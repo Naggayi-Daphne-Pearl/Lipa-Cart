@@ -1,0 +1,130 @@
+class User {
+  final String id;
+  final String phoneNumber;
+  final String? name;
+  final String? email;
+  final String? profileImage;
+  final List<Address> addresses;
+  final DateTime createdAt;
+
+  User({
+    required this.id,
+    required this.phoneNumber,
+    this.name,
+    this.email,
+    this.profileImage,
+    this.addresses = const [],
+    required this.createdAt,
+  });
+
+  User copyWith({
+    String? id,
+    String? phoneNumber,
+    String? name,
+    String? email,
+    String? profileImage,
+    List<Address>? addresses,
+    DateTime? createdAt,
+  }) {
+    return User(
+      id: id ?? this.id,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      profileImage: profileImage ?? this.profileImage,
+      addresses: addresses ?? this.addresses,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'phoneNumber': phoneNumber,
+      'name': name,
+      'email': email,
+      'profileImage': profileImage,
+      'addresses': addresses.map((a) => a.toJson()).toList(),
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'] as String,
+      phoneNumber: json['phoneNumber'] as String,
+      name: json['name'] as String?,
+      email: json['email'] as String?,
+      profileImage: json['profileImage'] as String?,
+      addresses: (json['addresses'] as List<dynamic>?)
+              ?.map((a) => Address.fromJson(a as Map<String, dynamic>))
+              .toList() ??
+          [],
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+  }
+}
+
+class Address {
+  final String id;
+  final String label;
+  final String fullAddress;
+  final String? landmark;
+  final double latitude;
+  final double longitude;
+  final bool isDefault;
+
+  Address({
+    required this.id,
+    required this.label,
+    required this.fullAddress,
+    this.landmark,
+    required this.latitude,
+    required this.longitude,
+    this.isDefault = false,
+  });
+
+  Address copyWith({
+    String? id,
+    String? label,
+    String? fullAddress,
+    String? landmark,
+    double? latitude,
+    double? longitude,
+    bool? isDefault,
+  }) {
+    return Address(
+      id: id ?? this.id,
+      label: label ?? this.label,
+      fullAddress: fullAddress ?? this.fullAddress,
+      landmark: landmark ?? this.landmark,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      isDefault: isDefault ?? this.isDefault,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'label': label,
+      'fullAddress': fullAddress,
+      'landmark': landmark,
+      'latitude': latitude,
+      'longitude': longitude,
+      'isDefault': isDefault,
+    };
+  }
+
+  factory Address.fromJson(Map<String, dynamic> json) {
+    return Address(
+      id: json['id'] as String,
+      label: json['label'] as String,
+      fullAddress: json['fullAddress'] as String,
+      landmark: json['landmark'] as String?,
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
+      isDefault: json['isDefault'] as bool? ?? false,
+    );
+  }
+}
