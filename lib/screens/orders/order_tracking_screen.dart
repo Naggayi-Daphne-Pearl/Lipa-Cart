@@ -18,15 +18,22 @@ class OrderTrackingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundGrey,
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Iconsax.arrow_left),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('Track Order'),
       ),
-      body: SingleChildScrollView(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppColors.elegantBgGradient,
+        ),
+        child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSizes.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,6 +226,7 @@ class OrderTrackingScreen extends StatelessWidget {
             ),
             const SizedBox(height: AppSizes.md),
           ],
+        ),
         ),
       ),
     );

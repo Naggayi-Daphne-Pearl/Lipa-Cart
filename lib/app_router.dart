@@ -15,6 +15,10 @@ import 'screens/checkout/checkout_screen.dart';
 import 'screens/checkout/order_success_screen.dart';
 import 'screens/orders/orders_screen.dart';
 import 'screens/orders/order_tracking_screen.dart';
+import 'screens/shopping_lists/shopping_lists_screen.dart';
+import 'screens/shopping_lists/shopping_list_detail_screen.dart';
+import 'screens/recipes/recipes_screen.dart';
+import 'screens/recipes/recipe_detail_screen.dart';
 
 class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -71,6 +75,20 @@ class AppRouter {
       case '/order-tracking':
         final order = settings.arguments as Order;
         return _buildRoute(OrderTrackingScreen(order: order), settings);
+
+      case '/shopping-lists':
+        return _buildRoute(const ShoppingListsScreen(), settings);
+
+      case '/shopping-list-detail':
+        final listId = settings.arguments as String;
+        return _buildRoute(ShoppingListDetailScreen(listId: listId), settings);
+
+      case '/recipes':
+        return _buildRoute(const RecipesScreen(), settings);
+
+      case '/recipe-detail':
+        final recipeId = settings.arguments as String;
+        return _buildRoute(RecipeDetailScreen(recipeId: recipeId), settings);
 
       default:
         return _buildRoute(

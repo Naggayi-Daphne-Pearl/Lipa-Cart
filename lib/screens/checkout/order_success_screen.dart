@@ -7,7 +7,7 @@ import '../../core/utils/formatters.dart';
 import '../../models/order.dart';
 import '../../widgets/custom_button.dart';
 
-class OrderSuccessScreen extends StatelessWidget {
+class OrderSuccessScreen extends StatefulWidget {
   final Order order;
 
   const OrderSuccessScreen({
@@ -16,41 +16,113 @@ class OrderSuccessScreen extends StatelessWidget {
   });
 
   @override
+  State<OrderSuccessScreen> createState() => _OrderSuccessScreenState();
+}
+
+class _OrderSuccessScreenState extends State<OrderSuccessScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.elasticOut,
+      ),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+      ),
+    );
+
+    // Start the animation
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Order get order => widget.order;
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSizes.lg),
-          child: Column(
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppColors.elegantBgGradient,
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSizes.lg),
+            child: Column(
             children: [
               const Spacer(),
-              // Success icon
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryGreen.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Iconsax.tick_circle5,
-                  size: 64,
-                  color: AppColors.primaryGreen,
-                ),
+              // Animated Success icon
+              AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _scaleAnimation.value,
+                    child: Opacity(
+                      opacity: _fadeAnimation.value,
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primaryGreen.withValues(alpha: 0.2),
+                              blurRadius: 30,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Iconsax.tick_circle5,
+                          size: 64,
+                          color: AppColors.primaryGreen,
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: AppSizes.xl),
-              Text(
-                'Order Placed!',
-                style: AppTextStyles.h2,
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: Text(
+                  'Order Placed!',
+                  style: AppTextStyles.h2,
+                ),
               ),
               const SizedBox(height: AppSizes.sm),
-              Text(
-                'Your order has been successfully placed',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textMedium,
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: Text(
+                  'Your order has been successfully placed',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textMedium,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSizes.xl),
 
@@ -108,6 +180,7 @@ class OrderSuccessScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

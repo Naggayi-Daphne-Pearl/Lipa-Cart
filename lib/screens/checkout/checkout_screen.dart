@@ -83,24 +83,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundGrey,
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Iconsax.arrow_left),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('Checkout'),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSizes.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Delivery address
-                  _buildSection(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppColors.elegantBgGradient,
+        ),
+        child: SafeArea(
+          child: Column(
+          children: [
+            // Progress Stepper
+            _buildProgressStepper(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSizes.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Delivery address
+                    _buildSection(
                     title: 'Delivery Address',
                     icon: Iconsax.location,
                     child: _selectedAddress == null
@@ -208,7 +218,101 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
           ),
         ],
+        ),
+        ),
       ),
+    );
+  }
+
+  Widget _buildProgressStepper() {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSizes.lg,
+        vertical: AppSizes.md,
+      ),
+      child: Row(
+        children: [
+          _buildStepItem(
+            icon: Iconsax.location,
+            label: 'Address',
+            isActive: true,
+            isCompleted: _selectedAddress != null,
+          ),
+          Expanded(
+            child: Container(
+              height: 2,
+              color: _selectedAddress != null
+                  ? AppColors.primary
+                  : AppColors.grey300,
+            ),
+          ),
+          _buildStepItem(
+            icon: Iconsax.card,
+            label: 'Payment',
+            isActive: true,
+            isCompleted: false,
+          ),
+          Expanded(
+            child: Container(
+              height: 2,
+              color: AppColors.grey300,
+            ),
+          ),
+          _buildStepItem(
+            icon: Iconsax.tick_circle,
+            label: 'Confirm',
+            isActive: false,
+            isCompleted: false,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepItem({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required bool isCompleted,
+  }) {
+    final color = isCompleted
+        ? AppColors.primary
+        : isActive
+            ? AppColors.accent
+            : AppColors.grey400;
+
+    return Column(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: isCompleted
+                ? AppColors.primarySoft
+                : isActive
+                    ? AppColors.accentSoft
+                    : AppColors.grey100,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: color,
+              width: 2,
+            ),
+          ),
+          child: Icon(
+            isCompleted ? Iconsax.tick_circle5 : icon,
+            color: color,
+            size: 18,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: AppTextStyles.caption.copyWith(
+            color: color,
+            fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
+      ],
     );
   }
 

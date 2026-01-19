@@ -7,9 +7,11 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/product.dart';
+import '../../models/recipe.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/recipe_provider.dart';
 import '../../widgets/category_card.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -25,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().loadProducts();
+      context.read<RecipeProvider>().loadRecipes();
     });
   }
 
@@ -46,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = context.watch<AuthProvider>();
     final productProvider = context.watch<ProductProvider>();
     final cartProvider = context.watch<CartProvider>();
+    final recipeProvider = context.watch<RecipeProvider>();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -183,67 +187,122 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-                // Promo Banner
-                Container(
-                  margin: const EdgeInsets.all(AppSizes.lg),
-                  height: 130,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+                // Promo Banner with Overlapping Image
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSizes.lg,
+                    AppSizes.lg + 25, // Extra top padding for overflow
+                    AppSizes.lg,
+                    AppSizes.lg,
                   ),
                   child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.all(AppSizes.lg),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Fresh Deals',
-                              style: AppTextStyles.h4.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            Text(
-                              'Up to 30% off on fruits',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: Colors.white.withValues(alpha: 0.9),
-                              ),
-                            ),
-                            const SizedBox(height: AppSizes.sm),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSizes.md,
-                                vertical: AppSizes.xs,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius:
-                                    BorderRadius.circular(AppSizes.radiusFull),
-                              ),
-                              child: Text(
-                                'Shop Now',
-                                style: AppTextStyles.labelSmall.copyWith(
-                                  color: AppColors.accent,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                      // Background card with gradient
+                      Container(
+                        height: 160,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.accent,
+                              AppColors.accentLight,
+                            ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.accent.withValues(alpha: 0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
                             ),
                           ],
                         ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSizes.lg),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Fresh Deals',
+                                style: AppTextStyles.h3.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Up to 30% off on fruits',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                ),
+                              ),
+                              const SizedBox(height: AppSizes.md),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSizes.lg,
+                                  vertical: AppSizes.sm,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius:
+                                      BorderRadius.circular(AppSizes.radiusFull),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  'Shop Now',
+                                  style: AppTextStyles.labelMedium.copyWith(
+                                    color: AppColors.accent,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
+                      // Overlapping image - extends right and top
                       Positioned(
-                        right: -20,
-                        top: 0,
-                        bottom: 0,
-                        child: Image.network(
-                          'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=300',
-                          width: 160,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const SizedBox(),
+                        right: -30,
+                        top: -35,
+                        child: Container(
+                          width: 170,
+                          height: 170,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Image.network(
+                              'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                color: AppColors.accentSoft,
+                                child: const Icon(
+                                  Iconsax.image,
+                                  size: 40,
+                                  color: AppColors.accent,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -298,19 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Shopping Lists Card
                       Expanded(
                         child: GestureDetector(
-                          onTap: () {
-                            // TODO: Navigate to Shopping Lists
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Shopping Lists coming soon!'),
-                                backgroundColor: AppColors.primary,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                                ),
-                              ),
-                            );
-                          },
+                          onTap: () => Navigator.pushNamed(context, '/shopping-lists'),
                           child: Container(
                             padding: const EdgeInsets.all(AppSizes.md),
                             decoration: BoxDecoration(
@@ -361,19 +408,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Recipes Card
                       Expanded(
                         child: GestureDetector(
-                          onTap: () {
-                            // TODO: Navigate to Recipes
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Recipes coming soon!'),
-                                backgroundColor: AppColors.accent,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                                ),
-                              ),
-                            );
-                          },
+                          onTap: () => Navigator.pushNamed(context, '/recipes'),
                           child: Container(
                             padding: const EdgeInsets.all(AppSizes.md),
                             decoration: BoxDecoration(
@@ -503,6 +538,37 @@ class _HomeScreenState extends State<HomeScreen> {
                           product,
                           cartProvider,
                         );
+                      },
+                    ),
+                  ),
+
+                // Popular Recipes section
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSizes.lg,
+                    AppSizes.lg,
+                    AppSizes.lg,
+                    AppSizes.sm,
+                  ),
+                  child: _buildSectionHeader(
+                    'Popular Recipes',
+                    onSeeAll: () => Navigator.pushNamed(context, '/recipes'),
+                  ),
+                ),
+                if (!recipeProvider.isLoading &&
+                    recipeProvider.popularRecipes.isNotEmpty)
+                  SizedBox(
+                    height: 240,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: AppSizes.lg),
+                      itemCount: recipeProvider.popularRecipes.length.clamp(0, 6),
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(width: AppSizes.md),
+                      itemBuilder: (context, index) {
+                        final recipe = recipeProvider.popularRecipes[index];
+                        return _buildRecipeCard(recipe);
                       },
                     ),
                   ),
@@ -667,6 +733,186 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: Colors.white,
                               size: 16,
                             ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecipeCard(Recipe recipe) {
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(
+        context,
+        '/recipe-detail',
+        arguments: recipe.id,
+      ),
+      child: Container(
+        width: 200,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+          boxShadow: AppColors.shadowSm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Recipe Image
+            Expanded(
+              flex: 3,
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(AppSizes.radiusLg),
+                    ),
+                    child: CachedNetworkImage(
+                      imageUrl: recipe.image,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: AppColors.grey100,
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.accent,
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: AppColors.grey100,
+                        child: const Icon(
+                          Iconsax.image,
+                          color: AppColors.grey400,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Time badge
+                  Positioned(
+                    top: AppSizes.sm,
+                    left: AppSizes.sm,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Iconsax.clock,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${recipe.totalTime} min',
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Rating badge
+                  Positioned(
+                    top: AppSizes.sm,
+                    right: AppSizes.sm,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent,
+                        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            recipe.rating.toString(),
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Recipe Info
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(AppSizes.sm),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          recipe.name,
+                          style: AppTextStyles.labelMedium.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          recipe.tags.take(2).join(' • '),
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            fontSize: 10,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Icon(
+                          Iconsax.shopping_bag,
+                          color: AppColors.primary,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${recipe.ingredients.length} ingredients',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 10,
                           ),
                         ),
                       ],

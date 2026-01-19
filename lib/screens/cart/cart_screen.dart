@@ -34,11 +34,15 @@ class CartScreen extends StatelessWidget {
     final amountToFreeDelivery = _freeDeliveryThreshold - cartProvider.subtotal;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: cartProvider.isEmpty
-            ? _buildEmptyCart(context)
-            : Column(
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppColors.elegantBgGradient,
+        ),
+        child: SafeArea(
+          child: cartProvider.isEmpty
+              ? _buildEmptyCart(context)
+              : Column(
                 children: [
                   // Header
                   Padding(
@@ -272,6 +276,7 @@ class CartScreen extends StatelessWidget {
                   ),
                 ],
               ),
+        ),
       ),
     );
   }

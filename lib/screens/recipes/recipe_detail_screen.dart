@@ -1,0 +1,832 @@
+import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:iconsax/iconsax.dart';
+import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_text_styles.dart';
+import '../../core/constants/app_sizes.dart';
+import '../../core/utils/formatters.dart';
+import '../../models/recipe.dart';
+import '../../providers/recipe_provider.dart';
+import '../../providers/cart_provider.dart';
+
+class RecipeDetailScreen extends StatefulWidget {
+  final String recipeId;
+
+  const RecipeDetailScreen({
+    super.key,
+    required this.recipeId,
+  });
+
+  @override
+  State<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
+}
+
+class _RecipeDetailScreenState extends State<RecipeDetailScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final Set<String> _selectedIngredients = {};
+  bool _selectAll = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final recipeProvider = context.watch<RecipeProvider>();
+    final cartProvider = context.watch<CartProvider>();
+    final recipe = recipeProvider.getRecipeById(widget.recipeId);
+
+    if (recipe == null) {
+      return Scaffold(
+        body: Center(
+          child: Text('Recipe not found'),
+        ),
+      );
+    }
+
+    // Initialize selected ingredients
+    if (_selectedIngredients.isEmpty && _selectAll) {
+      _selectedIngredients.addAll(
+        recipe.purchasableIngredients.map((i) => i.id),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: CustomScrollView(
+        slivers: [
+          // App bar with image
+          SliverAppBar(
+            expandedHeight: 300,
+            pinned: true,
+            backgroundColor: AppColors.surface,
+            leading: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: AppColors.shadowSm,
+                ),
+                child: const Icon(
+                  Iconsax.arrow_left,
+                  color: AppColors.textPrimary,
+                  size: 20,
+                ),
+              ),
+            ),
+            actions: [
+              GestureDetector(
+                onTap: () => recipeProvider.toggleFavorite(recipe.id),
+                child: Container(
+                  margin: const EdgeInsets.all(8),
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: AppColors.shadowSm,
+                  ),
+                  child: Icon(
+                    recipe.isFavorite ? Iconsax.heart5 : Iconsax.heart,
+                    color: recipe.isFavorite ? AppColors.error : AppColors.grey400,
+                    size: 20,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  // Share functionality
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: AppColors.shadowSm,
+                  ),
+                  child: const Icon(
+                    Iconsax.share,
+                    color: AppColors.textPrimary,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CachedNetworkImage(
+                    imageUrl: recipe.image,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: AppColors.grey100,
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: AppColors.grey100,
+                      child: const Icon(
+                        Iconsax.image,
+                        size: 64,
+                        color: AppColors.grey400,
+                      ),
+                    ),
+                  ),
+                  // Gradient overlay
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.5),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Bottom info badges
+                  Positioned(
+                    bottom: AppSizes.lg,
+                    left: AppSizes.lg,
+                    right: AppSizes.lg,
+                    child: Row(
+                      children: [
+                        _buildInfoBadge(
+                          icon: Iconsax.clock,
+                          label: '${recipe.totalTime} min',
+                        ),
+                        const SizedBox(width: AppSizes.sm),
+                        _buildInfoBadge(
+                          icon: Iconsax.people,
+                          label: '${recipe.servings} servings',
+                        ),
+                        const SizedBox(width: AppSizes.sm),
+                        _buildInfoBadge(
+                          icon: Iconsax.chart,
+                          label: recipe.difficulty,
+                          color: _getDifficultyColor(recipe.difficulty),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Content
+          SliverToBoxAdapter(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(AppSizes.radiusXl),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(AppSizes.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Tags
+                        Wrap(
+                          spacing: AppSizes.xs,
+                          runSpacing: AppSizes.xs,
+                          children: recipe.tags.map((tag) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.accentSoft,
+                                borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusFull),
+                              ),
+                              child: Text(
+                                tag,
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.accent,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: AppSizes.md),
+
+                        // Title and rating
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                recipe.name,
+                                style: AppTextStyles.h3.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSizes.sm,
+                                vertical: AppSizes.xs,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.accent,
+                                borderRadius:
+                                    BorderRadius.circular(AppSizes.radiusMd),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    recipe.rating.toString(),
+                                    style: AppTextStyles.labelSmall.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSizes.sm),
+
+                        // Description
+                        Text(
+                          recipe.description,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: AppSizes.md),
+
+                        // Author
+                        if (recipe.authorName != null)
+                          Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primarySoft,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Iconsax.user,
+                                  color: AppColors.primary,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: AppSizes.sm),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    recipe.authorName!,
+                                    style: AppTextStyles.labelMedium.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${recipe.reviewCount} reviews',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  // Tabs
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: AppColors.grey200,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      labelColor: AppColors.accent,
+                      unselectedLabelColor: AppColors.textSecondary,
+                      indicatorColor: AppColors.accent,
+                      indicatorWeight: 3,
+                      labelStyle: AppTextStyles.labelMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      tabs: [
+                        Tab(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Iconsax.shopping_bag, size: 18),
+                              const SizedBox(width: 8),
+                              Text(
+                                  'Ingredients (${recipe.ingredients.length})'),
+                            ],
+                          ),
+                        ),
+                        Tab(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Iconsax.document_text, size: 18),
+                              const SizedBox(width: 8),
+                              Text('Steps (${recipe.instructions.length})'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Tab content
+          SliverFillRemaining(
+            child: Container(
+              color: AppColors.surface,
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // Ingredients tab
+                  _buildIngredientsTab(recipe),
+                  // Instructions tab
+                  _buildInstructionsTab(recipe),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      // Bottom bar with add to cart
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(AppSizes.lg),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppSizes.radiusXl),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withValues(alpha: 0.05),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Row(
+            children: [
+              // Price estimate
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Estimated Cost',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      Formatters.formatCurrency(_calculateSelectedCost(recipe)),
+                      style: AppTextStyles.h4.copyWith(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Add to cart button
+              GestureDetector(
+                onTap: () =>
+                    _addSelectedToCart(recipe, cartProvider),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSizes.xl,
+                    vertical: AppSizes.md,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Iconsax.bag_2,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppSizes.sm),
+                      Text(
+                        'Add ${_selectedIngredients.length} Items',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoBadge({
+    required IconData icon,
+    required String label,
+    Color? color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSizes.sm,
+        vertical: AppSizes.xs,
+      ),
+      decoration: BoxDecoration(
+        color: color ?? Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: color != null ? Colors.white : AppColors.textPrimary,
+            size: 14,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              color: color != null ? Colors.white : AppColors.textPrimary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIngredientsTab(Recipe recipe) {
+    return ListView(
+      padding: const EdgeInsets.all(AppSizes.lg),
+      children: [
+        // Select all toggle
+        Row(
+          children: [
+            Text(
+              'SELECT INGREDIENTS',
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textTertiary,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  if (_selectAll) {
+                    _selectedIngredients.clear();
+                  } else {
+                    _selectedIngredients.addAll(
+                      recipe.purchasableIngredients.map((i) => i.id),
+                    );
+                  }
+                  _selectAll = !_selectAll;
+                });
+              },
+              child: Row(
+                children: [
+                  Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: _selectAll ? AppColors.primary : Colors.transparent,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: _selectAll ? AppColors.primary : AppColors.grey300,
+                        width: 2,
+                      ),
+                    ),
+                    child: _selectAll
+                        ? const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 14,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: AppSizes.xs),
+                  Text(
+                    'Select All',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSizes.md),
+
+        // Ingredients list
+        ...recipe.ingredients.map((ingredient) {
+          final isSelectable = ingredient.linkedProduct != null;
+          final isSelected = _selectedIngredients.contains(ingredient.id);
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: AppSizes.sm),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppColors.primarySoft
+                  : AppColors.grey50,
+              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              border: Border.all(
+                color: isSelected ? AppColors.primary : AppColors.grey200,
+                width: 1,
+              ),
+            ),
+            child: ListTile(
+              leading: isSelectable
+                  ? GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedIngredients.remove(ingredient.id);
+                            _selectAll = false;
+                          } else {
+                            _selectedIngredients.add(ingredient.id);
+                            if (_selectedIngredients.length ==
+                                recipe.purchasableIngredients.length) {
+                              _selectAll = true;
+                            }
+                          }
+                        });
+                      },
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primary
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color:
+                                isSelected ? AppColors.primary : AppColors.grey300,
+                            width: 2,
+                          ),
+                        ),
+                        child: isSelected
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 16,
+                              )
+                            : null,
+                      ),
+                    )
+                  : Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: AppColors.grey200,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Icon(
+                        Iconsax.close_circle,
+                        color: AppColors.grey400,
+                        size: 16,
+                      ),
+                    ),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      ingredient.name,
+                      style: AppTextStyles.labelMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (ingredient.isOptional)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.grey200,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Optional',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              subtitle: Row(
+                children: [
+                  Text(
+                    ingredient.quantity,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  if (ingredient.linkedProduct != null) ...[
+                    const Spacer(),
+                    Text(
+                      Formatters.formatCurrency(ingredient.linkedProduct!.price),
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              trailing: ingredient.linkedProduct != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: CachedNetworkImage(
+                        imageUrl: ingredient.linkedProduct!.image,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          width: 48,
+                          height: 48,
+                          color: AppColors.grey100,
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          width: 48,
+                          height: 48,
+                          color: AppColors.grey100,
+                          child: const Icon(
+                            Iconsax.image,
+                            size: 20,
+                            color: AppColors.grey400,
+                          ),
+                        ),
+                      ),
+                    )
+                  : null,
+            ),
+          );
+        }),
+        const SizedBox(height: 100),
+      ],
+    );
+  }
+
+  Widget _buildInstructionsTab(Recipe recipe) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppSizes.lg),
+      itemCount: recipe.instructions.length,
+      itemBuilder: (context, index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: AppSizes.md),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Step number
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    '${index + 1}',
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSizes.md),
+              // Step content
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(AppSizes.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.grey50,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  ),
+                  child: Text(
+                    recipe.instructions[index],
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      height: 1.6,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  double _calculateSelectedCost(Recipe recipe) {
+    double total = 0;
+    for (final ingredient in recipe.ingredients) {
+      if (_selectedIngredients.contains(ingredient.id) &&
+          ingredient.linkedProduct != null) {
+        total += ingredient.linkedProduct!.price;
+      }
+    }
+    return total;
+  }
+
+  void _addSelectedToCart(Recipe recipe, CartProvider cartProvider) {
+    int addedCount = 0;
+    for (final ingredient in recipe.ingredients) {
+      if (_selectedIngredients.contains(ingredient.id) &&
+          ingredient.linkedProduct != null) {
+        cartProvider.addToCart(ingredient.linkedProduct!);
+        addedCount++;
+      }
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Added $addedCount ingredients to cart'),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        ),
+        action: SnackBarAction(
+          label: 'View Cart',
+          textColor: Colors.white,
+          onPressed: () => Navigator.pushNamed(context, '/cart'),
+        ),
+      ),
+    );
+  }
+
+  Color _getDifficultyColor(String difficulty) {
+    switch (difficulty.toLowerCase()) {
+      case 'easy':
+        return AppColors.success;
+      case 'medium':
+        return AppColors.accent;
+      case 'hard':
+        return AppColors.error;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+}

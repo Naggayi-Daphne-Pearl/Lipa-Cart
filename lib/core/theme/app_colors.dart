@@ -94,16 +94,16 @@ class AppColors {
     end: Alignment.bottomCenter,
   );
 
-  // Elegant background gradient (visible warm cream to soft beige)
+  // Elegant background gradient (more visible warm cream to soft beige)
   static const LinearGradient elegantBgGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     colors: [
-      Color(0xFFFFFCF9), // Bright warm white at top
-      Color(0xFFFAF6F1), // Soft warm cream middle
-      Color(0xFFF5F0E8), // Warm beige at bottom
+      Color(0xFFFFFDF8), // Bright warm white at top
+      Color(0xFFF7F2E8), // More visible warm cream middle
+      Color(0xFFEDE5D8), // Warmer beige at bottom (more contrast)
     ],
-    stops: [0.0, 0.5, 1.0],
+    stops: [0.0, 0.4, 1.0],
   );
 
   // Shadows (Very subtle for elegant feel)

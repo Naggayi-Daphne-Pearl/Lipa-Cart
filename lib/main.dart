@@ -6,6 +6,8 @@ import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/order_provider.dart';
+import 'providers/shopping_list_provider.dart';
+import 'providers/recipe_provider.dart';
 import 'app_router.dart';
 
 void main() {
@@ -38,6 +40,8 @@ class LipaCartApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(create: (_) => ShoppingListProvider()),
+        ChangeNotifierProvider(create: (_) => RecipeProvider()),
       ],
       child: MaterialApp(
         title: 'LipaCart',
