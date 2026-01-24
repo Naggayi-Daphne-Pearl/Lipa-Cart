@@ -8,6 +8,7 @@ import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/search_bar_widget.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -32,6 +33,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundGrey,
+      bottomNavigationBar: const AppBottomNav(currentIndex: 1),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Iconsax.arrow_left),

@@ -6,6 +6,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../providers/product_provider.dart';
 import '../../widgets/category_card.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class CategoriesScreen extends StatelessWidget {
   const CategoriesScreen({super.key});
@@ -16,6 +17,7 @@ class CategoriesScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundGrey,
+      bottomNavigationBar: const AppBottomNav(currentIndex: 1),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Iconsax.arrow_left),
@@ -65,6 +67,7 @@ class CategoryProductsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundGrey,
+      bottomNavigationBar: const AppBottomNav(currentIndex: 1),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Iconsax.arrow_left),

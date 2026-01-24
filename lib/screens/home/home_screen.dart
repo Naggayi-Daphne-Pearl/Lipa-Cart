@@ -254,12 +254,21 @@ class _HomeScreenState extends State<HomeScreen> {
                               right: 0,
                               top: -20,
                               bottom: -10,
-                              child: Image.network(
-                                'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400',
+                              child: CachedNetworkImage(
+                                imageUrl: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400',
                                 width: 140,
                                 fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Container(
+                                placeholder: (context, url) => Container(
+                                  width: 140,
+                                  color: Colors.transparent,
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.accent.withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) => Container(
                                   width: 140,
                                   color: Colors.transparent,
                                   child: const Icon(

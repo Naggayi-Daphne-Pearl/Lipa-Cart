@@ -5,11 +5,25 @@ A mobile-first grocery shopping and delivery platform built with Flutter. LipaCa
 ## Features
 
 - **Phone Authentication** - Quick registration with OTP verification
+- **Guest Browsing** - Browse and add items to cart without authentication
+- **Checkout Authentication** - Sign in required at checkout for secure order placement
 - **Product Browsing** - Browse categories, search products, view featured items
 - **Shopping Cart** - Add items, adjust quantities, special instructions
 - **Multiple Payment Options** - Mobile Money, Card, Cash on Delivery
 - **Real-time Order Tracking** - Track orders from shopping to delivery
 - **Order History** - View past orders and reorder easily
+
+## User Flow
+
+### Order Journey
+
+1. **Browse & Shop** - Users can browse products, search, and add items to cart without authentication
+2. **Review Cart** - View cart items, adjust quantities, and see order summary
+3. **Checkout Authentication** - When proceeding to checkout, users are prompted to sign in/login if not already authenticated
+4. **Complete Order** - After authentication, users can select delivery address, payment method, and place their order
+5. **Track Delivery** - Monitor order status from shopping to delivery
+
+This flow allows users to explore products freely while ensuring secure, authenticated checkouts.
 
 ## Screenshots
 

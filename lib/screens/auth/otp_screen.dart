@@ -13,10 +13,12 @@ import '../../widgets/custom_button.dart';
 
 class OtpScreen extends StatefulWidget {
   final String phoneNumber;
+  final String? returnRoute;
 
   const OtpScreen({
     super.key,
     required this.phoneNumber,
+    this.returnRoute,
   });
 
   @override
@@ -77,11 +79,20 @@ class _OtpScreenState extends State<OtpScreen> {
 
     if (success) {
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/main',
-        (route) => false,
-      );
+      // Navigate to returnRoute if provided, otherwise go to main
+      if (widget.returnRoute != null) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          widget.returnRoute!,
+          (route) => route.isFirst,
+        );
+      } else {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/main',
+          (route) => false,
+        );
+      }
     } else if (authProvider.errorMessage != null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

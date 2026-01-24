@@ -7,6 +7,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../models/recipe.dart';
 import '../../providers/recipe_provider.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class RecipesScreen extends StatefulWidget {
   const RecipesScreen({super.key});
@@ -57,6 +58,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      bottomNavigationBar: const AppBottomNav(currentIndex: 0),
       body: Container(
         decoration: const BoxDecoration(
           gradient: AppColors.elegantBgGradient,

@@ -30,11 +30,21 @@ class AppRouter {
         return _buildRoute(const OnboardingScreen(), settings);
 
       case '/login':
-        return _buildRoute(const LoginScreen(), settings);
+        final returnRoute = settings.arguments as String?;
+        return _buildRoute(
+          LoginScreen(returnRoute: returnRoute),
+          settings,
+        );
 
       case '/otp':
-        final phoneNumber = settings.arguments as String;
-        return _buildRoute(OtpScreen(phoneNumber: phoneNumber), settings);
+        final args = settings.arguments as Map<String, dynamic>;
+        return _buildRoute(
+          OtpScreen(
+            phoneNumber: args['phoneNumber'] as String,
+            returnRoute: args['returnRoute'] as String?,
+          ),
+          settings,
+        );
 
       case '/main':
         return _buildRoute(const MainShell(), settings);

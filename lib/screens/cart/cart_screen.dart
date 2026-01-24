@@ -8,11 +8,29 @@ import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/cart_item.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
   static const double _freeDeliveryThreshold = 50000;
+
+  void _handleProceedToCheckout(BuildContext context) {
+    final authProvider = context.read<AuthProvider>();
+
+    if (authProvider.isAuthenticated) {
+      // User is authenticated, proceed to checkout
+      Navigator.pushNamed(context, '/checkout');
+    } else {
+      // User is not authenticated, redirect to login with return route
+      Navigator.pushNamed(
+        context,
+        '/login',
+        arguments: '/checkout',
+      );
+    }
+  }
 
   Color _getProductBgColor(String categoryName) {
     final category = categoryName.toLowerCase();
@@ -35,6 +53,7 @@ class CartScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      bottomNavigationBar: const AppBottomNav(currentIndex: 2),
       body: Container(
         decoration: const BoxDecoration(
           gradient: AppColors.elegantBgGradient,
@@ -232,8 +251,7 @@ class CartScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: AppSizes.lg),
                           GestureDetector(
-                            onTap: () =>
-                                Navigator.pushNamed(context, '/checkout'),
+                            onTap: () => _handleProceedToCheckout(context),
                             child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.symmetric(

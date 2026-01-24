@@ -6,6 +6,7 @@ import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class OrderTrackingScreen extends StatelessWidget {
   final Order order;
@@ -20,6 +21,7 @@ class OrderTrackingScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
+      bottomNavigationBar: const AppBottomNav(currentIndex: 3),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

@@ -9,6 +9,7 @@ import '../../core/utils/formatters.dart';
 import '../../models/product.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -80,6 +81,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: const AppBottomNav(currentIndex: 1),
       body: Column(
         children: [
           Expanded(

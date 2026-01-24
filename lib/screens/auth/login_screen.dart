@@ -10,7 +10,12 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? returnRoute;
+
+  const LoginScreen({
+    super.key,
+    this.returnRoute,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -42,7 +47,10 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.pushNamed(
         context,
         '/otp',
-        arguments: _phoneController.text,
+        arguments: {
+          'phoneNumber': _phoneController.text,
+          'returnRoute': widget.returnRoute,
+        },
       );
     } else if (authProvider.errorMessage != null) {
       if (!mounted) return;

@@ -9,6 +9,7 @@ import '../../core/utils/formatters.dart';
 import '../../models/recipe.dart';
 import '../../providers/recipe_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
   final String recipeId;
@@ -48,6 +49,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
 
     if (recipe == null) {
       return Scaffold(
+        bottomNavigationBar: const AppBottomNav(currentIndex: 0),
         body: Center(
           child: Text('Recipe not found'),
         ),

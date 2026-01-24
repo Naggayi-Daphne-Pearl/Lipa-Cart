@@ -42,12 +42,14 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
 
   assets:
     - assets/images/
+    - assets/images/logos/
     - assets/icons/
 
   # Fonts (uncomment and add font files to enable custom fonts)
@@ -62,3 +64,22 @@ flutter:
   #         weight: 600
   #       - asset: assets/fonts/Inter-Bold.ttf
   #         weight: 700
+
+# App Icon Configuration
+flutter_launcher_icons:
+  android: true
+  ios: true
+  web:
+    generate: true
+    image_path: "assets/images/logos/app_icon.png"
+    background_color: "#FF8C00"
+    theme_color: "#FF8C00"
+  image_path: "assets/images/logos/app_icon.png"
+  min_sdk_android: 21
+
+  # Adaptive icons for Android
+  adaptive_icon_background: "#FF8C00"
+  adaptive_icon_foreground: "assets/images/logos/app_icon.png"
+
+  # iOS specific
+  remove_alpha_ios: true

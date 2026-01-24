@@ -10,6 +10,7 @@ import '../../models/shopping_list.dart';
 import '../../providers/shopping_list_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class ShoppingListDetailScreen extends StatefulWidget {
   final String listId;
@@ -46,6 +47,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
 
     if (list == null) {
       return Scaffold(
+        bottomNavigationBar: const AppBottomNav(currentIndex: 0),
         body: Center(
           child: Text('List not found'),
         ),

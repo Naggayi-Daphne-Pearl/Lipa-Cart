@@ -7,6 +7,7 @@ import '../../core/constants/app_sizes.dart';
 import '../../models/shopping_list.dart';
 import '../../providers/shopping_list_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class ShoppingListsScreen extends StatefulWidget {
   const ShoppingListsScreen({super.key});
@@ -30,6 +31,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      bottomNavigationBar: const AppBottomNav(currentIndex: 0),
       body: Container(
         decoration: const BoxDecoration(
           gradient: AppColors.elegantBgGradient,

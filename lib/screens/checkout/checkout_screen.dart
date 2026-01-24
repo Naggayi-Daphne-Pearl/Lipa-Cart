@@ -11,6 +11,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -85,6 +86,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
+      bottomNavigationBar: const AppBottomNav(currentIndex: 2),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
