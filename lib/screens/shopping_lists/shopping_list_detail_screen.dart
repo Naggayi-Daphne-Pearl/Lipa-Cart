@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
@@ -26,13 +25,6 @@ class ShoppingListDetailScreen extends StatefulWidget {
 }
 
 class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
-  final TextEditingController _itemController = TextEditingController();
-
-  @override
-  void dispose() {
-    _itemController.dispose();
-    super.dispose();
-  }
 
   Color _parseColor(String hexColor) {
     final hex = hexColor.replaceAll('#', '');
@@ -299,50 +291,38 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
         child: SafeArea(
           child: Row(
             children: [
-              // Add item field
+              // Add item button
               Expanded(
-                child: Container(
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: AppColors.grey100,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  ),
-                  child: TextField(
-                    controller: _itemController,
-                    decoration: InputDecoration(
-                      hintText: 'Add an item...',
-                      hintStyle: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textTertiary,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSizes.md,
-                        vertical: AppSizes.md,
-                      ),
+                child: GestureDetector(
+                  onTap: () => _showAddItemDialog(list, color),
+                  child: Container(
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: AppColors.grey100,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                     ),
-                    onSubmitted: (value) => _addItem(value, listProvider),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: AppSizes.md),
+                        Icon(
+                          Iconsax.add_circle,
+                          color: color,
+                          size: 22,
+                        ),
+                        const SizedBox(width: AppSizes.sm),
+                        Text(
+                          'Add item to list...',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: AppSizes.md),
-              // Add button
-              GestureDetector(
-                onTap: () => _addItem(_itemController.text, listProvider),
-                child: Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  ),
-                  child: const Icon(
-                    Iconsax.add,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSizes.sm),
               // Add all to cart
               if (list.purchasableItems.isNotEmpty)
                 GestureDetector(
@@ -438,42 +418,13 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 horizontal: AppSizes.md,
                 vertical: AppSizes.sm,
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Product image if linked
-                  if (item.linkedProduct != null) ...[
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                        child: CachedNetworkImage(
-                          imageUrl: item.linkedProduct!.image,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: AppColors.grey100,
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            color: AppColors.grey100,
-                            child: const Icon(
-                              Iconsax.image,
-                              color: AppColors.grey400,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSizes.sm),
-                  ],
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
                           item.name,
                           style: AppTextStyles.labelMedium.copyWith(
                             fontWeight: FontWeight.w600,
@@ -485,29 +436,75 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                 : AppColors.textPrimary,
                           ),
                         ),
-                        Row(
-                          children: [
-                            Text(
-                              '${item.quantity} ${item.unit ?? ''}',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
+                      ),
+                      // Edit button for description
+                      if (!item.isChecked)
+                        GestureDetector(
+                          onTap: () => _showEditDescriptionDialog(item, list),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(
+                              item.description != null && item.description!.isNotEmpty
+                                  ? Iconsax.document_text5
+                                  : Iconsax.document_text,
+                              size: 16,
+                              color: item.description != null && item.description!.isNotEmpty
+                                  ? color
+                                  : AppColors.grey400,
                             ),
-                            if (item.linkedProduct != null) ...[
-                              const SizedBox(width: AppSizes.sm),
-                              Text(
-                                Formatters.formatCurrency(
-                                    item.linkedProduct!.price),
-                                style: AppTextStyles.labelSmall.copyWith(
-                                  color: color,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ],
+                          ),
                         ),
-                      ],
+                    ],
+                  ),
+                  if (item.description != null && item.description!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      item.description!,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                  ],
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      if (item.budgetAmount != null) ...[
+                        Icon(
+                          Iconsax.wallet_3,
+                          size: 14,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Worth ${Formatters.formatCurrency(item.budgetAmount!)}',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ] else ...[
+                        Text(
+                          '${item.quantity} ${item.unit ?? ''}',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        if (item.linkedProduct != null) ...[
+                          const SizedBox(width: AppSizes.sm),
+                          Text(
+                            Formatters.formatCurrency(
+                                item.linkedProduct!.price),
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: color,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -622,27 +619,28 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
     );
   }
 
-  void _addItem(String value, ShoppingListProvider provider) {
-    if (value.trim().isNotEmpty) {
+  void _addItem(String name, String? description, double? budgetAmount, ShoppingListProvider provider) {
+    if (name.trim().isNotEmpty) {
       // Try to find a matching product
       final productProvider = context.read<ProductProvider>();
       final matchingProduct = productProvider.products.firstWhere(
-        (p) => p.name.toLowerCase().contains(value.toLowerCase()),
+        (p) => p.name.toLowerCase().contains(name.toLowerCase()),
         orElse: () => productProvider.products.first,
       );
 
       final item = ShoppingListItem(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: value.trim(),
+        name: name.trim(),
+        description: description?.trim().isEmpty ?? true ? null : description?.trim(),
         quantity: 1,
+        budgetAmount: budgetAmount,
         linkedProduct:
-            matchingProduct.name.toLowerCase().contains(value.toLowerCase())
+            matchingProduct.name.toLowerCase().contains(name.toLowerCase())
                 ? matchingProduct
                 : null,
       );
 
       provider.addItemToList(widget.listId, item);
-      _itemController.clear();
     }
   }
 
@@ -756,6 +754,350 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
             child: Text(
               'Delete',
               style: TextStyle(color: AppColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddItemDialog(ShoppingList list, Color color) {
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final budgetController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+        ),
+        title: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              ),
+              child: Icon(
+                Iconsax.add_circle,
+                color: color,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: AppSizes.sm),
+            Text(
+              'Add Item',
+              style: AppTextStyles.h5.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Item Name',
+                style: AppTextStyles.labelMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: AppSizes.xs),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  hintText: 'e.g., Fresh Milk, Bananas, Bread...',
+                  hintStyle: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide(color: AppColors.grey300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide(color: color, width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.all(AppSizes.md),
+                ),
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: AppSizes.md),
+              Text(
+                'Budget Amount (Optional)',
+                style: AppTextStyles.labelMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: AppSizes.xs),
+              TextField(
+                controller: budgetController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'e.g., 5000',
+                  hintStyle: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                  prefixText: 'UGX ',
+                  prefixStyle: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide(color: AppColors.grey300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide(color: color, width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.all(AppSizes.md),
+                ),
+              ),
+              const SizedBox(height: AppSizes.xs),
+              Row(
+                children: [
+                  Icon(
+                    Iconsax.info_circle,
+                    size: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: AppSizes.xs),
+                  Expanded(
+                    child: Text(
+                      'Specify a budget amount instead of exact quantity',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSizes.md),
+              Text(
+                'Special Instructions (Optional)',
+                style: AppTextStyles.labelMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: AppSizes.xs),
+              TextField(
+                controller: descriptionController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'e.g., "Ripe, ready to eat", "Full cream", "Sliced"...',
+                  hintStyle: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide(color: AppColors.grey300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide(color: color, width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.all(AppSizes.md),
+                ),
+                textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: AppSizes.sm),
+              Row(
+                children: [
+                  Icon(
+                    Iconsax.info_circle,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: AppSizes.xs),
+                  Expanded(
+                    child: Text(
+                      'Help your shopper pick exactly what you want',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: AppTextStyles.labelMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              final description = descriptionController.text.trim();
+              final budgetText = budgetController.text.trim();
+              final budgetAmount = budgetText.isEmpty ? null : double.tryParse(budgetText);
+
+              if (name.isNotEmpty) {
+                _addItem(
+                  name,
+                  description.isEmpty ? null : description,
+                  budgetAmount,
+                  context.read<ShoppingListProvider>(),
+                );
+                Navigator.pop(context);
+
+                // Show success message
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Added "$name" to list'),
+                    backgroundColor: AppColors.success,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    ),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSizes.md,
+                vertical: AppSizes.xs,
+              ),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              ),
+              child: Text(
+                'Add to List',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditDescriptionDialog(ShoppingListItem item, ShoppingList list) {
+    final descriptionController = TextEditingController(text: item.description ?? '');
+    final color = _parseColor(list.color);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+        ),
+        title: Text(
+          'Add Notes',
+          style: AppTextStyles.h5.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              item.name,
+              style: AppTextStyles.labelMedium.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: AppSizes.md),
+            TextField(
+              controller: descriptionController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'e.g., "Ripe bananas", "Low fat", "2cm thick slices"...',
+                hintStyle: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textTertiary,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  borderSide: BorderSide(color: AppColors.grey300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  borderSide: BorderSide(color: color, width: 2),
+                ),
+                contentPadding: const EdgeInsets.all(AppSizes.md),
+              ),
+              autofocus: true,
+            ),
+            const SizedBox(height: AppSizes.sm),
+            Text(
+              'Help your shopper get exactly what you want',
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textSecondary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: AppTextStyles.labelMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          if (item.description != null && item.description!.isNotEmpty)
+            TextButton(
+              onPressed: () {
+                context.read<ShoppingListProvider>().updateItemDescription(
+                      list.id,
+                      item.id,
+                      null,
+                    );
+                Navigator.pop(context);
+              },
+              child: Text(
+                'Remove',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.error,
+                ),
+              ),
+            ),
+          TextButton(
+            onPressed: () {
+              final description = descriptionController.text.trim();
+              context.read<ShoppingListProvider>().updateItemDescription(
+                    list.id,
+                    item.id,
+                    description.isEmpty ? null : description,
+                  );
+              Navigator.pop(context);
+            },
+            child: Text(
+              'Save',
+              style: AppTextStyles.labelMedium.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

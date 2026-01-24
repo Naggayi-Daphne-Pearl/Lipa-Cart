@@ -135,6 +135,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
         '/shopping-list-detail',
         arguments: list.id,
       ),
+      onLongPress: () => _showListOptions(list),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSizes.md),
         decoration: BoxDecoration(
@@ -195,10 +196,21 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                       ],
                     ),
                   ),
-                  Icon(
-                    Iconsax.arrow_right_3,
-                    color: color,
-                    size: 20,
+                  // Options menu button
+                  GestureDetector(
+                    onTap: () => _showListOptions(list),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.grey100,
+                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                      ),
+                      child: Icon(
+                        Iconsax.more,
+                        color: AppColors.textSecondary,
+                        size: 18,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -571,6 +583,170 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showListOptions(ShoppingList list) {
+    final color = _parseColor(list.color);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppSizes.radiusXl),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: AppSizes.md),
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.grey300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSizes.lg),
+            // List info
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    ),
+                    child: Center(
+                      child: Text(
+                        list.emoji ?? '🛒',
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSizes.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          list.name,
+                          style: AppTextStyles.h5.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          '${list.totalItems} items',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSizes.lg),
+            // Options
+            ListTile(
+              leading: Icon(Iconsax.edit, color: color),
+              title: const Text('View Details'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(
+                  context,
+                  '/shopping-list-detail',
+                  arguments: list.id,
+                );
+              },
+            ),
+            if (list.purchasableItems.isNotEmpty)
+              ListTile(
+                leading: const Icon(Iconsax.bag_2, color: AppColors.primary),
+                title: const Text('Add All to Cart'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _addListToCart(list);
+                },
+              ),
+            ListTile(
+              leading: const Icon(Iconsax.trash, color: AppColors.error),
+              title: const Text(
+                'Delete List',
+                style: TextStyle(color: AppColors.error),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _confirmDeleteList(list);
+              },
+            ),
+            const SizedBox(height: AppSizes.lg),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteList(ShoppingList list) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+        ),
+        title: const Text('Delete List?'),
+        content: Text(
+          'Are you sure you want to delete "${list.name}"? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: AppTextStyles.labelMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<ShoppingListProvider>().deleteList(list.id);
+              Navigator.pop(context);
+
+              // Show success message
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Deleted "${list.name}"'),
+                  backgroundColor: AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  ),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                color: AppColors.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

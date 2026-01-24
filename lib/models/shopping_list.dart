@@ -3,16 +3,20 @@ import 'product.dart';
 class ShoppingListItem {
   final String id;
   final String name;
+  final String? description; // Personal notes/preferences for the item
   final int quantity;
   final String? unit;
+  final double? budgetAmount; // Budget in UGX - "Give me 5000 worth"
   final Product? linkedProduct; // Optional link to actual product
   final bool isChecked;
 
   ShoppingListItem({
     required this.id,
     required this.name,
+    this.description,
     this.quantity = 1,
     this.unit,
+    this.budgetAmount,
     this.linkedProduct,
     this.isChecked = false,
   });
@@ -20,16 +24,20 @@ class ShoppingListItem {
   ShoppingListItem copyWith({
     String? id,
     String? name,
+    String? description,
     int? quantity,
     String? unit,
+    double? budgetAmount,
     Product? linkedProduct,
     bool? isChecked,
   }) {
     return ShoppingListItem(
       id: id ?? this.id,
       name: name ?? this.name,
+      description: description ?? this.description,
       quantity: quantity ?? this.quantity,
       unit: unit ?? this.unit,
+      budgetAmount: budgetAmount ?? this.budgetAmount,
       linkedProduct: linkedProduct ?? this.linkedProduct,
       isChecked: isChecked ?? this.isChecked,
     );
@@ -39,8 +47,10 @@ class ShoppingListItem {
     return {
       'id': id,
       'name': name,
+      'description': description,
       'quantity': quantity,
       'unit': unit,
+      'budgetAmount': budgetAmount,
       'linkedProductId': linkedProduct?.id,
       'isChecked': isChecked,
     };
