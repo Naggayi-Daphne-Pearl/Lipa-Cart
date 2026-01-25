@@ -88,258 +88,486 @@ class _HomeScreenState extends State<HomeScreen> {
                     bottom: false,
                     child: Column(
                       children: [
-                        // Premium Header Bar with Logo, Location, and Notifications
+                        // Enhanced Header Bar - Desktop optimized
                         Padding(
                           padding: EdgeInsets.fromLTRB(
                             context.horizontalPadding,
-                            AppSizes.sm,
+                            context.responsive<double>(
+                              mobile: AppSizes.sm,
+                              tablet: AppSizes.md,
+                              desktop: AppSizes.lg,
+                            ),
                             context.horizontalPadding,
-                            AppSizes.xs,
+                            context.responsive<double>(
+                              mobile: AppSizes.xs,
+                              tablet: AppSizes.sm,
+                              desktop: AppSizes.md,
+                            ),
                           ),
                           child: Row(
                             children: [
                               // App Logo
                               SvgPicture.asset(
                                 'assets/images/logos/logo-on-white.svg',
-                                height: 20,
+                                height: context.responsive<double>(
+                                  mobile: 20.0,
+                                  tablet: 24.0,
+                                  desktop: 28.0,
+                                ),
                                 fit: BoxFit.contain,
                               ),
-                              const SizedBox(width: AppSizes.lg),
-                              // Location/Delivery Address
+                              SizedBox(width: context.responsive<double>(
+                                mobile: AppSizes.lg,
+                                tablet: AppSizes.xl,
+                                desktop: 32.0,
+                              )),
+
+                              // Location/Delivery Address - Enhanced for desktop
                               if (context.isTablet || context.isDesktop)
                                 Expanded(
+                                  flex: context.isDesktop ? 2 : 3,
                                   child: GestureDetector(
                                     onTap: () {
-                                      // TODO: Open location selector
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Location selector coming soon'),
-                                          duration: Duration(seconds: 1),
+                                        SnackBar(
+                                          content: const Text('Location selector coming soon'),
+                                          duration: const Duration(seconds: 1),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                                          ),
                                         ),
                                       );
                                     },
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Iconsax.location5,
-                                          size: 18,
-                                          color: AppColors.textSecondary,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface.withValues(alpha: 0.8),
+                                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                                        border: Border.all(
+                                          color: AppColors.grey200,
+                                          width: 1,
                                         ),
-                                        const SizedBox(width: 8),
-                                        Flexible(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                'Deliver to',
-                                                style: AppTextStyles.caption.copyWith(
-                                                  color: AppColors.textSecondary,
-                                                  fontSize: 11,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.primary.withValues(alpha: 0.1),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              Iconsax.location5,
+                                              size: 16,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Flexible(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  'Deliver to',
+                                                  style: AppTextStyles.caption.copyWith(
+                                                    color: AppColors.textSecondary,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
                                                 ),
-                                              ),
-                                              Text(
-                                                'Kampala, Uganda',
-                                                style: AppTextStyles.labelMedium.copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                  color: AppColors.textPrimary,
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  'Kampala, Uganda',
+                                                  style: AppTextStyles.labelMedium.copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                    color: AppColors.textPrimary,
+                                                    fontSize: 13,
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
+                                                  maxLines: 1,
                                                 ),
-                                                overflow: TextOverflow.ellipsis,
-                                                maxLines: 1,
-                                              ),
-                                            ],
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Icon(
+                                            Icons.keyboard_arrow_down_rounded,
+                                            size: 18,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                              if (context.isDesktop) const Spacer(),
+
+                              // User greeting for desktop
+                              if (context.isDesktop)
+                                Row(
+                                  children: [
+                                    Text(
+                                      _getGreeting(
+                                        authProvider.user?.name?.split(' ').first ?? 'there',
+                                      ),
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSizes.md),
+                                  ],
+                                ),
+
+                              // Quick actions for desktop
+                              if (context.isDesktop)
+                                Row(
+                                  children: [
+                                    // Cart quick access
+                                    GestureDetector(
+                                      onTap: () => Navigator.pushNamed(context, '/cart'),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.surface,
+                                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                                          border: Border.all(
+                                            color: AppColors.grey200,
+                                            width: 1,
                                           ),
                                         ),
-                                        const SizedBox(width: 4),
-                                        Icon(
-                                          Icons.keyboard_arrow_down_rounded,
-                                          size: 16,
-                                          color: AppColors.textSecondary,
+                                        child: Row(
+                                          children: [
+                                            Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                Icon(
+                                                  Iconsax.bag_2,
+                                                  color: AppColors.primary,
+                                                  size: 20,
+                                                ),
+                                                if (cartProvider.itemCount > 0)
+                                                  Positioned(
+                                                    right: -6,
+                                                    top: -6,
+                                                    child: Container(
+                                                      padding: const EdgeInsets.all(4),
+                                                      decoration: const BoxDecoration(
+                                                        color: AppColors.accent,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                      constraints: const BoxConstraints(
+                                                        minWidth: 16,
+                                                        minHeight: 16,
+                                                      ),
+                                                      child: Text(
+                                                        cartProvider.itemCount > 9
+                                                            ? '9+'
+                                                            : cartProvider.itemCount.toString(),
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 9,
+                                                          fontWeight: FontWeight.w600,
+                                                        ),
+                                                        textAlign: TextAlign.center,
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'Cart',
+                                              style: AppTextStyles.labelMedium.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.textPrimary,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSizes.sm),
+                                  ],
+                                ),
+
+                              // User avatar and notifications
+                              Row(
+                                children: [
+                                  if (!context.isMobile) ...[
+                                    // User profile button for desktop
+                                    GestureDetector(
+                                      onTap: () => Navigator.pushNamed(context, '/profile'),
+                                      child: Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.surface,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: AppColors.primary.withValues(alpha: 0.3),
+                                            width: 2,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.05),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: authProvider.user?.profileImage != null
+                                            ? ClipOval(
+                                                child: Image.network(
+                                                  authProvider.user!.profileImage!,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              )
+                                            : Center(
+                                                child: Text(
+                                                  authProvider.user?.name
+                                                          ?.substring(0, 1)
+                                                          .toUpperCase() ??
+                                                      'G',
+                                                  style: AppTextStyles.labelMedium.copyWith(
+                                                    color: AppColors.primary,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSizes.sm),
+                                  ],
+
+                                  // Notifications Bell
+                                  Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surface,
+                                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.06),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Stack(
+                                      children: [
+                                        const Center(
+                                          child: Icon(
+                                            Iconsax.notification,
+                                            color: AppColors.textPrimary,
+                                            size: 22,
+                                          ),
+                                        ),
+                                        // Notification badge
+                                        Positioned(
+                                          right: 10,
+                                          top: 10,
+                                          child: Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: const BoxDecoration(
+                                              color: AppColors.error,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                ),
-                              // Notifications Bell
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: AppColors.surface,
-                                  borderRadius: BorderRadius.circular(
-                                    AppSizes.radiusMd,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.06,
-                                      ),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Stack(
-                                  children: [
-                                    const Center(
-                                      child: Icon(
-                                        Iconsax.notification,
-                                        color: AppColors.textPrimary,
-                                        size: 22,
-                                      ),
-                                    ),
-                                    // Notification badge
-                                    Positioned(
-                                      right: 10,
-                                      top: 10,
-                                      child: Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.error,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                ],
                               ),
                             ],
                           ),
                         ),
-                        // Greeting Section (Compact)
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            context.horizontalPadding,
-                            AppSizes.xs,
-                            context.horizontalPadding,
-                            AppSizes.sm,
-                          ),
-                          child: Row(
-                            children: [
-                              // User avatar (smaller)
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: AppColors.surface,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppColors.primary.withValues(
-                                      alpha: 0.2,
+
+                        // Mobile greeting section
+                        if (context.isMobile)
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              context.horizontalPadding,
+                              AppSizes.xs,
+                              context.horizontalPadding,
+                              AppSizes.sm,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.primary.withValues(alpha: 0.2),
+                                      width: 2,
                                     ),
-                                    width: 2,
+                                  ),
+                                  child: authProvider.user?.profileImage != null
+                                      ? ClipOval(
+                                          child: Image.network(
+                                            authProvider.user!.profileImage!,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        )
+                                      : Center(
+                                          child: Text(
+                                            authProvider.user?.name
+                                                    ?.substring(0, 1)
+                                                    .toUpperCase() ??
+                                                'G',
+                                            style: AppTextStyles.labelMedium.copyWith(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                ),
+                                const SizedBox(width: AppSizes.sm),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _getGreeting(
+                                          authProvider.user?.name?.split(' ').first ?? 'there',
+                                        ),
+                                        style: AppTextStyles.h5.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      ),
+                                      Text(
+                                        'What would you buy today?',
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                child: authProvider.user?.profileImage != null
-                                    ? ClipOval(
-                                        child: Image.network(
-                                          authProvider.user!.profileImage!,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      )
-                                    : Center(
-                                        child: Text(
-                                          authProvider.user?.name
-                                                  ?.substring(0, 1)
-                                                  .toUpperCase() ??
-                                              'G',
-                                          style: AppTextStyles.labelMedium
-                                              .copyWith(
-                                                color: AppColors.primary,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                        ),
-                                      ),
-                              ),
-                              const SizedBox(width: AppSizes.sm),
-                              // Greeting text (compact)
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _getGreeting(
-                                        authProvider.user?.name
-                                                ?.split(' ')
-                                                .first ??
-                                            'there',
-                                      ),
-                                      style: AppTextStyles.h5.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                    Text(
-                                      'What would you buy today?',
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        // Search Bar
+
+                        // Enhanced Search Bar
                         Padding(
                           padding: EdgeInsets.fromLTRB(
                             context.horizontalPadding,
-                            AppSizes.md,
+                            context.responsive<double>(
+                              mobile: AppSizes.md,
+                              tablet: AppSizes.sm,
+                              desktop: 0.0,
+                            ),
                             context.horizontalPadding,
-                            AppSizes.sm,
+                            context.responsive<double>(
+                              mobile: AppSizes.sm,
+                              tablet: AppSizes.md,
+                              desktop: AppSizes.lg,
+                            ),
                           ),
                           child: GestureDetector(
                             onTap: () {
                               Navigator.pushNamed(context, '/search');
                             },
                             child: Container(
-                              height: 52,
+                              height: context.responsive<double>(
+                                mobile: 52.0,
+                                tablet: 56.0,
+                                desktop: 60.0,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(
-                                  AppSizes.radiusFull,
-                                ),
+                                borderRadius: BorderRadius.circular(AppSizes.radiusFull),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.06),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 2),
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 4),
                                   ),
                                 ],
                               ),
                               child: Row(
                                 children: [
-                                  const SizedBox(width: AppSizes.md),
+                                  SizedBox(width: context.responsive<double>(
+                                    mobile: AppSizes.md,
+                                    tablet: AppSizes.lg,
+                                    desktop: 20.0,
+                                  )),
                                   Icon(
                                     Iconsax.search_normal,
                                     color: AppColors.textSecondary,
-                                    size: 22,
+                                    size: context.responsive<double>(
+                                      mobile: 22.0,
+                                      tablet: 24.0,
+                                      desktop: 26.0,
+                                    ),
                                   ),
-                                  const SizedBox(width: AppSizes.sm),
+                                  const SizedBox(width: AppSizes.md),
                                   Expanded(
                                     child: Text(
                                       'Search products, recipes...',
                                       style: AppTextStyles.bodyMedium.copyWith(
                                         color: AppColors.textSecondary,
+                                        fontSize: context.responsive<double>(
+                                          mobile: 14.0,
+                                          tablet: 15.0,
+                                          desktop: 16.0,
+                                        ),
                                       ),
                                     ),
                                   ),
                                   Container(
                                     margin: const EdgeInsets.only(right: 6),
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary,
-                                      borderRadius: BorderRadius.circular(
-                                        AppSizes.radiusFull,
-                                      ),
+                                    width: context.responsive<double>(
+                                      mobile: 40.0,
+                                      tablet: 44.0,
+                                      desktop: 48.0,
                                     ),
-                                    child: const Icon(
+                                    height: context.responsive<double>(
+                                      mobile: 40.0,
+                                      tablet: 44.0,
+                                      desktop: 48.0,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFF1B7F4E),
+                                          Color(0xFF15874B),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.primary.withValues(alpha: 0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
                                       Iconsax.setting_4,
                                       color: Colors.white,
-                                      size: 20,
+                                      size: context.responsive<double>(
+                                        mobile: 20.0,
+                                        tablet: 22.0,
+                                        desktop: 24.0,
+                                      ),
                                     ),
                                   ),
                                 ],

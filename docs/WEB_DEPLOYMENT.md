@@ -83,17 +83,144 @@ netlify deploy --dir=build/web --prod
 
 ### 3. Vercel
 
-**Install Vercel CLI**:
+ #### Option A: Manual Deployment (Quickest)
+
+**Step 1: Build your Flutter app locally**:
+```bash
+flutter build web --release --web-renderer canvaskit
+```
+
+**Step 2: Install Vercel CLI**:
 ```bash
 npm install -g vercel
 ```
 
-**Deploy**:
+**Step 3: Deploy the build folder**:
 ```bash
-flutter build web --release
 cd build/web
 vercel --prod
 ```
+
+Follow the prompts:
+- Set up and deploy? **Y**
+- Which scope? Select your account
+- Link to existing project? **N** (first time) or **Y** (if exists)
+- What's your project name? **lipa-cart** (or your choice)
+- In which directory is your code located? **./** (we're already in build/web)
+- Want to override settings? **N**
+
+#### Option B: GitHub Actions (Automated - Recommended)
+
+This automatically builds and deploys when you push to the main branch.
+
+**Step 1: Get Vercel credentials**:
+```bash
+# Install Vercel CLI if not installed
+npm install -g vercel
+
+# Login to Vercel
+vercel login
+
+# Link your project (run this in your project root, not build/web)
+vercel link
+```
+
+This creates `.vercel/project.json` with your project details.
+
+**Step 2: Get your Vercel tokens**:
+```bash
+# Get your Vercel token from: https://vercel.com/account/tokens
+# Create a new token with name "GitHub Actions"
+```
+
+**Step 3: Add GitHub Secrets**:
+
+Go to your GitHub repository → Settings → Secrets and variables → Actions → New repository secret
+
+Add these secrets:
+- `VERCEL_TOKEN`: Your Vercel token from step 2
+- `VERCEL_ORG_ID`: Found in `.vercel/project.json` (orgId field)
+- `VERCEL_PROJECT_ID`: Found in `.vercel/project.json` (projectId field)
+
+**Step 4: Push to GitHub**:
+```bash
+git add .
+git commit -m "Add Vercel deployment"
+git push origin main
+```
+
+The GitHub Action will automatically build and deploy! ✨
+
+#### Option C: Vercel Git Integration (Easiest - No CLI needed)
+
+**Important**: Since Vercel doesn't natively support Flutter, you need to **push your built files**:
+
+1. **Build locally**:
+```bash
+flutter build web --release --web-renderer canvaskit
+```
+
+2. **Create a new branch with just the build**:
+```bash
+# Create a new orphan branch
+git checkout --orphan gh-pages
+
+# Remove all files
+git rm -rf .
+
+# Copy build files
+cp -r build/web/* .
+
+# Add vercel.json (it's already in your repo root)
+git add .
+git commit -m "Deploy to Vercel"
+git push origin gh-pages
+```
+
+3. **Connect to Vercel**:
+   - Go to [vercel.com](https://vercel.com)
+   - Click "Add New Project"
+   - Import your GitHub repository
+   - **Important**: Set branch to `gh-pages`
+   - Root Directory: `./`
+   - Build Command: Leave empty (files are pre-built)
+   - Output Directory: `./`
+   - Click "Deploy"
+
+#### Troubleshooting Vercel 404 Errors
+
+If you get 404 errors, ensure:
+
+1. **vercel.json exists** in your project root (✅ Already created)
+
+2. **Base href is correct** in web/index.html:
+   - For root domain: `<base href="/">`
+   - For subdomain: `<base href="/subdirectory/">`
+
+3. **Rebuild with correct base-href**:
+```bash
+flutter build web --release --base-href /
+```
+
+4. **Check your build output**:
+```bash
+ls -la build/web/
+# Should see: index.html, main.dart.js, flutter.js, assets/, etc.
+```
+
+5. **Vercel configuration** - The `vercel.json` file handles routing:
+```json
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+```
+
+This ensures all routes redirect to index.html for client-side routing.
 
 ### 4. GitHub Pages
 
