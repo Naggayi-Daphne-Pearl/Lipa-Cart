@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -49,12 +50,19 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     final authProvider = context.read<AuthProvider>();
-    if (authProvider.isFirstLaunch) {
-      Navigator.pushReplacementNamed(context, '/onboarding');
-    } else if (authProvider.isAuthenticated) {
+
+    // Web flow - always show main page first (guest browsing allowed)
+    if (kIsWeb) {
       Navigator.pushReplacementNamed(context, '/main');
     } else {
-      Navigator.pushReplacementNamed(context, '/login');
+      // Mobile flow - show onboarding on first launch
+      if (authProvider.isFirstLaunch) {
+        Navigator.pushReplacementNamed(context, '/onboarding');
+      } else if (authProvider.isAuthenticated) {
+        Navigator.pushReplacementNamed(context, '/main');
+      } else {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
     }
   }
 

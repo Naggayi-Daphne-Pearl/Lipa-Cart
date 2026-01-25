@@ -4,9 +4,9 @@
   "description": "Fresh groceries delivered to your doorstep",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#FF8C00",
-  "theme_color": "#FF8C00",
-  "orientation": "portrait-primary",
+  "background_color": "#1B7F4E",
+  "theme_color": "#1B7F4E",
+  "orientation": "any",
   "prefer_related_applications": false,
   "icons": [
     {
