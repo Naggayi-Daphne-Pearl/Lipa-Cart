@@ -18,9 +18,7 @@ class CategoryCard extends StatelessWidget {
 
   Color get categoryColor {
     try {
-      return Color(
-        int.parse(category.color.replaceFirst('#', '0xFF')),
-      );
+      return Color(int.parse(category.color.replaceFirst('#', '0xFF')));
     } catch (_) {
       return AppColors.primary;
     }
@@ -29,7 +27,8 @@ class CategoryCard extends StatelessWidget {
   // Get a softer background color based on category
   Color get categoryBgColor {
     final baseColor = categoryColor;
-    return Color.lerp(baseColor, AppColors.white, 0.85) ?? baseColor.withValues(alpha: 0.15);
+    return Color.lerp(baseColor, AppColors.white, 0.85) ??
+        baseColor.withValues(alpha: 0.15);
   }
 
   @override
@@ -44,9 +43,9 @@ class CategoryCard extends StatelessWidget {
     return Builder(
       builder: (context) {
         final cardSize = context.responsive<double>(
-          mobile: 64.0,
-          tablet: 72.0,
-          desktop: 80.0,
+          mobile: 52.0,
+          tablet: 60.0,
+          desktop: 68.0,
         );
 
         return GestureDetector(
@@ -85,14 +84,14 @@ class CategoryCard extends StatelessWidget {
                   ),
                   child: ClipOval(
                     child: Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(6),
                       child: CachedNetworkImage(
                         imageUrl: category.image,
-                        fit: BoxFit.contain,
+                        fit: BoxFit.cover,
                         placeholder: (context, url) => Center(
                           child: SizedBox(
-                            width: 24,
-                            height: 24,
+                            width: 20,
+                            height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: categoryColor.withValues(alpha: 0.5),
@@ -102,7 +101,7 @@ class CategoryCard extends StatelessWidget {
                         errorWidget: (context, url, error) => Icon(
                           Icons.category_outlined,
                           color: categoryColor,
-                          size: 28,
+                          size: 24,
                         ),
                       ),
                     ),
@@ -225,10 +224,7 @@ class CategoryCard extends StatelessWidget {
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                               shadows: [
-                                Shadow(
-                                  color: Colors.black26,
-                                  blurRadius: 4,
-                                ),
+                                Shadow(color: Colors.black26, blurRadius: 4),
                               ],
                             ),
                             maxLines: 1,

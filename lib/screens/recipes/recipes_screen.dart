@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
+import '../../core/utils/responsive.dart';
 import '../../models/recipe.dart';
 import '../../providers/recipe_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
@@ -58,172 +59,234 @@ class _RecipesScreenState extends State<RecipesScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      bottomNavigationBar: const AppBottomNav(currentIndex: 0),
+      bottomNavigationBar: context.isMobile ? const AppBottomNav(currentIndex: 0) : null,
       body: Container(
         decoration: const BoxDecoration(
           gradient: AppColors.elegantBgGradient,
         ),
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(AppSizes.lg),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                          boxShadow: AppColors.shadowSm,
+        child: ResponsiveContainer(
+          child: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Padding(
+                  padding: EdgeInsets.all(context.responsive<double>(
+                    mobile: AppSizes.lg,
+                    tablet: AppSizes.xl,
+                    desktop: 24.0,
+                  )),
+                  child: Row(
+                    children: [
+                      if (context.isMobile)
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              boxShadow: AppColors.shadowSm,
+                            ),
+                            child: const Icon(
+                              Iconsax.arrow_left,
+                              color: AppColors.textPrimary,
+                              size: 20,
+                            ),
+                          ),
                         ),
-                        child: const Icon(
-                          Iconsax.arrow_left,
-                          color: AppColors.textPrimary,
+                      if (context.isMobile) const SizedBox(width: AppSizes.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Recipes',
+                              style: AppTextStyles.h4.copyWith(
+                                fontWeight: FontWeight.w700,
+                                fontSize: context.responsive<double>(
+                                  mobile: 24.0,
+                                  tablet: 28.0,
+                                  desktop: 32.0,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              'Find inspiration & buy ingredients',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                                fontSize: context.responsive<double>(
+                                  mobile: 13.0,
+                                  tablet: 14.0,
+                                  desktop: 15.0,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Search bar
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                  child: Container(
+                    height: context.responsive<double>(
+                      mobile: 52.0,
+                      tablet: 56.0,
+                      desktop: 60.0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                      boxShadow: AppColors.shadowSm,
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) => setState(() => _searchQuery = value),
+                      decoration: InputDecoration(
+                        hintText: 'Search recipes or ingredients...',
+                        hintStyle: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textTertiary,
+                        ),
+                        prefixIcon: const Icon(
+                          Iconsax.search_normal,
+                          color: AppColors.textTertiary,
                           size: 20,
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSizes.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Recipes',
-                            style: AppTextStyles.h4.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          Text(
-                            'Find inspiration & buy ingredients',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Search bar
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
-                child: Container(
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                    boxShadow: AppColors.shadowSm,
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                    decoration: InputDecoration(
-                      hintText: 'Search recipes or ingredients...',
-                      hintStyle: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textTertiary,
-                      ),
-                      prefixIcon: const Icon(
-                        Iconsax.search_normal,
-                        color: AppColors.textTertiary,
-                        size: 20,
-                      ),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(
-                                Iconsax.close_circle,
-                                color: AppColors.textTertiary,
-                                size: 20,
-                              ),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppSizes.md,
-                        vertical: AppSizes.md,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSizes.md),
-
-              // Tag filters
-              SizedBox(
-                height: 44,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
-                  children: [
-                    _buildTagChip(
-                      label: 'All',
-                      icon: Iconsax.element_4,
-                      isSelected: _selectedTag == null,
-                      onTap: () => setState(() => _selectedTag = null),
-                    ),
-                    ...provider.allTags.take(8).map((tag) => Padding(
-                          padding: const EdgeInsets.only(left: AppSizes.sm),
-                          child: _buildTagChip(
-                            label: tag,
-                            icon: _getTagIcon(tag),
-                            isSelected: _selectedTag == tag,
-                            onTap: () => setState(() => _selectedTag = tag),
-                          ),
-                        )),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSizes.md),
-
-              // Results count
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
-                child: Text(
-                  '${filteredRecipes.length} recipes found',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSizes.sm),
-
-              // Recipes list
-              Expanded(
-                child: provider.isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.accent,
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(
+                                  Iconsax.close_circle,
+                                  color: AppColors.textTertiary,
+                                  size: 20,
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSizes.md,
+                          vertical: AppSizes.md,
                         ),
-                      )
-                    : filteredRecipes.isEmpty
-                        ? _buildEmptyState()
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSizes.lg,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: context.responsive<double>(
+                  mobile: AppSizes.md,
+                  tablet: AppSizes.lg,
+                  desktop: AppSizes.lg,
+                )),
+
+                // Tag filters
+                SizedBox(
+                  height: 44,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                    children: [
+                      _buildTagChip(
+                        label: 'All',
+                        icon: Iconsax.element_4,
+                        isSelected: _selectedTag == null,
+                        onTap: () => setState(() => _selectedTag = null),
+                      ),
+                      ...provider.allTags.take(8).map((tag) => Padding(
+                            padding: const EdgeInsets.only(left: AppSizes.sm),
+                            child: _buildTagChip(
+                              label: tag,
+                              icon: _getTagIcon(tag),
+                              isSelected: _selectedTag == tag,
+                              onTap: () => setState(() => _selectedTag = tag),
                             ),
-                            itemCount: filteredRecipes.length,
-                            itemBuilder: (context, index) {
-                              final recipe = filteredRecipes[index];
-                              return _buildRecipeCard(recipe);
-                            },
+                          )),
+                    ],
+                  ),
+                ),
+                SizedBox(height: context.responsive<double>(
+                  mobile: AppSizes.md,
+                  tablet: AppSizes.lg,
+                  desktop: AppSizes.lg,
+                )),
+
+                // Results count
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                  child: Text(
+                    '${filteredRecipes.length} ${filteredRecipes.length == 1 ? 'recipe' : 'recipes'} found',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.sm),
+
+                // Recipes list/grid
+                Expanded(
+                  child: provider.isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.accent,
                           ),
-              ),
-            ],
+                        )
+                      : filteredRecipes.isEmpty
+                          ? _buildEmptyState()
+                          : _buildRecipesGrid(filteredRecipes),
+                ),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildRecipesGrid(List<Recipe> recipes) {
+    final columns = context.responsive<int>(
+      mobile: 1,
+      tablet: 2,
+      desktop: 3,
+      largeDesktop: 4,
+    );
+
+    if (context.isMobile) {
+      return ListView.builder(
+        padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+        itemCount: recipes.length,
+        itemBuilder: (context, index) => _buildRecipeCard(recipes[index]),
+      );
+    }
+
+    return GridView.builder(
+      padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        crossAxisSpacing: context.responsive<double>(
+          mobile: AppSizes.md,
+          tablet: AppSizes.lg,
+          desktop: 24.0,
+        ),
+        mainAxisSpacing: context.responsive<double>(
+          mobile: AppSizes.md,
+          tablet: AppSizes.lg,
+          desktop: 24.0,
+        ),
+        childAspectRatio: context.responsive<double>(
+          mobile: 1.0,
+          tablet: 0.75,
+          desktop: 0.7,
+          largeDesktop: 0.72,
+        ),
+      ),
+      itemCount: recipes.length,
+      itemBuilder: (context, index) => _buildRecipeCard(recipes[index]),
     );
   }
 
@@ -273,6 +336,13 @@ class _RecipesScreenState extends State<RecipesScreen> {
   }
 
   Widget _buildRecipeCard(Recipe recipe) {
+    final imageHeight = context.responsive<double>(
+      mobile: 180.0,
+      tablet: 200.0,
+      desktop: 220.0,
+      largeDesktop: 240.0,
+    );
+
     return GestureDetector(
       onTap: () => Navigator.pushNamed(
         context,
@@ -280,11 +350,27 @@ class _RecipesScreenState extends State<RecipesScreen> {
         arguments: recipe.id,
       ),
       child: Container(
-        margin: const EdgeInsets.only(bottom: AppSizes.md),
+        margin: EdgeInsets.only(
+          bottom: context.isMobile ? AppSizes.md : 0,
+        ),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppSizes.radiusXl),
-          boxShadow: AppColors.shadowSm,
+          borderRadius: BorderRadius.circular(context.responsive<double>(
+            mobile: AppSizes.radiusXl,
+            tablet: 20.0,
+            desktop: 24.0,
+          )),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: context.responsive<double>(
+                mobile: 8.0,
+                tablet: 12.0,
+                desktop: 16.0,
+              ),
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,16 +379,20 @@ class _RecipesScreenState extends State<RecipesScreen> {
             Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(AppSizes.radiusXl),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(context.responsive<double>(
+                      mobile: AppSizes.radiusXl,
+                      tablet: 20.0,
+                      desktop: 24.0,
+                    )),
                   ),
                   child: CachedNetworkImage(
                     imageUrl: recipe.image,
-                    height: 180,
+                    height: imageHeight,
                     width: double.infinity,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(
-                      height: 180,
+                      height: imageHeight,
                       color: AppColors.grey100,
                       child: const Center(
                         child: CircularProgressIndicator(
@@ -312,7 +402,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
                       ),
                     ),
                     errorWidget: (context, url, error) => Container(
-                      height: 180,
+                      height: imageHeight,
                       color: AppColors.grey100,
                       child: const Icon(
                         Iconsax.image,
@@ -405,7 +495,11 @@ class _RecipesScreenState extends State<RecipesScreen> {
             ),
             // Recipe info
             Padding(
-              padding: const EdgeInsets.all(AppSizes.md),
+              padding: EdgeInsets.all(context.responsive<double>(
+                mobile: AppSizes.md,
+                tablet: AppSizes.lg,
+                desktop: 20.0,
+              )),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -533,15 +627,27 @@ class _RecipesScreenState extends State<RecipesScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 100,
-              height: 100,
+              width: context.responsive<double>(
+                mobile: 100.0,
+                tablet: 120.0,
+                desktop: 140.0,
+              ),
+              height: context.responsive<double>(
+                mobile: 100.0,
+                tablet: 120.0,
+                desktop: 140.0,
+              ),
               decoration: BoxDecoration(
                 color: AppColors.accentSoft,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Iconsax.book,
-                size: 48,
+                size: context.responsive<double>(
+                  mobile: 48.0,
+                  tablet: 56.0,
+                  desktop: 64.0,
+                ),
                 color: AppColors.accent,
               ),
             ),
@@ -550,6 +656,11 @@ class _RecipesScreenState extends State<RecipesScreen> {
               'No recipes found',
               style: AppTextStyles.h5.copyWith(
                 fontWeight: FontWeight.w600,
+                fontSize: context.responsive<double>(
+                  mobile: 18.0,
+                  tablet: 20.0,
+                  desktop: 22.0,
+                ),
               ),
             ),
             const SizedBox(height: AppSizes.sm),

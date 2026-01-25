@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
@@ -79,20 +80,28 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Logo
                 Center(
                   child: Container(
-                    width: 80,
-                    height: 80,
+                    width: 100,
+                    height: 100,
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'LC',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF1B7F4E), Color(0xFF15874B)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
                         ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: SvgPicture.asset(
+                        'assets/images/logos/logo-on-green-1.svg',
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),

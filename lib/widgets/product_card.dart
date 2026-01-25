@@ -29,41 +29,61 @@ class ProductCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(AppSizes.radiusXl),
-          boxShadow: AppColors.shadowSm,
+          border: Border.all(
+            color: AppColors.grey200.withValues(alpha: 0.5),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+              spreadRadius: 0,
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+              spreadRadius: 0,
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image section with warm cream background
+            // Image section
             Expanded(
               flex: 5,
               child: Stack(
                 children: [
                   Container(
                     width: double.infinity,
-                    margin: const EdgeInsets.all(AppSizes.sm),
                     decoration: BoxDecoration(
-                      color: AppColors.cardGreen,
-                      borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                      color: AppColors.grey50,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(AppSizes.radiusXl),
+                      ),
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(AppSizes.radiusXl),
+                      ),
                       child: CachedNetworkImage(
                         imageUrl: product.image,
-                        fit: BoxFit.contain,
+                        fit: BoxFit.cover,
                         placeholder: (context, url) => Container(
-                          color: AppColors.cardGreen,
+                          color: AppColors.grey100,
                           child: Center(
                             child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.primary.withValues(alpha: 0.5),
+                              strokeWidth: 2.5,
+                              color: AppColors.primary.withValues(alpha: 0.4),
                             ),
                           ),
                         ),
                         errorWidget: (context, url, error) => Container(
-                          color: AppColors.cardGreen,
+                          color: AppColors.grey100,
                           child: Icon(
                             Iconsax.image,
                             color: AppColors.grey400,
@@ -76,8 +96,8 @@ class ProductCard extends StatelessWidget {
                   // Discount badge - pill shape with coral color
                   if (product.hasDiscount)
                     Positioned(
-                      top: AppSizes.md,
-                      left: AppSizes.md,
+                      top: 8,
+                      left: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -86,6 +106,13 @@ class ProductCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: AppColors.accent,
                           borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.accent.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: Text(
                           '${product.discountPercentage.toInt()}%',
@@ -99,21 +126,28 @@ class ProductCard extends StatelessWidget {
                     ),
                   // Favorite heart button
                   Positioned(
-                    top: AppSizes.md,
-                    right: AppSizes.md,
+                    top: 8,
+                    right: 8,
                     child: Container(
-                      width: 28,
-                      height: 28,
+                      width: 30,
+                      height: 30,
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: Colors.white,
                         shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Icon(
                         isFavorite ? Iconsax.heart5 : Iconsax.heart,
                         color: isFavorite
                             ? AppColors.heartActive
                             : AppColors.grey400,
-                        size: 14,
+                        size: 16,
                       ),
                     ),
                   ),
@@ -124,25 +158,35 @@ class ProductCard extends StatelessWidget {
             Expanded(
               flex: 3,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSizes.md,
-                  0,
-                  AppSizes.md,
-                  AppSizes.md,
-                ),
+                padding: const EdgeInsets.all(AppSizes.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Product name
-                    Text(
-                      product.name,
-                      style: AppTextStyles.labelMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Product name
+                        Text(
+                          product.name,
+                          style: AppTextStyles.labelMedium.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                            height: 1.3,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        // Unit text
+                        Text(
+                          'per ${product.unit}',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                     // Price and add button row
                     Row(
@@ -153,30 +197,42 @@ class ProductCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             Formatters.formatCurrency(product.price),
-                            style: AppTextStyles.priceMedium.copyWith(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
+                            style: AppTextStyles.labelLarge.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
                             ),
                           ),
                         ),
-                        // Add to cart button - coral/orange color
+                        // Add to cart button
                         GestureDetector(
                           onTap: onAddToCart,
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            width: 32,
-                            height: 32,
+                            width: 36,
+                            height: 36,
                             decoration: BoxDecoration(
-                              color: isInCart
-                                  ? AppColors.primary
-                                  : AppColors.accent,
-                              borderRadius:
-                                  BorderRadius.circular(AppSizes.radiusSm),
+                              gradient: LinearGradient(
+                                colors: isInCart
+                                    ? [AppColors.success, AppColors.success.withValues(alpha: 0.8)]
+                                    : [AppColors.primary, AppColors.primary.withValues(alpha: 0.85)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (isInCart ? AppColors.success : AppColors.primary)
+                                      .withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
                             child: Icon(
-                              isInCart ? Iconsax.tick_circle5 : Iconsax.bag_2,
-                              color: AppColors.white,
-                              size: 16,
+                              isInCart ? Iconsax.tick_circle5 : Iconsax.add,
+                              color: Colors.white,
+                              size: 18,
                             ),
                           ),
                         ),

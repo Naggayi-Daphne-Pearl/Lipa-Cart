@@ -116,96 +116,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 fit: BoxFit.contain,
                               ),
-                              SizedBox(width: context.responsive<double>(
-                                mobile: AppSizes.lg,
-                                tablet: AppSizes.xl,
-                                desktop: 32.0,
-                              )),
-
-                              // Location/Delivery Address - Enhanced for desktop
-                              if (context.isTablet || context.isDesktop)
-                                Expanded(
-                                  flex: context.isDesktop ? 2 : 3,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: const Text('Location selector coming soon'),
-                                          duration: const Duration(seconds: 1),
-                                          behavior: SnackBarBehavior.floating,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surface.withValues(alpha: 0.8),
-                                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                                        border: Border.all(
-                                          color: AppColors.grey200,
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(6),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.primary.withValues(alpha: 0.1),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Icon(
-                                              Iconsax.location5,
-                                              size: 16,
-                                              color: AppColors.primary,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 10),
-                                          Flexible(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(
-                                                  'Deliver to',
-                                                  style: AppTextStyles.caption.copyWith(
-                                                    color: AppColors.textSecondary,
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  'Kampala, Uganda',
-                                                  style: AppTextStyles.labelMedium.copyWith(
-                                                    fontWeight: FontWeight.w600,
-                                                    color: AppColors.textPrimary,
-                                                    fontSize: 13,
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis,
-                                                  maxLines: 1,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Icon(
-                                            Icons.keyboard_arrow_down_rounded,
-                                            size: 18,
-                                            color: AppColors.textSecondary,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
+                              SizedBox(
+                                width: context.responsive<double>(
+                                  mobile: AppSizes.lg,
+                                  tablet: AppSizes.xl,
+                                  desktop: 32.0,
                                 ),
+                              ),
+
+                             
 
                               if (context.isDesktop) const Spacer(),
 
@@ -215,7 +134,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   children: [
                                     Text(
                                       _getGreeting(
-                                        authProvider.user?.name?.split(' ').first ?? 'there',
+                                        authProvider.user?.name
+                                                ?.split(' ')
+                                                .first ??
+                                            'there',
                                       ),
                                       style: AppTextStyles.bodyMedium.copyWith(
                                         fontWeight: FontWeight.w600,
@@ -232,7 +154,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   children: [
                                     // Cart quick access
                                     GestureDetector(
-                                      onTap: () => Navigator.pushNamed(context, '/cart'),
+                                      onTap: () =>
+                                          Navigator.pushNamed(context, '/cart'),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 12,
@@ -240,7 +163,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: AppColors.surface,
-                                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                                          borderRadius: BorderRadius.circular(
+                                            AppSizes.radiusMd,
+                                          ),
                                           border: Border.all(
                                             color: AppColors.grey200,
                                             width: 1,
@@ -261,25 +186,37 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     right: -6,
                                                     top: -6,
                                                     child: Container(
-                                                      padding: const EdgeInsets.all(4),
-                                                      decoration: const BoxDecoration(
-                                                        color: AppColors.accent,
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                      constraints: const BoxConstraints(
-                                                        minWidth: 16,
-                                                        minHeight: 16,
-                                                      ),
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            4,
+                                                          ),
+                                                      decoration:
+                                                          const BoxDecoration(
+                                                            color: AppColors
+                                                                .accent,
+                                                            shape:
+                                                                BoxShape.circle,
+                                                          ),
+                                                      constraints:
+                                                          const BoxConstraints(
+                                                            minWidth: 16,
+                                                            minHeight: 16,
+                                                          ),
                                                       child: Text(
-                                                        cartProvider.itemCount > 9
+                                                        cartProvider.itemCount >
+                                                                9
                                                             ? '9+'
-                                                            : cartProvider.itemCount.toString(),
+                                                            : cartProvider
+                                                                  .itemCount
+                                                                  .toString(),
                                                         style: const TextStyle(
                                                           color: Colors.white,
                                                           fontSize: 9,
-                                                          fontWeight: FontWeight.w600,
+                                                          fontWeight:
+                                                              FontWeight.w600,
                                                         ),
-                                                        textAlign: TextAlign.center,
+                                                        textAlign:
+                                                            TextAlign.center,
                                                       ),
                                                     ),
                                                   ),
@@ -288,10 +225,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                             const SizedBox(width: 8),
                                             Text(
                                               'Cart',
-                                              style: AppTextStyles.labelMedium.copyWith(
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.textPrimary,
-                                              ),
+                                              style: AppTextStyles.labelMedium
+                                                  .copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                    color:
+                                                        AppColors.textPrimary,
+                                                  ),
                                             ),
                                           ],
                                         ),
@@ -307,7 +246,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   if (!context.isMobile) ...[
                                     // User profile button for desktop
                                     GestureDetector(
-                                      onTap: () => Navigator.pushNamed(context, '/profile'),
+                                      onTap: () => Navigator.pushNamed(
+                                        context,
+                                        '/profile',
+                                      ),
                                       child: Container(
                                         width: 40,
                                         height: 40,
@@ -315,21 +257,29 @@ class _HomeScreenState extends State<HomeScreen> {
                                           color: AppColors.surface,
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                            color: AppColors.primary.withValues(alpha: 0.3),
+                                            color: AppColors.primary.withValues(
+                                              alpha: 0.3,
+                                            ),
                                             width: 2,
                                           ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.05),
+                                              color: Colors.black.withValues(
+                                                alpha: 0.05,
+                                              ),
                                               blurRadius: 8,
                                               offset: const Offset(0, 2),
                                             ),
                                           ],
                                         ),
-                                        child: authProvider.user?.profileImage != null
+                                        child:
+                                            authProvider.user?.profileImage !=
+                                                null
                                             ? ClipOval(
                                                 child: Image.network(
-                                                  authProvider.user!.profileImage!,
+                                                  authProvider
+                                                      .user!
+                                                      .profileImage!,
                                                   fit: BoxFit.cover,
                                                 ),
                                               )
@@ -339,10 +289,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                                           ?.substring(0, 1)
                                                           .toUpperCase() ??
                                                       'G',
-                                                  style: AppTextStyles.labelMedium.copyWith(
-                                                    color: AppColors.primary,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
+                                                  style: AppTextStyles
+                                                      .labelMedium
+                                                      .copyWith(
+                                                        color:
+                                                            AppColors.primary,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
                                                 ),
                                               ),
                                       ),
@@ -356,10 +310,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                     height: 44,
                                     decoration: BoxDecoration(
                                       color: AppColors.surface,
-                                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                                      borderRadius: BorderRadius.circular(
+                                        AppSizes.radiusMd,
+                                      ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.06),
+                                          color: Colors.black.withValues(
+                                            alpha: 0.06,
+                                          ),
                                           blurRadius: 8,
                                           offset: const Offset(0, 2),
                                         ),
@@ -414,7 +372,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     color: AppColors.surface,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: AppColors.primary.withValues(alpha: 0.2),
+                                      color: AppColors.primary.withValues(
+                                        alpha: 0.2,
+                                      ),
                                       width: 2,
                                     ),
                                   ),
@@ -431,21 +391,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     ?.substring(0, 1)
                                                     .toUpperCase() ??
                                                 'G',
-                                            style: AppTextStyles.labelMedium.copyWith(
-                                              color: AppColors.primary,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                            style: AppTextStyles.labelMedium
+                                                .copyWith(
+                                                  color: AppColors.primary,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                           ),
                                         ),
                                 ),
                                 const SizedBox(width: AppSizes.sm),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         _getGreeting(
-                                          authProvider.user?.name?.split(' ').first ?? 'there',
+                                          authProvider.user?.name
+                                                  ?.split(' ')
+                                                  .first ??
+                                              'there',
                                         ),
                                         style: AppTextStyles.h5.copyWith(
                                           fontWeight: FontWeight.w700,
@@ -493,7 +458,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               decoration: BoxDecoration(
                                 color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusFull,
+                                ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.08),
@@ -504,11 +471,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  SizedBox(width: context.responsive<double>(
-                                    mobile: AppSizes.md,
-                                    tablet: AppSizes.lg,
-                                    desktop: 20.0,
-                                  )),
+                                  SizedBox(
+                                    width: context.responsive<double>(
+                                      mobile: AppSizes.md,
+                                      tablet: AppSizes.lg,
+                                      desktop: 20.0,
+                                    ),
+                                  ),
                                   Icon(
                                     Iconsax.search_normal,
                                     color: AppColors.textSecondary,
@@ -551,10 +520,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                           Color(0xFF15874B),
                                         ],
                                       ),
-                                      borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                                      borderRadius: BorderRadius.circular(
+                                        AppSizes.radiusFull,
+                                      ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: AppColors.primary.withValues(alpha: 0.3),
+                                          color: AppColors.primary.withValues(
+                                            alpha: 0.3,
+                                          ),
                                           blurRadius: 8,
                                           offset: const Offset(0, 2),
                                         ),
@@ -925,11 +898,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     arguments: category,
                   ),
                 ),
-                SizedBox(height: context.responsive<double>(
-                  mobile: AppSizes.md,
-                  tablet: AppSizes.xl,
-                  desktop: AppSizes.xxl,
-                )),
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.md,
+                    tablet: AppSizes.xl,
+                    desktop: AppSizes.xxl,
+                  ),
+                ),
 
                 // Enhanced Quick Actions - Shopping Lists & Recipes
                 Padding(
@@ -1096,11 +1071,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
 
                 // Fresh Picks Today section
-                SizedBox(height: context.responsive<double>(
-                  mobile: AppSizes.lg,
-                  tablet: AppSizes.xxl,
-                  desktop: 48,
-                )),
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.lg,
+                    tablet: AppSizes.xxl,
+                    desktop: 48,
+                  ),
+                ),
                 Padding(
                   padding: EdgeInsets.fromLTRB(
                     context.horizontalPadding,
@@ -1125,22 +1102,37 @@ class _HomeScreenState extends State<HomeScreen> {
                   )
                 else
                   AdaptiveProductSection(
-                    products: (productProvider.featuredProducts.isNotEmpty
-                            ? productProvider.featuredProducts
-                            : productProvider.products.take(12))
-                        .map((product) => _buildHorizontalProductCard(
-                              product,
-                              cartProvider,
-                            ))
-                        .toList(),
+                    itemWidth: context.responsive<double>(
+                      mobile: 160,
+                      tablet: 150,
+                      desktop: 145,
+                    ),
+                    itemHeight: context.responsive<double>(
+                      mobile: 220,
+                      tablet: 210,
+                      desktop: 205,
+                    ),
+                    products:
+                        (productProvider.featuredProducts.isNotEmpty
+                                ? productProvider.featuredProducts
+                                : productProvider.products.take(12))
+                            .map(
+                              (product) => _buildHorizontalProductCard(
+                                product,
+                                cartProvider,
+                              ),
+                            )
+                            .toList(),
                   ),
 
                 // Popular This Week section
-                SizedBox(height: context.responsive<double>(
-                  mobile: AppSizes.lg,
-                  tablet: AppSizes.xxl,
-                  desktop: 48,
-                )),
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.lg,
+                    tablet: AppSizes.xxl,
+                    desktop: 48,
+                  ),
+                ),
                 Padding(
                   padding: EdgeInsets.fromLTRB(
                     context.horizontalPadding,
@@ -1155,22 +1147,35 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 if (!productProvider.isLoading)
                   AdaptiveProductSection(
-                    products: productProvider.products
-                        .reversed
+                    itemWidth: context.responsive<double>(
+                      mobile: 160,
+                      tablet: 150,
+                      desktop: 145,
+                    ),
+                    itemHeight: context.responsive<double>(
+                      mobile: 220,
+                      tablet: 210,
+                      desktop: 205,
+                    ),
+                    products: productProvider.products.reversed
                         .take(12)
-                        .map((product) => _buildHorizontalProductCard(
-                              product,
-                              cartProvider,
-                            ))
+                        .map(
+                          (product) => _buildHorizontalProductCard(
+                            product,
+                            cartProvider,
+                          ),
+                        )
                         .toList(),
                   ),
 
                 // Popular Recipes section
-                SizedBox(height: context.responsive<double>(
-                  mobile: AppSizes.lg,
-                  tablet: AppSizes.xxl,
-                  desktop: 48,
-                )),
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.lg,
+                    tablet: AppSizes.xxl,
+                    desktop: 48,
+                  ),
+                ),
                 Padding(
                   padding: EdgeInsets.fromLTRB(
                     context.horizontalPadding,
@@ -1303,7 +1308,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: CachedNetworkImage(
                     imageUrl: product.image,
-                    fit: BoxFit.contain,
+                    fit: BoxFit.cover,
                     placeholder: (context, url) => Center(
                       child: CircularProgressIndicator(
                         strokeWidth: 2,

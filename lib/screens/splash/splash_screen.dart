@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -92,27 +93,28 @@ class _SplashScreenState extends State<SplashScreen>
                     children: [
                       // Logo container
                       Container(
-                        width: 100,
-                        height: 100,
+                        width: 120,
+                        height: 120,
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(28),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF1B7F4E), Color(0xFF15874B)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(32),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                              blurRadius: 30,
-                              offset: const Offset(0, 10),
+                              color: AppColors.primary.withValues(alpha: 0.4),
+                              blurRadius: 32,
+                              offset: const Offset(0, 12),
                             ),
                           ],
                         ),
-                        child: const Center(
-                          child: Text(
-                            'LC',
-                            style: TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.white,
-                            ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: SvgPicture.asset(
+                            'assets/images/logos/logo-on-green-1.svg',
+                            fit: BoxFit.contain,
                           ),
                         ),
                       ),

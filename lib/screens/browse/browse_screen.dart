@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/responsive.dart';
 import '../../models/product.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
@@ -58,192 +59,354 @@ class _BrowseScreenState extends State<BrowseScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Title
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSizes.lg,
-                AppSizes.md,
-                AppSizes.lg,
-                AppSizes.sm,
-              ),
-              child: Text(
-                'Browse',
-                style: AppTextStyles.h3.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-
-            // Search Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
-              child: Container(
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                  border: Border.all(
-                    color: AppColors.grey200,
-                    width: 1,
+      body: ResponsiveContainer(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  context.horizontalPadding,
+                  context.responsive<double>(
+                    mobile: AppSizes.md,
+                    tablet: AppSizes.lg,
+                    desktop: AppSizes.xl,
                   ),
+                  context.horizontalPadding,
+                  AppSizes.sm,
                 ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (value) => setState(() => _searchQuery = value),
-                  decoration: InputDecoration(
-                    hintText: 'Search for groceries...',
-                    hintStyle: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textTertiary,
-                    ),
-                    prefixIcon: Icon(
-                      Iconsax.search_normal,
-                      color: AppColors.textTertiary,
-                      size: 20,
-                    ),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(
-                              Iconsax.close_circle,
-                              color: AppColors.textTertiary,
-                              size: 20,
-                            ),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSizes.md,
-                      vertical: AppSizes.md,
+                child: Text(
+                  'Browse Products',
+                  style: AppTextStyles.h3.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: context.responsive<double>(
+                      mobile: 26.0,
+                      tablet: 30.0,
+                      desktop: 34.0,
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSizes.md),
 
-            // Category Pills
-            SizedBox(
-              height: 44,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
-                itemCount: productProvider.categories.length + 1,
-                separatorBuilder: (_, __) => const SizedBox(width: AppSizes.sm),
-                itemBuilder: (context, index) {
-                  if (index == 0) {
+              // Search Bar
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                child: Container(
+                  height: context.responsive<double>(
+                    mobile: 52.0,
+                    tablet: 56.0,
+                    desktop: 60.0,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(context.responsive<double>(
+                      mobile: AppSizes.radiusLg,
+                      tablet: 14.0,
+                      desktop: 16.0,
+                    )),
+                    border: Border.all(
+                      color: AppColors.grey200,
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontSize: context.responsive<double>(
+                        mobile: 14.0,
+                        tablet: 15.0,
+                        desktop: 16.0,
+                      ),
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Search for groceries, fruits, vegetables...',
+                      hintStyle: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textTertiary,
+                        fontSize: context.responsive<double>(
+                          mobile: 14.0,
+                          tablet: 15.0,
+                          desktop: 16.0,
+                        ),
+                      ),
+                      prefixIcon: Icon(
+                        Iconsax.search_normal,
+                        color: AppColors.textSecondary,
+                        size: context.responsive<double>(
+                          mobile: 20.0,
+                          tablet: 22.0,
+                          desktop: 24.0,
+                        ),
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Iconsax.close_circle5,
+                                color: AppColors.textSecondary,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: context.responsive<double>(
+                          mobile: AppSizes.md,
+                          tablet: AppSizes.lg,
+                          desktop: 20.0,
+                        ),
+                        vertical: AppSizes.md,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: context.responsive<double>(
+                mobile: AppSizes.md,
+                tablet: AppSizes.lg,
+                desktop: AppSizes.lg,
+              )),
+
+              // Category Pills
+              SizedBox(
+                height: context.responsive<double>(
+                  mobile: 44.0,
+                  tablet: 48.0,
+                  desktop: 52.0,
+                ),
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                  itemCount: productProvider.categories.length + 1,
+                  separatorBuilder: (_, __) => SizedBox(width: context.responsive<double>(
+                    mobile: AppSizes.sm,
+                    tablet: AppSizes.md,
+                    desktop: AppSizes.md,
+                  )),
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      final allItemsCount = productProvider.products.length;
+                      return _buildCategoryPill(
+                        context: context,
+                        label: 'All Items',
+                        icon: Iconsax.element_4,
+                        count: allItemsCount,
+                        isSelected: _selectedCategoryId == null,
+                        onTap: () => setState(() => _selectedCategoryId = null),
+                      );
+                    }
+                    final category = productProvider.categories[index - 1];
+                    final categoryCount = productProvider.products
+                        .where((p) => p.categoryId == category.id)
+                        .length;
                     return _buildCategoryPill(
-                      label: 'All Items',
-                      icon: Iconsax.element_4,
-                      isSelected: _selectedCategoryId == null,
-                      onTap: () => setState(() => _selectedCategoryId = null),
+                      context: context,
+                      label: category.name,
+                      icon: _getCategoryIcon(category.name),
+                      count: categoryCount,
+                      isSelected: _selectedCategoryId == category.id,
+                      onTap: () =>
+                          setState(() => _selectedCategoryId = category.id),
                     );
-                  }
-                  final category = productProvider.categories[index - 1];
-                  return _buildCategoryPill(
-                    label: category.name,
-                    icon: _getCategoryIcon(category.name),
-                    isSelected: _selectedCategoryId == category.id,
-                    onTap: () =>
-                        setState(() => _selectedCategoryId = category.id),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: AppSizes.md),
-
-            // Results count
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
-              child: Text(
-                '${filteredProducts.length} items available',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
+                  },
                 ),
               ),
-            ),
-            const SizedBox(height: AppSizes.sm),
+              SizedBox(height: context.responsive<double>(
+                mobile: AppSizes.md,
+                tablet: AppSizes.lg,
+                desktop: AppSizes.xl,
+              )),
 
-            // Products Grid
-            Expanded(
-              child: filteredProducts.isEmpty
-                  ? _buildEmptyState()
-                  : GridView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSizes.lg,
-                        vertical: AppSizes.sm,
-                      ),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: AppSizes.md,
-                        crossAxisSpacing: AppSizes.md,
-                        childAspectRatio: 0.72,
-                      ),
-                      itemCount: filteredProducts.length,
-                      itemBuilder: (context, index) {
-                        final product = filteredProducts[index];
-                        return _buildProductCard(product, cartProvider);
-                      },
+              // Results count
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                child: Text(
+                  '${filteredProducts.length} ${filteredProducts.length == 1 ? 'item' : 'items'} available',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                    fontSize: context.responsive<double>(
+                      mobile: 13.0,
+                      tablet: 14.0,
+                      desktop: 15.0,
                     ),
-            ),
-          ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSizes.sm),
+
+              // Products Grid
+              Expanded(
+                child: filteredProducts.isEmpty
+                    ? _buildEmptyState(context)
+                    : GridView.builder(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: context.horizontalPadding,
+                          vertical: context.responsive<double>(
+                            mobile: AppSizes.sm,
+                            tablet: AppSizes.md,
+                            desktop: AppSizes.lg,
+                          ),
+                        ),
+                        gridDelegate:
+                            SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: context.responsive<int>(
+                            mobile: 2,
+                            tablet: 3,
+                            desktop: 4,
+                            largeDesktop: 5,
+                          ),
+                          mainAxisSpacing: context.responsive<double>(
+                            mobile: AppSizes.md,
+                            tablet: AppSizes.lg,
+                            desktop: 20.0,
+                          ),
+                          crossAxisSpacing: context.responsive<double>(
+                            mobile: AppSizes.md,
+                            tablet: AppSizes.lg,
+                            desktop: 20.0,
+                          ),
+                          childAspectRatio: context.responsive<double>(
+                            mobile: 0.72,
+                            tablet: 0.75,
+                            desktop: 0.78,
+                          ),
+                        ),
+                        itemCount: filteredProducts.length,
+                        itemBuilder: (context, index) {
+                          final product = filteredProducts[index];
+                          return _buildProductCard(context, product, cartProvider);
+                        },
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildCategoryPill({
+    required BuildContext context,
     required String label,
     required IconData icon,
+    required int count,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSizes.md,
-          vertical: AppSizes.sm,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        padding: EdgeInsets.symmetric(
+          horizontal: context.responsive<double>(
+            mobile: AppSizes.md,
+            tablet: AppSizes.lg,
+            desktop: 18.0,
+          ),
+          vertical: context.responsive<double>(
+            mobile: AppSizes.sm,
+            tablet: 10.0,
+            desktop: 12.0,
+          ),
         ),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.accent : AppColors.surface,
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [Color(0xFFFF8C42), Color(0xFFFF6B35)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected ? null : Colors.white,
           borderRadius: BorderRadius.circular(AppSizes.radiusFull),
           border: Border.all(
-            color: isSelected ? AppColors.accent : AppColors.grey200,
-            width: 1,
+            color: isSelected ? Colors.transparent : AppColors.grey200,
+            width: 1.5,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.accent.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              size: 18,
+              size: context.responsive<double>(
+                mobile: 18.0,
+                tablet: 20.0,
+                desktop: 22.0,
+              ),
               color: isSelected ? Colors.white : AppColors.textSecondary,
             ),
             const SizedBox(width: AppSizes.xs),
             Text(
               label,
               style: AppTextStyles.labelSmall.copyWith(
-                color: isSelected ? Colors.white : AppColors.textSecondary,
-                fontWeight: FontWeight.w500,
+                color: isSelected ? Colors.white : AppColors.textPrimary,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontSize: context.responsive<double>(
+                  mobile: 13.0,
+                  tablet: 14.0,
+                  desktop: 15.0,
+                ),
               ),
             ),
+            if (context.isTablet || context.isDesktop) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Colors.white.withValues(alpha: 0.25)
+                      : AppColors.grey100,
+                  borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: AppTextStyles.caption.copyWith(
+                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildProductCard(Product product, CartProvider cartProvider) {
+  Widget _buildProductCard(BuildContext context, Product product, CartProvider cartProvider) {
     final isInCart = cartProvider.isInCart(product.id);
 
     return GestureDetector(
@@ -254,9 +417,38 @@ class _BrowseScreenState extends State<BrowseScreen> {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-          boxShadow: AppColors.shadowSm,
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(context.responsive<double>(
+            mobile: AppSizes.radiusLg,
+            tablet: AppSizes.radiusXl,
+            desktop: 20.0,
+          )),
+          border: Border.all(
+            color: AppColors.grey200.withValues(alpha: 0.5),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: context.responsive<double>(
+                mobile: 8.0,
+                tablet: 12.0,
+                desktop: 16.0,
+              ),
+              offset: const Offset(0, 4),
+              spreadRadius: 0,
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: context.responsive<double>(
+                mobile: 4.0,
+                tablet: 6.0,
+                desktop: 8.0,
+              ),
+              offset: const Offset(0, 2),
+              spreadRadius: 0,
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,46 +456,67 @@ class _BrowseScreenState extends State<BrowseScreen> {
             // Product Image
             Expanded(
               flex: 3,
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(AppSizes.radiusLg),
-                  ),
-                ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(AppSizes.radiusLg),
-                  ),
-                  child: CachedNetworkImage(
-                    imageUrl: product.image,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: AppColors.grey100,
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.primary.withValues(alpha: 0.5),
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.grey50,
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(context.responsive<double>(
+                          mobile: AppSizes.radiusLg,
+                          tablet: AppSizes.radiusXl,
+                          desktop: 20.0,
+                        )),
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(context.responsive<double>(
+                          mobile: AppSizes.radiusLg,
+                          tablet: AppSizes.radiusXl,
+                          desktop: 20.0,
+                        )),
+                      ),
+                      child: CachedNetworkImage(
+                        imageUrl: product.image,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          color: AppColors.grey100,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: AppColors.primary.withValues(alpha: 0.4),
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: AppColors.grey100,
+                          child: Icon(
+                            Iconsax.image,
+                            color: AppColors.grey400,
+                            size: context.responsive<double>(
+                              mobile: 32.0,
+                              tablet: 40.0,
+                              desktop: 48.0,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                    errorWidget: (context, url, error) => Container(
-                      color: AppColors.grey100,
-                      child: Icon(
-                        Iconsax.image,
-                        color: AppColors.grey400,
-                        size: 32,
-                      ),
-                    ),
                   ),
-                ),
+                ],
               ),
             ),
             // Product Info
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(AppSizes.sm),
+                padding: EdgeInsets.all(context.responsive<double>(
+                  mobile: AppSizes.md,
+                  tablet: AppSizes.lg,
+                  desktop: 16.0,
+                )),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -314,27 +527,53 @@ class _BrowseScreenState extends State<BrowseScreen> {
                         Text(
                           product.name,
                           style: AppTextStyles.labelMedium.copyWith(
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                            fontSize: context.responsive<double>(
+                              mobile: 14.0,
+                              tablet: 15.0,
+                              desktop: 16.0,
+                            ),
+                            height: 1.3,
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           'per ${product.unit}',
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.textSecondary,
+                            fontSize: context.responsive<double>(
+                              mobile: 12.0,
+                              tablet: 13.0,
+                              desktop: 13.0,
+                            ),
                           ),
                         ),
                       ],
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          Formatters.formatCurrency(product.price),
-                          style: AppTextStyles.labelMedium.copyWith(
-                            color: AppColors.accent,
-                            fontWeight: FontWeight.w700,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                Formatters.formatCurrency(product.price),
+                                style: AppTextStyles.labelLarge.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: context.responsive<double>(
+                                    mobile: 16.0,
+                                    tablet: 17.0,
+                                    desktop: 18.0,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         GestureDetector(
@@ -345,32 +584,73 @@ class _BrowseScreenState extends State<BrowseScreen> {
                               cartProvider.addToCart(product);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content:
-                                      Text('${product.name} added to cart'),
+                                  content: Row(
+                                    children: [
+                                      const Icon(
+                                        Iconsax.tick_circle5,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          '${product.name} added to cart',
+                                          style: AppTextStyles.labelMedium.copyWith(
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                   backgroundColor: AppColors.success,
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(
                                     borderRadius:
                                         BorderRadius.circular(AppSizes.radiusMd),
                                   ),
-                                  duration: const Duration(seconds: 1),
+                                  duration: const Duration(milliseconds: 1500),
                                 ),
                               );
                             }
                           },
-                          child: Container(
-                            width: 32,
-                            height: 32,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: context.responsive<double>(
+                              mobile: 36.0,
+                              tablet: 40.0,
+                              desktop: 44.0,
+                            ),
+                            height: context.responsive<double>(
+                              mobile: 36.0,
+                              tablet: 40.0,
+                              desktop: 44.0,
+                            ),
                             decoration: BoxDecoration(
-                              color: isInCart
-                                  ? AppColors.primary
-                                  : AppColors.primary,
+                              gradient: LinearGradient(
+                                colors: isInCart
+                                    ? [AppColors.success, AppColors.success.withValues(alpha: 0.8)]
+                                    : [AppColors.primary, AppColors.primary.withValues(alpha: 0.85)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
                               shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (isInCart ? AppColors.success : AppColors.primary)
+                                      .withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
                             child: Icon(
                               isInCart ? Iconsax.tick_circle5 : Iconsax.add,
                               color: Colors.white,
-                              size: 16,
+                              size: context.responsive<double>(
+                                mobile: 18.0,
+                                tablet: 20.0,
+                                desktop: 22.0,
+                              ),
                             ),
                           ),
                         ),
@@ -386,39 +666,60 @@ class _BrowseScreenState extends State<BrowseScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppColors.grey100,
-              shape: BoxShape.circle,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSizes.xl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: context.responsive<double>(
+                mobile: 100.0,
+                tablet: 120.0,
+                desktop: 140.0,
+              ),
+              height: context.responsive<double>(
+                mobile: 100.0,
+                tablet: 120.0,
+                desktop: 140.0,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Iconsax.box_search,
+                size: context.responsive<double>(
+                  mobile: 48.0,
+                  tablet: 56.0,
+                  desktop: 64.0,
+                ),
+                color: AppColors.primary,
+              ),
             ),
-            child: Icon(
-              Iconsax.box_search,
-              size: 40,
-              color: AppColors.grey400,
+            const SizedBox(height: AppSizes.xl),
+            Text(
+              'No products found',
+              style: AppTextStyles.h5.copyWith(
+                fontWeight: FontWeight.w700,
+                fontSize: context.responsive<double>(
+                  mobile: 20.0,
+                  tablet: 22.0,
+                  desktop: 24.0,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: AppSizes.md),
-          Text(
-            'No products found',
-            style: AppTextStyles.h5.copyWith(
-              fontWeight: FontWeight.w600,
+            const SizedBox(height: AppSizes.xs),
+            Text(
+              'Try adjusting your search or filters',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: AppSizes.xs),
-          Text(
-            'Try adjusting your search or filters',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
