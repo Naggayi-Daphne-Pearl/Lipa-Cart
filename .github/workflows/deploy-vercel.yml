@@ -23,7 +23,7 @@ jobs:
         run: flutter pub get
 
       - name: Build web
-        run: flutter build web --release --base-href /
+        run: flutter build web --release --base-href / --no-tree-shake-icons
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
