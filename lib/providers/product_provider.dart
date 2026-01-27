@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' hide Category;
 import '../models/product.dart';
 import '../models/category.dart';
+import '../services/strapi_service.dart';
 
 class ProductProvider extends ChangeNotifier {
   List<Product> _products = [];
@@ -46,11 +47,16 @@ class ProductProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(milliseconds: 800));
+      final results = await Future.wait([
+        StrapiService.getProducts(),
+        StrapiService.getCategories(),
+      ]);
+      _products = results[0] as List<Product>;
+      _categories = results[1] as List<Category>;
+    } catch (e) {
+      debugPrint('Strapi fetch failed, using sample data: $e');
       _products = Product.getSampleProducts();
       _categories = Category.getSampleCategories();
-    } catch (e) {
-      _errorMessage = 'Failed to load products. Please try again.';
     }
 
     _isLoading = false;

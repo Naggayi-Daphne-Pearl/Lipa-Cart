@@ -37,6 +37,26 @@ class Category {
     );
   }
 
+  factory Category.fromStrapi(Map<String, dynamic> json, {String? baseUrl}) {
+    String imageUrl = '';
+    final imageData = json['image'];
+    if (imageData != null) {
+      final url = imageData['url'] as String? ?? '';
+      imageUrl = url.startsWith('http') ? url : '${baseUrl ?? ""}$url';
+    }
+
+    final products = json['products'] as List<dynamic>?;
+
+    return Category(
+      id: (json['documentId'] ?? json['id']).toString(),
+      name: json['name'] as String? ?? '',
+      image: imageUrl,
+      description: json['description'] as String?,
+      productCount: products?.length ?? 0,
+      color: json['color'] as String? ?? '#FF8C00',
+    );
+  }
+
   static List<Category> getSampleCategories() {
     return [
       Category(

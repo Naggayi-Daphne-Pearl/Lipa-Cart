@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/recipe.dart';
 import '../models/product.dart';
+import '../services/strapi_service.dart';
 
 class RecipeProvider extends ChangeNotifier {
   List<Recipe> _recipes = [];
@@ -33,11 +34,12 @@ class RecipeProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(milliseconds: 600));
-      _recipes = _getSampleRecipes();
+      _recipes = await StrapiService.getRecipes();
       _favoriteRecipes = _recipes.where((r) => r.isFavorite).toList();
     } catch (e) {
-      _errorMessage = 'Failed to load recipes. Please try again.';
+      debugPrint('Strapi fetch failed, using sample data: $e');
+      _recipes = _getSampleRecipes();
+      _favoriteRecipes = _recipes.where((r) => r.isFavorite).toList();
     }
 
     _isLoading = false;
