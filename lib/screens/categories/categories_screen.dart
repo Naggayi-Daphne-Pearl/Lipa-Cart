@@ -5,7 +5,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/cart_provider.dart';
 import '../../widgets/category_card.dart';
+import '../../widgets/product_card.dart';
 import '../../widgets/app_bottom_nav.dart';
 
 class CategoriesScreen extends StatelessWidget {
@@ -63,6 +65,7 @@ class CategoryProductsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final productProvider = context.watch<ProductProvider>();
+    final cartProvider = context.watch<CartProvider>();
     final products = productProvider.getProductsByCategory(categoryId);
 
     return Scaffold(
@@ -95,49 +98,73 @@ class CategoryProductsScreen extends StatelessWidget {
                 ],
               ),
             )
-          : GridView.builder(
-              padding: const EdgeInsets.all(AppSizes.md),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: AppSizes.md,
-                crossAxisSpacing: AppSizes.md,
-                childAspectRatio: 0.72,
-              ),
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                final product = products[index];
-                return _ProductCard(product: product);
-              },
+          : Column(
+              children: [
+                // Results count header
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSizes.md,
+                    vertical: AppSizes.sm,
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        '${products.length} product${products.length == 1 ? '' : 's'}',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Product grid
+                Expanded(
+                  child: GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSizes.md,
+                      0,
+                      AppSizes.md,
+                      AppSizes.md,
+                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: AppSizes.md,
+                      crossAxisSpacing: AppSizes.md,
+                      childAspectRatio: 0.72,
+                    ),
+                    itemCount: products.length,
+                    itemBuilder: (context, index) {
+                      final product = products[index];
+                      return ProductCard(
+                        product: product,
+                        isInCart: cartProvider.isInCart(product.id),
+                        onTap: () => Navigator.pushNamed(
+                          context,
+                          '/product',
+                          arguments: product,
+                        ),
+                        onAddToCart: () {
+                          if (cartProvider.isInCart(product.id)) {
+                            cartProvider.removeFromCart(product.id);
+                          } else {
+                            cartProvider.addToCart(product);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content:
+                                    Text('${product.name} added to cart'),
+                                duration: const Duration(seconds: 1),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-    );
-  }
-}
-
-class _ProductCard extends StatelessWidget {
-  final dynamic product;
-
-  const _ProductCard({required this.product});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/product', arguments: product),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: const Center(
-          child: Text('Product Card'),
-        ),
-      ),
     );
   }
 }

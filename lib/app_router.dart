@@ -56,7 +56,10 @@ class AppRouter {
         return _buildRoute(const CategoriesScreen(), settings);
 
       case '/category':
-        final category = settings.arguments as Category;
+        final category = settings.arguments as Category?;
+        if (category == null) {
+          return _buildRoute(const CategoriesScreen(), settings);
+        }
         return _buildRoute(
           CategoryProductsScreen(
             categoryId: category.id,
