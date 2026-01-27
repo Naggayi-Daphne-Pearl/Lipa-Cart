@@ -512,68 +512,64 @@ class _BrowseScreenState extends State<BrowseScreen> {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: EdgeInsets.all(context.responsive<double>(
-                  mobile: AppSizes.md,
-                  tablet: AppSizes.lg,
-                  desktop: 16.0,
-                )),
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.responsive<double>(
+                    mobile: 10.0,
+                    tablet: AppSizes.lg,
+                    desktop: 16.0,
+                  ),
+                  vertical: context.responsive<double>(
+                    mobile: 8.0,
+                    tablet: AppSizes.md,
+                    desktop: 12.0,
+                  ),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.name,
-                          style: AppTextStyles.labelMedium.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                            fontSize: context.responsive<double>(
-                              mobile: 14.0,
-                              tablet: 15.0,
-                              desktop: 16.0,
-                            ),
-                            height: 1.3,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                    Text(
+                      product.name,
+                      style: AppTextStyles.labelMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                        fontSize: context.responsive<double>(
+                          mobile: 13.0,
+                          tablet: 15.0,
+                          desktop: 16.0,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'per ${product.unit}',
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.textSecondary,
-                            fontSize: context.responsive<double>(
-                              mobile: 12.0,
-                              tablet: 13.0,
-                              desktop: 13.0,
-                            ),
-                          ),
+                        height: 1.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'per ${product.unit}',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: context.responsive<double>(
+                          mobile: 11.0,
+                          tablet: 13.0,
+                          desktop: 13.0,
                         ),
-                      ],
+                      ),
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                Formatters.formatCurrency(product.price),
-                                style: AppTextStyles.labelLarge.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: context.responsive<double>(
-                                    mobile: 16.0,
-                                    tablet: 17.0,
-                                    desktop: 18.0,
-                                  ),
-                                ),
+                          child: Text(
+                            Formatters.formatCurrency(product.price),
+                            style: AppTextStyles.labelLarge.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w800,
+                              fontSize: context.responsive<double>(
+                                mobile: 14.0,
+                                tablet: 17.0,
+                                desktop: 18.0,
                               ),
-                            ],
+                            ),
                           ),
                         ),
                         GestureDetector(
@@ -616,12 +612,12 @@ class _BrowseScreenState extends State<BrowseScreen> {
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             width: context.responsive<double>(
-                              mobile: 36.0,
+                              mobile: 32.0,
                               tablet: 40.0,
                               desktop: 44.0,
                             ),
                             height: context.responsive<double>(
-                              mobile: 36.0,
+                              mobile: 32.0,
                               tablet: 40.0,
                               desktop: 44.0,
                             ),

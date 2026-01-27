@@ -158,59 +158,52 @@ class ProductCard extends StatelessWidget {
             Expanded(
               flex: 3,
               child: Padding(
-                padding: const EdgeInsets.all(AppSizes.md),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Product name
-                        Text(
-                          product.name,
-                          style: AppTextStyles.labelMedium.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                            height: 1.3,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        // Unit text
-                        Text(
-                          'per ${product.unit}',
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                    // Product name
+                    Text(
+                      product.name,
+                      style: AppTextStyles.labelMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                        height: 1.2,
+                        fontSize: 13,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    // Unit text
+                    Text(
+                      'per ${product.unit}',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
                     ),
                     // Price and add button row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Price section
                         Expanded(
                           child: Text(
                             Formatters.formatCurrency(product.price),
                             style: AppTextStyles.labelLarge.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w800,
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           ),
                         ),
-                        // Add to cart button
                         GestureDetector(
                           onTap: onAddToCart,
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            width: 36,
-                            height: 36,
+                            width: 32,
+                            height: 32,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: isInCart
@@ -232,7 +225,7 @@ class ProductCard extends StatelessWidget {
                             child: Icon(
                               isInCart ? Iconsax.tick_circle5 : Iconsax.add,
                               color: Colors.white,
-                              size: 18,
+                              size: 16,
                             ),
                           ),
                         ),

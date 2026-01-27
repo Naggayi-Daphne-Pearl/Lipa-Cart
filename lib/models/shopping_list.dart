@@ -43,6 +43,24 @@ class ShoppingListItem {
     );
   }
 
+  factory ShoppingListItem.fromStrapi(Map<String, dynamic> json) {
+    Product? linkedProduct;
+    final productData = json['product'];
+    if (productData != null && productData is Map<String, dynamic>) {
+      linkedProduct = Product.fromStrapi(productData);
+    }
+
+    return ShoppingListItem(
+      id: (json['id'] ?? '').toString(),
+      name: json['name'] as String? ?? '',
+      description: json['notes'] as String?,
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      unit: json['unit'] as String?,
+      budgetAmount: (json['budget_amount'] as num?)?.toDouble(),
+      linkedProduct: linkedProduct,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -106,6 +124,24 @@ class ShoppingList {
       items: items ?? this.items,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  factory ShoppingList.fromStrapi(Map<String, dynamic> json) {
+    final itemsData = json['items'] as List<dynamic>? ?? [];
+    final items = itemsData
+        .map((item) => ShoppingListItem.fromStrapi(item as Map<String, dynamic>))
+        .toList();
+
+    return ShoppingList(
+      id: (json['documentId'] ?? json['id']).toString(),
+      name: json['name'] as String? ?? '',
+      description: json['description'] as String?,
+      emoji: json['emoji'] as String?,
+      color: json['color'] as String? ?? '#15874B',
+      items: items,
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
     );
   }
 

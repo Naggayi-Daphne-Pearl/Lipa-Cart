@@ -31,7 +31,6 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      bottomNavigationBar: const AppBottomNav(currentIndex: 0),
       body: Container(
         decoration: const BoxDecoration(
           gradient: AppColors.elegantBgGradient,

@@ -6,6 +6,7 @@ import '../core/constants/app_constants.dart';
 import '../models/category.dart';
 import '../models/product.dart';
 import '../models/recipe.dart';
+import '../models/shopping_list.dart';
 
 class StrapiService {
   static String get _baseUrl {
@@ -56,9 +57,25 @@ class StrapiService {
         .toList();
   }
 
+  static Future<List<ShoppingList>> getShoppingLists() async {
+    final response = await http
+        .get(Uri.parse('$_baseUrl/shopping-lists?populate[items][populate]=*'))
+        .timeout(AppConstants.apiTimeout);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load shopping lists: ${response.statusCode}');
+    }
+
+    final body = json.decode(response.body);
+    final data = body['data'] as List<dynamic>;
+    return data
+        .map((item) => ShoppingList.fromStrapi(item as Map<String, dynamic>))
+        .toList();
+  }
+
   static Future<List<Recipe>> getRecipes() async {
     final response = await http
-        .get(Uri.parse('$_baseUrl/recipes?populate=*'))
+        .get(Uri.parse('$_baseUrl/recipes?populate[image]=*&populate[ingredients][populate]=*&populate[instructions]=*'))
         .timeout(AppConstants.apiTimeout);
 
     if (response.statusCode != 200) {
