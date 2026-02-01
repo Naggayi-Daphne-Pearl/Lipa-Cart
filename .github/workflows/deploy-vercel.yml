@@ -25,6 +25,9 @@ jobs:
       - name: Build web
         run: flutter build web --release --base-href / --no-tree-shake-icons
 
+      - name: Copy vercel.json to build output
+        run: cp vercel.json build/web/
+
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:
