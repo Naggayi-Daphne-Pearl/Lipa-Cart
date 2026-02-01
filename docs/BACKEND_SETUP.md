@@ -108,15 +108,7 @@ module.exports = ({ env }) => ({
 });
 ```
 
-5. Create `.env` file in Strapi project:
-```env
-HOST=0.0.0.0
-PORT=1337
-APP_KEYS=your-app-keys
-API_TOKEN_SALT=your-api-token-salt
-ADMIN_JWT_SECRET=your-admin-jwt-secret
-JWT_SECRET=your-jwt-secret
-TRANSFER_TOKEN_SALT=your-transfer-token-salt
+
 
 # Supabase PostgreSQL
 DATABASE_HOST=db.xxxxx.supabase.co
