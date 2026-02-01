@@ -37,7 +37,10 @@ class AppRouter {
         );
 
       case '/otp':
-        final args = settings.arguments as Map<String, dynamic>;
+        final args = settings.arguments as Map<String, dynamic>?;
+        if (args == null) {
+          return _buildRoute(const LoginScreen(), settings);
+        }
         return _buildRoute(
           OtpScreen(
             phoneNumber: args['phoneNumber'] as String,
@@ -56,7 +59,10 @@ class AppRouter {
         return _buildRoute(const CategoriesScreen(), settings);
 
       case '/category':
-        final category = settings.arguments as Category;
+        final category = settings.arguments as Category?;
+        if (category == null) {
+          return _buildRoute(const CategoriesScreen(), settings);
+        }
         return _buildRoute(
           CategoryProductsScreen(
             categoryId: category.id,
@@ -66,7 +72,10 @@ class AppRouter {
         );
 
       case '/product':
-        final product = settings.arguments as Product;
+        final product = settings.arguments as Product?;
+        if (product == null) {
+          return _buildRoute(const MainShell(), settings);
+        }
         return _buildRoute(ProductDetailScreen(product: product), settings);
 
       case '/cart':
@@ -76,28 +85,40 @@ class AppRouter {
         return _buildRoute(const CheckoutScreen(), settings);
 
       case '/order-success':
-        final order = settings.arguments as Order;
+        final order = settings.arguments as Order?;
+        if (order == null) {
+          return _buildRoute(const MainShell(), settings);
+        }
         return _buildRoute(OrderSuccessScreen(order: order), settings);
 
       case '/orders':
         return _buildRoute(const OrdersScreen(), settings);
 
       case '/order-tracking':
-        final order = settings.arguments as Order;
+        final order = settings.arguments as Order?;
+        if (order == null) {
+          return _buildRoute(const MainShell(), settings);
+        }
         return _buildRoute(OrderTrackingScreen(order: order), settings);
 
       case '/shopping-lists':
         return _buildRoute(const ShoppingListsScreen(), settings);
 
       case '/shopping-list-detail':
-        final listId = settings.arguments as String;
+        final listId = settings.arguments as String?;
+        if (listId == null) {
+          return _buildRoute(const ShoppingListsScreen(), settings);
+        }
         return _buildRoute(ShoppingListDetailScreen(listId: listId), settings);
 
       case '/recipes':
         return _buildRoute(const RecipesScreen(), settings);
 
       case '/recipe-detail':
-        final recipeId = settings.arguments as String;
+        final recipeId = settings.arguments as String?;
+        if (recipeId == null) {
+          return _buildRoute(const RecipesScreen(), settings);
+        }
         return _buildRoute(RecipeDetailScreen(recipeId: recipeId), settings);
 
       default:

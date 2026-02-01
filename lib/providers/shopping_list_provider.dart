@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/shopping_list.dart';
 import '../models/product.dart';
+import '../services/strapi_service.dart';
 
 class ShoppingListProvider extends ChangeNotifier {
   List<ShoppingList> _lists = [];
@@ -30,8 +31,12 @@ class ShoppingListProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    await Future.delayed(const Duration(milliseconds: 500));
-    _lists = _getSampleLists();
+    try {
+      _lists = await StrapiService.getShoppingLists();
+    } catch (e) {
+      debugPrint('Strapi fetch failed, using sample data: $e');
+      _lists = _getSampleLists();
+    }
 
     _isLoading = false;
     notifyListeners();

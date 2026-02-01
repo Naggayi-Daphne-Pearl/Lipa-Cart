@@ -5,9 +5,9 @@ class AppConstants {
   static const String appName = 'LipaCart';
   static const String appTagline = 'Fresh groceries delivered to your doorstep';
 
-  // API Endpoints (placeholder)
-  static const String baseUrl = 'https://api.lipacart.com';
-  static const String apiVersion = '/v1';
+  // API Endpoints
+  static const String baseUrl = 'https://lipa-cart-strapi-production.up.railway.app';
+  static const String apiUrl = '$baseUrl/api';
 
   // Storage Keys
   static const String tokenKey = 'auth_token';
