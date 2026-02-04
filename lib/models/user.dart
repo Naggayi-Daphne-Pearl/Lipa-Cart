@@ -1,9 +1,23 @@
+enum UserRole { customer, admin, rider, shopper }
+
+extension UserRoleExtension on UserRole {
+  String get name => toString().split('.').last;
+
+  static UserRole fromString(String? roleString) {
+    return UserRole.values.firstWhere(
+      (e) => e.name == roleString,
+      orElse: () => UserRole.customer,
+    );
+  }
+}
+
 class User {
   final String id;
   final String phoneNumber;
   final String? name;
   final String? email;
   final String? profileImage;
+  final UserRole role;
   final List<Address> addresses;
   final DateTime createdAt;
 
@@ -13,6 +27,7 @@ class User {
     this.name,
     this.email,
     this.profileImage,
+    this.role = UserRole.customer,
     this.addresses = const [],
     required this.createdAt,
   });
@@ -23,6 +38,7 @@ class User {
     String? name,
     String? email,
     String? profileImage,
+    UserRole? role,
     List<Address>? addresses,
     DateTime? createdAt,
   }) {
@@ -32,6 +48,7 @@ class User {
       name: name ?? this.name,
       email: email ?? this.email,
       profileImage: profileImage ?? this.profileImage,
+      role: role ?? this.role,
       addresses: addresses ?? this.addresses,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -44,6 +61,7 @@ class User {
       'name': name,
       'email': email,
       'profileImage': profileImage,
+      'role': role.name,
       'addresses': addresses.map((a) => a.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
     };
@@ -56,7 +74,9 @@ class User {
       name: json['name'] as String?,
       email: json['email'] as String?,
       profileImage: json['profileImage'] as String?,
-      addresses: (json['addresses'] as List<dynamic>?)
+      role: UserRoleExtension.fromString(json['role'] as String?),
+      addresses:
+          (json['addresses'] as List<dynamic>?)
               ?.map((a) => Address.fromJson(a as Map<String, dynamic>))
               .toList() ??
           [],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -61,12 +62,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (order != null) {
       cartProvider.clearCart();
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/order-success',
-        (route) => route.isFirst,
-        arguments: order,
-      );
+      context.push('/customer/order-success', extra: order);
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

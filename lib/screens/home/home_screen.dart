@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -154,8 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   children: [
                                     // Cart quick access
                                     GestureDetector(
-                                      onTap: () =>
-                                          Navigator.pushNamed(context, '/cart'),
+                                      onTap: () => context.go('/customer/cart'),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 12,
@@ -246,10 +246,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   if (!context.isMobile) ...[
                                     // User profile button for desktop
                                     GestureDetector(
-                                      onTap: () => Navigator.pushNamed(
-                                        context,
-                                        '/profile',
-                                      ),
+                                      onTap: () => context.go('/customer/profile'),
                                       child: Container(
                                         width: 40,
                                         height: 40,
@@ -448,7 +445,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           child: GestureDetector(
                             onTap: () {
-                              Navigator.pushNamed(context, '/search');
+                              context.go('/customer/search');
                             },
                             child: Container(
                               height: context.responsive<double>(
@@ -685,10 +682,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           // Shop Now CTA Button
                                           GestureDetector(
                                             onTap: () {
-                                              Navigator.pushNamed(
-                                                context,
-                                                '/categories',
-                                              );
+                                              context.go('/customer/categories');
                                             },
                                             child: Container(
                                               padding:
@@ -816,8 +810,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             AppSizes.lg,
                           ),
                           child: GestureDetector(
-                            onTap: () =>
-                                Navigator.pushNamed(context, '/search'),
+                            onTap: () => context.go('/customer/search'),
                             child: Container(
                               height: 52,
                               padding: const EdgeInsets.symmetric(
@@ -887,16 +880,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: _buildSectionHeader(
                     'Categories',
-                    onSeeAll: () => Navigator.pushNamed(context, '/categories'),
+                    onSeeAll: () => context.go('/customer/categories'),
                   ),
                 ),
                 AdaptiveCategorySection(
                   categories: productProvider.categories,
-                  onCategoryTap: (category) => Navigator.pushNamed(
-                    context,
-                    '/category',
-                    arguments: category,
-                  ),
+                  onCategoryTap: (category) => context.push('/customer/category', extra: category),
                 ),
                 SizedBox(
                   height: context.responsive<double>(
@@ -919,8 +908,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Shopping Lists Card - Enhanced
                       Expanded(
                         child: GestureDetector(
-                          onTap: () =>
-                              Navigator.pushNamed(context, '/shopping-lists'),
+                          onTap: () => context.go('/customer/shopping-lists'),
                           child: Container(
                             padding: const EdgeInsets.all(AppSizes.lg),
                             decoration: BoxDecoration(
@@ -995,7 +983,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Recipes Card - Enhanced
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => Navigator.pushNamed(context, '/recipes'),
+                          onTap: () => context.go('/customer/recipes'),
                           child: Container(
                             padding: const EdgeInsets.all(AppSizes.lg),
                             decoration: BoxDecoration(
@@ -1185,7 +1173,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: _buildSectionHeader(
                     'Popular Recipes',
-                    onSeeAll: () => Navigator.pushNamed(context, '/recipes'),
+                    onSeeAll: () => context.go('/customer/recipes'),
                   ),
                 ),
                 if (!recipeProvider.isLoading &&
@@ -1274,7 +1262,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isInCart = cartProvider.isInCart(product.id);
 
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/product', arguments: product),
+      onTap: () => context.push('/customer/product', extra: product),
       child: Container(
         decoration: BoxDecoration(
           color: const Color(0xFFFAFBFC),
@@ -1458,8 +1446,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildRecipeCard(Recipe recipe) {
     return GestureDetector(
-      onTap: () =>
-          Navigator.pushNamed(context, '/recipe-detail', arguments: recipe.id),
+      onTap: () => context.push('/customer/recipe-detail', extra: recipe.id),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,

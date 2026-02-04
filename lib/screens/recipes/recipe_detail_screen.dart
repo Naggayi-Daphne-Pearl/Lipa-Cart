@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -813,7 +814,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
         action: SnackBarAction(
           label: 'View Cart',
           textColor: Colors.white,
-          onPressed: () => Navigator.pushNamed(context, '/cart'),
+          onPressed: () => context.go('/customer/cart'),
         ),
       ),
     );

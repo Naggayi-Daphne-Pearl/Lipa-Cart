@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../models/shopping_list.dart';
 import '../../providers/shopping_list_provider.dart';
 import '../../providers/cart_provider.dart';
-import '../../widgets/app_bottom_nav.dart';
 
 class ShoppingListsScreen extends StatefulWidget {
   const ShoppingListsScreen({super.key});
@@ -129,11 +129,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     final color = _parseColor(list.color);
 
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(
-        context,
-        '/shopping-list-detail',
-        arguments: list.id,
-      ),
+      onTap: () => context.push('/customer/shopping-list-detail', extra: list.id),
       onLongPress: () => _showListOptions(list),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSizes.md),
@@ -664,11 +660,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
               title: const Text('View Details'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.pushNamed(
-                  context,
-                  '/shopping-list-detail',
-                  arguments: list.id,
-                );
+                context.push('/customer/shopping-list-detail', extra: list.id);
               },
             ),
             if (list.purchasableItems.isNotEmpty)
@@ -786,7 +778,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
           label: 'View Cart',
           textColor: Colors.white,
           onPressed: () {
-            Navigator.pushNamed(context, '/cart');
+            context.go('/customer/cart');
           },
         ),
       ),

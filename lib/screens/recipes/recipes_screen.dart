@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -344,11 +345,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
     );
 
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(
-        context,
-        '/recipe-detail',
-        arguments: recipe.id,
-      ),
+      onTap: () => context.push('/customer/recipe-detail', extra: recipe.id),
       child: Container(
         margin: EdgeInsets.only(
           bottom: context.isMobile ? AppSizes.md : 0,

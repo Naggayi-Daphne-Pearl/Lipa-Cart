@@ -9,7 +9,7 @@ import 'providers/product_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/shopping_list_provider.dart';
 import 'providers/recipe_provider.dart';
-import 'app_router.dart';
+import 'role_based_router.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,12 +47,15 @@ class LipaCartApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ShoppingListProvider()),
         ChangeNotifierProvider(create: (_) => RecipeProvider()),
       ],
-      child: MaterialApp(
-        title: 'LipaCart',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        initialRoute: '/',
-        onGenerateRoute: AppRouter.onGenerateRoute,
+      child: Builder(
+        builder: (context) {
+          return MaterialApp.router(
+            title: 'LipaCart',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            routerConfig: RoleBasedRouter.getRouter(context),
+          );
+        },
       ),
     );
   }

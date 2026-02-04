@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -79,20 +80,8 @@ class _OtpScreenState extends State<OtpScreen> {
 
     if (success) {
       if (!mounted) return;
-      // Navigate to returnRoute if provided, otherwise go to main
-      if (widget.returnRoute != null) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          widget.returnRoute!,
-          (route) => route.isFirst,
-        );
-      } else {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/main',
-          (route) => false,
-        );
-      }
+      // Navigate to customer home after successful OTP verification
+      context.go('/customer/home');
     } else if (authProvider.errorMessage != null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

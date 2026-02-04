@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -117,8 +118,7 @@ class _SearchScreenState extends State<SearchScreen> {
         return ProductCard(
           product: product,
           isInCart: cartProvider.isInCart(product.id),
-          onTap: () =>
-              Navigator.pushNamed(context, '/product', arguments: product),
+          onTap: () => context.push('/customer/product', extra: product),
           onAddToCart: () {
             if (cartProvider.isInCart(product.id)) {
               cartProvider.removeFromCart(product.id);
@@ -193,11 +193,7 @@ class _SearchScreenState extends State<SearchScreen> {
           const SizedBox(height: AppSizes.md),
           ...productProvider.categories.map((category) {
             return ListTile(
-              onTap: () => Navigator.pushNamed(
-                context,
-                '/category',
-                arguments: category,
-              ),
+              onTap: () => context.push('/customer/category', extra: category),
               contentPadding: EdgeInsets.zero,
               leading: Container(
                 width: 44,

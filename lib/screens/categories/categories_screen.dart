@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -40,11 +41,7 @@ class CategoriesScreen extends StatelessWidget {
           final category = productProvider.categories[index];
           return CategoryCard(
             category: category,
-            onTap: () => Navigator.pushNamed(
-              context,
-              '/category',
-              arguments: category,
-            ),
+            onTap: () => context.push('/customer/category', extra: category),
           );
         },
       ),
@@ -139,11 +136,7 @@ class CategoryProductsScreen extends StatelessWidget {
                       return ProductCard(
                         product: product,
                         isInCart: cartProvider.isInCart(product.id),
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          '/product',
-                          arguments: product,
-                        ),
+                        onTap: () => context.push('/customer/product', extra: product),
                         onAddToCart: () {
                           if (cartProvider.isInCart(product.id)) {
                             cartProvider.removeFromCart(product.id);

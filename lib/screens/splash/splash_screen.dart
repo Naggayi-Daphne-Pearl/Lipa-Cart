@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_constants.dart';
@@ -52,17 +53,31 @@ class _SplashScreenState extends State<SplashScreen>
 
     final authProvider = context.read<AuthProvider>();
 
-    // Web flow - always show main page first (guest browsing allowed)
+    // Web flow - show customer home for browsing (guest allowed)
     if (kIsWeb) {
-      Navigator.pushReplacementNamed(context, '/main');
+      context.replace('/customer/home');
     } else {
       // Mobile flow - show onboarding on first launch
       if (authProvider.isFirstLaunch) {
-        Navigator.pushReplacementNamed(context, '/onboarding');
+        context.replace('/onboarding');
       } else if (authProvider.isAuthenticated) {
-        Navigator.pushReplacementNamed(context, '/main');
+        // Route to home based on user role
+        final userRole = authProvider.user?.role;
+        switch (userRole?.toString()) {
+          case 'UserRole.admin':
+            context.replace('/admin/dashboard');
+            break;
+          case 'UserRole.rider':
+            context.replace('/rider/home');
+            break;
+          case 'UserRole.shopper':
+            context.replace('/shopper/home');
+            break;
+          default:
+            context.replace('/customer/home');
+        }
       } else {
-        Navigator.pushReplacementNamed(context, '/login');
+        context.replace('/login');
       }
     }
   }

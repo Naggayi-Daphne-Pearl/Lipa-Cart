@@ -117,7 +117,15 @@ class Order {
     this.isPaid = false,
   });
 
-  int get itemCount => items.fold(0, (sum, item) => sum + item.quantity.toInt());
+  int get itemCount =>
+      items.fold(0, (sum, item) => sum + item.quantity.toInt());
+
+  // Convenience getters
+  String get statusLabel => status.displayName;
+  double get discount => 0.0; // Calculate from items or promotions if needed
+  bool get isPending => status == OrderStatus.pending;
+  bool get isDelivered => status == OrderStatus.delivered;
+  bool get isCancelled => status == OrderStatus.cancelled;
 
   Order copyWith({
     String? id,
@@ -200,8 +208,9 @@ class Order {
       items: (json['items'] as List<dynamic>)
           .map((i) => CartItem.fromJson(i as Map<String, dynamic>))
           .toList(),
-      deliveryAddress:
-          Address.fromJson(json['deliveryAddress'] as Map<String, dynamic>),
+      deliveryAddress: Address.fromJson(
+        json['deliveryAddress'] as Map<String, dynamic>,
+      ),
       subtotal: (json['subtotal'] as num).toDouble(),
       serviceFee: (json['serviceFee'] as num).toDouble(),
       deliveryFee: (json['deliveryFee'] as num).toDouble(),
@@ -233,11 +242,7 @@ class Order {
   }
 }
 
-enum PaymentMethod {
-  mobileMoney,
-  card,
-  cashOnDelivery,
-}
+enum PaymentMethod { mobileMoney, card, cashOnDelivery }
 
 extension PaymentMethodExtension on PaymentMethod {
   String get displayName {

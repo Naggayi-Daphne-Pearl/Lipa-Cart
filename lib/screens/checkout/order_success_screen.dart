@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -162,21 +163,13 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
               // Buttons
               CustomButton(
                 text: 'Track Order',
-                onPressed: () => Navigator.pushReplacementNamed(
-                  context,
-                  '/order-tracking',
-                  arguments: order,
-                ),
+                onPressed: () => context.go('/customer/order-tracking', extra: order),
               ),
               const SizedBox(height: AppSizes.sm),
               CustomButton(
                 text: 'Back to Home',
                 isOutlined: true,
-                onPressed: () => Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/main',
-                  (route) => false,
-                ),
+                onPressed: () => context.go('/customer/home'),
               ),
             ],
           ),

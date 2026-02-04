@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/constants/app_sizes.dart';
@@ -21,31 +22,23 @@ class AppBottomNav extends StatelessWidget {
     switch (index) {
       case 0:
         // Home
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/main',
-          (route) => false,
-        );
+        context.go('/customer/home');
         break;
       case 1:
         // Browse - navigate to categories
-        Navigator.pushReplacementNamed(context, '/categories');
+        context.go('/customer/categories');
         break;
       case 2:
         // Cart
-        Navigator.pushReplacementNamed(context, '/cart');
+        context.go('/customer/cart');
         break;
       case 3:
         // Orders
-        Navigator.pushReplacementNamed(context, '/orders');
+        context.go('/customer/orders');
         break;
       case 4:
-        // Profile - navigate to main shell with profile tab
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/main',
-          (route) => false,
-        );
+        // Profile
+        context.go('/customer/profile');
         break;
     }
   }

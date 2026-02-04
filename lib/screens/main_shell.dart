@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/constants/app_sizes.dart';
@@ -52,7 +53,7 @@ class _MainShellState extends State<MainShell> {
         setState(() => _showCartSidebar = !_showCartSidebar);
       } else {
         // On mobile: navigate to cart screen
-        Navigator.pushNamed(context, '/cart');
+        context.go('/customer/cart');
       }
     } else {
       setState(() {
@@ -671,7 +672,7 @@ class _MainShellState extends State<MainShell> {
                       child: ElevatedButton(
                         onPressed: () {
                           setState(() => _showCartSidebar = false);
-                          Navigator.pushNamed(context, '/cart');
+                          context.go('/customer/cart');
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -45,14 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (authProvider.status == AuthStatus.otpSent) {
       if (!mounted) return;
-      Navigator.pushNamed(
-        context,
-        '/otp',
-        arguments: {
-          'phoneNumber': _phoneController.text,
-          'returnRoute': widget.returnRoute,
-        },
-      );
+      context.push('/otp', extra: _phoneController.text);
     } else if (authProvider.errorMessage != null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
