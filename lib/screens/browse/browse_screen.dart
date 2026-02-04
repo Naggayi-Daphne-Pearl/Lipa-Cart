@@ -43,9 +43,13 @@ class _BrowseScreenState extends State<BrowseScreen> {
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
       products = products
-          .where((p) =>
-              p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              p.description.toLowerCase().contains(_searchQuery.toLowerCase()))
+          .where(
+            (p) =>
+                p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                p.description.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ),
+          )
           .toList();
     }
 
@@ -92,7 +96,9 @@ class _BrowseScreenState extends State<BrowseScreen> {
 
               // Search Bar
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.horizontalPadding,
+                ),
                 child: Container(
                   height: context.responsive<double>(
                     mobile: 52.0,
@@ -101,15 +107,14 @@ class _BrowseScreenState extends State<BrowseScreen> {
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(context.responsive<double>(
-                      mobile: AppSizes.radiusLg,
-                      tablet: 14.0,
-                      desktop: 16.0,
-                    )),
-                    border: Border.all(
-                      color: AppColors.grey200,
-                      width: 1.5,
+                    borderRadius: BorderRadius.circular(
+                      context.responsive<double>(
+                        mobile: AppSizes.radiusLg,
+                        tablet: 14.0,
+                        desktop: 16.0,
+                      ),
                     ),
+                    border: Border.all(color: AppColors.grey200, width: 1.5),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.04),
@@ -173,11 +178,13 @@ class _BrowseScreenState extends State<BrowseScreen> {
                   ),
                 ),
               ),
-              SizedBox(height: context.responsive<double>(
-                mobile: AppSizes.md,
-                tablet: AppSizes.lg,
-                desktop: AppSizes.lg,
-              )),
+              SizedBox(
+                height: context.responsive<double>(
+                  mobile: AppSizes.md,
+                  tablet: AppSizes.lg,
+                  desktop: AppSizes.lg,
+                ),
+              ),
 
               // Category Pills
               SizedBox(
@@ -188,13 +195,17 @@ class _BrowseScreenState extends State<BrowseScreen> {
                 ),
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.horizontalPadding,
+                  ),
                   itemCount: productProvider.categories.length + 1,
-                  separatorBuilder: (_, __) => SizedBox(width: context.responsive<double>(
-                    mobile: AppSizes.sm,
-                    tablet: AppSizes.md,
-                    desktop: AppSizes.md,
-                  )),
+                  separatorBuilder: (_, __) => SizedBox(
+                    width: context.responsive<double>(
+                      mobile: AppSizes.sm,
+                      tablet: AppSizes.md,
+                      desktop: AppSizes.md,
+                    ),
+                  ),
                   itemBuilder: (context, index) {
                     if (index == 0) {
                       final allItemsCount = productProvider.products.length;
@@ -223,15 +234,19 @@ class _BrowseScreenState extends State<BrowseScreen> {
                   },
                 ),
               ),
-              SizedBox(height: context.responsive<double>(
-                mobile: AppSizes.md,
-                tablet: AppSizes.lg,
-                desktop: AppSizes.xl,
-              )),
+              SizedBox(
+                height: context.responsive<double>(
+                  mobile: AppSizes.md,
+                  tablet: AppSizes.lg,
+                  desktop: AppSizes.xl,
+                ),
+              ),
 
               // Results count
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.horizontalPadding,
+                ),
                 child: Text(
                   '${filteredProducts.length} ${filteredProducts.length == 1 ? 'item' : 'items'} available',
                   style: AppTextStyles.bodySmall.copyWith(
@@ -260,8 +275,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                             desktop: AppSizes.lg,
                           ),
                         ),
-                        gridDelegate:
-                            SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: context.responsive<int>(
                             mobile: 2,
                             tablet: 3,
@@ -287,7 +301,11 @@ class _BrowseScreenState extends State<BrowseScreen> {
                         itemCount: filteredProducts.length,
                         itemBuilder: (context, index) {
                           final product = filteredProducts[index];
-                          return _buildProductCard(context, product, cartProvider);
+                          return _buildProductCard(
+                            context,
+                            product,
+                            cartProvider,
+                          );
                         },
                       ),
               ),
@@ -381,10 +399,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
             if (context.isTablet || context.isDesktop) ...[
               const SizedBox(width: 6),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 2,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? Colors.white.withValues(alpha: 0.25)
@@ -407,7 +422,11 @@ class _BrowseScreenState extends State<BrowseScreen> {
     );
   }
 
-  Widget _buildProductCard(BuildContext context, Product product, CartProvider cartProvider) {
+  Widget _buildProductCard(
+    BuildContext context,
+    Product product,
+    CartProvider cartProvider,
+  ) {
     final isInCart = cartProvider.isInCart(product.id);
 
     return GestureDetector(
@@ -415,11 +434,13 @@ class _BrowseScreenState extends State<BrowseScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(context.responsive<double>(
-            mobile: AppSizes.radiusLg,
-            tablet: AppSizes.radiusXl,
-            desktop: 20.0,
-          )),
+          borderRadius: BorderRadius.circular(
+            context.responsive<double>(
+              mobile: AppSizes.radiusLg,
+              tablet: AppSizes.radiusXl,
+              desktop: 20.0,
+            ),
+          ),
           border: Border.all(
             color: AppColors.grey200.withValues(alpha: 0.5),
             width: 1,
@@ -460,20 +481,24 @@ class _BrowseScreenState extends State<BrowseScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.grey50,
                       borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(context.responsive<double>(
-                          mobile: AppSizes.radiusLg,
-                          tablet: AppSizes.radiusXl,
-                          desktop: 20.0,
-                        )),
+                        top: Radius.circular(
+                          context.responsive<double>(
+                            mobile: AppSizes.radiusLg,
+                            tablet: AppSizes.radiusXl,
+                            desktop: 20.0,
+                          ),
+                        ),
                       ),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(context.responsive<double>(
-                          mobile: AppSizes.radiusLg,
-                          tablet: AppSizes.radiusXl,
-                          desktop: 20.0,
-                        )),
+                        top: Radius.circular(
+                          context.responsive<double>(
+                            mobile: AppSizes.radiusLg,
+                            tablet: AppSizes.radiusXl,
+                            desktop: 20.0,
+                          ),
+                        ),
                       ),
                       child: CachedNetworkImage(
                         imageUrl: product.image,
@@ -588,9 +613,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
                                       Expanded(
                                         child: Text(
                                           '${product.name} added to cart',
-                                          style: AppTextStyles.labelMedium.copyWith(
-                                            color: Colors.white,
-                                          ),
+                                          style: AppTextStyles.labelMedium
+                                              .copyWith(color: Colors.white),
                                         ),
                                       ),
                                     ],
@@ -598,8 +622,9 @@ class _BrowseScreenState extends State<BrowseScreen> {
                                   backgroundColor: AppColors.success,
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(AppSizes.radiusMd),
+                                    borderRadius: BorderRadius.circular(
+                                      AppSizes.radiusMd,
+                                    ),
                                   ),
                                   duration: const Duration(milliseconds: 1500),
                                 ),
@@ -621,16 +646,29 @@ class _BrowseScreenState extends State<BrowseScreen> {
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: isInCart
-                                    ? [AppColors.success, AppColors.success.withValues(alpha: 0.8)]
-                                    : [AppColors.primary, AppColors.primary.withValues(alpha: 0.85)],
+                                    ? [
+                                        AppColors.success,
+                                        AppColors.success.withValues(
+                                          alpha: 0.8,
+                                        ),
+                                      ]
+                                    : [
+                                        AppColors.primary,
+                                        AppColors.primary.withValues(
+                                          alpha: 0.85,
+                                        ),
+                                      ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: (isInCart ? AppColors.success : AppColors.primary)
-                                      .withValues(alpha: 0.3),
+                                  color:
+                                      (isInCart
+                                              ? AppColors.success
+                                              : AppColors.primary)
+                                          .withValues(alpha: 0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 3),
                                 ),

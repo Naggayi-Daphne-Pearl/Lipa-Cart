@@ -60,11 +60,11 @@ class _RecipesScreenState extends State<RecipesScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      bottomNavigationBar: context.isMobile ? const AppBottomNav(currentIndex: 0) : null,
+      bottomNavigationBar: context.isMobile
+          ? const AppBottomNav(currentIndex: 0)
+          : null,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.elegantBgGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
         child: ResponsiveContainer(
           child: SafeArea(
             child: Column(
@@ -72,11 +72,13 @@ class _RecipesScreenState extends State<RecipesScreen> {
               children: [
                 // Header
                 Padding(
-                  padding: EdgeInsets.all(context.responsive<double>(
-                    mobile: AppSizes.lg,
-                    tablet: AppSizes.xl,
-                    desktop: 24.0,
-                  )),
+                  padding: EdgeInsets.all(
+                    context.responsive<double>(
+                      mobile: AppSizes.lg,
+                      tablet: AppSizes.xl,
+                      desktop: 24.0,
+                    ),
+                  ),
                   child: Row(
                     children: [
                       if (context.isMobile)
@@ -87,7 +89,9 @@ class _RecipesScreenState extends State<RecipesScreen> {
                             height: 44,
                             decoration: BoxDecoration(
                               color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              borderRadius: BorderRadius.circular(
+                                AppSizes.radiusMd,
+                              ),
                               boxShadow: AppColors.shadowSm,
                             ),
                             child: const Icon(
@@ -133,7 +137,9 @@ class _RecipesScreenState extends State<RecipesScreen> {
 
                 // Search bar
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.horizontalPadding,
+                  ),
                   child: Container(
                     height: context.responsive<double>(
                       mobile: 52.0,
@@ -147,7 +153,8 @@ class _RecipesScreenState extends State<RecipesScreen> {
                     ),
                     child: TextField(
                       controller: _searchController,
-                      onChanged: (value) => setState(() => _searchQuery = value),
+                      onChanged: (value) =>
+                          setState(() => _searchQuery = value),
                       decoration: InputDecoration(
                         hintText: 'Search recipes or ingredients...',
                         hintStyle: AppTextStyles.bodyMedium.copyWith(
@@ -180,18 +187,22 @@ class _RecipesScreenState extends State<RecipesScreen> {
                     ),
                   ),
                 ),
-                SizedBox(height: context.responsive<double>(
-                  mobile: AppSizes.md,
-                  tablet: AppSizes.lg,
-                  desktop: AppSizes.lg,
-                )),
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.md,
+                    tablet: AppSizes.lg,
+                    desktop: AppSizes.lg,
+                  ),
+                ),
 
                 // Tag filters
                 SizedBox(
                   height: 44,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.horizontalPadding,
+                    ),
                     children: [
                       _buildTagChip(
                         label: 'All',
@@ -199,27 +210,35 @@ class _RecipesScreenState extends State<RecipesScreen> {
                         isSelected: _selectedTag == null,
                         onTap: () => setState(() => _selectedTag = null),
                       ),
-                      ...provider.allTags.take(8).map((tag) => Padding(
-                            padding: const EdgeInsets.only(left: AppSizes.sm),
-                            child: _buildTagChip(
-                              label: tag,
-                              icon: _getTagIcon(tag),
-                              isSelected: _selectedTag == tag,
-                              onTap: () => setState(() => _selectedTag = tag),
+                      ...provider.allTags
+                          .take(8)
+                          .map(
+                            (tag) => Padding(
+                              padding: const EdgeInsets.only(left: AppSizes.sm),
+                              child: _buildTagChip(
+                                label: tag,
+                                icon: _getTagIcon(tag),
+                                isSelected: _selectedTag == tag,
+                                onTap: () => setState(() => _selectedTag = tag),
+                              ),
                             ),
-                          )),
+                          ),
                     ],
                   ),
                 ),
-                SizedBox(height: context.responsive<double>(
-                  mobile: AppSizes.md,
-                  tablet: AppSizes.lg,
-                  desktop: AppSizes.lg,
-                )),
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.md,
+                    tablet: AppSizes.lg,
+                    desktop: AppSizes.lg,
+                  ),
+                ),
 
                 // Results count
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.horizontalPadding,
+                  ),
                   child: Text(
                     '${filteredRecipes.length} ${filteredRecipes.length == 1 ? 'recipe' : 'recipes'} found',
                     style: AppTextStyles.bodySmall.copyWith(
@@ -238,8 +257,8 @@ class _RecipesScreenState extends State<RecipesScreen> {
                           ),
                         )
                       : filteredRecipes.isEmpty
-                          ? _buildEmptyState()
-                          : _buildRecipesGrid(filteredRecipes),
+                      ? _buildEmptyState()
+                      : _buildRecipesGrid(filteredRecipes),
                 ),
               ],
             ),
@@ -347,16 +366,16 @@ class _RecipesScreenState extends State<RecipesScreen> {
     return GestureDetector(
       onTap: () => context.push('/customer/recipe-detail', extra: recipe.id),
       child: Container(
-        margin: EdgeInsets.only(
-          bottom: context.isMobile ? AppSizes.md : 0,
-        ),
+        margin: EdgeInsets.only(bottom: context.isMobile ? AppSizes.md : 0),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(context.responsive<double>(
-            mobile: AppSizes.radiusXl,
-            tablet: 20.0,
-            desktop: 24.0,
-          )),
+          borderRadius: BorderRadius.circular(
+            context.responsive<double>(
+              mobile: AppSizes.radiusXl,
+              tablet: 20.0,
+              desktop: 24.0,
+            ),
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.06),
@@ -377,11 +396,13 @@ class _RecipesScreenState extends State<RecipesScreen> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(context.responsive<double>(
-                      mobile: AppSizes.radiusXl,
-                      tablet: 20.0,
-                      desktop: 24.0,
-                    )),
+                    top: Radius.circular(
+                      context.responsive<double>(
+                        mobile: AppSizes.radiusXl,
+                        tablet: 20.0,
+                        desktop: 24.0,
+                      ),
+                    ),
                   ),
                   child: CachedNetworkImage(
                     imageUrl: recipe.image,
@@ -414,8 +435,9 @@ class _RecipesScreenState extends State<RecipesScreen> {
                   top: AppSizes.md,
                   right: AppSizes.md,
                   child: GestureDetector(
-                    onTap: () =>
-                        context.read<RecipeProvider>().toggleFavorite(recipe.id),
+                    onTap: () => context.read<RecipeProvider>().toggleFavorite(
+                      recipe.id,
+                    ),
                     child: Container(
                       width: 40,
                       height: 40,
@@ -426,8 +448,9 @@ class _RecipesScreenState extends State<RecipesScreen> {
                       ),
                       child: Icon(
                         recipe.isFavorite ? Iconsax.heart5 : Iconsax.heart,
-                        color:
-                            recipe.isFavorite ? AppColors.error : AppColors.grey400,
+                        color: recipe.isFavorite
+                            ? AppColors.error
+                            : AppColors.grey400,
                         size: 20,
                       ),
                     ),
@@ -492,11 +515,13 @@ class _RecipesScreenState extends State<RecipesScreen> {
             ),
             // Recipe info
             Padding(
-              padding: EdgeInsets.all(context.responsive<double>(
-                mobile: AppSizes.md,
-                tablet: AppSizes.lg,
-                desktop: 20.0,
-              )),
+              padding: EdgeInsets.all(
+                context.responsive<double>(
+                  mobile: AppSizes.md,
+                  tablet: AppSizes.lg,
+                  desktop: 20.0,
+                ),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

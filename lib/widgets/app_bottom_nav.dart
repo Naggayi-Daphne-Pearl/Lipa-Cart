@@ -10,10 +10,7 @@ import '../providers/cart_provider.dart';
 class AppBottomNav extends StatelessWidget {
   final int currentIndex;
 
-  const AppBottomNav({
-    super.key,
-    this.currentIndex = 0,
-  });
+  const AppBottomNav({super.key, this.currentIndex = 0});
 
   void _onNavTap(BuildContext context, int index) {
     // Avoid navigating to the same page

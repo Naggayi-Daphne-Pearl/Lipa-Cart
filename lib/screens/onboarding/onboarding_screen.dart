@@ -16,7 +16,8 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> with TickerProviderStateMixin {
+class _OnboardingScreenState extends State<OnboardingScreen>
+    with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   late AnimationController _iconAnimationController;
@@ -63,7 +64,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
     );
 
     _iconScaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _iconAnimationController, curve: Curves.elasticOut),
+      CurvedAnimation(
+        parent: _iconAnimationController,
+        curve: Curves.elasticOut,
+      ),
     );
 
     _iconRotationAnimation = Tween<double>(begin: -0.1, end: 0.0).animate(
@@ -113,182 +117,177 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFFAFBFC),
-              Color(0xFFFFFFFF),
-              Color(0xFFF8F9FA),
-            ],
+            colors: [Color(0xFFFAFBFC), Color(0xFFFFFFFF), Color(0xFFF8F9FA)],
             stops: [0.0, 0.5, 1.0],
           ),
         ),
         child: SafeArea(
-        child: Column(
-          children: [
-            // Premium Header Bar with Logo and Skip
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSizes.lg,
-                vertical: AppSizes.md,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.9),
-                border: Border(
-                  bottom: BorderSide(
-                    color: AppColors.grey200,
-                    width: 0.5,
-                  ),
+          child: Column(
+            children: [
+              // Premium Header Bar with Logo and Skip
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSizes.lg,
+                  vertical: AppSizes.md,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  border: Border(
+                    bottom: BorderSide(color: AppColors.grey200, width: 0.5),
                   ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Logo
-                  SvgPicture.asset(
-                    'assets/images/logos/logo-on-white.svg',
-                    height: 25,
-                    fit: BoxFit.contain,
-                  ),
-                  // Skip button with icon
-                  TextButton.icon(
-                    onPressed: _completeOnboarding,
-                    icon: const Icon(
-                      Iconsax.arrow_right_3,
-                      size: 14,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
                     ),
-                    label: Text(
-                      'Skip',
-                      style: AppTextStyles.labelMedium.copyWith(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Logo
+                    SvgPicture.asset(
+                      'assets/images/logos/logo-on-white.svg',
+                      height: 25,
+                      fit: BoxFit.contain,
                     ),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSizes.sm,
-                        vertical: AppSizes.xs,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Page content
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: _onPageChanged,
-                itemCount: _items.length,
-                itemBuilder: (context, index) {
-                  return _buildPage(_items[index]);
-                },
-              ),
-            ),
-            // Indicators and button
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSizes.xl,
-                AppSizes.lg,
-                AppSizes.xl,
-                AppSizes.xl,
-              ),
-              child: Column(
-                children: [
-                  // Step indicator with text
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Step ${_currentPage + 1} of ${_items.length}',
-                        style: AppTextStyles.caption.copyWith(
+                    // Skip button with icon
+                    TextButton.icon(
+                      onPressed: _completeOnboarding,
+                      icon: const Icon(Iconsax.arrow_right_3, size: 14),
+                      label: Text(
+                        'Skip',
+                        style: AppTextStyles.labelMedium.copyWith(
                           color: AppColors.textSecondary,
                           fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSizes.sm),
-                  // Enhanced progress dots with glow
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSizes.md,
-                      vertical: AppSizes.sm,
-                    ),
-                    child: SmoothPageIndicator(
-                      controller: _pageController,
-                      count: _items.length,
-                      effect: WormEffect(
-                        dotWidth: 12,
-                        dotHeight: 12,
-                        spacing: 12,
-                        activeDotColor: AppColors.primary,
-                        dotColor: AppColors.grey300,
-                        strokeWidth: 2,
-                        paintStyle: PaintingStyle.fill,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSizes.xxl),
-                  // Enhanced button with press effect
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _nextPage,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1B7F4E),
-                        foregroundColor: Colors.white,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.textSecondary,
                         padding: const EdgeInsets.symmetric(
-                          vertical: AppSizes.md,
+                          horizontal: AppSizes.sm,
+                          vertical: AppSizes.xs,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                        ),
-                        elevation: 6,
-                        shadowColor: const Color(0xFF1B7F4E).withValues(alpha: 0.5),
-                      ).copyWith(
-                        overlayColor: WidgetStateProperty.all(
-                          Colors.white.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            _currentPage == _items.length - 1
-                                ? 'Start Shopping'
-                                : 'Next',
-                            style: AppTextStyles.labelLarge.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 17,
-                            ),
-                          ),
-                          const SizedBox(width: AppSizes.sm),
-                          Icon(
-                            _currentPage == _items.length - 1
-                                ? Iconsax.tick_circle5
-                                : Iconsax.arrow_right_3,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                        ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
+              // Page content
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: _onPageChanged,
+                  itemCount: _items.length,
+                  itemBuilder: (context, index) {
+                    return _buildPage(_items[index]);
+                  },
+                ),
+              ),
+              // Indicators and button
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSizes.xl,
+                  AppSizes.lg,
+                  AppSizes.xl,
+                  AppSizes.xl,
+                ),
+                child: Column(
+                  children: [
+                    // Step indicator with text
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Step ${_currentPage + 1} of ${_items.length}',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSizes.sm),
+                    // Enhanced progress dots with glow
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSizes.md,
+                        vertical: AppSizes.sm,
+                      ),
+                      child: SmoothPageIndicator(
+                        controller: _pageController,
+                        count: _items.length,
+                        effect: WormEffect(
+                          dotWidth: 12,
+                          dotHeight: 12,
+                          spacing: 12,
+                          activeDotColor: AppColors.primary,
+                          dotColor: AppColors.grey300,
+                          strokeWidth: 2,
+                          paintStyle: PaintingStyle.fill,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSizes.xxl),
+                    // Enhanced button with press effect
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _nextPage,
+                        style:
+                            ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1B7F4E),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: AppSizes.md,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusFull,
+                                ),
+                              ),
+                              elevation: 6,
+                              shadowColor: const Color(
+                                0xFF1B7F4E,
+                              ).withValues(alpha: 0.5),
+                            ).copyWith(
+                              overlayColor: WidgetStateProperty.all(
+                                Colors.white.withValues(alpha: 0.2),
+                              ),
+                            ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _currentPage == _items.length - 1
+                                  ? 'Start Shopping'
+                                  : 'Next',
+                              style: AppTextStyles.labelLarge.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 17,
+                              ),
+                            ),
+                            const SizedBox(width: AppSizes.sm),
+                            Icon(
+                              _currentPage == _items.length - 1
+                                  ? Iconsax.tick_circle5
+                                  : Iconsax.arrow_right_3,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -361,11 +360,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                             ),
                           ],
                         ),
-                        child: Icon(
-                          item.icon,
-                          size: 80,
-                          color: Colors.white,
-                        ),
+                        child: Icon(item.icon, size: 80, color: Colors.white),
                       ),
                     ),
                   ),

@@ -93,130 +93,137 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         title: const Text('Checkout'),
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.elegantBgGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
         child: SafeArea(
           child: Column(
-          children: [
-            // Progress Stepper
-            _buildProgressStepper(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSizes.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Delivery address
-                    _buildSection(
-                    title: 'Delivery Address',
-                    icon: Iconsax.location,
-                    child: _selectedAddress == null
-                        ? _buildAddAddressButton()
-                        : _buildAddressCard(authProvider),
-                  ),
-                  const SizedBox(height: AppSizes.md),
+            children: [
+              // Progress Stepper
+              _buildProgressStepper(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppSizes.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Delivery address
+                      _buildSection(
+                        title: 'Delivery Address',
+                        icon: Iconsax.location,
+                        child: _selectedAddress == null
+                            ? _buildAddAddressButton()
+                            : _buildAddressCard(authProvider),
+                      ),
+                      const SizedBox(height: AppSizes.md),
 
-                  // Order items
-                  _buildSection(
-                    title: 'Order Items (${cartProvider.itemCount})',
-                    icon: Iconsax.shopping_bag,
-                    child: Column(
-                      children: cartProvider.items.map((item) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: AppSizes.sm),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  '${item.quantity.toInt()}x ${item.product.name}',
-                                  style: AppTextStyles.bodyMedium,
-                                ),
+                      // Order items
+                      _buildSection(
+                        title: 'Order Items (${cartProvider.itemCount})',
+                        icon: Iconsax.shopping_bag,
+                        child: Column(
+                          children: cartProvider.items.map((item) {
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: AppSizes.sm,
                               ),
-                              Text(
-                                Formatters.formatCurrency(item.totalPrice),
-                                style: AppTextStyles.labelMedium,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '${item.quantity.toInt()}x ${item.product.name}',
+                                      style: AppTextStyles.bodyMedium,
+                                    ),
+                                  ),
+                                  Text(
+                                    Formatters.formatCurrency(item.totalPrice),
+                                    style: AppTextStyles.labelMedium,
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: AppSizes.md),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: AppSizes.md),
 
-                  // Payment method
-                  _buildSection(
-                    title: 'Payment Method',
-                    icon: Iconsax.card,
-                    child: Column(
-                      children: PaymentMethod.values.map((method) {
-                        return _buildPaymentOption(method);
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: AppSizes.md),
+                      // Payment method
+                      _buildSection(
+                        title: 'Payment Method',
+                        icon: Iconsax.card,
+                        child: Column(
+                          children: PaymentMethod.values.map((method) {
+                            return _buildPaymentOption(method);
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: AppSizes.md),
 
-                  // Order summary
-                  _buildSection(
-                    title: 'Order Summary',
-                    icon: Iconsax.receipt_2,
-                    child: Column(
-                      children: [
-                        _buildSummaryRow(
-                          'Subtotal',
-                          Formatters.formatCurrency(cartProvider.subtotal),
+                      // Order summary
+                      _buildSection(
+                        title: 'Order Summary',
+                        icon: Iconsax.receipt_2,
+                        child: Column(
+                          children: [
+                            _buildSummaryRow(
+                              'Subtotal',
+                              Formatters.formatCurrency(cartProvider.subtotal),
+                            ),
+                            const SizedBox(height: AppSizes.sm),
+                            _buildSummaryRow(
+                              'Service Fee (5%)',
+                              Formatters.formatCurrency(
+                                cartProvider.serviceFee,
+                              ),
+                            ),
+                            const SizedBox(height: AppSizes.sm),
+                            _buildSummaryRow(
+                              'Delivery Fee',
+                              Formatters.formatCurrency(
+                                cartProvider.deliveryFee,
+                              ),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(
+                                vertical: AppSizes.sm,
+                              ),
+                              child: Divider(),
+                            ),
+                            _buildSummaryRow(
+                              'Total',
+                              Formatters.formatCurrency(cartProvider.total),
+                              isTotal: true,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: AppSizes.sm),
-                        _buildSummaryRow(
-                          'Service Fee (5%)',
-                          Formatters.formatCurrency(cartProvider.serviceFee),
-                        ),
-                        const SizedBox(height: AppSizes.sm),
-                        _buildSummaryRow(
-                          'Delivery Fee',
-                          Formatters.formatCurrency(cartProvider.deliveryFee),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: AppSizes.sm),
-                          child: Divider(),
-                        ),
-                        _buildSummaryRow(
-                          'Total',
-                          Formatters.formatCurrency(cartProvider.total),
-                          isTotal: true,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ),
-
-          // Place order button
-          Container(
-            padding: const EdgeInsets.all(AppSizes.md),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -4),
                 ),
-              ],
-            ),
-            child: SafeArea(
-              child: CustomButton(
-                text: 'Place Order - ${Formatters.formatCurrency(cartProvider.total)}',
-                isLoading: _isLoading,
-                onPressed: _placeOrder,
               ),
-            ),
+
+              // Place order button
+              Container(
+                padding: const EdgeInsets.all(AppSizes.md),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
+                ),
+                child: SafeArea(
+                  child: CustomButton(
+                    text:
+                        'Place Order - ${Formatters.formatCurrency(cartProvider.total)}',
+                    isLoading: _isLoading,
+                    onPressed: _placeOrder,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-        ),
         ),
       ),
     );
@@ -250,12 +257,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             isActive: true,
             isCompleted: false,
           ),
-          Expanded(
-            child: Container(
-              height: 2,
-              color: AppColors.grey300,
-            ),
-          ),
+          Expanded(child: Container(height: 2, color: AppColors.grey300)),
           _buildStepItem(
             icon: Iconsax.tick_circle,
             label: 'Confirm',
@@ -276,8 +278,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final color = isCompleted
         ? AppColors.primary
         : isActive
-            ? AppColors.accent
-            : AppColors.grey400;
+        ? AppColors.accent
+        : AppColors.grey400;
 
     return Column(
       children: [
@@ -288,13 +290,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             color: isCompleted
                 ? AppColors.primarySoft
                 : isActive
-                    ? AppColors.accentSoft
-                    : AppColors.grey100,
+                ? AppColors.accentSoft
+                : AppColors.grey100,
             shape: BoxShape.circle,
-            border: Border.all(
-              color: color,
-              width: 2,
-            ),
+            border: Border.all(color: color, width: 2),
           ),
           child: Icon(
             isCompleted ? Iconsax.tick_circle5 : icon,
@@ -355,10 +354,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _selectedAddress!.label,
-                  style: AppTextStyles.labelMedium,
-                ),
+                Text(_selectedAddress!.label, style: AppTextStyles.labelMedium),
                 const SizedBox(height: 4),
                 Text(
                   _selectedAddress!.fullAddress,
@@ -400,11 +396,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Iconsax.add,
-              color: AppColors.primaryOrange,
-              size: 20,
-            ),
+            const Icon(Iconsax.add, color: AppColors.primaryOrange, size: 20),
             const SizedBox(width: AppSizes.sm),
             Text(
               'Add Delivery Address',
@@ -438,15 +430,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           children: [
             Icon(
               _getPaymentIcon(method),
-              color: isSelected ? AppColors.primaryOrange : AppColors.textMedium,
+              color: isSelected
+                  ? AppColors.primaryOrange
+                  : AppColors.textMedium,
             ),
             const SizedBox(width: AppSizes.sm),
             Expanded(
               child: Text(
                 method.displayName,
                 style: AppTextStyles.labelMedium.copyWith(
-                  color:
-                      isSelected ? AppColors.primaryOrange : AppColors.textDark,
+                  color: isSelected
+                      ? AppColors.primaryOrange
+                      : AppColors.textDark,
                 ),
               ),
             ),
@@ -479,9 +474,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       children: [
         Text(
           label,
-          style: isTotal
-              ? AppTextStyles.labelMedium
-              : AppTextStyles.bodySmall,
+          style: isTotal ? AppTextStyles.labelMedium : AppTextStyles.bodySmall,
         ),
         Text(
           value,
@@ -511,9 +504,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               Text('Select Address', style: AppTextStyles.h5),
               const SizedBox(height: AppSizes.md),
               if (authProvider.user?.addresses.isEmpty ?? true)
-                const Center(
-                  child: Text('No saved addresses'),
-                )
+                const Center(child: Text('No saved addresses'))
               else
                 ...authProvider.user!.addresses.map((address) {
                   return ListTile(

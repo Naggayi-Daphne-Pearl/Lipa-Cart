@@ -14,10 +14,7 @@ import '../../widgets/custom_button.dart';
 class LoginScreen extends StatefulWidget {
   final String? returnRoute;
 
-  const LoginScreen({
-    super.key,
-    this.returnRoute,
-  });
+  const LoginScreen({super.key, this.returnRoute});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -102,10 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: AppSizes.xxl),
                 // Welcome text
-                Text(
-                  'Welcome to LipaCart',
-                  style: AppTextStyles.h3,
-                ),
+                Text('Welcome to LipaCart', style: AppTextStyles.h3),
                 const SizedBox(height: AppSizes.sm),
                 Text(
                   'Enter your phone number to continue. We\'ll send you a verification code.',
@@ -115,10 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: AppSizes.xl),
                 // Phone input
-                Text(
-                  'Phone Number',
-                  style: AppTextStyles.labelMedium,
-                ),
+                Text('Phone Number', style: AppTextStyles.labelMedium),
                 const SizedBox(height: AppSizes.sm),
                 TextFormField(
                   controller: _phoneController,

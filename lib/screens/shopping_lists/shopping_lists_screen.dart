@@ -32,9 +32,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.elegantBgGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,7 +49,9 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                         height: 44,
                         decoration: BoxDecoration(
                           color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
                           boxShadow: AppColors.shadowSm,
                         ),
                         child: const Icon(
@@ -94,17 +94,17 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                         ),
                       )
                     : provider.lists.isEmpty
-                        ? _buildEmptyState()
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSizes.lg,
-                            ),
-                            itemCount: provider.lists.length,
-                            itemBuilder: (context, index) {
-                              final list = provider.lists[index];
-                              return _buildListCard(list);
-                            },
-                          ),
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSizes.lg,
+                        ),
+                        itemCount: provider.lists.length,
+                        itemBuilder: (context, index) {
+                          final list = provider.lists[index];
+                          return _buildListCard(list);
+                        },
+                      ),
               ),
             ],
           ),
@@ -129,7 +129,8 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     final color = _parseColor(list.color);
 
     return GestureDetector(
-      onTap: () => context.push('/customer/shopping-list-detail', extra: list.id),
+      onTap: () =>
+          context.push('/customer/shopping-list-detail', extra: list.id),
       onLongPress: () => _showListOptions(list),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSizes.md),
@@ -226,7 +227,9 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                               list.isComplete
                                   ? Iconsax.tick_circle5
                                   : Iconsax.task_square,
-                              color: list.isComplete ? AppColors.success : color,
+                              color: list.isComplete
+                                  ? AppColors.success
+                                  : color,
                               size: 16,
                             ),
                             const SizedBox(width: AppSizes.xs),
@@ -267,7 +270,9 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusFull,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -321,9 +326,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
             const SizedBox(height: AppSizes.lg),
             Text(
               'No Shopping Lists Yet',
-              style: AppTextStyles.h5.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: AppSizes.sm),
             Text(
@@ -348,11 +351,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Iconsax.add,
-                      color: Colors.white,
-                      size: 20,
-                    ),
+                    const Icon(Iconsax.add, color: Colors.white, size: 20),
                     const SizedBox(width: AppSizes.sm),
                     Text(
                       'Create Your First List',
@@ -412,9 +411,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                 const SizedBox(height: AppSizes.lg),
                 Text(
                   'Create New List',
-                  style: AppTextStyles.h4.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: AppSizes.lg),
 
@@ -429,7 +426,10 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
                     ),
                   ),
                 ),
@@ -446,7 +446,10 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
                     ),
                   ),
                 ),
@@ -474,7 +477,9 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                           color: isSelected
                               ? AppColors.primarySoft
                               : AppColors.grey100,
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
                           border: isSelected
                               ? Border.all(color: AppColors.primary, width: 2)
                               : null,
@@ -506,13 +511,16 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                     final color = _parseColor(colorHex);
                     final isSelected = selectedColor == colorHex;
                     return GestureDetector(
-                      onTap: () => setSheetState(() => selectedColor = colorHex),
+                      onTap: () =>
+                          setSheetState(() => selectedColor = colorHex),
                       child: Container(
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
                           color: color,
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
                           border: isSelected
                               ? Border.all(color: Colors.white, width: 3)
                               : null,
@@ -546,20 +554,22 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                     onPressed: () {
                       if (nameController.text.isNotEmpty) {
                         context.read<ShoppingListProvider>().createList(
-                              name: nameController.text,
-                              description: descController.text.isEmpty
-                                  ? null
-                                  : descController.text,
-                              emoji: selectedEmoji,
-                              color: selectedColor,
-                            );
+                          name: nameController.text,
+                          description: descController.text.isEmpty
+                              ? null
+                              : descController.text,
+                          emoji: selectedEmoji,
+                          color: selectedColor,
+                        );
                         Navigator.pop(context);
                       }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSizes.md,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                       ),
@@ -749,7 +759,10 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     // Add all purchasable items to cart
     for (final item in list.purchasableItems) {
       if (item.linkedProduct != null) {
-        cartProvider.addToCart(item.linkedProduct!, quantity: item.quantity.toDouble());
+        cartProvider.addToCart(
+          item.linkedProduct!,
+          quantity: item.quantity.toDouble(),
+        );
         addedCount++;
       }
     }

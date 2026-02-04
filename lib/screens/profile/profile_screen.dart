@@ -52,15 +52,19 @@ class ProfileScreen extends StatelessWidget {
 
                 // User Card with Stats
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.horizontalPadding,
+                  ),
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppColors.accent,
-                      borderRadius: BorderRadius.circular(context.responsive<double>(
-                        mobile: AppSizes.radiusXl,
-                        tablet: 20.0,
-                        desktop: 24.0,
-                      )),
+                      borderRadius: BorderRadius.circular(
+                        context.responsive<double>(
+                          mobile: AppSizes.radiusXl,
+                          tablet: 20.0,
+                          desktop: 24.0,
+                        ),
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.accent.withValues(alpha: 0.2),
@@ -77,11 +81,13 @@ class ProfileScreen extends StatelessWidget {
                       children: [
                         // User Info Row
                         Padding(
-                          padding: EdgeInsets.all(context.responsive<double>(
-                            mobile: AppSizes.lg,
-                            tablet: AppSizes.xl,
-                            desktop: 24.0,
-                          )),
+                          padding: EdgeInsets.all(
+                            context.responsive<double>(
+                              mobile: AppSizes.lg,
+                              tablet: AppSizes.xl,
+                              desktop: 24.0,
+                            ),
+                          ),
                           child: Row(
                             children: [
                               // Avatar
@@ -138,9 +144,12 @@ class ProfileScreen extends StatelessWidget {
                                     const SizedBox(height: 2),
                                     Text(
                                       Formatters.formatPhoneNumber(
-                                          user?.phoneNumber ?? ''),
+                                        user?.phoneNumber ?? '',
+                                      ),
                                       style: AppTextStyles.bodySmall.copyWith(
-                                        color: Colors.white.withValues(alpha: 0.85),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.85,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -158,8 +167,9 @@ class ProfileScreen extends StatelessWidget {
                                 ),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius:
-                                      BorderRadius.circular(AppSizes.radiusFull),
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusFull,
+                                  ),
                                 ),
                                 child: Text(
                                   'Edit',
@@ -189,16 +199,20 @@ class ProfileScreen extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.only(
-                              bottomLeft: Radius.circular(context.responsive<double>(
-                                mobile: AppSizes.radiusXl,
-                                tablet: 20.0,
-                                desktop: 24.0,
-                              )),
-                              bottomRight: Radius.circular(context.responsive<double>(
-                                mobile: AppSizes.radiusXl,
-                                tablet: 20.0,
-                                desktop: 24.0,
-                              )),
+                              bottomLeft: Radius.circular(
+                                context.responsive<double>(
+                                  mobile: AppSizes.radiusXl,
+                                  tablet: 20.0,
+                                  desktop: 24.0,
+                                ),
+                              ),
+                              bottomRight: Radius.circular(
+                                context.responsive<double>(
+                                  mobile: AppSizes.radiusXl,
+                                  tablet: 20.0,
+                                  desktop: 24.0,
+                                ),
+                              ),
                             ),
                           ),
                           child: Row(
@@ -217,189 +231,208 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
 
-              SizedBox(height: context.responsive<double>(
-                mobile: AppSizes.md,
-                tablet: AppSizes.lg,
-                desktop: AppSizes.xl,
-              )),
-
-              // Default Address Card
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
-                child: Container(
-                  padding: EdgeInsets.all(context.responsive<double>(
+                SizedBox(
+                  height: context.responsive<double>(
                     mobile: AppSizes.md,
                     tablet: AppSizes.lg,
-                    desktop: 20.0,
-                  )),
-                  decoration: BoxDecoration(
-                    color: AppColors.primarySoft,
-                    borderRadius: BorderRadius.circular(context.responsive<double>(
-                      mobile: AppSizes.radiusLg,
-                      tablet: AppSizes.radiusXl,
-                      desktop: 20.0,
-                    )),
+                    desktop: AppSizes.xl,
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
+                ),
+
+                // Default Address Card
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.horizontalPadding,
+                  ),
+                  child: Container(
+                    padding: EdgeInsets.all(
+                      context.responsive<double>(
+                        mobile: AppSizes.md,
+                        tablet: AppSizes.lg,
+                        desktop: 20.0,
+                      ),
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primarySoft,
+                      borderRadius: BorderRadius.circular(
+                        context.responsive<double>(
+                          mobile: AppSizes.radiusLg,
+                          tablet: AppSizes.radiusXl,
+                          desktop: 20.0,
                         ),
-                        child: Icon(
-                          Iconsax.location,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Iconsax.location,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: AppSizes.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Home',
+                                    style: AppTextStyles.labelMedium.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSizes.xs),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary,
+                                      borderRadius: BorderRadius.circular(
+                                        AppSizes.radiusFull,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Default',
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Plot 45, Nakasero Road, Nakasero',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Iconsax.arrow_right_3,
                           color: AppColors.primary,
                           size: 20,
                         ),
-                      ),
-                      const SizedBox(width: AppSizes.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'Home',
-                                  style: AppTextStyles.labelMedium.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: AppSizes.xs),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.primary,
-                                    borderRadius: BorderRadius.circular(
-                                        AppSizes.radiusFull),
-                                  ),
-                                  child: Text(
-                                    'Default',
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Plot 45, Nakasero Road, Nakasero',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Iconsax.arrow_right_3,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              SizedBox(height: context.responsive<double>(
-                mobile: AppSizes.lg,
-                tablet: AppSizes.xl,
-                desktop: 24.0,
-              )),
-
-              // Account Section
-              _buildSectionTitle(context, 'ACCOUNT'),
-              _buildMenuCard(context, [
-                _MenuItem(
-                  icon: Iconsax.location,
-                  title: 'My Addresses',
-                  onTap: () {},
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.lg,
+                    tablet: AppSizes.xl,
+                    desktop: 24.0,
+                  ),
                 ),
-                _MenuItem(
-                  icon: Iconsax.card,
-                  title: 'Payment Methods',
-                  onTap: () {},
-                ),
-                _MenuItem(
-                  icon: Iconsax.heart,
-                  title: 'Saved Items',
-                  onTap: () {},
-                ),
-                _MenuItem(
-                  icon: Iconsax.clock,
-                  title: 'Order History',
-                  onTap: () => context.go('/customer/orders'),
-                ),
-              ]),
 
-              SizedBox(height: context.responsive<double>(
-                mobile: AppSizes.md,
-                tablet: AppSizes.lg,
-                desktop: AppSizes.lg,
-              )),
+                // Account Section
+                _buildSectionTitle(context, 'ACCOUNT'),
+                _buildMenuCard(context, [
+                  _MenuItem(
+                    icon: Iconsax.location,
+                    title: 'My Addresses',
+                    onTap: () {},
+                  ),
+                  _MenuItem(
+                    icon: Iconsax.card,
+                    title: 'Payment Methods',
+                    onTap: () {},
+                  ),
+                  _MenuItem(
+                    icon: Iconsax.heart,
+                    title: 'Saved Items',
+                    onTap: () {},
+                  ),
+                  _MenuItem(
+                    icon: Iconsax.clock,
+                    title: 'Order History',
+                    onTap: () => context.go('/customer/orders'),
+                  ),
+                ]),
 
-              // Preferences Section
-              _buildSectionTitle(context, 'PREFERENCES'),
-              _buildMenuCard(context, [
-                _MenuItem(
-                  icon: Iconsax.notification,
-                  title: 'Notifications',
-                  onTap: () {},
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.md,
+                    tablet: AppSizes.lg,
+                    desktop: AppSizes.lg,
+                  ),
                 ),
-                _MenuItem(
-                  icon: Iconsax.setting_2,
-                  title: 'App Settings',
-                  onTap: () {},
+
+                // Preferences Section
+                _buildSectionTitle(context, 'PREFERENCES'),
+                _buildMenuCard(context, [
+                  _MenuItem(
+                    icon: Iconsax.notification,
+                    title: 'Notifications',
+                    onTap: () {},
+                  ),
+                  _MenuItem(
+                    icon: Iconsax.setting_2,
+                    title: 'App Settings',
+                    onTap: () {},
+                  ),
+                ]),
+
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.md,
+                    tablet: AppSizes.lg,
+                    desktop: AppSizes.lg,
+                  ),
                 ),
-              ]),
 
-              SizedBox(height: context.responsive<double>(
-                mobile: AppSizes.md,
-                tablet: AppSizes.lg,
-                desktop: AppSizes.lg,
-              )),
+                // Support Section
+                _buildSectionTitle(context, 'SUPPORT'),
+                _buildMenuCard(context, [
+                  _MenuItem(
+                    icon: Iconsax.message_question,
+                    title: 'Help Center',
+                    onTap: () {},
+                  ),
+                  _MenuItem(
+                    icon: Iconsax.document_text,
+                    title: 'Terms & Privacy',
+                    onTap: () {},
+                  ),
+                ]),
 
-              // Support Section
-              _buildSectionTitle(context, 'SUPPORT'),
-              _buildMenuCard(context, [
-                _MenuItem(
-                  icon: Iconsax.message_question,
-                  title: 'Help Center',
-                  onTap: () {},
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.lg,
+                    tablet: AppSizes.xl,
+                    desktop: 24.0,
+                  ),
                 ),
-                _MenuItem(
-                  icon: Iconsax.document_text,
-                  title: 'Terms & Privacy',
-                  onTap: () {},
+
+                // Logout button
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.horizontalPadding,
+                  ),
+                  child: _buildLogoutButton(context, authProvider),
                 ),
-              ]),
 
-              SizedBox(height: context.responsive<double>(
-                mobile: AppSizes.lg,
-                tablet: AppSizes.xl,
-                desktop: 24.0,
-              )),
-
-              // Logout button
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
-                child: _buildLogoutButton(context, authProvider),
-              ),
-
-              const SizedBox(height: 100),
-            ],
+                const SizedBox(height: 100),
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -472,11 +505,13 @@ class ProfileScreen extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(context.responsive<double>(
-            mobile: AppSizes.radiusLg,
-            tablet: AppSizes.radiusXl,
-            desktop: 20.0,
-          )),
+          borderRadius: BorderRadius.circular(
+            context.responsive<double>(
+              mobile: AppSizes.radiusLg,
+              tablet: AppSizes.radiusXl,
+              desktop: 20.0,
+            ),
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -501,7 +536,11 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuItem(BuildContext context, _MenuItem item, {bool showDivider = true}) {
+  Widget _buildMenuItem(
+    BuildContext context,
+    _MenuItem item, {
+    bool showDivider = true,
+  }) {
     return Column(
       children: [
         ListTile(
@@ -562,15 +601,14 @@ class ProfileScreen extends StatelessWidget {
         ),
         if (showDivider)
           Padding(
-            padding: EdgeInsets.only(left: context.responsive<double>(
-              mobile: 68.0,
-              tablet: 76.0,
-              desktop: 84.0,
-            )),
-            child: Divider(
-              height: 1,
-              color: AppColors.grey100,
+            padding: EdgeInsets.only(
+              left: context.responsive<double>(
+                mobile: 68.0,
+                tablet: 76.0,
+                desktop: 84.0,
+              ),
             ),
+            child: Divider(height: 1, color: AppColors.grey100),
           ),
       ],
     );
@@ -580,18 +618,22 @@ class ProfileScreen extends StatelessWidget {
     return GestureDetector(
       onTap: () => _showLogoutDialog(context, authProvider),
       child: Container(
-        padding: EdgeInsets.all(context.responsive<double>(
-          mobile: AppSizes.md,
-          tablet: AppSizes.lg,
-          desktop: 20.0,
-        )),
+        padding: EdgeInsets.all(
+          context.responsive<double>(
+            mobile: AppSizes.md,
+            tablet: AppSizes.lg,
+            desktop: 20.0,
+          ),
+        ),
         decoration: BoxDecoration(
           color: AppColors.error.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(context.responsive<double>(
-            mobile: AppSizes.radiusLg,
-            tablet: AppSizes.radiusXl,
-            desktop: 20.0,
-          )),
+          borderRadius: BorderRadius.circular(
+            context.responsive<double>(
+              mobile: AppSizes.radiusLg,
+              tablet: AppSizes.radiusXl,
+              desktop: 20.0,
+            ),
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -631,10 +673,7 @@ class ProfileScreen extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusLg),
         ),
-        title: Text(
-          'Logout',
-          style: AppTextStyles.h5,
-        ),
+        title: Text('Logout', style: AppTextStyles.h5),
         content: Text(
           'Are you sure you want to logout?',
           style: AppTextStyles.bodyMedium,
@@ -673,9 +712,5 @@ class _MenuItem {
   final String title;
   final VoidCallback onTap;
 
-  _MenuItem({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-  });
+  _MenuItem({required this.icon, required this.title, required this.onTap});
 }

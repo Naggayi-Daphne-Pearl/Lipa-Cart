@@ -60,16 +60,16 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
 
           // Results
-          Expanded(
-            child: _buildContent(productProvider, cartProvider),
-          ),
+          Expanded(child: _buildContent(productProvider, cartProvider)),
         ],
       ),
     );
   }
 
   Widget _buildContent(
-      ProductProvider productProvider, CartProvider cartProvider) {
+    ProductProvider productProvider,
+    CartProvider cartProvider,
+  ) {
     if (_searchController.text.isEmpty) {
       // Show recent searches or popular items
       return _buildSuggestions(productProvider);
@@ -88,9 +88,7 @@ class _SearchScreenState extends State<SearchScreen> {
             const SizedBox(height: AppSizes.md),
             Text(
               'No products found',
-              style: AppTextStyles.h5.copyWith(
-                color: AppColors.textMedium,
-              ),
+              style: AppTextStyles.h5.copyWith(color: AppColors.textMedium),
             ),
             const SizedBox(height: AppSizes.sm),
             Text(
@@ -144,52 +142,46 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Popular Searches',
-            style: AppTextStyles.h5,
-          ),
+          Text('Popular Searches', style: AppTextStyles.h5),
           const SizedBox(height: AppSizes.md),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: [
-              'Tomatoes',
-              'Milk',
-              'Eggs',
-              'Rice',
-              'Bananas',
-              'Onions',
-              'Fish',
-              'Avocado',
-            ].map((term) {
-              return GestureDetector(
-                onTap: () {
-                  _searchController.text = term;
-                  productProvider.search(term);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                    border: Border.all(color: AppColors.lightGrey),
-                  ),
-                  child: Text(
-                    term,
-                    style: AppTextStyles.labelMedium,
-                  ),
-                ),
-              );
-            }).toList(),
+            children:
+                [
+                  'Tomatoes',
+                  'Milk',
+                  'Eggs',
+                  'Rice',
+                  'Bananas',
+                  'Onions',
+                  'Fish',
+                  'Avocado',
+                ].map((term) {
+                  return GestureDetector(
+                    onTap: () {
+                      _searchController.text = term;
+                      productProvider.search(term);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(
+                          AppSizes.radiusFull,
+                        ),
+                        border: Border.all(color: AppColors.lightGrey),
+                      ),
+                      child: Text(term, style: AppTextStyles.labelMedium),
+                    ),
+                  );
+                }).toList(),
           ),
           const SizedBox(height: AppSizes.xl),
-          Text(
-            'Browse Categories',
-            style: AppTextStyles.h5,
-          ),
+          Text('Browse Categories', style: AppTextStyles.h5),
           const SizedBox(height: AppSizes.md),
           ...productProvider.categories.map((category) {
             return ListTile(
@@ -207,10 +199,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   color: AppColors.primaryOrange,
                 ),
               ),
-              title: Text(
-                category.name,
-                style: AppTextStyles.labelMedium,
-              ),
+              title: Text(category.name, style: AppTextStyles.labelMedium),
               subtitle: Text(
                 '${category.productCount} items',
                 style: AppTextStyles.caption,

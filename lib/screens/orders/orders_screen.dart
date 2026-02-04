@@ -27,11 +27,13 @@ class OrdersScreen extends StatelessWidget {
               children: [
                 // Title
                 Padding(
-                  padding: EdgeInsets.all(context.responsive<double>(
-                    mobile: AppSizes.lg,
-                    tablet: AppSizes.xl,
-                    desktop: 24.0,
-                  )),
+                  padding: EdgeInsets.all(
+                    context.responsive<double>(
+                      mobile: AppSizes.lg,
+                      tablet: AppSizes.xl,
+                      desktop: 24.0,
+                    ),
+                  ),
                   child: Text(
                     'My Orders',
                     style: AppTextStyles.h3.copyWith(
@@ -48,7 +50,9 @@ class OrdersScreen extends StatelessWidget {
                 // Active Orders Section
                 if (orderProvider.activeOrders.isNotEmpty) ...[
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.horizontalPadding,
+                    ),
                     child: Text(
                       'ACTIVE ORDERS',
                       style: AppTextStyles.caption.copyWith(
@@ -58,11 +62,13 @@ class OrdersScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  SizedBox(height: context.responsive<double>(
-                    mobile: AppSizes.sm,
-                    tablet: AppSizes.md,
-                    desktop: AppSizes.md,
-                  )),
+                  SizedBox(
+                    height: context.responsive<double>(
+                      mobile: AppSizes.sm,
+                      tablet: AppSizes.md,
+                      desktop: AppSizes.md,
+                    ),
+                  ),
                   ...orderProvider.activeOrders.map(
                     (order) => _buildActiveOrderCard(context, order),
                   ),
@@ -138,7 +144,8 @@ class OrdersScreen extends StatelessWidget {
         ),
       ),
       itemCount: orders.length,
-      itemBuilder: (context, index) => _buildPastOrderCard(context, orders[index]),
+      itemBuilder: (context, index) =>
+          _buildPastOrderCard(context, orders[index]),
     );
   }
 
@@ -154,11 +161,13 @@ class OrdersScreen extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: AppColors.accent,
-        borderRadius: BorderRadius.circular(context.responsive<double>(
-          mobile: AppSizes.radiusXl,
-          tablet: 20.0,
-          desktop: 24.0,
-        )),
+        borderRadius: BorderRadius.circular(
+          context.responsive<double>(
+            mobile: AppSizes.radiusXl,
+            tablet: 20.0,
+            desktop: 24.0,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColors.accent.withValues(alpha: 0.2),
@@ -175,11 +184,13 @@ class OrdersScreen extends StatelessWidget {
         children: [
           // Order Info
           Padding(
-            padding: EdgeInsets.all(context.responsive<double>(
-              mobile: AppSizes.lg,
-              tablet: AppSizes.xl,
-              desktop: 24.0,
-            )),
+            padding: EdgeInsets.all(
+              context.responsive<double>(
+                mobile: AppSizes.lg,
+                tablet: AppSizes.xl,
+                desktop: 24.0,
+              ),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -198,7 +209,10 @@ class OrdersScreen extends StatelessWidget {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => context.push('/customer/order-tracking', extra: order),
+                      onTap: () => context.push(
+                        '/customer/order-tracking',
+                        extra: order,
+                      ),
                       child: Container(
                         padding: EdgeInsets.symmetric(
                           horizontal: context.responsive<double>(
@@ -210,8 +224,9 @@ class OrdersScreen extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius:
-                              BorderRadius.circular(AppSizes.radiusFull),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusFull,
+                          ),
                         ),
                         child: Text(
                           'Track Order',
@@ -237,11 +252,13 @@ class OrdersScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                SizedBox(height: context.responsive<double>(
-                  mobile: AppSizes.lg,
-                  tablet: AppSizes.xl,
-                  desktop: AppSizes.xl,
-                )),
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.lg,
+                    tablet: AppSizes.xl,
+                    desktop: AppSizes.xl,
+                  ),
+                ),
                 // Progress Indicator
                 _buildProgressIndicator(context, order.status),
               ],
@@ -300,11 +317,7 @@ class OrdersScreen extends StatelessWidget {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                   ),
-                  child: Icon(
-                    Iconsax.call,
-                    color: AppColors.accent,
-                    size: 20,
-                  ),
+                  child: Icon(Iconsax.call, color: AppColors.accent, size: 20),
                 ),
               ],
             ),
@@ -427,18 +440,22 @@ class OrdersScreen extends StatelessWidget {
         right: context.isMobile ? context.horizontalPadding : 0,
         bottom: context.isMobile ? AppSizes.md : 0,
       ),
-      padding: EdgeInsets.all(context.responsive<double>(
-        mobile: AppSizes.md,
-        tablet: AppSizes.lg,
-        desktop: 20.0,
-      )),
+      padding: EdgeInsets.all(
+        context.responsive<double>(
+          mobile: AppSizes.md,
+          tablet: AppSizes.lg,
+          desktop: 20.0,
+        ),
+      ),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(context.responsive<double>(
-          mobile: AppSizes.radiusLg,
-          tablet: AppSizes.radiusXl,
-          desktop: 20.0,
-        )),
+        borderRadius: BorderRadius.circular(
+          context.responsive<double>(
+            mobile: AppSizes.radiusLg,
+            tablet: AppSizes.radiusXl,
+            desktop: 20.0,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -547,11 +564,7 @@ class OrdersScreen extends StatelessWidget {
           // Order details
           Row(
             children: [
-              Icon(
-                Iconsax.location,
-                color: AppColors.textSecondary,
-                size: 16,
-              ),
+              Icon(Iconsax.location, color: AppColors.textSecondary, size: 16),
               const SizedBox(width: AppSizes.xs),
               Expanded(
                 child: Text(
@@ -591,11 +604,7 @@ class OrdersScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Iconsax.refresh,
-                  color: AppColors.accent,
-                  size: 18,
-                ),
+                Icon(Iconsax.refresh, color: AppColors.accent, size: 18),
                 const SizedBox(width: AppSizes.xs),
                 Text(
                   'Reorder',

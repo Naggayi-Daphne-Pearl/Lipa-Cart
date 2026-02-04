@@ -16,11 +16,7 @@ class OtpScreen extends StatefulWidget {
   final String phoneNumber;
   final String? returnRoute;
 
-  const OtpScreen({
-    super.key,
-    required this.phoneNumber,
-    this.returnRoute,
-  });
+  const OtpScreen({super.key, required this.phoneNumber, this.returnRoute});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -130,10 +126,7 @@ class _OtpScreenState extends State<OtpScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: AppSizes.lg),
-              Text(
-                'Verify Your Number',
-                style: AppTextStyles.h3,
-              ),
+              Text('Verify Your Number', style: AppTextStyles.h3),
               const SizedBox(height: AppSizes.sm),
               Text.rich(
                 TextSpan(

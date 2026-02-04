@@ -125,8 +125,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
 
-                             
-
                               if (context.isDesktop) const Spacer(),
 
                               // User greeting for desktop
@@ -246,7 +244,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   if (!context.isMobile) ...[
                                     // User profile button for desktop
                                     GestureDetector(
-                                      onTap: () => context.go('/customer/profile'),
+                                      onTap: () =>
+                                          context.go('/customer/profile'),
                                       child: Container(
                                         width: 40,
                                         height: 40,
@@ -682,7 +681,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                           // Shop Now CTA Button
                                           GestureDetector(
                                             onTap: () {
-                                              context.go('/customer/categories');
+                                              context.go(
+                                                '/customer/categories',
+                                              );
                                             },
                                             child: Container(
                                               padding:
@@ -885,7 +886,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 AdaptiveCategorySection(
                   categories: productProvider.categories,
-                  onCategoryTap: (category) => context.push('/customer/category', extra: category),
+                  onCategoryTap: (category) =>
+                      context.push('/customer/category', extra: category),
                 ),
                 SizedBox(
                   height: context.responsive<double>(
@@ -1332,7 +1334,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,

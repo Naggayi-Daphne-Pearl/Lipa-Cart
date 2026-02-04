@@ -15,10 +15,7 @@ import '../../widgets/app_bottom_nav.dart';
 class ShoppingListDetailScreen extends StatefulWidget {
   final String listId;
 
-  const ShoppingListDetailScreen({
-    super.key,
-    required this.listId,
-  });
+  const ShoppingListDetailScreen({super.key, required this.listId});
 
   @override
   State<ShoppingListDetailScreen> createState() =>
@@ -26,7 +23,6 @@ class ShoppingListDetailScreen extends StatefulWidget {
 }
 
 class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
-
   Color _parseColor(String hexColor) {
     final hex = hexColor.replaceAll('#', '');
     return Color(int.parse('FF$hex', radix: 16));
@@ -41,9 +37,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
     if (list == null) {
       return Scaffold(
         bottomNavigationBar: const AppBottomNav(currentIndex: 0),
-        body: Center(
-          child: Text('List not found'),
-        ),
+        body: Center(child: Text('List not found')),
       );
     }
 
@@ -54,9 +48,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.elegantBgGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
         child: Column(
           children: [
             // Header with colored background
@@ -83,8 +75,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                               height: 44,
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius:
-                                    BorderRadius.circular(AppSizes.radiusMd),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusMd,
+                                ),
                               ),
                               child: const Icon(
                                 Iconsax.arrow_left,
@@ -101,8 +94,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                               height: 44,
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius:
-                                    BorderRadius.circular(AppSizes.radiusMd),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusMd,
+                                ),
                               ),
                               child: const Icon(
                                 Iconsax.more,
@@ -122,8 +116,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                             height: 64,
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius:
-                                  BorderRadius.circular(AppSizes.radiusLg),
+                              borderRadius: BorderRadius.circular(
+                                AppSizes.radiusLg,
+                              ),
                             ),
                             child: Center(
                               child: Text(
@@ -149,7 +144,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                   Text(
                                     list.description!,
                                     style: AppTextStyles.bodySmall.copyWith(
-                                      color: Colors.white.withValues(alpha: 0.8),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.8,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -173,8 +170,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                     Text(
                                       '${list.checkedItems} of ${list.totalItems} items',
                                       style: AppTextStyles.labelSmall.copyWith(
-                                        color:
-                                            Colors.white.withValues(alpha: 0.9),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.9,
+                                        ),
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
@@ -192,11 +190,13 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                   borderRadius: BorderRadius.circular(4),
                                   child: LinearProgressIndicator(
                                     value: list.progress,
-                                    backgroundColor:
-                                        Colors.white.withValues(alpha: 0.3),
+                                    backgroundColor: Colors.white.withValues(
+                                      alpha: 0.3,
+                                    ),
                                     valueColor:
                                         const AlwaysStoppedAnimation<Color>(
-                                            Colors.white),
+                                          Colors.white,
+                                        ),
                                     minHeight: 6,
                                   ),
                                 ),
@@ -249,8 +249,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                 ),
                               ),
                               GestureDetector(
-                                onTap: () => listProvider
-                                    .clearCheckedItems(widget.listId),
+                                onTap: () => listProvider.clearCheckedItems(
+                                  widget.listId,
+                                ),
                                 child: Text(
                                   'Clear all',
                                   style: AppTextStyles.labelSmall.copyWith(
@@ -305,11 +306,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                     child: Row(
                       children: [
                         const SizedBox(width: AppSizes.md),
-                        Icon(
-                          Iconsax.add_circle,
-                          color: color,
-                          size: 22,
-                        ),
+                        Icon(Iconsax.add_circle, color: color, size: 22),
                         const SizedBox(width: AppSizes.sm),
                         Text(
                           'Add item to list...',
@@ -330,7 +327,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                   onTap: () => _addAllToCart(list, cartProvider),
                   child: Container(
                     height: 52,
-                    padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSizes.md,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(AppSizes.radiusMd),
@@ -361,11 +360,11 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
     );
   }
 
-  Widget _buildItemCard(
-      ShoppingListItem item, ShoppingList list, Color color) {
+  Widget _buildItemCard(ShoppingListItem item, ShoppingList list, Color color) {
     final cartProvider = context.watch<CartProvider>();
     final isInCart =
-        item.linkedProduct != null && cartProvider.isInCart(item.linkedProduct!.id);
+        item.linkedProduct != null &&
+        cartProvider.isInCart(item.linkedProduct!.id);
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSizes.sm),
@@ -457,7 +456,8 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                       ? Iconsax.document_text5
                                       : Iconsax.document_text,
                                   size: 16,
-                                  color: item.description != null &&
+                                  color:
+                                      item.description != null &&
                                           item.description!.isNotEmpty
                                       ? color
                                       : AppColors.grey400,
@@ -507,7 +507,8 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                               const SizedBox(width: AppSizes.sm),
                               Text(
                                 Formatters.formatCurrency(
-                                    item.linkedProduct!.price),
+                                  item.linkedProduct!.price,
+                                ),
                                 style: AppTextStyles.labelSmall.copyWith(
                                   color: color,
                                   fontWeight: FontWeight.w600,
@@ -591,12 +592,14 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                            '${item.name} (x${item.quantity}) added to cart'),
+                          '${item.name} (x${item.quantity}) added to cart',
+                        ),
                         backgroundColor: AppColors.success,
                         behavior: SnackBarBehavior.floating,
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppSizes.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
                         ),
                         duration: const Duration(seconds: 1),
                       ),
@@ -604,9 +607,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                   }
                 },
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppSizes.sm,
-                  ),
+                  padding: const EdgeInsets.symmetric(vertical: AppSizes.sm),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -646,11 +647,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
           color: AppColors.grey100,
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Icon(
-          icon,
-          size: 14,
-          color: AppColors.textSecondary,
-        ),
+        child: Icon(icon, size: 14, color: AppColors.textSecondary),
       ),
     );
   }
@@ -669,18 +666,12 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Iconsax.clipboard_tick,
-                size: 48,
-                color: color,
-              ),
+              child: Icon(Iconsax.clipboard_tick, size: 48, color: color),
             ),
             const SizedBox(height: AppSizes.lg),
             Text(
               'Your list is empty',
-              style: AppTextStyles.h5.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: AppSizes.sm),
             Text(
@@ -696,7 +687,12 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
     );
   }
 
-  void _addItem(String name, String? description, double? budgetAmount, ShoppingListProvider provider) {
+  void _addItem(
+    String name,
+    String? description,
+    double? budgetAmount,
+    ShoppingListProvider provider,
+  ) {
     if (name.trim().isNotEmpty) {
       // Try to find a matching product
       final productProvider = context.read<ProductProvider>();
@@ -708,13 +704,15 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
       final item = ShoppingListItem(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: name.trim(),
-        description: description?.trim().isEmpty ?? true ? null : description?.trim(),
+        description: description?.trim().isEmpty ?? true
+            ? null
+            : description?.trim(),
         quantity: 1,
         budgetAmount: budgetAmount,
         linkedProduct:
             matchingProduct.name.toLowerCase().contains(name.toLowerCase())
-                ? matchingProduct
-                : null,
+            ? matchingProduct
+            : null,
       );
 
       provider.addItemToList(widget.listId, item);
@@ -783,7 +781,10 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Iconsax.share, color: AppColors.textPrimary),
+                leading: const Icon(
+                  Iconsax.share,
+                  color: AppColors.textPrimary,
+                ),
                 title: const Text('Share List'),
                 onTap: () {
                   Navigator.pop(context);
@@ -828,10 +829,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: Text(
-              'Delete',
-              style: TextStyle(color: AppColors.error),
-            ),
+            child: Text('Delete', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -858,18 +856,12 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
               ),
-              child: Icon(
-                Iconsax.add_circle,
-                color: color,
-                size: 22,
-              ),
+              child: Icon(Iconsax.add_circle, color: color, size: 22),
             ),
             const SizedBox(width: AppSizes.sm),
             Text(
               'Add Item',
-              style: AppTextStyles.h5.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -972,7 +964,8 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 controller: descriptionController,
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: 'e.g., "Ripe, ready to eat", "Full cream", "Sliced"...',
+                  hintText:
+                      'e.g., "Ripe, ready to eat", "Full cream", "Sliced"...',
                   hintStyle: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textTertiary,
                   ),
@@ -1026,7 +1019,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
               final name = nameController.text.trim();
               final description = descriptionController.text.trim();
               final budgetText = budgetController.text.trim();
-              final budgetAmount = budgetText.isEmpty ? null : double.tryParse(budgetText);
+              final budgetAmount = budgetText.isEmpty
+                  ? null
+                  : double.tryParse(budgetText);
 
               if (name.isNotEmpty) {
                 _addItem(
@@ -1075,7 +1070,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
   }
 
   void _showEditDescriptionDialog(ShoppingListItem item, ShoppingList list) {
-    final descriptionController = TextEditingController(text: item.description ?? '');
+    final descriptionController = TextEditingController(
+      text: item.description ?? '',
+    );
     final color = _parseColor(list.color);
 
     showDialog(
@@ -1086,9 +1083,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
         ),
         title: Text(
           'Add Notes',
-          style: AppTextStyles.h5.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1106,7 +1101,8 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
               controller: descriptionController,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: 'e.g., "Ripe bananas", "Low fat", "2cm thick slices"...',
+                hintText:
+                    'e.g., "Ripe bananas", "Low fat", "2cm thick slices"...',
                 hintStyle: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.textTertiary,
                 ),
@@ -1146,10 +1142,10 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
             TextButton(
               onPressed: () {
                 context.read<ShoppingListProvider>().updateItemDescription(
-                      list.id,
-                      item.id,
-                      null,
-                    );
+                  list.id,
+                  item.id,
+                  null,
+                );
                 Navigator.pop(context);
               },
               child: Text(
@@ -1163,10 +1159,10 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
             onPressed: () {
               final description = descriptionController.text.trim();
               context.read<ShoppingListProvider>().updateItemDescription(
-                    list.id,
-                    item.id,
-                    description.isEmpty ? null : description,
-                  );
+                list.id,
+                item.id,
+                description.isEmpty ? null : description,
+              );
               Navigator.pop(context);
             },
             child: Text(

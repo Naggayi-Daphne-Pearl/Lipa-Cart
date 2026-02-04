@@ -125,18 +125,19 @@ class CategoryProductsScreen extends StatelessWidget {
                     ),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: AppSizes.md,
-                      crossAxisSpacing: AppSizes.md,
-                      childAspectRatio: 0.72,
-                    ),
+                          crossAxisCount: 2,
+                          mainAxisSpacing: AppSizes.md,
+                          crossAxisSpacing: AppSizes.md,
+                          childAspectRatio: 0.72,
+                        ),
                     itemCount: products.length,
                     itemBuilder: (context, index) {
                       final product = products[index];
                       return ProductCard(
                         product: product,
                         isInCart: cartProvider.isInCart(product.id),
-                        onTap: () => context.push('/customer/product', extra: product),
+                        onTap: () =>
+                            context.push('/customer/product', extra: product),
                         onAddToCart: () {
                           if (cartProvider.isInCart(product.id)) {
                             cartProvider.removeFromCart(product.id);
@@ -144,8 +145,7 @@ class CategoryProductsScreen extends StatelessWidget {
                             cartProvider.addToCart(product);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content:
-                                    Text('${product.name} added to cart'),
+                                content: Text('${product.name} added to cart'),
                                 duration: const Duration(seconds: 1),
                                 behavior: SnackBarBehavior.floating,
                               ),

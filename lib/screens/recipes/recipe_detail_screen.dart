@@ -15,10 +15,7 @@ import '../../widgets/app_bottom_nav.dart';
 class RecipeDetailScreen extends StatefulWidget {
   final String recipeId;
 
-  const RecipeDetailScreen({
-    super.key,
-    required this.recipeId,
-  });
+  const RecipeDetailScreen({super.key, required this.recipeId});
 
   @override
   State<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
@@ -51,9 +48,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     if (recipe == null) {
       return Scaffold(
         bottomNavigationBar: const AppBottomNav(currentIndex: 0),
-        body: Center(
-          child: Text('Recipe not found'),
-        ),
+        body: Center(child: Text('Recipe not found')),
       );
     }
 
@@ -103,7 +98,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                   ),
                   child: Icon(
                     recipe.isFavorite ? Iconsax.heart5 : Iconsax.heart,
-                    color: recipe.isFavorite ? AppColors.error : AppColors.grey400,
+                    color: recipe.isFavorite
+                        ? AppColors.error
+                        : AppColors.grey400,
                     size: 20,
                   ),
                 ),
@@ -136,9 +133,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                   CachedNetworkImage(
                     imageUrl: recipe.image,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: AppColors.grey100,
-                    ),
+                    placeholder: (context, url) =>
+                        Container(color: AppColors.grey100),
                     errorWidget: (context, url, error) => Container(
                       color: AppColors.grey100,
                       child: const Icon(
@@ -221,7 +217,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                               decoration: BoxDecoration(
                                 color: AppColors.accentSoft,
                                 borderRadius: BorderRadius.circular(
-                                    AppSizes.radiusFull),
+                                  AppSizes.radiusFull,
+                                ),
                               ),
                               child: Text(
                                 tag,
@@ -254,8 +251,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                               ),
                               decoration: BoxDecoration(
                                 color: AppColors.accent,
-                                borderRadius:
-                                    BorderRadius.circular(AppSizes.radiusMd),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusMd,
+                                ),
                               ),
                               child: Row(
                                 children: [
@@ -334,10 +332,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                   Container(
                     decoration: BoxDecoration(
                       border: Border(
-                        bottom: BorderSide(
-                          color: AppColors.grey200,
-                          width: 1,
-                        ),
+                        bottom: BorderSide(color: AppColors.grey200, width: 1),
                       ),
                     ),
                     child: TabBar(
@@ -357,7 +352,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                               const Icon(Iconsax.shopping_bag, size: 18),
                               const SizedBox(width: 8),
                               Text(
-                                  'Ingredients (${recipe.ingredients.length})'),
+                                'Ingredients (${recipe.ingredients.length})',
+                              ),
                             ],
                           ),
                         ),
@@ -439,8 +435,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
               ),
               // Add to cart button
               GestureDetector(
-                onTap: () =>
-                    _addSelectedToCart(recipe, cartProvider),
+                onTap: () => _addSelectedToCart(recipe, cartProvider),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSizes.xl,
@@ -452,11 +447,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Iconsax.bag_2,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                      const Icon(Iconsax.bag_2, color: Colors.white, size: 20),
                       const SizedBox(width: AppSizes.sm),
                       Text(
                         'Add ${_selectedIngredients.length} Items',
@@ -546,19 +537,19 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                     width: 20,
                     height: 20,
                     decoration: BoxDecoration(
-                      color: _selectAll ? AppColors.primary : Colors.transparent,
+                      color: _selectAll
+                          ? AppColors.primary
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(
-                        color: _selectAll ? AppColors.primary : AppColors.grey300,
+                        color: _selectAll
+                            ? AppColors.primary
+                            : AppColors.grey300,
                         width: 2,
                       ),
                     ),
                     child: _selectAll
-                        ? const Icon(
-                            Icons.check,
-                            color: Colors.white,
-                            size: 14,
-                          )
+                        ? const Icon(Icons.check, color: Colors.white, size: 14)
                         : null,
                   ),
                   const SizedBox(width: AppSizes.xs),
@@ -584,9 +575,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           return Container(
             margin: const EdgeInsets.only(bottom: AppSizes.sm),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? AppColors.primarySoft
-                  : AppColors.grey50,
+              color: isSelected ? AppColors.primarySoft : AppColors.grey50,
               borderRadius: BorderRadius.circular(AppSizes.radiusMd),
               border: Border.all(
                 color: isSelected ? AppColors.primary : AppColors.grey200,
@@ -619,8 +608,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(
-                            color:
-                                isSelected ? AppColors.primary : AppColors.grey300,
+                            color: isSelected
+                                ? AppColors.primary
+                                : AppColors.grey300,
                             width: 2,
                           ),
                         ),
@@ -687,7 +677,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                   if (ingredient.linkedProduct != null) ...[
                     const Spacer(),
                     Text(
-                      Formatters.formatCurrency(ingredient.linkedProduct!.price),
+                      Formatters.formatCurrency(
+                        ingredient.linkedProduct!.price,
+                      ),
                       style: AppTextStyles.labelSmall.copyWith(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w600,
@@ -769,9 +761,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                   ),
                   child: Text(
                     recipe.instructions[index],
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      height: 1.6,
-                    ),
+                    style: AppTextStyles.bodyMedium.copyWith(height: 1.6),
                   ),
                 ),
               ),
