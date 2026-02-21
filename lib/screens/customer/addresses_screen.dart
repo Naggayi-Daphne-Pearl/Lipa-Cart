@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../services/auth_service.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/address_service.dart';
 import '../../models/address.dart';
 
@@ -19,11 +19,11 @@ class _AddressesScreenState extends State<AddressesScreen> {
   }
 
   Future<void> _loadAddresses() async {
-    final auth = context.read<AuthService>();
+    final authProvider = context.read<AuthProvider>();
     final addressService = context.read<AddressService>();
 
-    if (auth.user != null && auth.token != null) {
-      await addressService.fetchAddresses(auth.token!, auth.user!.id);
+    if (authProvider.user != null && authProvider.token != null) {
+      await addressService.fetchAddresses(authProvider.token!, authProvider.user!.id);
     }
   }
 
@@ -34,7 +34,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
         title: const Text('Delivery Addresses'),
         backgroundColor: Colors.green,
       ),
-      body: Consumer2<AuthService, AddressService>(
+      body: Consumer2<AuthProvider, AddressService>(
         builder: (context, auth, addressService, _) {
           if (addressService.isLoading) {
             return const Center(child: CircularProgressIndicator());
@@ -131,7 +131,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
 
   void _showAddressForm(
     BuildContext context,
-    AuthService auth,
+    AuthProvider auth,
     AddressService addressService,
     Address? address,
   ) {
@@ -182,7 +182,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
 
   Future<void> _deleteAddress(
     BuildContext context,
-    AuthService auth,
+    AuthProvider auth,
     AddressService addressService,
     int id,
   ) async {
@@ -211,7 +211,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
 
   Future<void> _setDefault(
     BuildContext context,
-    AuthService auth,
+    AuthProvider auth,
     AddressService addressService,
     int id,
   ) async {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../services/auth_service.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
 
 class OrderDetailScreen extends StatefulWidget {
@@ -20,7 +20,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _loadOrderDetail() async {
-    final auth = context.read<AuthService>();
+    final auth = context.read<AuthProvider>();
     final orderService = context.read<OrderService>();
 
     if (auth.token != null) {
@@ -35,7 +35,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         title: const Text('Order Details'),
         backgroundColor: Colors.green,
       ),
-      body: Consumer2<AuthService, OrderService>(
+      body: Consumer2<AuthProvider, OrderService>(
         builder: (context, auth, orderService, _) {
           if (orderService.isLoading) {
             return const Center(child: CircularProgressIndicator());
@@ -329,7 +329,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   Future<void> _cancelOrder(
     BuildContext context,
-    AuthService auth,
+    AuthProvider auth,
     OrderService orderService,
   ) async {
     final confirmed = await showDialog<bool>(

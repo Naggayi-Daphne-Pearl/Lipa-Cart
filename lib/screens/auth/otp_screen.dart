@@ -9,6 +9,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/formatters.dart';
+import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 
@@ -53,6 +54,20 @@ class _OtpScreenState extends State<OtpScreen> {
     super.dispose();
   }
 
+  String _homeForRole(UserRole? role) {
+    switch (role) {
+      case UserRole.admin:
+        return '/admin/dashboard';
+      case UserRole.rider:
+        return '/rider/home';
+      case UserRole.shopper:
+        return '/shopper/home';
+      case UserRole.customer:
+      default:
+        return '/customer/home';
+    }
+  }
+
   Future<void> _verifyOtp() async {
     if (_otpController.text.length != AppConstants.otpLength) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -76,8 +91,17 @@ class _OtpScreenState extends State<OtpScreen> {
 
     if (success) {
       if (!mounted) return;
-      // Navigate to customer home after successful OTP verification
-      context.go('/customer/home');
+      // Check if user profile is complete (has name and email)
+      final user = authProvider.user;
+      if (user?.name == null || user?.name?.isEmpty == true) {
+        // Profile incomplete - go to completion screen
+        context.push('/profile-completion', extra: widget.phoneNumber);
+      } else {
+        // Profile complete - navigate to role-appropriate home
+        final userRole = authProvider.user?.role;
+        final homeRoute = _homeForRole(userRole);
+        context.go(homeRoute);
+      }
     } else if (authProvider.errorMessage != null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -116,7 +140,13 @@ class _OtpScreenState extends State<OtpScreen> {
         backgroundColor: AppColors.background,
         leading: IconButton(
           icon: const Icon(Iconsax.arrow_left),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/login');
+            }
+          },
         ),
       ),
       body: SafeArea(
@@ -216,7 +246,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     const SizedBox(width: AppSizes.sm),
                     Expanded(
                       child: Text(
-                        'Demo: Use 123456 as OTP',
+                        'Dev: Check backend console for OTP',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.info,
                         ),

@@ -67,14 +67,10 @@ class Product {
   }
 
   factory Product.fromStrapi(Map<String, dynamic> json, {String? baseUrl}) {
-    String imageUrl = '';
-    final imageData = json['image'];
-    if (imageData != null) {
-      final url = imageData['url'] as String? ?? '';
-      imageUrl = url.startsWith('http') ? url : '${baseUrl ?? ""}$url';
-    }
+    final attributes = (json['attributes'] as Map<String, dynamic>?) ?? json;
+    String imageUrl = _resolveMediaUrl(attributes['image'], baseUrl);
 
-    final units = json['common_units'];
+    final units = attributes['common_units'];
     String unit = 'piece';
     if (units is List && units.isNotEmpty) {
       unit = units[0].toString();
@@ -82,25 +78,45 @@ class Product {
       unit = units;
     }
 
-    final category = json['category'];
+    final category = attributes['category'];
     String categoryId = '';
     String categoryName = '';
-    if (category != null) {
-      categoryId = (category['documentId'] ?? category['id']).toString();
-      categoryName = category['name'] as String? ?? '';
+    if (category is Map<String, dynamic>) {
+      final categoryData = (category['data'] as Map<String, dynamic>?) ?? category;
+      final categoryAttrs =
+          (categoryData['attributes'] as Map<String, dynamic>?) ?? categoryData;
+      categoryId =
+          (categoryData['documentId'] ?? categoryData['id']).toString();
+      categoryName = categoryAttrs['name'] as String? ?? '';
     }
 
     return Product(
       id: (json['documentId'] ?? json['id']).toString(),
-      name: json['name'] as String? ?? '',
-      description: json['description'] as String? ?? '',
+      name: attributes['name'] as String? ?? '',
+      description: attributes['description'] as String? ?? '',
       image: imageUrl,
-      price: (json['estimated_price'] as num?)?.toDouble() ?? 0,
+      price: (attributes['estimated_price'] as num?)?.toDouble() ?? 0,
       unit: unit,
       categoryId: categoryId,
       categoryName: categoryName,
-      isAvailable: json['is_active'] as bool? ?? true,
+      isAvailable: attributes['is_active'] as bool? ?? true,
     );
+  }
+
+  static String _resolveMediaUrl(dynamic media, String? baseUrl) {
+    if (media == null) return '';
+
+    Map<String, dynamic>? data;
+    if (media is Map<String, dynamic>) {
+      data = (media['data'] as Map<String, dynamic>?) ?? media;
+    }
+    if (data == null) return '';
+
+    final attrs = (data['attributes'] as Map<String, dynamic>?) ?? data;
+    final url = attrs['url'] as String? ?? '';
+    if (url.isEmpty) return '';
+
+    return url.startsWith('http') ? url : '${baseUrl ?? ""}$url';
   }
 
   factory Product.fromJson(Map<String, dynamic> json) {

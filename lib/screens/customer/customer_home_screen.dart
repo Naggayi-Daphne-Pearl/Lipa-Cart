@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../../services/auth_service.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/address_service.dart';
 
 class CustomerHomeScreen extends StatefulWidget {
@@ -19,7 +19,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    final auth = context.read<AuthService>();
+    final auth = context.read<AuthProvider>();
     final addressService = context.read<AddressService>();
 
     // Load user's addresses
@@ -47,7 +47,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Consumer<AuthService>(
+                  Consumer<AuthProvider>(
                     builder: (context, auth, _) => Text(
                       'Welcome, ${auth.user?.name ?? 'Customer'}',
                       style: Theme.of(context).textTheme.headlineSmall,

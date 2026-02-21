@@ -9,6 +9,8 @@ import 'providers/product_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/shopping_list_provider.dart';
 import 'providers/recipe_provider.dart';
+import 'providers/imgbb_upload_provider.dart';
+import 'services/order_service.dart';
 import 'role_based_router.dart';
 
 void main() {
@@ -44,8 +46,10 @@ class LipaCartApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(create: (_) => OrderService()),
         ChangeNotifierProvider(create: (_) => ShoppingListProvider()),
         ChangeNotifierProvider(create: (_) => RecipeProvider()),
+        ChangeNotifierProvider(create: (_) => ImgBBUploadProvider()),
       ],
       child: Builder(
         builder: (context) {

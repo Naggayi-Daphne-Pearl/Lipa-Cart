@@ -15,7 +15,8 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/app_bottom_nav.dart';
 
 class CheckoutScreen extends StatefulWidget {
-  const CheckoutScreen({super.key});
+  final bool isGuest;
+  const CheckoutScreen({super.key, this.isGuest = false});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -25,52 +26,240 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   PaymentMethod _selectedPayment = PaymentMethod.mobileMoney;
   Address? _selectedAddress;
   bool _isLoading = false;
+  bool _consentChecked = false;
+
+  // Guest checkout fields
+  late final TextEditingController _guestNameController;
+  late final TextEditingController _guestPhoneController;
+  late final TextEditingController _guestAddressController;
+  late final TextEditingController _guestCityController;
+  late final TextEditingController _guestPasswordController;
+  late final TextEditingController _guestConfirmPasswordController;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void initState() {
     super.initState();
-    _selectedAddress = context.read<AuthProvider>().defaultAddress;
+    _guestNameController = TextEditingController();
+    _guestPhoneController = TextEditingController();
+    _guestAddressController = TextEditingController();
+    _guestCityController = TextEditingController();
+    _guestPasswordController = TextEditingController();
+    _guestConfirmPasswordController = TextEditingController();
+
+    if (!widget.isGuest) {
+      _selectedAddress = context.read<AuthProvider>().defaultAddress;
+    }
+  }
+
+  @override
+  void dispose() {
+    _guestNameController.dispose();
+    _guestPhoneController.dispose();
+    _guestAddressController.dispose();
+    _guestCityController.dispose();
+    _guestPasswordController.dispose();
+    _guestConfirmPasswordController.dispose();
+    super.dispose();
   }
 
   Future<void> _placeOrder() async {
-    if (_selectedAddress == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add a delivery address'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-
     setState(() => _isLoading = true);
 
-    final cartProvider = context.read<CartProvider>();
-    final orderProvider = context.read<OrderProvider>();
+    try {
+      final cartProvider = context.read<CartProvider>();
 
-    final order = await orderProvider.createOrder(
-      items: cartProvider.items,
-      deliveryAddress: _selectedAddress!,
-      subtotal: cartProvider.subtotal,
-      serviceFee: cartProvider.serviceFee,
-      deliveryFee: cartProvider.deliveryFee,
-      paymentMethod: _selectedPayment,
-    );
+      if (widget.isGuest) {
+        // Guest checkout flow with signup
+        final nameText = _guestNameController.text.trim();
+        final phoneText = _guestPhoneController.text.trim();
+        final addressText = _guestAddressController.text.trim();
+        final cityText = _guestCityController.text.trim();
+        final password = _guestPasswordController.text.trim();
+        final confirmPassword = _guestConfirmPasswordController.text.trim();
 
-    setState(() => _isLoading = false);
+        // Validate name
+        if (nameText.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please enter your name'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
 
-    if (order != null) {
-      cartProvider.clearCart();
-      if (!mounted) return;
-      context.push('/customer/order-success', extra: order);
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(orderProvider.errorMessage ?? 'Failed to place order'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+        // Validate phone (9 digits)
+        if (phoneText.length != 9 ||
+            !RegExp(r'^[0-9]{9}$').hasMatch(phoneText)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Phone number must be exactly 9 digits'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        // Validate address
+        if (addressText.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please enter a delivery address'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        // Validate password
+        if (password.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please enter a password'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        if (password.length < 6) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Password must be at least 6 characters'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        if (password != confirmPassword) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Passwords do not match'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        // Step 1: Create account
+        final authProvider = context.read<AuthProvider>();
+        final signupSuccess = await authProvider.signup(
+          phoneNumber: '+256$phoneText',
+          password: password,
+          name: nameText,
+        );
+
+        if (!signupSuccess) {
+          setState(() => _isLoading = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  authProvider.errorMessage ?? 'Failed to create account',
+                ),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+          return;
+        }
+
+        // Step 2: Create order as authenticated user
+        final orderProvider = context.read<OrderProvider>();
+
+        // Create temporary address for the order
+        final tempAddress = Address(
+          id: '0',
+          label: 'Delivery Address',
+          fullAddress:
+              '$addressText${cityText.isNotEmpty ? ', $cityText' : ''}',
+          latitude: 0.0,
+          longitude: 0.0,
+        );
+
+        final order = await orderProvider.createOrder(
+          items: cartProvider.items,
+          deliveryAddress: tempAddress,
+          subtotal: cartProvider.subtotal,
+          serviceFee: cartProvider.serviceFee,
+          deliveryFee: cartProvider.deliveryFee,
+          paymentMethod: _selectedPayment,
+        );
+
+        setState(() => _isLoading = false);
+
+        if (order != null && mounted) {
+          cartProvider.clearCart();
+          context.push('/customer/order-success', extra: order);
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                orderProvider.errorMessage ?? 'Failed to place order',
+              ),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      } else {
+        // Authenticated checkout flow
+        if (_selectedAddress == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please add a delivery address'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        final orderProvider = context.read<OrderProvider>();
+
+        final order = await orderProvider.createOrder(
+          items: cartProvider.items,
+          deliveryAddress: _selectedAddress!,
+          subtotal: cartProvider.subtotal,
+          serviceFee: cartProvider.serviceFee,
+          deliveryFee: cartProvider.deliveryFee,
+          paymentMethod: _selectedPayment,
+        );
+
+        setState(() => _isLoading = false);
+
+        if (order != null && mounted) {
+          cartProvider.clearCart();
+          context.push('/customer/order-success', extra: order);
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                orderProvider.errorMessage ?? 'Failed to place order',
+              ),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -105,14 +294,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Delivery address
-                      _buildSection(
-                        title: 'Delivery Address',
-                        icon: Iconsax.location,
-                        child: _selectedAddress == null
-                            ? _buildAddAddressButton()
-                            : _buildAddressCard(authProvider),
-                      ),
+                      // Delivery address or guest form
+                      if (widget.isGuest)
+                        _buildSection(
+                          title: 'Sign Up & Delivery Details',
+                          icon: Iconsax.user_add,
+                          child: _buildGuestAddressForm(),
+                        )
+                      else
+                        _buildSection(
+                          title: 'Delivery Address',
+                          icon: Iconsax.location,
+                          child: _selectedAddress == null
+                              ? _buildAddAddressButton()
+                              : _buildAddressCard(authProvider),
+                        ),
                       const SizedBox(height: AppSizes.md),
 
                       // Order items
@@ -200,7 +396,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ),
 
-              // Place order button
+              // Consent checkbox and Place order button
               Container(
                 padding: const EdgeInsets.all(AppSizes.md),
                 decoration: BoxDecoration(
@@ -214,11 +410,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ],
                 ),
                 child: SafeArea(
-                  child: CustomButton(
-                    text:
-                        'Place Order - ${Formatters.formatCurrency(cartProvider.total)}',
-                    isLoading: _isLoading,
-                    onPressed: _placeOrder,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Consent checkbox
+                      CheckboxListTile(
+                        value: _consentChecked,
+                        onChanged: (val) {
+                          setState(() => _consentChecked = val ?? false);
+                        },
+                        title: Text(
+                          widget.isGuest
+                              ? 'I confirm my details and agree to create an account'
+                              : 'I confirm my order details are correct and agree to the terms',
+                          style: AppTextStyles.bodySmall,
+                        ),
+                        activeColor: AppColors.accent,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      const SizedBox(height: AppSizes.md),
+                      // Place order button
+                      CustomButton(
+                        text:
+                            'Place Order - ${Formatters.formatCurrency(cartProvider.total)}',
+                        isLoading: _isLoading,
+                        onPressed: _consentChecked ? _placeOrder : null,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -407,6 +626,109 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildGuestAddressForm() {
+    return Column(
+      children: [
+        // Name field
+        TextField(
+          controller: _guestNameController,
+          decoration: InputDecoration(
+            hintText: 'Your full name',
+            labelText: 'Name (required)',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSizes.md),
+        // Phone number field
+        TextField(
+          controller: _guestPhoneController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            hintText: '701234567',
+            labelText: 'Phone Number (9 digits)',
+            prefixText: '+256 ',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSizes.md),
+        // Password field
+        TextField(
+          controller: _guestPasswordController,
+          obscureText: _obscurePassword,
+          decoration: InputDecoration(
+            hintText: 'At least 6 characters',
+            labelText: 'Password (required)',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
+                color: AppColors.grey400,
+              ),
+              onPressed: () {
+                setState(() => _obscurePassword = !_obscurePassword);
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSizes.md),
+        // Confirm Password field
+        TextField(
+          controller: _guestConfirmPasswordController,
+          obscureText: _obscureConfirmPassword,
+          decoration: InputDecoration(
+            hintText: 'Re-enter your password',
+            labelText: 'Confirm Password (required)',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscureConfirmPassword ? Iconsax.eye_slash : Iconsax.eye,
+                color: AppColors.grey400,
+              ),
+              onPressed: () {
+                setState(
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSizes.md),
+        // Delivery address field
+        TextField(
+          controller: _guestAddressController,
+          decoration: InputDecoration(
+            hintText: 'e.g., 123 Main St, Plot 45',
+            labelText: 'Delivery Address (required)',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
+          ),
+          maxLines: 2,
+        ),
+        const SizedBox(height: AppSizes.md),
+        // City field (optional)
+        TextField(
+          controller: _guestCityController,
+          decoration: InputDecoration(
+            hintText: 'e.g., Kampala',
+            labelText: 'City (optional)',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

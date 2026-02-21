@@ -53,32 +53,37 @@ class _SplashScreenState extends State<SplashScreen>
 
     final authProvider = context.read<AuthProvider>();
 
-    // Web flow - show customer home for browsing (guest allowed)
-    if (kIsWeb) {
-      context.replace('/customer/home');
-    } else {
-      // Mobile flow - show onboarding on first launch
-      if (authProvider.isFirstLaunch) {
-        context.replace('/onboarding');
-      } else if (authProvider.isAuthenticated) {
-        // Route to home based on user role
-        final userRole = authProvider.user?.role;
-        switch (userRole?.toString()) {
-          case 'UserRole.admin':
-            context.replace('/admin/dashboard');
-            break;
-          case 'UserRole.rider':
-            context.replace('/rider/home');
-            break;
-          case 'UserRole.shopper':
-            context.replace('/shopper/home');
-            break;
-          default:
-            context.replace('/customer/home');
-        }
-      } else {
-        context.replace('/login');
+    // Initialize first launch status from SharedPreferences
+    await authProvider.initializeFirstLaunch();
+
+    // Try to restore existing session from stored JWT
+    await authProvider.tryAutoLogin();
+
+    if (!mounted) return;
+
+    // Guest browsing allowed - route based on role if authenticated
+    if (authProvider.isAuthenticated) {
+      // User is logged in - route to home based on user role
+      final userRole = authProvider.user?.role;
+      switch (userRole?.toString()) {
+        case 'UserRole.admin':
+          context.replace('/admin/dashboard');
+          break;
+        case 'UserRole.rider':
+          context.replace('/rider/home');
+          break;
+        case 'UserRole.shopper':
+          context.replace('/shopper/home');
+          break;
+        default:
+          context.replace('/customer/home');
       }
+    } else if (authProvider.isFirstLaunch) {
+      // First time user - show onboarding
+      context.replace('/onboarding');
+    } else {
+      // Guest user (not authenticated) - allow browsing as customer
+      context.replace('/customer/home');
     }
   }
 

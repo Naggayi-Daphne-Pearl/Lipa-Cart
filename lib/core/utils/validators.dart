@@ -10,8 +10,8 @@ class Validators {
 
     final cleanedNumber = value.replaceAll(RegExp(r'[^\d]'), '');
 
-    if (cleanedNumber.length < 9 || cleanedNumber.length > 12) {
-      return 'Enter a valid phone number';
+    if (cleanedNumber.length != 9) {
+      return 'Phone number must be exactly 9 digits';
     }
 
     return null;

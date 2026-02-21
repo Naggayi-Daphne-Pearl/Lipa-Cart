@@ -11,12 +11,28 @@ class ProductProvider extends ChangeNotifier {
   String? _errorMessage;
   String _searchQuery = '';
 
+  // Filter properties
+  double _minPrice = 0;
+  double _maxPrice = 1000000;
+  double _selectedMinPrice = 0;
+  double _selectedMaxPrice = 1000000;
+  double _minRating = 0;
+  bool _inStockOnly = false;
+
   List<Product> get products => _products;
   List<Category> get categories => _categories;
-  List<Product> get searchResults => _searchResults;
+  List<Product> get searchResults => _applyFilters(_searchResults);
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String get searchQuery => _searchQuery;
+
+  // Filter getters
+  double get minPrice => _minPrice;
+  double get maxPrice => _maxPrice;
+  double get selectedMinPrice => _selectedMinPrice;
+  double get selectedMaxPrice => _selectedMaxPrice;
+  double get minRating => _minRating;
+  bool get inStockOnly => _inStockOnly;
 
   List<Product> get featuredProducts =>
       _products.where((p) => p.isFeatured).toList();
@@ -82,6 +98,41 @@ class ProductProvider extends ChangeNotifier {
   void clearSearch() {
     _searchQuery = '';
     _searchResults = [];
+    notifyListeners();
+  }
+
+  // Filter methods
+  List<Product> _applyFilters(List<Product> products) {
+    return products.where((product) {
+      final priceMatch = product.price >= _selectedMinPrice &&
+          product.price <= _selectedMaxPrice;
+      final ratingMatch = product.rating >= _minRating;
+      final stockMatch = !_inStockOnly || product.isAvailable;
+      return priceMatch && ratingMatch && stockMatch;
+    }).toList();
+  }
+
+  void setPriceRange(double min, double max) {
+    _selectedMinPrice = min;
+    _selectedMaxPrice = max;
+    notifyListeners();
+  }
+
+  void setMinRating(double rating) {
+    _minRating = rating;
+    notifyListeners();
+  }
+
+  void setInStockOnly(bool value) {
+    _inStockOnly = value;
+    notifyListeners();
+  }
+
+  void resetFilters() {
+    _selectedMinPrice = _minPrice;
+    _selectedMaxPrice = _maxPrice;
+    _minRating = 0;
+    _inStockOnly = false;
     notifyListeners();
   }
 

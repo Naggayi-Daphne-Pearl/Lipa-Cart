@@ -23,35 +23,69 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _usePassword = true; // true = password login, false = OTP login
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
     _phoneController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _sendOtp() async {
+  Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
+    // Format phone number with +256 prefix
+    final phoneNumber = '+256${_phoneController.text}';
+
     final authProvider = context.read<AuthProvider>();
-    await authProvider.sendOtp(_phoneController.text);
 
-    setState(() => _isLoading = false);
-
-    if (authProvider.status == AuthStatus.otpSent) {
-      if (!mounted) return;
-      context.push('/otp', extra: _phoneController.text);
-    } else if (authProvider.errorMessage != null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.errorMessage!),
-          backgroundColor: AppColors.error,
-        ),
+    if (_usePassword) {
+      // Login with password
+      final success = await authProvider.login(
+        phoneNumber: phoneNumber,
+        password: _passwordController.text,
       );
+
+      setState(() => _isLoading = false);
+
+      if (success) {
+        if (!mounted) return;
+        // Navigate based on role
+        final role = authProvider.user?.role.name ?? 'customer';
+        context.go('/$role/home');
+      } else if (authProvider.errorMessage != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.errorMessage!),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } else {
+      // Send OTP
+      await authProvider.sendOtp(phoneNumber);
+
+      setState(() => _isLoading = false);
+
+      if (authProvider.status == AuthStatus.otpSent) {
+        if (!mounted) return;
+        context.push('/otp', extra: phoneNumber);
+      } else if (authProvider.errorMessage != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.errorMessage!),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -102,7 +136,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text('Welcome to LipaCart', style: AppTextStyles.h3),
                 const SizedBox(height: AppSizes.sm),
                 Text(
-                  'Enter your phone number to continue. We\'ll send you a verification code.',
+                  _usePassword
+                      ? 'Enter your phone number and password to login.'
+                      : 'Enter your phone number. We\'ll send you a verification code.',
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.textMedium,
                   ),
@@ -152,12 +188,94 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+                // Password field (conditional)
+                if (_usePassword) ...[
+                  const SizedBox(height: AppSizes.lg),
+                  Text('Password', style: AppTextStyles.labelMedium),
+                  const SizedBox(height: AppSizes.sm),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    validator: (value) {
+                      if (_usePassword && (value == null || value.isEmpty)) {
+                        return 'Password is required';
+                      }
+                      return null;
+                    },
+                    style: AppTextStyles.bodyLarge,
+                    decoration: InputDecoration(
+                      hintText: 'Enter your password',
+                      prefixIcon: const Icon(
+                        Iconsax.lock,
+                        color: AppColors.textLight,
+                        size: 22,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
+                          color: AppColors.textLight,
+                          size: 22,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppSizes.xl),
-                // Continue button
+                // Login/Continue button
                 CustomButton(
-                  text: 'Continue',
+                  text: _usePassword ? 'Login' : 'Continue',
                   isLoading: _isLoading,
-                  onPressed: _sendOtp,
+                  onPressed: _login,
+                ),
+                const SizedBox(height: AppSizes.md),
+                // Toggle login method
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _usePassword = !_usePassword;
+                        _passwordController.clear();
+                      });
+                    },
+                    child: Text(
+                      _usePassword
+                          ? 'Login with OTP instead'
+                          : 'Login with password instead',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.md),
+                // Sign up link
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      context.push('/signup');
+                    },
+                    child: Text.rich(
+                      TextSpan(
+                        text: 'Don\'t have an account? ',
+                        style: AppTextStyles.bodyMedium,
+                        children: [
+                          TextSpan(
+                            text: 'Sign Up',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: AppSizes.lg),
                 // Terms text

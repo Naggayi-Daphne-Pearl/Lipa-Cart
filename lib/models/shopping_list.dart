@@ -45,18 +45,21 @@ class ShoppingListItem {
 
   factory ShoppingListItem.fromStrapi(Map<String, dynamic> json) {
     Product? linkedProduct;
-    final productData = json['product'];
-    if (productData != null && productData is Map<String, dynamic>) {
-      linkedProduct = Product.fromStrapi(productData);
+    final attributes = (json['attributes'] as Map<String, dynamic>?) ?? json;
+    final productData = attributes['product'];
+    if (productData is Map<String, dynamic>) {
+      final resolvedProduct =
+          (productData['data'] as Map<String, dynamic>?) ?? productData;
+      linkedProduct = Product.fromStrapi(resolvedProduct);
     }
 
     return ShoppingListItem(
       id: (json['id'] ?? '').toString(),
-      name: json['name'] as String? ?? '',
-      description: json['notes'] as String?,
-      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
-      unit: json['unit'] as String?,
-      budgetAmount: (json['budget_amount'] as num?)?.toDouble(),
+      name: attributes['name'] as String? ?? '',
+      description: attributes['notes'] as String?,
+      quantity: (attributes['quantity'] as num?)?.toInt() ?? 1,
+      unit: attributes['unit'] as String?,
+      budgetAmount: (attributes['budget_amount'] as num?)?.toDouble(),
       linkedProduct: linkedProduct,
     );
   }
@@ -128,20 +131,23 @@ class ShoppingList {
   }
 
   factory ShoppingList.fromStrapi(Map<String, dynamic> json) {
-    final itemsData = json['items'] as List<dynamic>? ?? [];
+    final attributes = (json['attributes'] as Map<String, dynamic>?) ?? json;
+    final itemsData = attributes['items'] as List<dynamic>? ?? [];
     final items = itemsData
         .map((item) => ShoppingListItem.fromStrapi(item as Map<String, dynamic>))
         .toList();
 
     return ShoppingList(
       id: (json['documentId'] ?? json['id']).toString(),
-      name: json['name'] as String? ?? '',
-      description: json['description'] as String?,
-      emoji: json['emoji'] as String?,
-      color: json['color'] as String? ?? '#15874B',
+      name: attributes['name'] as String? ?? '',
+      description: attributes['description'] as String?,
+      emoji: attributes['emoji'] as String?,
+      color: attributes['color'] as String? ?? '#15874B',
       items: items,
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
+      createdAt:
+          DateTime.tryParse(attributes['createdAt'] as String? ?? '') ??
+              DateTime.now(),
+      updatedAt: DateTime.tryParse(attributes['updatedAt'] as String? ?? ''),
     );
   }
 

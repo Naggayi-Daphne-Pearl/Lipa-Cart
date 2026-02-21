@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'models/order.dart';
 import 'models/product.dart';
+import 'models/user.dart';
+import 'providers/auth_provider.dart';
 
 // Import screens
 import 'screens/splash/splash_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/signup_screen.dart';
 import 'screens/auth/otp_screen.dart';
+import 'screens/auth/profile_completion_screen.dart';
 import 'screens/profile/profile_screen.dart';
 
 // Customer screens
@@ -25,6 +30,7 @@ import 'screens/shopping_lists/shopping_list_detail_screen.dart';
 import 'screens/recipes/recipes_screen.dart';
 import 'screens/recipes/recipe_detail_screen.dart';
 import 'screens/customer/addresses_screen.dart';
+import 'screens/customer/order_rating_screen.dart';
 
 // Admin screens
 import 'screens/admin/admin_dashboard_screen.dart';
@@ -32,6 +38,7 @@ import 'screens/admin/admin_products_screen.dart';
 import 'screens/admin/admin_users_screen.dart';
 import 'screens/admin/admin_orders_screen.dart';
 import 'screens/admin/admin_analytics_screen.dart';
+import 'screens/admin/admin_user_management_screen.dart';
 
 // Rider screens
 import 'screens/rider/rider_home_screen.dart';
@@ -47,13 +54,68 @@ import 'screens/shopper/shopper_active_tasks_screen.dart';
 import 'screens/shopper/shopper_earnings_screen.dart';
 import 'screens/shopper/shopper_completed_tasks_screen.dart';
 
+/// Helper to get home route based on user role
+String _homeForRole(UserRole? role) {
+  switch (role) {
+    case UserRole.admin:
+      return '/admin/dashboard';
+    case UserRole.rider:
+      return '/rider/home';
+    case UserRole.shopper:
+      return '/shopper/home';
+    case UserRole.customer:
+    default:
+      return '/customer/home';
+  }
+}
+
 /// Unified role-based router that handles all user types in one app
 class RoleBasedRouter {
   static GoRouter? _router;
 
   static GoRouter getRouter(BuildContext context) {
-    _router ??= GoRouter(
+    if (_router != null) return _router!;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    _router = GoRouter(
       initialLocation: '/',
+      refreshListenable: authProvider,
+      redirect: (context, state) {
+        final isAuthenticated = authProvider.isAuthenticated;
+        final isInitial = authProvider.status == AuthStatus.initial;
+
+        // Still loading - let splash handle
+        if (isInitial) return null;
+
+        // Define protected routes (require authentication)
+        // Customer routes are open for guest browsing
+        // Only shopper, rider, and admin routes require authentication
+        final isProtectedRoute =
+            state.matchedLocation.startsWith('/shopper/') ||
+            state.matchedLocation.startsWith('/rider/') ||
+            state.matchedLocation.startsWith('/admin/');
+
+        // Define auth routes (should redirect away if already authenticated)
+        final isAuthRoute =
+            state.matchedLocation == '/login' ||
+            state.matchedLocation == '/signup' ||
+            state.matchedLocation.startsWith('/otp') ||
+            state.matchedLocation == '/profile-completion';
+
+        // Not authenticated, trying to access shopper/rider/admin → go to login
+        if (!isAuthenticated && isProtectedRoute) {
+          return '/login';
+        }
+
+        // Already authenticated, trying to access auth routes → go to role home
+        if (isAuthenticated && isAuthRoute) {
+          return _homeForRole(authProvider.user?.role);
+        }
+
+        // No redirect needed
+        return null;
+      },
       routes: [
         // Auth Routes
         GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
@@ -68,10 +130,23 @@ class RoleBasedRouter {
           },
         ),
         GoRoute(
+          path: '/signup',
+          builder: (context, state) {
+            return const SignupScreen();
+          },
+        ),
+        GoRoute(
           path: '/otp',
           builder: (context, state) {
             final phoneNumber = state.extra as String? ?? '';
             return OtpScreen(phoneNumber: phoneNumber);
+          },
+        ),
+        GoRoute(
+          path: '/profile-completion',
+          builder: (context, state) {
+            final phoneNumber = state.extra as String? ?? '';
+            return ProfileCompletionScreen(phoneNumber: phoneNumber);
           },
         ),
 
@@ -106,14 +181,27 @@ class RoleBasedRouter {
         ),
         GoRoute(
           path: '/customer/checkout',
-          builder: (context, state) => const CheckoutScreen(),
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>?;
+            final isGuest = extra?['guest'] == true;
+            return CheckoutScreen(isGuest: isGuest);
+          },
         ),
         GoRoute(
           path: '/customer/order-success',
           builder: (context, state) {
-            final order = state.extra as Order?;
-            if (order == null) return const MainShell();
-            return OrderSuccessScreen(order: order);
+            // Handle both Order and Map<String, dynamic> (guest order with isGuest flag)
+            if (state.extra is Order) {
+              final order = state.extra as Order;
+              return OrderSuccessScreen(order: order, isGuest: false);
+            } else if (state.extra is Map<String, dynamic>) {
+              final extra = state.extra as Map<String, dynamic>;
+              final order = extra['order'] as Order?;
+              final isGuest = extra['isGuest'] as bool? ?? false;
+              if (order == null) return const MainShell();
+              return OrderSuccessScreen(order: order, isGuest: isGuest);
+            }
+            return const MainShell();
           },
         ),
         GoRoute(
@@ -126,6 +214,14 @@ class RoleBasedRouter {
             final order = state.extra as Order?;
             if (order == null) return const MainShell();
             return OrderTrackingScreen(order: order);
+          },
+        ),
+        GoRoute(
+          path: '/customer/order-rating',
+          builder: (context, state) {
+            final order = state.extra as Order?;
+            if (order == null) return const MainShell();
+            return OrderRatingScreen(order: order);
           },
         ),
         GoRoute(
@@ -177,6 +273,10 @@ class RoleBasedRouter {
         GoRoute(
           path: '/admin/analytics',
           builder: (context, state) => const AdminAnalyticsScreen(),
+        ),
+        GoRoute(
+          path: '/admin/user-management',
+          builder: (context, state) => const AdminUserManagementScreen(),
         ),
 
         // Rider Routes

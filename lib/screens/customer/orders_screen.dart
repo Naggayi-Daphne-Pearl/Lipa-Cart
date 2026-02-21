@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../../services/auth_service.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
 import '../../models/order.dart';
 
@@ -20,7 +20,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   Future<void> _loadOrders() async {
-    final auth = context.read<AuthService>();
+    final auth = context.read<AuthProvider>();
     final orderService = context.read<OrderService>();
 
     if (auth.user != null && auth.token != null) {

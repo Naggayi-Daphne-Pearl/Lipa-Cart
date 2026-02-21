@@ -99,7 +99,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   void _completeOnboarding() {
     context.read<AuthProvider>().setFirstLaunchComplete();
-    context.replace('/login');
+    context.replace('/customer/home');
   }
 
   @override

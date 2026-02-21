@@ -6,12 +6,14 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order.dart';
+import '../../models/user.dart';
 import '../../widgets/custom_button.dart';
 
 class OrderSuccessScreen extends StatefulWidget {
-  final Order order;
+  final Order? order;
+  final bool isGuest;
 
-  const OrderSuccessScreen({super.key, required this.order});
+  const OrderSuccessScreen({super.key, this.order, this.isGuest = false});
 
   @override
   State<OrderSuccessScreen> createState() => _OrderSuccessScreenState();
@@ -22,10 +24,42 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  late Order _order;
+  late bool _isGuest;
 
   @override
   void initState() {
     super.initState();
+    _isGuest = widget.isGuest;
+
+    // Handle both direct Order and Map<String, dynamic> formats
+    if (widget.order != null) {
+      _order = widget.order!;
+    } else {
+      // Fallback - should not happen in normal flow
+      _order = Order(
+        id: 'unknown',
+        orderNumber: 'N/A',
+        items: [],
+        deliveryAddress: Address(
+          id: '',
+          label: '',
+          fullAddress: '',
+          latitude: 0,
+          longitude: 0,
+          isDefault: false,
+        ),
+        subtotal: 0,
+        serviceFee: 0,
+        deliveryFee: 0,
+        total: 0,
+        status: OrderStatus.pending,
+        createdAt: DateTime.now(),
+        paymentMethod: PaymentMethod.mobileMoney,
+        isPaid: false,
+      );
+    }
+
     _controller = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -53,7 +87,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
     super.dispose();
   }
 
-  Order get order => widget.order;
+  Order get order => _order;
 
   @override
   Widget build(BuildContext context) {
@@ -157,17 +191,41 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                 const Spacer(),
 
                 // Buttons
-                CustomButton(
-                  text: 'Track Order',
-                  onPressed: () =>
-                      context.go('/customer/order-tracking', extra: order),
-                ),
-                const SizedBox(height: AppSizes.sm),
-                CustomButton(
-                  text: 'Back to Home',
-                  isOutlined: true,
-                  onPressed: () => context.go('/customer/home'),
-                ),
+                if (_isGuest)
+                  // Guest: Show sign-in option
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CustomButton(
+                        text: 'Sign In to Track Your Order',
+                        onPressed: () => context.go('/login'),
+                      ),
+                      const SizedBox(height: AppSizes.sm),
+                      CustomButton(
+                        text: 'Continue Shopping',
+                        isOutlined: true,
+                        onPressed: () => context.go('/customer/home'),
+                      ),
+                    ],
+                  )
+                else
+                  // Authenticated: Show tracking and home buttons
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CustomButton(
+                        text: 'Track Order',
+                        onPressed: () =>
+                            context.go('/customer/order-tracking', extra: order),
+                      ),
+                      const SizedBox(height: AppSizes.sm),
+                      CustomButton(
+                        text: 'Back to Home',
+                        isOutlined: true,
+                        onPressed: () => context.go('/customer/home'),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),

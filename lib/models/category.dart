@@ -38,23 +38,41 @@ class Category {
   }
 
   factory Category.fromStrapi(Map<String, dynamic> json, {String? baseUrl}) {
-    String imageUrl = '';
-    final imageData = json['image'];
-    if (imageData != null) {
-      final url = imageData['url'] as String? ?? '';
-      imageUrl = url.startsWith('http') ? url : '${baseUrl ?? ""}$url';
-    }
+    final attributes = (json['attributes'] as Map<String, dynamic>?) ?? json;
+    String imageUrl = _resolveMediaUrl(attributes['image'], baseUrl);
 
-    final products = json['products'] as List<dynamic>?;
+    List<dynamic>? products;
+    final productsData = attributes['products'];
+    if (productsData is Map<String, dynamic>) {
+      products = productsData['data'] as List<dynamic>?;
+    } else if (productsData is List<dynamic>) {
+      products = productsData;
+    }
 
     return Category(
       id: (json['documentId'] ?? json['id']).toString(),
-      name: json['name'] as String? ?? '',
+      name: attributes['name'] as String? ?? '',
       image: imageUrl,
-      description: json['description'] as String?,
+      description: attributes['description'] as String?,
       productCount: products?.length ?? 0,
-      color: json['color'] as String? ?? '#FF8C00',
+      color: attributes['color'] as String? ?? '#FF8C00',
     );
+  }
+
+  static String _resolveMediaUrl(dynamic media, String? baseUrl) {
+    if (media == null) return '';
+
+    Map<String, dynamic>? data;
+    if (media is Map<String, dynamic>) {
+      data = (media['data'] as Map<String, dynamic>?) ?? media;
+    }
+    if (data == null) return '';
+
+    final attrs = (data['attributes'] as Map<String, dynamic>?) ?? data;
+    final url = attrs['url'] as String? ?? '';
+    if (url.isEmpty) return '';
+
+    return url.startsWith('http') ? url : '${baseUrl ?? ""}$url';
   }
 
   static List<Category> getSampleCategories() {

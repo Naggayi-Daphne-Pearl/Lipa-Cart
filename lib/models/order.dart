@@ -1,5 +1,6 @@
 import 'cart_item.dart';
 import 'user.dart';
+import 'rating.dart';
 
 enum OrderStatus {
   pending,
@@ -92,6 +93,8 @@ class Order {
   final String? cancellationReason;
   final PaymentMethod paymentMethod;
   final bool isPaid;
+  final Rating? rating;
+  final bool hasBeenRated;
 
   Order({
     required this.id,
@@ -115,6 +118,8 @@ class Order {
     this.cancellationReason,
     required this.paymentMethod,
     this.isPaid = false,
+    this.rating,
+    this.hasBeenRated = false,
   });
 
   int get itemCount =>
@@ -149,6 +154,8 @@ class Order {
     String? cancellationReason,
     PaymentMethod? paymentMethod,
     bool? isPaid,
+    Rating? rating,
+    bool? hasBeenRated,
   }) {
     return Order(
       id: id ?? this.id,
@@ -172,6 +179,8 @@ class Order {
       cancellationReason: cancellationReason ?? this.cancellationReason,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       isPaid: isPaid ?? this.isPaid,
+      rating: rating ?? this.rating,
+      hasBeenRated: hasBeenRated ?? this.hasBeenRated,
     );
   }
 
@@ -198,6 +207,8 @@ class Order {
       'cancellationReason': cancellationReason,
       'paymentMethod': paymentMethod.name,
       'isPaid': isPaid,
+      'rating': rating?.toJson(),
+      'hasBeenRated': hasBeenRated,
     };
   }
 
@@ -238,6 +249,10 @@ class Order {
         orElse: () => PaymentMethod.mobileMoney,
       ),
       isPaid: json['isPaid'] as bool? ?? false,
+      rating: json['rating'] != null
+          ? Rating.fromJson(json['rating'] as Map<String, dynamic>)
+          : null,
+      hasBeenRated: json['hasBeenRated'] as bool? ?? false,
     );
   }
 }

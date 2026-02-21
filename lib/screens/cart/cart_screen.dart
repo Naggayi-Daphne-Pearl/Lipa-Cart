@@ -24,8 +24,16 @@ class CartScreen extends StatelessWidget {
       // User is authenticated, proceed to checkout
       context.go('/customer/checkout');
     } else {
-      // User is not authenticated, redirect to login
-      context.go('/login');
+      // User is not authenticated, show Sign In / Guest options
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppSizes.radiusXl),
+          ),
+        ),
+        builder: (context) => _GuestOrSignInSheet(),
+      );
     }
   }
 
@@ -579,6 +587,68 @@ class CartScreen extends StatelessWidget {
               style: AppTextStyles.labelMedium.copyWith(
                 color: AppColors.error,
                 fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Modal sheet offering Sign In or Guest checkout options
+class _GuestOrSignInSheet extends StatelessWidget {
+  const _GuestOrSignInSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSizes.lg),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Proceed to Checkout', style: AppTextStyles.h4),
+          const SizedBox(height: AppSizes.md),
+          Text(
+            'Sign in to save order history and track deliveries',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSizes.lg),
+          // Sign In button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                context.go('/login');
+              },
+              icon: const Icon(Iconsax.login),
+              label: const Text('Sign In / Register'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSizes.md),
+          // Guest checkout button
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                context.go('/customer/checkout', extra: {'guest': true});
+              },
+              icon: const Icon(Iconsax.card),
+              label: const Text('Continue as Guest'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.accent,
+                padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
+                side: const BorderSide(color: AppColors.accent),
               ),
             ),
           ),

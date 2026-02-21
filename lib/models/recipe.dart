@@ -83,15 +83,11 @@ class Recipe {
   }
 
   factory Recipe.fromStrapi(Map<String, dynamic> json, {String? baseUrl}) {
-    String imageUrl = '';
-    final imageData = json['image'];
-    if (imageData != null) {
-      final url = imageData['url'] as String? ?? '';
-      imageUrl = url.startsWith('http') ? url : '${baseUrl ?? ""}$url';
-    }
+    final attributes = (json['attributes'] as Map<String, dynamic>?) ?? json;
+    String imageUrl = _resolveMediaUrl(attributes['image'], baseUrl);
 
     // Parse ingredients component
-    final ingredientsData = json['ingredients'] as List<dynamic>? ?? [];
+    final ingredientsData = attributes['ingredients'] as List<dynamic>? ?? [];
     final ingredients = ingredientsData.map<RecipeIngredient>((item) {
       final i = item as Map<String, dynamic>;
       final qty = i['quantity'];
@@ -109,7 +105,7 @@ class Recipe {
     }).toList();
 
     // Parse instructions component
-    final instructionsData = json['instructions'] as List<dynamic>? ?? [];
+    final instructionsData = attributes['instructions'] as List<dynamic>? ?? [];
     final sortedInstructions = List<Map<String, dynamic>>.from(
       instructionsData.map((e) => e as Map<String, dynamic>),
     )..sort((a, b) => ((a['step_number'] as int?) ?? 0).compareTo((b['step_number'] as int?) ?? 0));
@@ -118,33 +114,51 @@ class Recipe {
         .toList();
 
     // Parse tags
-    final tagsData = json['tags'];
+    final tagsData = attributes['tags'];
     List<String> tags = [];
     if (tagsData is List) {
       tags = tagsData.map((e) => e.toString()).toList();
     }
 
     // Difficulty enum: Strapi stores lowercase
-    final difficultyRaw = json['difficulty'] as String? ?? 'medium';
+    final difficultyRaw = attributes['difficulty'] as String? ?? 'medium';
     final difficulty = '${difficultyRaw[0].toUpperCase()}${difficultyRaw.substring(1)}';
 
     return Recipe(
       id: (json['documentId'] ?? json['id']).toString(),
-      name: json['name'] as String? ?? '',
-      description: json['description'] as String? ?? '',
+      name: attributes['name'] as String? ?? '',
+      description: attributes['description'] as String? ?? '',
       image: imageUrl,
-      authorName: json['author_name'] as String?,
-      prepTime: json['prep_time'] as int? ?? 0,
-      cookTime: json['cook_time'] as int? ?? 0,
-      servings: json['servings'] as int? ?? 1,
+      authorName: attributes['author_name'] as String?,
+      prepTime: attributes['prep_time'] as int? ?? 0,
+      cookTime: attributes['cook_time'] as int? ?? 0,
+      servings: attributes['servings'] as int? ?? 1,
       difficulty: difficulty,
       ingredients: ingredients,
       instructions: instructions,
       tags: tags,
-      rating: (json['rating'] as num?)?.toDouble() ?? 0,
-      reviewCount: json['review_count'] as int? ?? 0,
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+      rating: (attributes['rating'] as num?)?.toDouble() ?? 0,
+      reviewCount: attributes['review_count'] as int? ?? 0,
+      createdAt:
+          DateTime.tryParse(attributes['createdAt'] as String? ?? '') ??
+              DateTime.now(),
     );
+  }
+
+  static String _resolveMediaUrl(dynamic media, String? baseUrl) {
+    if (media == null) return '';
+
+    Map<String, dynamic>? data;
+    if (media is Map<String, dynamic>) {
+      data = (media['data'] as Map<String, dynamic>?) ?? media;
+    }
+    if (data == null) return '';
+
+    final attrs = (data['attributes'] as Map<String, dynamic>?) ?? data;
+    final url = attrs['url'] as String? ?? '';
+    if (url.isEmpty) return '';
+
+    return url.startsWith('http') ? url : '${baseUrl ?? ""}$url';
   }
 
   Recipe copyWith({

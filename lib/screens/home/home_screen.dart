@@ -1306,22 +1306,25 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     errorWidget: (context, url, error) => const Padding(
-                      padding: EdgeInsets.all(24.0),
+                      padding: EdgeInsets.all(8.0),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Icon(
                             Iconsax.gallery,
                             color: Color(0xFFB8B3AB),
-                            size: 36,
+                            size: 20,
                           ),
-                          SizedBox(height: 4),
+                          SizedBox(height: 2),
                           Text(
                             'No image',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 9,
                               color: Color(0xFFB8B3AB),
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),

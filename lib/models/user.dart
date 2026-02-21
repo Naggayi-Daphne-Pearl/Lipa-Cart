@@ -3,6 +3,21 @@ enum UserRole { customer, admin, rider, shopper }
 extension UserRoleExtension on UserRole {
   String get name => toString().split('.').last;
 
+  String get value => name;
+
+  String get displayName {
+    switch (this) {
+      case UserRole.customer:
+        return 'Customer';
+      case UserRole.shopper:
+        return 'Shopper';
+      case UserRole.rider:
+        return 'Rider';
+      case UserRole.admin:
+        return 'Admin';
+    }
+  }
+
   static UserRole fromString(String? roleString) {
     return UserRole.values.firstWhere(
       (e) => e.name == roleString,
