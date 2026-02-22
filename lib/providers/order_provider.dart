@@ -25,13 +25,19 @@ class OrderProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   List<Order> get activeOrders => _orders
-      .where((o) =>
-          o.status != OrderStatus.delivered && o.status != OrderStatus.cancelled)
+      .where(
+        (o) =>
+            o.status != OrderStatus.delivered &&
+            o.status != OrderStatus.cancelled,
+      )
       .toList();
 
   List<Order> get pastOrders => _orders
-      .where((o) =>
-          o.status == OrderStatus.delivered || o.status == OrderStatus.cancelled)
+      .where(
+        (o) =>
+            o.status == OrderStatus.delivered ||
+            o.status == OrderStatus.cancelled,
+      )
       .toList();
 
   Future<void> _bootstrap() async {
@@ -49,9 +55,7 @@ class OrderProvider extends ChangeNotifier {
         _orders
           ..clear()
           ..addAll(
-            data
-                .map((e) => Order.fromJson(e as Map<String, dynamic>))
-                .toList(),
+            data.map((e) => Order.fromJson(e as Map<String, dynamic>)).toList(),
           );
       }
 
@@ -104,7 +108,8 @@ class OrderProvider extends ChangeNotifier {
 
       final order = Order(
         id: _uuid.v4(),
-        orderNumber: 'LC${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
+        orderNumber:
+            'LC${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
         items: items,
         deliveryAddress: deliveryAddress,
         subtotal: subtotal,

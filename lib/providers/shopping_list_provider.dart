@@ -30,8 +30,9 @@ class ShoppingListProvider extends ChangeNotifier {
       final raw = prefs.getString(AppConstants.shoppingListsKey);
       if (raw == null || raw.isEmpty) return;
       final data = jsonDecode(raw) as List<dynamic>;
-      _lists =
-          data.map((e) => ShoppingList.fromJson(e as Map<String, dynamic>)).toList();
+      _lists = data
+          .map((e) => ShoppingList.fromJson(e as Map<String, dynamic>))
+          .toList();
       notifyListeners();
     } catch (_) {
       // Ignore corrupted cache
@@ -61,8 +62,22 @@ class ShoppingListProvider extends ChangeNotifier {
   ];
 
   static const List<String> listEmojis = [
-    '🛒', '🥗', '🍳', '🎉', '🏠', '💪', '🌱', '❤️',
-    '🍎', '🥩', '🥛', '🍞', '☕', '🍕', '🎂', '🧺',
+    '🛒',
+    '🥗',
+    '🍳',
+    '🎉',
+    '🏠',
+    '💪',
+    '🌱',
+    '❤️',
+    '🍎',
+    '🥩',
+    '🥛',
+    '🍞',
+    '☕',
+    '🍕',
+    '🎂',
+    '🧺',
   ];
 
   Future<void> loadLists() async {
@@ -201,7 +216,11 @@ class ShoppingListProvider extends ChangeNotifier {
     }
   }
 
-  void updateItemDescription(String listId, String itemId, String? description) {
+  void updateItemDescription(
+    String listId,
+    String itemId,
+    String? description,
+  ) {
     final listIndex = _lists.indexWhere((l) => l.id == listId);
     if (listIndex != -1) {
       final list = _lists[listIndex];
@@ -249,10 +268,14 @@ class ShoppingListProvider extends ChangeNotifier {
           ShoppingListItem(
             id: '1',
             name: 'Fresh Milk',
-            description: 'Full cream, not skimmed. Check expiry date - at least 5 days',
+            description:
+                'Full cream, not skimmed. Check expiry date - at least 5 days',
             quantity: 2,
             unit: 'liters',
-            linkedProduct: sampleProducts.firstWhere((p) => p.name.contains('Milk'), orElse: () => sampleProducts.first),
+            linkedProduct: sampleProducts.firstWhere(
+              (p) => p.name.contains('Milk'),
+              orElse: () => sampleProducts.first,
+            ),
           ),
           ShoppingListItem(
             id: '2',
@@ -260,7 +283,10 @@ class ShoppingListProvider extends ChangeNotifier {
             description: 'Whole wheat, soft texture. Not the seeded one',
             quantity: 1,
             unit: 'loaf',
-            linkedProduct: sampleProducts.firstWhere((p) => p.name.contains('Bread'), orElse: () => sampleProducts.first),
+            linkedProduct: sampleProducts.firstWhere(
+              (p) => p.name.contains('Bread'),
+              orElse: () => sampleProducts.first,
+            ),
           ),
           ShoppingListItem(
             id: '3',
@@ -268,7 +294,10 @@ class ShoppingListProvider extends ChangeNotifier {
             description: 'Large size, brown eggs preferred',
             quantity: 1,
             unit: 'tray',
-            linkedProduct: sampleProducts.firstWhere((p) => p.name.contains('Egg'), orElse: () => sampleProducts.first),
+            linkedProduct: sampleProducts.firstWhere(
+              (p) => p.name.contains('Egg'),
+              orElse: () => sampleProducts.first,
+            ),
           ),
           ShoppingListItem(
             id: '4',
@@ -276,7 +305,10 @@ class ShoppingListProvider extends ChangeNotifier {
             description: 'Firm, slightly ripe. Not too soft',
             budgetAmount: 3000,
             quantity: 1,
-            linkedProduct: sampleProducts.firstWhere((p) => p.name.contains('Tomato'), orElse: () => sampleProducts.first),
+            linkedProduct: sampleProducts.firstWhere(
+              (p) => p.name.contains('Tomato'),
+              orElse: () => sampleProducts.first,
+            ),
             isChecked: true,
           ),
         ],
@@ -295,7 +327,10 @@ class ShoppingListProvider extends ChangeNotifier {
             description: 'Fresh, not frozen. Medium-sized wings',
             quantity: 2,
             unit: 'kg',
-            linkedProduct: sampleProducts.firstWhere((p) => p.name.contains('Chicken'), orElse: () => sampleProducts.first),
+            linkedProduct: sampleProducts.firstWhere(
+              (p) => p.name.contains('Chicken'),
+              orElse: () => sampleProducts.first,
+            ),
           ),
           ShoppingListItem(
             id: '6',
@@ -303,7 +338,10 @@ class ShoppingListProvider extends ChangeNotifier {
             description: 'Well-marbled, ribeye or sirloin cut. About 2cm thick',
             budgetAmount: 25000,
             quantity: 1,
-            linkedProduct: sampleProducts.firstWhere((p) => p.name.contains('Beef'), orElse: () => sampleProducts.first),
+            linkedProduct: sampleProducts.firstWhere(
+              (p) => p.name.contains('Beef'),
+              orElse: () => sampleProducts.first,
+            ),
           ),
           ShoppingListItem(
             id: '7',
@@ -311,7 +349,10 @@ class ShoppingListProvider extends ChangeNotifier {
             description: 'Red onions, medium size',
             quantity: 4,
             unit: 'pieces',
-            linkedProduct: sampleProducts.firstWhere((p) => p.name.contains('Onion'), orElse: () => sampleProducts.first),
+            linkedProduct: sampleProducts.firstWhere(
+              (p) => p.name.contains('Onion'),
+              orElse: () => sampleProducts.first,
+            ),
           ),
         ],
         createdAt: DateTime.now().subtract(const Duration(days: 1)),
@@ -326,10 +367,14 @@ class ShoppingListProvider extends ChangeNotifier {
           ShoppingListItem(
             id: '8',
             name: 'Avocados',
-            description: 'Ripe, ready to eat. Should yield slightly to gentle pressure',
+            description:
+                'Ripe, ready to eat. Should yield slightly to gentle pressure',
             quantity: 4,
             unit: 'pieces',
-            linkedProduct: sampleProducts.firstWhere((p) => p.name.contains('Avocado'), orElse: () => sampleProducts.first),
+            linkedProduct: sampleProducts.firstWhere(
+              (p) => p.name.contains('Avocado'),
+              orElse: () => sampleProducts.first,
+            ),
           ),
           ShoppingListItem(
             id: '9',
@@ -337,7 +382,10 @@ class ShoppingListProvider extends ChangeNotifier {
             description: 'Fresh leaves, bright green. No wilting or yellowing',
             quantity: 2,
             unit: 'bunches',
-            linkedProduct: sampleProducts.firstWhere((p) => p.name.contains('Spinach'), orElse: () => sampleProducts.first),
+            linkedProduct: sampleProducts.firstWhere(
+              (p) => p.name.contains('Spinach'),
+              orElse: () => sampleProducts.first,
+            ),
           ),
         ],
         createdAt: DateTime.now(),

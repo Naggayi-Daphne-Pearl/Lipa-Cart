@@ -22,8 +22,7 @@ class CartProvider extends ChangeNotifier {
   int get totalQuantity =>
       _items.fold(0, (sum, item) => sum + item.quantity.toInt());
 
-  double get subtotal =>
-      _items.fold(0, (sum, item) => sum + item.totalPrice);
+  double get subtotal => _items.fold(0, (sum, item) => sum + item.totalPrice);
 
   double get serviceFee => subtotal * AppConstants.serviceFeePercentage;
 
@@ -83,17 +82,16 @@ class CartProvider extends ChangeNotifier {
   }
 
   void addToCart(Product product, {double quantity = 1}) {
-    final existingIndex =
-        _items.indexWhere((item) => item.product.id == product.id);
+    final existingIndex = _items.indexWhere(
+      (item) => item.product.id == product.id,
+    );
 
     if (existingIndex >= 0) {
       _items[existingIndex].quantity += quantity;
     } else {
-      _items.add(CartItem(
-        id: _uuid.v4(),
-        product: product,
-        quantity: quantity,
-      ));
+      _items.add(
+        CartItem(id: _uuid.v4(), product: product, quantity: quantity),
+      );
     }
     _persistCart();
     notifyListeners();
@@ -149,9 +147,7 @@ class CartProvider extends ChangeNotifier {
   void updateSpecialInstructions(String productId, String? instructions) {
     final index = _items.indexWhere((item) => item.product.id == productId);
     if (index >= 0) {
-      _items[index] = _items[index].copyWith(
-        specialInstructions: instructions,
-      );
+      _items[index] = _items[index].copyWith(specialInstructions: instructions);
       _persistCart();
       notifyListeners();
     }

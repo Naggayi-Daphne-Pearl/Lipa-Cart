@@ -24,7 +24,9 @@ class _AddressesScreenState extends State<AddressesScreen> {
     final addressService = context.read<AddressService>();
 
     final customerId = authProvider.user?.customerId;
-    if (authProvider.user != null && authProvider.token != null && customerId != null) {
+    if (authProvider.user != null &&
+        authProvider.token != null &&
+        customerId != null) {
       final success = await addressService.fetchAddresses(
         authProvider.token!,
         customerId,

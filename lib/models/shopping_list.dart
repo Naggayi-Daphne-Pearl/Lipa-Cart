@@ -154,7 +154,9 @@ class ShoppingList {
     final attributes = (json['attributes'] as Map<String, dynamic>?) ?? json;
     final itemsData = attributes['items'] as List<dynamic>? ?? [];
     final items = itemsData
-        .map((item) => ShoppingListItem.fromStrapi(item as Map<String, dynamic>))
+        .map(
+          (item) => ShoppingListItem.fromStrapi(item as Map<String, dynamic>),
+        )
         .toList();
 
     return ShoppingList(
@@ -166,7 +168,7 @@ class ShoppingList {
       items: items,
       createdAt:
           DateTime.tryParse(attributes['createdAt'] as String? ?? '') ??
-              DateTime.now(),
+          DateTime.now(),
       updatedAt: DateTime.tryParse(attributes['updatedAt'] as String? ?? ''),
     );
   }
@@ -181,7 +183,8 @@ class ShoppingList {
       items: (json['items'] as List<dynamic>? ?? [])
           .map((i) => ShoppingListItem.fromJson(i as Map<String, dynamic>))
           .toList(),
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
     );

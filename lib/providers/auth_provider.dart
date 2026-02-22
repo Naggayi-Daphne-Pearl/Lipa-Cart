@@ -6,7 +6,7 @@ import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../core/constants/app_constants.dart';
 import '../services/web_cookie_storage_stub.dart'
-  if (dart.library.html) '../services/web_cookie_storage.dart';
+    if (dart.library.html) '../services/web_cookie_storage.dart';
 
 enum AuthStatus {
   initial,
@@ -90,7 +90,6 @@ class AuthProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(AppConstants.userKey, jsonEncode(_user!.toJson()));
   }
-
 
   /// Check for existing session and restore if valid
   /// Called on app startup
