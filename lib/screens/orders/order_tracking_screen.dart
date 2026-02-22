@@ -29,7 +29,7 @@ class OrderTrackingScreen extends StatelessWidget {
           icon: const Icon(Iconsax.arrow_left),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Track Order'),
+        title: const Text('Order Details & Tracking'),
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -40,59 +40,100 @@ class OrderTrackingScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Order header
+            // Order header card
             Container(
               padding: const EdgeInsets.all(AppSizes.md),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Order number and status
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Order #${order.orderNumber}',
-                        style: AppTextStyles.h5,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Order #${order.orderNumber}',
+                            style: AppTextStyles.h5.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Placed on ${Formatters.formatDateTime(order.createdAt)}',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+                          horizontal: 14,
+                          vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(order.status).withValues(alpha: 0.1),
+                          color: _getStatusColor(order.status).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(AppSizes.radiusFull),
                         ),
                         child: Text(
                           order.status.displayName,
                           style: AppTextStyles.labelSmall.copyWith(
                             color: _getStatusColor(order.status),
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSizes.sm),
-                  Text(
-                    'Placed on ${Formatters.formatDateTime(order.createdAt)}',
-                    style: AppTextStyles.bodySmall,
-                  ),
-                  if (order.estimatedDelivery != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Est. delivery: ${Formatters.formatDateTime(order.estimatedDelivery!)}',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.primaryGreen,
+                  const SizedBox(height: AppSizes.md),
+                  
+                  // Delivery time estimate
+                  if (order.estimatedDelivery != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSizes.sm,
+                        vertical: AppSizes.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Iconsax.clock,
+                            color: AppColors.primaryGreen,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Est. delivery: ${Formatters.formatDateTime(order.estimatedDelivery!)}',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.primaryGreen,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
                 ],
               ),
             ),
-            const SizedBox(height: AppSizes.md),
+            const SizedBox(height: AppSizes.lg),
 
             // Tracking timeline
             Container(
@@ -100,39 +141,286 @@ class OrderTrackingScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Order Status', style: AppTextStyles.h5),
+                  Row(
+                    children: [
+                      const Icon(
+                        Iconsax.routing,
+                        color: AppColors.primaryGreen,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppSizes.sm),
+                      Text('Order Timeline', style: AppTextStyles.h5),
+                    ],
+                  ),
                   const SizedBox(height: AppSizes.md),
                   _buildTrackingTimeline(),
                 ],
               ),
             ),
-            const SizedBox(height: AppSizes.md),
+            const SizedBox(height: AppSizes.lg),
 
-            // Shopper info (if assigned)
-            if (order.shopperName != null) ...[
-              _buildPersonCard(
-                title: 'Your Shopper',
-                name: order.shopperName!,
-                phone: order.shopperPhone,
-                icon: Iconsax.shopping_bag,
+            // Order items details
+            Container(
+              padding: const EdgeInsets.all(AppSizes.md),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSizes.md),
-            ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Iconsax.shopping_bag,
+                        color: AppColors.primaryOrange,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppSizes.sm),
+                      Text('Items Ordered (${order.itemCount})', style: AppTextStyles.h5),
+                    ],
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  ...order.items.asMap().entries.map((entry) {
+                    final isLast = entry.key == order.items.length - 1;
+                    final item = entry.value;
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        bottom: isLast ? 0 : AppSizes.md,
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryOrange.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${item.quantity.toInt()}x',
+                                    style: AppTextStyles.labelSmall.copyWith(
+                                      color: AppColors.primaryOrange,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSizes.sm),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.product.name,
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${Formatters.formatCurrency(item.product.price)} per unit',
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    if (item.specialInstructions != null && item.specialInstructions!.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primaryOrange.withValues(alpha: 0.05),
+                                            borderRadius: BorderRadius.circular(AppSizes.radiusXs),
+                                          ),
+                                          child: Text(
+                                            'Note: ${item.specialInstructions}',
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: AppColors.textSecondary,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: AppSizes.sm),
+                              Text(
+                                Formatters.formatCurrency(item.totalPrice),
+                                style: AppTextStyles.labelMedium.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (!isLast)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                top: AppSizes.md,
+                              ),
+                              child: Divider(
+                                color: AppColors.lightGrey.withValues(alpha: 0.5),
+                                height: 1,
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSizes.lg),
 
-            // Rider info (if assigned)
-            if (order.riderName != null) ...[
-              _buildPersonCard(
-                title: 'Delivery Rider',
-                name: order.riderName!,
-                phone: order.riderPhone,
-                icon: Iconsax.truck_fast,
+            // Pricing breakdown
+            Container(
+              padding: const EdgeInsets.all(AppSizes.md),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSizes.md),
-            ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Iconsax.calculator,
+                        color: AppColors.primaryOrange,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppSizes.sm),
+                      Text('Price Breakdown', style: AppTextStyles.h5),
+                    ],
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  _buildPricingRow('Subtotal', order.subtotal),
+                  const SizedBox(height: AppSizes.sm),
+                  _buildPricingRow('Service Fee (5%)', order.serviceFee),
+                  const SizedBox(height: AppSizes.sm),
+                  if (order.deliveryFee > 0)
+                    _buildPricingRow('Delivery Fee', order.deliveryFee)
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Delivery Fee',
+                            style: AppTextStyles.bodyMedium,
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(AppSizes.radiusXs),
+                            ),
+                            child: Text(
+                              'FREE',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.success,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  Divider(
+                    color: AppColors.lightGrey.withValues(alpha: 0.5),
+                    height: 1,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total',
+                        style: AppTextStyles.h5.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        Formatters.formatCurrency(order.total),
+                        style: AppTextStyles.h4.copyWith(
+                          color: AppColors.primaryGreen,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSizes.sm,
+                      vertical: AppSizes.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: order.isPaid 
+                          ? AppColors.success.withValues(alpha: 0.1)
+                          : AppColors.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          order.isPaid ? Iconsax.verify : Iconsax.clock,
+                          color: order.isPaid ? AppColors.success : AppColors.warning,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          order.isPaid ? 'Paid' : 'Pending Payment',
+                          style: AppTextStyles.caption.copyWith(
+                            color: order.isPaid ? AppColors.success : AppColors.warning,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSizes.lg),
 
             // Delivery address
             Container(
@@ -140,6 +428,13 @@ class OrderTrackingScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,69 +450,80 @@ class OrderTrackingScreen extends StatelessWidget {
                       Text('Delivery Address', style: AppTextStyles.h5),
                     ],
                   ),
-                  const SizedBox(height: AppSizes.sm),
-                  Text(
-                    order.deliveryAddress.label,
-                    style: AppTextStyles.labelMedium,
-                  ),
-                  Text(
-                    order.deliveryAddress.fullAddress,
-                    style: AppTextStyles.bodySmall,
-                  ),
-                  if (order.deliveryAddress.landmark != null)
-                    Text(
-                      'Near: ${order.deliveryAddress.landmark}',
-                      style: AppTextStyles.caption,
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSizes.md),
-
-            // Order items
-            Container(
-              padding: const EdgeInsets.all(AppSizes.md),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Order Items', style: AppTextStyles.h5),
                   const SizedBox(height: AppSizes.md),
-                  ...order.items.map((item) => Padding(
-                        padding: const EdgeInsets.only(bottom: AppSizes.sm),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${item.quantity.toInt()}x ${item.product.name}',
-                                style: AppTextStyles.bodyMedium,
-                              ),
-                            ),
-                            Text(
-                              Formatters.formatCurrency(item.totalPrice),
-                              style: AppTextStyles.labelMedium,
-                            ),
-                          ],
-                        ),
-                      )),
-                  const Divider(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Total', style: AppTextStyles.labelMedium),
-                      Text(
-                        Formatters.formatCurrency(order.total),
-                        style: AppTextStyles.priceMedium,
+                  Container(
+                    padding: const EdgeInsets.all(AppSizes.sm),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryOrange.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                      border: Border.all(
+                        color: AppColors.primaryOrange.withValues(alpha: 0.2),
                       ),
-                    ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          order.deliveryAddress.label,
+                          style: AppTextStyles.labelMedium.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          order.deliveryAddress.fullAddress,
+                          style: AppTextStyles.bodySmall,
+                        ),
+                        if (order.deliveryAddress.landmark != null) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(
+                                Iconsax.map,
+                                size: 14,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Near: ${order.deliveryAddress.landmark}',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: AppSizes.xl),
+            const SizedBox(height: AppSizes.lg),
+
+            // Shopper info (if assigned)
+            if (order.shopperName != null) ...[
+              _buildPersonCard(
+                title: 'Your Shopper',
+                name: order.shopperName!,
+                phone: order.shopperPhone,
+                icon: Iconsax.shopping_bag,
+              ),
+              const SizedBox(height: AppSizes.lg),
+            ],
+
+            // Rider info (if assigned)
+            if (order.riderName != null) ...[
+              _buildPersonCard(
+                title: 'Delivery Rider',
+                name: order.riderName!,
+                phone: order.riderPhone,
+                icon: Iconsax.truck_fast,
+              ),
+              const SizedBox(height: AppSizes.lg),
+            ],
 
             // Help button
             CustomButton(
@@ -226,11 +532,29 @@ class OrderTrackingScreen extends StatelessWidget {
               icon: Iconsax.message_question,
               onPressed: () {},
             ),
-            const SizedBox(height: AppSizes.md),
+            const SizedBox(height: AppSizes.xl),
           ],
         ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPricingRow(String label, double amount) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.bodyMedium,
+        ),
+        Text(
+          Formatters.formatCurrency(amount),
+          style: AppTextStyles.labelMedium.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 

@@ -1,5 +1,6 @@
 class Address {
   final int id;
+  final String documentId;
   final int customerId;
   final String label;
   final String addressLine;
@@ -13,6 +14,7 @@ class Address {
 
   Address({
     required this.id,
+    required this.documentId,
     required this.customerId,
     required this.label,
     required this.addressLine,
@@ -28,6 +30,7 @@ class Address {
   factory Address.empty() {
     return Address(
       id: 0,
+      documentId: '',
       customerId: 0,
       label: '',
       addressLine: '',
@@ -43,6 +46,7 @@ class Address {
 
     return Address(
       id: json['id'] ?? 0,
+      documentId: json['documentId'] ?? '',
       customerId: customerId ?? 0,
       label: json['label'] ?? 'Address',
       addressLine: json['address_line'] ?? '',

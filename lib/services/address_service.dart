@@ -131,6 +131,7 @@ class AddressService extends ChangeNotifier {
   Future<bool> updateAddress({
     required String token,
     required int addressId,
+    required String addressDocumentId,
     required String label,
     required String addressLine,
     required String city,
@@ -139,8 +140,10 @@ class AddressService extends ChangeNotifier {
     bool isDefault = false,
   }) async {
     try {
+      final targetId =
+          addressDocumentId.isNotEmpty ? addressDocumentId : addressId.toString();
       final response = await http.put(
-        Uri.parse('$baseUrl/api/addresses/$addressId'),
+        Uri.parse('$baseUrl/api/addresses/$targetId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -178,10 +181,16 @@ class AddressService extends ChangeNotifier {
   }
 
   /// Delete address
-  Future<bool> deleteAddress(String token, int addressId) async {
+  Future<bool> deleteAddress({
+    required String token,
+    required int addressId,
+    required String addressDocumentId,
+  }) async {
     try {
+      final targetId =
+          addressDocumentId.isNotEmpty ? addressDocumentId : addressId.toString();
       final response = await http.delete(
-        Uri.parse('$baseUrl/api/addresses/$addressId'),
+        Uri.parse('$baseUrl/api/addresses/$targetId'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -202,12 +211,21 @@ class AddressService extends ChangeNotifier {
   }
 
   /// Set address as default
-  Future<bool> setDefaultAddress(String token, int addressId) async {
+  Future<bool> setDefaultAddress({
+    required String token,
+    required int addressId,
+    required String addressDocumentId,
+  }) async {
     try {
+      final targetId =
+          addressDocumentId.isNotEmpty ? addressDocumentId : addressId.toString();
       // Unset previous default
       if (_defaultAddress != null) {
+        final previousId = _defaultAddress!.documentId.isNotEmpty
+            ? _defaultAddress!.documentId
+            : _defaultAddress!.id.toString();
         await http.put(
-          Uri.parse('$baseUrl/api/addresses/${_defaultAddress!.id}'),
+          Uri.parse('$baseUrl/api/addresses/$previousId'),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
@@ -220,7 +238,7 @@ class AddressService extends ChangeNotifier {
 
       // Set new default
       final response = await http.put(
-        Uri.parse('$baseUrl/api/addresses/$addressId'),
+        Uri.parse('$baseUrl/api/addresses/$targetId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
