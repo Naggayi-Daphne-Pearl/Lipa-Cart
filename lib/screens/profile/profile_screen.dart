@@ -93,8 +93,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      bottomNavigationBar:
-          widget.showBottomNav ? const AppBottomNav(currentIndex: 5) : null,
+      bottomNavigationBar: widget.showBottomNav
+          ? const AppBottomNav(currentIndex: 5)
+          : null,
       body: ResponsiveContainer(
         child: SafeArea(
           child: SingleChildScrollView(

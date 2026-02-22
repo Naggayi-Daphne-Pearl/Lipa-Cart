@@ -95,8 +95,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      bottomNavigationBar:
-          widget.showBottomNav ? const AppBottomNav(currentIndex: 4) : null,
+      bottomNavigationBar: widget.showBottomNav
+          ? const AppBottomNav(currentIndex: 4)
+          : null,
       body: ResponsiveContainer(
         child: SafeArea(
           child: RefreshIndicator(
