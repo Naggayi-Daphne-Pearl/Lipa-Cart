@@ -152,6 +152,15 @@ class OrderProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sync orders from backend service
+  void syncOrdersFromService(List<Order> backendOrders) {
+    _orders
+      ..clear()
+      ..addAll(backendOrders);
+    _persistOrders();
+    notifyListeners();
+  }
+
   Order? getOrderById(String id) {
     try {
       return _orders.firstWhere((o) => o.id == id);
@@ -195,6 +204,21 @@ class OrderProvider extends ChangeNotifier {
 
   void clearError() {
     _errorMessage = null;
+    notifyListeners();
+  }
+
+  Future<void> clearAll() async {
+    _orders.clear();
+    _currentOrder = null;
+    _isLoading = false;
+    _errorMessage = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(AppConstants.ordersKey);
+      await prefs.remove(AppConstants.currentOrderKey);
+    } catch (_) {
+      // Ignore persistence errors
+    }
     notifyListeners();
   }
 }

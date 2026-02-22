@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/utils/logout_helper.dart';
 
 class RiderHomeScreen extends StatefulWidget {
   const RiderHomeScreen({super.key});
@@ -14,7 +15,17 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Rider Dashboard'), elevation: 0),
+      appBar: AppBar(
+        title: const Text('Rider Dashboard'),
+        elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: () => _showLogoutDialog(context),
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+          ),
+        ],
+      ),
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
           final user = authProvider.user;
@@ -116,6 +127,31 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await LogoutHelper.logoutAndClear(context);
+              if (!mounted) return;
+              Navigator.of(dialogContext).pop();
+              GoRouter.of(context).go('/login');
+            },
+            child: const Text('Logout'),
+          ),
+        ],
       ),
     );
   }

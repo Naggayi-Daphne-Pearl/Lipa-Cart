@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/address_service.dart';
 import '../../models/address.dart';
 import '../../models/user.dart' as user_models;
 
 class AddressesScreen extends StatefulWidget {
-  const AddressesScreen({super.key});
+  final String? returnRoute;
+
+  const AddressesScreen({super.key, this.returnRoute});
 
   @override
   State<AddressesScreen> createState() => _AddressesScreenState();
@@ -185,7 +188,12 @@ class _AddressesScreenState extends State<AddressesScreen> {
                 );
               }
               await auth.setAddresses(addressService.userAddresses);
-              if (context.mounted) Navigator.pop(context);
+              if (context.mounted) {
+                Navigator.pop(context);
+                if (address == null && widget.returnRoute != null) {
+                  context.go(widget.returnRoute!);
+                }
+              }
             },
       ),
     );

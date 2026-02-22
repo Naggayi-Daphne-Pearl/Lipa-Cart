@@ -6,7 +6,7 @@ class AppConstants {
   static const String appTagline = 'Fresh groceries delivered to your doorstep';
 
   // API Endpoints
-  static const String baseUrl = 'http://localhost:1337';
+  static const String baseUrl = 'http://192.168.1.4:1337';
   static const String apiUrl = '$baseUrl/api';
 
   // Storage Keys

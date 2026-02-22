@@ -158,4 +158,15 @@ class CartProvider extends ChangeNotifier {
     _persistCart();
     notifyListeners();
   }
+
+  Future<void> clearAll() async {
+    _items.clear();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(AppConstants.cartKey);
+    } catch (_) {
+      // Ignore persistence errors
+    }
+    notifyListeners();
+  }
 }

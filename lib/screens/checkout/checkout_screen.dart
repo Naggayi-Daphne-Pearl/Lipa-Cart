@@ -14,6 +14,7 @@ import '../../models/user.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
+import '../../services/order_service.dart';
 import '../../services/address_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/app_bottom_nav.dart';
@@ -262,7 +263,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
             // Step 3: Create order with saved address
             final orderProvider = context.read<OrderProvider>();
-            final order = await orderProvider.createOrder(
+            final orderService = context.read<OrderService>();
+            final localOrder = await orderProvider.createOrder(
               items: cartProvider.items,
               deliveryAddress: savedAddress,
               subtotal: cartProvider.subtotal,
@@ -271,11 +273,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               paymentMethod: _selectedPayment,
             );
 
+            await orderService.createOrderWithItems(
+              token: token,
+              userId: authProvider.user!.id,
+              addressId: savedAddress.id,
+              items: cartProvider.items,
+              subtotal: cartProvider.subtotal,
+              serviceFee: cartProvider.serviceFee,
+              deliveryFee: cartProvider.deliveryFee,
+              total: cartProvider.total,
+            );
+
             setState(() => _isLoading = false);
 
-            if (order != null && mounted) {
+            if (localOrder != null && mounted) {
               cartProvider.clearCart();
-              context.push('/customer/order-success', extra: order);
+              context.push('/customer/order-success', extra: localOrder);
             } else if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -289,6 +302,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           } else {
             // Fallback: Still try to create order with temporary address
             final orderProvider = context.read<OrderProvider>();
+            final orderService = context.read<OrderService>();
             final tempAddress = Address(
               id: '0',
               label: 'Delivery Address',
@@ -298,7 +312,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               longitude: 0.0,
             );
 
-            final order = await orderProvider.createOrder(
+            final localOrder = await orderProvider.createOrder(
               items: cartProvider.items,
               deliveryAddress: tempAddress,
               subtotal: cartProvider.subtotal,
@@ -307,11 +321,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               paymentMethod: _selectedPayment,
             );
 
+            // Skip backend order creation here because address was not created.
+
             setState(() => _isLoading = false);
 
-            if (order != null && mounted) {
+            if (localOrder != null && mounted) {
               cartProvider.clearCart();
-              context.push('/customer/order-success', extra: order);
+              context.push('/customer/order-success', extra: localOrder);
             } else if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -336,6 +352,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
       } else {
         // Authenticated checkout flow
+        final authProvider = context.read<AuthProvider>();
         if (_selectedAddress == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -348,8 +365,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
 
         final orderProvider = context.read<OrderProvider>();
+        final orderService = context.read<OrderService>();
 
-        final order = await orderProvider.createOrder(
+        final localOrder = await orderProvider.createOrder(
           items: cartProvider.items,
           deliveryAddress: _selectedAddress!,
           subtotal: cartProvider.subtotal,
@@ -358,11 +376,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           paymentMethod: _selectedPayment,
         );
 
+        await orderService.createOrderWithItems(
+          token: authProvider.token!,
+          userId: authProvider.user!.id,
+          addressId: _selectedAddress!.id,
+          items: cartProvider.items,
+          subtotal: cartProvider.subtotal,
+          serviceFee: cartProvider.serviceFee,
+          deliveryFee: cartProvider.deliveryFee,
+          total: cartProvider.total,
+        );
+
         setState(() => _isLoading = false);
 
-        if (order != null && mounted) {
+        if (localOrder != null && mounted) {
           cartProvider.clearCart();
-          context.push('/customer/order-success', extra: order);
+          context.push('/customer/order-success', extra: localOrder);
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

@@ -4,7 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
 
 class OrderDetailScreen extends StatefulWidget {
-  final int orderId;
+  final String orderId;
 
   const OrderDetailScreen({super.key, required this.orderId});
 

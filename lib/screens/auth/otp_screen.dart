@@ -11,6 +11,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/address_service.dart';
 import '../../widgets/custom_button.dart';
 
 class OtpScreen extends StatefulWidget {
@@ -98,9 +99,7 @@ class _OtpScreenState extends State<OtpScreen> {
         context.push('/profile-completion', extra: widget.phoneNumber);
       } else {
         // Profile complete - navigate to role-appropriate home
-        final userRole = authProvider.user?.role;
-        final homeRoute = _homeForRole(userRole);
-        context.go(homeRoute);
+        await _handlePostLogin(authProvider);
       }
     } else if (authProvider.errorMessage != null) {
       if (!mounted) return;
@@ -260,5 +259,43 @@ class _OtpScreenState extends State<OtpScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handlePostLogin(AuthProvider authProvider) async {
+    if (!mounted) return;
+
+    final role = authProvider.user?.role ?? UserRole.customer;
+    if (role != UserRole.customer) {
+      context.go('/${role.name}/home');
+      return;
+    }
+
+    final returnRoute = widget.returnRoute;
+    if (returnRoute == null || returnRoute.isEmpty) {
+      context.go('/customer/home');
+      return;
+    }
+
+    if (returnRoute.startsWith('/customer/checkout')) {
+      final token = authProvider.token;
+      final user = authProvider.user;
+      if (token != null && user != null && user.addresses.isEmpty) {
+        final addressService = context.read<AddressService>();
+        final customerId = user.customerId ?? user.id;
+        final success = await addressService.fetchAddresses(token, customerId);
+        if (success) {
+          await authProvider.setAddresses(addressService.userAddresses);
+        }
+      }
+
+      final hasAddress = authProvider.user?.addresses.isNotEmpty == true;
+      if (!hasAddress) {
+        final encoded = Uri.encodeComponent(returnRoute);
+        context.go('/customer/addresses?return=$encoded');
+        return;
+      }
+    }
+
+    context.go(returnRoute);
   }
 }

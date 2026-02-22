@@ -1,5 +1,6 @@
 class Product {
   final String id;
+  final String? strapiId;
   final String name;
   final String description;
   final String image;
@@ -19,6 +20,7 @@ class Product {
 
   Product({
     required this.id,
+    this.strapiId,
     required this.name,
     required this.description,
     required this.image,
@@ -47,6 +49,7 @@ class Product {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'strapiId': strapiId,
       'name': name,
       'description': description,
       'image': image,
@@ -82,16 +85,18 @@ class Product {
     String categoryId = '';
     String categoryName = '';
     if (category is Map<String, dynamic>) {
-      final categoryData = (category['data'] as Map<String, dynamic>?) ?? category;
+      final categoryData =
+          (category['data'] as Map<String, dynamic>?) ?? category;
       final categoryAttrs =
           (categoryData['attributes'] as Map<String, dynamic>?) ?? categoryData;
-      categoryId =
-          (categoryData['documentId'] ?? categoryData['id']).toString();
+      categoryId = (categoryData['documentId'] ?? categoryData['id'])
+          .toString();
       categoryName = categoryAttrs['name'] as String? ?? '';
     }
 
     return Product(
       id: (json['documentId'] ?? json['id']).toString(),
+      strapiId: (json['id'] ?? attributes['id'])?.toString(),
       name: attributes['name'] as String? ?? '',
       description: attributes['description'] as String? ?? '',
       image: imageUrl,
@@ -122,11 +127,11 @@ class Product {
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
       id: json['id'] as String,
+      strapiId: json['strapiId'] as String?,
       name: json['name'] as String,
       description: json['description'] as String,
       image: json['image'] as String,
-      images:
-          (json['images'] as List<dynamic>?)?.cast<String>() ?? [],
+      images: (json['images'] as List<dynamic>?)?.cast<String>() ?? [],
       price: (json['price'] as num).toDouble(),
       originalPrice: (json['originalPrice'] as num?)?.toDouble(),
       unit: json['unit'] as String,
@@ -148,8 +153,10 @@ class Product {
       Product(
         id: '1',
         name: 'Bananas (Matooke)',
-        description: 'Fresh green bananas for cooking. The staple food of Uganda — steam and mash for the perfect matoke.',
-        image: 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?w=400',
+        description:
+            'Fresh green bananas for cooking. The staple food of Uganda — steam and mash for the perfect matoke.',
+        image:
+            'https://images.unsplash.com/photo-1603833665858-e61d17a86224?w=400',
         price: 5000,
         unit: 'bunch',
         categoryId: '1',
@@ -162,8 +169,10 @@ class Product {
       Product(
         id: '2',
         name: 'Mangoes',
-        description: 'Sweet, juicy mangoes sourced from local farms. Perfect for snacking or fresh juice.',
-        image: 'https://images.unsplash.com/photo-1553279768-865429fa0078?w=400',
+        description:
+            'Sweet, juicy mangoes sourced from local farms. Perfect for snacking or fresh juice.',
+        image:
+            'https://images.unsplash.com/photo-1553279768-865429fa0078?w=400',
         price: 2000,
         unit: 'piece',
         categoryId: '1',
@@ -175,8 +184,10 @@ class Product {
       Product(
         id: '3',
         name: 'Pineapple',
-        description: 'Ripe, sweet pineapple from Eastern Uganda. Great for juice, desserts, or eating fresh.',
-        image: 'https://images.unsplash.com/photo-1550258987-190a2d41a8ba?w=400',
+        description:
+            'Ripe, sweet pineapple from Eastern Uganda. Great for juice, desserts, or eating fresh.',
+        image:
+            'https://images.unsplash.com/photo-1550258987-190a2d41a8ba?w=400',
         price: 3000,
         unit: 'piece',
         categoryId: '1',
@@ -188,8 +199,10 @@ class Product {
       Product(
         id: '4',
         name: 'Watermelon',
-        description: 'Large, refreshing watermelon. Perfect for hot days and fresh juice.',
-        image: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?w=400',
+        description:
+            'Large, refreshing watermelon. Perfect for hot days and fresh juice.',
+        image:
+            'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?w=400',
         price: 8000,
         unit: 'piece',
         categoryId: '1',
@@ -201,8 +214,10 @@ class Product {
       Product(
         id: '5',
         name: 'Passion Fruit',
-        description: 'Tangy passion fruit for fresh juice or desserts. Rich in vitamins.',
-        image: 'https://images.unsplash.com/photo-1604495772376-9657f0035eb5?w=400',
+        description:
+            'Tangy passion fruit for fresh juice or desserts. Rich in vitamins.',
+        image:
+            'https://images.unsplash.com/photo-1604495772376-9657f0035eb5?w=400',
         price: 500,
         unit: 'piece',
         categoryId: '1',
@@ -214,8 +229,10 @@ class Product {
       Product(
         id: '6',
         name: 'Tomatoes',
-        description: 'Ripe red tomatoes from local farms. Perfect for salads, cooking, and sauces.',
-        image: 'https://images.unsplash.com/photo-1546470427-0d4db154ceb8?w=400',
+        description:
+            'Ripe red tomatoes from local farms. Perfect for salads, cooking, and sauces.',
+        image:
+            'https://images.unsplash.com/photo-1546470427-0d4db154ceb8?w=400',
         price: 3000,
         originalPrice: 3500,
         unit: 'kg',
@@ -229,8 +246,10 @@ class Product {
       Product(
         id: '7',
         name: 'Onions',
-        description: 'Red onions perfect for cooking and salads. A kitchen essential.',
-        image: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=400',
+        description:
+            'Red onions perfect for cooking and salads. A kitchen essential.',
+        image:
+            'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=400',
         price: 3500,
         unit: 'kg',
         categoryId: '1',
@@ -242,8 +261,10 @@ class Product {
       Product(
         id: '8',
         name: 'Cabbage',
-        description: 'Fresh green cabbage. Great for salads, stir-fry, or steaming.',
-        image: 'https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f?w=400',
+        description:
+            'Fresh green cabbage. Great for salads, stir-fry, or steaming.',
+        image:
+            'https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f?w=400',
         price: 2000,
         unit: 'piece',
         categoryId: '1',
@@ -255,8 +276,10 @@ class Product {
       Product(
         id: '9',
         name: 'Nakati (African Nightshade)',
-        description: 'Traditional Ugandan leafy green vegetable. Nutritious and delicious when steamed.',
-        image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=400',
+        description:
+            'Traditional Ugandan leafy green vegetable. Nutritious and delicious when steamed.',
+        image:
+            'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=400',
         price: 1000,
         unit: 'bunch',
         categoryId: '1',
@@ -268,8 +291,10 @@ class Product {
       Product(
         id: '10',
         name: 'Sukuma Wiki (Collard Greens)',
-        description: 'Popular East African leafy greens. A staple side dish in Kenya and Uganda.',
-        image: 'https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?w=400',
+        description:
+            'Popular East African leafy greens. A staple side dish in Kenya and Uganda.',
+        image:
+            'https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?w=400',
         price: 1000,
         unit: 'bunch',
         categoryId: '1',
@@ -281,8 +306,10 @@ class Product {
       Product(
         id: '11',
         name: 'Coriander (Dania)',
-        description: 'Fresh coriander leaves for garnishing and flavouring. Essential for East African cooking.',
-        image: 'https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=400',
+        description:
+            'Fresh coriander leaves for garnishing and flavouring. Essential for East African cooking.',
+        image:
+            'https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=400',
         price: 500,
         unit: 'bunch',
         categoryId: '1',
@@ -294,8 +321,10 @@ class Product {
       Product(
         id: '12',
         name: 'Ginger',
-        description: 'Fresh ginger root for tea, cooking, and natural remedies.',
-        image: 'https://images.unsplash.com/photo-1615485500704-8e990f9900f7?w=400',
+        description:
+            'Fresh ginger root for tea, cooking, and natural remedies.',
+        image:
+            'https://images.unsplash.com/photo-1615485500704-8e990f9900f7?w=400',
         price: 2000,
         unit: 'piece',
         categoryId: '1',
@@ -308,8 +337,10 @@ class Product {
       Product(
         id: '13',
         name: 'Whole Chicken',
-        description: 'Fresh whole chicken, locally raised. Perfect for roasting or stewing.',
-        image: 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?w=400',
+        description:
+            'Fresh whole chicken, locally raised. Perfect for roasting or stewing.',
+        image:
+            'https://images.unsplash.com/photo-1587593810167-a84920ea0781?w=400',
         price: 18000,
         unit: 'piece',
         categoryId: '2',
@@ -322,8 +353,10 @@ class Product {
       Product(
         id: '14',
         name: 'Chicken Breast',
-        description: 'Boneless chicken breast. Lean, versatile, and great for grilling or stir-fry.',
-        image: 'https://images.unsplash.com/photo-1604503468506-a8da13d82571?w=400',
+        description:
+            'Boneless chicken breast. Lean, versatile, and great for grilling or stir-fry.',
+        image:
+            'https://images.unsplash.com/photo-1604503468506-a8da13d82571?w=400',
         price: 12000,
         unit: 'kg',
         categoryId: '2',
@@ -335,8 +368,10 @@ class Product {
       Product(
         id: '15',
         name: 'Beef Stew Meat',
-        description: 'Tender beef chunks ideal for slow-cooked stews and curries.',
-        image: 'https://images.unsplash.com/photo-1602470520998-f4a52199a3d6?w=400',
+        description:
+            'Tender beef chunks ideal for slow-cooked stews and curries.',
+        image:
+            'https://images.unsplash.com/photo-1602470520998-f4a52199a3d6?w=400',
         price: 15000,
         unit: 'kg',
         categoryId: '2',
@@ -348,8 +383,10 @@ class Product {
       Product(
         id: '16',
         name: 'Minced Beef',
-        description: 'Freshly minced beef. Perfect for samosas, bolognese, or chapati fillings.',
-        image: 'https://images.unsplash.com/photo-1602470520998-f4a52199a3d6?w=400',
+        description:
+            'Freshly minced beef. Perfect for samosas, bolognese, or chapati fillings.',
+        image:
+            'https://images.unsplash.com/photo-1602470520998-f4a52199a3d6?w=400',
         price: 16000,
         unit: 'kg',
         categoryId: '2',
@@ -361,8 +398,10 @@ class Product {
       Product(
         id: '17',
         name: 'Tilapia',
-        description: 'Freshly caught tilapia from Lake Victoria. Perfect for grilling or frying.',
-        image: 'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=400',
+        description:
+            'Freshly caught tilapia from Lake Victoria. Perfect for grilling or frying.',
+        image:
+            'https://images.unsplash.com/photo-1510130387422-82bed34b37e9?w=400',
         price: 12000,
         unit: 'piece',
         categoryId: '2',
@@ -375,8 +414,10 @@ class Product {
       Product(
         id: '18',
         name: 'Nile Perch',
-        description: 'Premium Nile Perch fillet from Lake Victoria. A Ugandan delicacy.',
-        image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400',
+        description:
+            'Premium Nile Perch fillet from Lake Victoria. A Ugandan delicacy.',
+        image:
+            'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400',
         price: 18000,
         unit: 'kg',
         categoryId: '2',
@@ -390,7 +431,8 @@ class Product {
         id: '19',
         name: 'Fresh Milk (1L)',
         description: 'Pasteurized fresh milk from local dairy farms.',
-        image: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400',
+        image:
+            'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400',
         price: 3500,
         unit: 'litre',
         categoryId: '3',
@@ -402,8 +444,10 @@ class Product {
       Product(
         id: '20',
         name: 'Yogurt (500ml)',
-        description: 'Creamy natural yogurt. Great for breakfast or as a snack.',
-        image: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',
+        description:
+            'Creamy natural yogurt. Great for breakfast or as a snack.',
+        image:
+            'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',
         price: 3000,
         unit: 'piece',
         categoryId: '3',
@@ -415,8 +459,10 @@ class Product {
       Product(
         id: '21',
         name: 'Eggs (Tray of 30)',
-        description: 'Fresh eggs from free-range chickens. A kitchen essential.',
-        image: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=400',
+        description:
+            'Fresh eggs from free-range chickens. A kitchen essential.',
+        image:
+            'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=400',
         price: 12000,
         unit: 'tray',
         categoryId: '3',
@@ -431,7 +477,8 @@ class Product {
         id: '22',
         name: 'Rice (1kg)',
         description: 'High-quality long grain rice for everyday meals.',
-        image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400',
+        image:
+            'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400',
         price: 5000,
         unit: 'kg',
         categoryId: '4',
@@ -443,8 +490,10 @@ class Product {
       Product(
         id: '23',
         name: 'Maize Flour (Posho) 2kg',
-        description: 'Fine maize flour for making posho/ugali. A staple across East Africa.',
-        image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400',
+        description:
+            'Fine maize flour for making posho/ugali. A staple across East Africa.',
+        image:
+            'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400',
         price: 4000,
         unit: 'packet',
         categoryId: '4',
@@ -457,8 +506,10 @@ class Product {
       Product(
         id: '24',
         name: 'Bread (Loaf)',
-        description: 'Freshly baked white bread loaf. Perfect for breakfast or sandwiches.',
-        image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400',
+        description:
+            'Freshly baked white bread loaf. Perfect for breakfast or sandwiches.',
+        image:
+            'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400',
         price: 5000,
         unit: 'loaf',
         categoryId: '4',
@@ -472,7 +523,8 @@ class Product {
         id: '25',
         name: 'Mineral Water (1.5L)',
         description: 'Pure mineral water. Stay hydrated throughout the day.',
-        image: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',
+        image:
+            'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400',
         price: 1500,
         unit: 'bottle',
         categoryId: '5',
@@ -484,8 +536,10 @@ class Product {
       Product(
         id: '26',
         name: 'Orange Juice (1L)',
-        description: 'Fresh orange juice packed with vitamin C. No added sugars.',
-        image: 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=400',
+        description:
+            'Fresh orange juice packed with vitamin C. No added sugars.',
+        image:
+            'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=400',
         price: 5000,
         unit: 'packet',
         categoryId: '5',
@@ -499,7 +553,8 @@ class Product {
         id: '27',
         name: 'Washing Soap (Bar)',
         description: 'Multipurpose washing soap bar for laundry and cleaning.',
-        image: 'https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=400',
+        image:
+            'https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=400',
         price: 2000,
         unit: 'piece',
         categoryId: '6',
@@ -512,7 +567,8 @@ class Product {
         id: '28',
         name: 'Cooking Oil (1L)',
         description: 'Vegetable cooking oil for everyday frying and cooking.',
-        image: 'https://images.unsplash.com/photo-1474979266404-7eabd7875faf?w=400',
+        image:
+            'https://images.unsplash.com/photo-1474979266404-7eabd7875faf?w=400',
         price: 8000,
         unit: 'litre',
         categoryId: '6',

@@ -103,9 +103,18 @@ class RoleBasedRouter {
             state.matchedLocation.startsWith('/otp') ||
             state.matchedLocation == '/profile-completion';
 
-        // Not authenticated, trying to access shopper/rider/admin → go to login
-        if (!isAuthenticated && isProtectedRoute) {
-          return '/login';
+        final isCustomerProtectedRoute =
+          state.matchedLocation.startsWith('/customer/checkout') ||
+          state.matchedLocation.startsWith('/customer/orders') ||
+          state.matchedLocation.startsWith('/customer/order-tracking') ||
+          state.matchedLocation.startsWith('/customer/order-rating') ||
+          state.matchedLocation.startsWith('/customer/addresses') ||
+          state.matchedLocation.startsWith('/customer/profile');
+
+        // Not authenticated, trying to access protected → go to login
+        if (!isAuthenticated && (isProtectedRoute || isCustomerProtectedRoute)) {
+          final returnPath = Uri.encodeComponent(state.uri.toString());
+          return '/login?return=$returnPath';
         }
 
         // Already authenticated, trying to access auth routes → go to role home
@@ -126,7 +135,8 @@ class RoleBasedRouter {
         GoRoute(
           path: '/login',
           builder: (context, state) {
-            return const LoginScreen();
+            final returnRoute = state.uri.queryParameters['return'];
+            return LoginScreen(returnRoute: returnRoute);
           },
         ),
         GoRoute(
@@ -138,6 +148,15 @@ class RoleBasedRouter {
         GoRoute(
           path: '/otp',
           builder: (context, state) {
+            if (state.extra is Map<String, dynamic>) {
+              final extra = state.extra as Map<String, dynamic>;
+              final phoneNumber = extra['phoneNumber'] as String? ?? '';
+              final returnRoute = extra['returnRoute'] as String?;
+              return OtpScreen(
+                phoneNumber: phoneNumber,
+                returnRoute: returnRoute,
+              );
+            }
             final phoneNumber = state.extra as String? ?? '';
             return OtpScreen(phoneNumber: phoneNumber);
           },
@@ -173,7 +192,10 @@ class RoleBasedRouter {
         ),
         GoRoute(
           path: '/customer/addresses',
-          builder: (context, state) => const AddressesScreen(),
+          builder: (context, state) {
+            final returnRoute = state.uri.queryParameters['return'];
+            return AddressesScreen(returnRoute: returnRoute);
+          },
         ),
         GoRoute(
           path: '/customer/cart',

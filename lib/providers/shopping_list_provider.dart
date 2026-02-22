@@ -253,6 +253,18 @@ class ShoppingListProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> clearAll() async {
+    _lists.clear();
+    _isLoading = false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(AppConstants.shoppingListsKey);
+    } catch (_) {
+      // Ignore persistence errors
+    }
+    notifyListeners();
+  }
+
   // Sample data
   List<ShoppingList> _getSampleLists() {
     final sampleProducts = Product.getSampleProducts();

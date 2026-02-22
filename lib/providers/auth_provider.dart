@@ -347,6 +347,49 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshProfile() async {
+    if (_token == null) return;
+
+    try {
+      final response = await AuthService.getMe(_token!);
+
+      if (_user == null) {
+        _user = User(
+          id: (response['id'] ?? response['documentId'] ?? '').toString(),
+          phoneNumber: (response['phone'] ?? '').toString(),
+          email: response['email'],
+          role: UserRoleExtension.fromString(
+            response['user_type'] ?? response['role'],
+          ),
+          name: response['name'],
+          profileImage: response['profile_photo'],
+          customerId: response['customer_id']?.toString(),
+          createdAt: DateTime.now(),
+        );
+      } else {
+        _user = _user!.copyWith(
+          id: (response['id'] ?? response['documentId'] ?? _user!.id)
+              .toString(),
+          phoneNumber: (response['phone'] ?? _user!.phoneNumber).toString(),
+          email: response['email'] ?? _user!.email,
+          role: UserRoleExtension.fromString(
+            response['user_type'] ?? response['role'] ?? _user!.role.name,
+          ),
+          name: response['name'] ?? _user!.name,
+          profileImage: response['profile_photo'] ?? _user!.profileImage,
+          customerId: response['customer_id']?.toString() ?? _user!.customerId,
+        );
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(AppConstants.userKey, jsonEncode(_user!.toJson()));
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = 'Failed to refresh profile: $e';
+      notifyListeners();
+    }
+  }
+
   Future<void> addAddress(Address address) async {
     if (_user == null) return;
 

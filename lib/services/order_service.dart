@@ -3,6 +3,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/order.dart';
 import '../models/rating.dart';
+import '../models/cart_item.dart';
+import '../models/product.dart';
+import '../models/user.dart' as user_models;
 import '../core/constants/app_constants.dart';
 
 class OrderService extends ChangeNotifier {
@@ -18,34 +21,206 @@ class OrderService extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  Future<void> clearAll() async {
+    _orders = [];
+    _currentOrder = null;
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
+  }
+
+  OrderStatus _mapStatus(String? status) {
+    switch (status) {
+      case 'payment_confirmed':
+      case 'shopper_assigned':
+        return OrderStatus.confirmed;
+      case 'ready_for_pickup':
+        return OrderStatus.readyForDelivery;
+      case 'in_transit':
+        return OrderStatus.inTransit;
+      case 'delivered':
+        return OrderStatus.delivered;
+      case 'cancelled':
+        return OrderStatus.cancelled;
+      case 'shopping':
+        return OrderStatus.shopping;
+      case 'pending':
+      default:
+        return OrderStatus.pending;
+    }
+  }
+
+  List<CartItem> _parseOrderItems(Map<String, dynamic> attributes) {
+    // Handle both wrapped and flat formats
+    final orderItemsRaw = attributes['order_items'];
+
+    List<dynamic> orderItems = [];
+    if (orderItemsRaw is List<dynamic>) {
+      // Flat format: direct array
+      orderItems = orderItemsRaw;
+    } else if (orderItemsRaw is Map<String, dynamic> &&
+        orderItemsRaw.containsKey('data')) {
+      // Wrapped format: {data: [...]}
+      orderItems = (orderItemsRaw['data'] as List<dynamic>?) ?? [];
+    }
+
+    return orderItems.map((item) {
+      final itemAttrs = (item['attributes'] as Map<String, dynamic>?) ?? item;
+      final productName = itemAttrs['product_name'] as String? ?? 'Item';
+      final quantity = (itemAttrs['quantity'] as num?)?.toDouble() ?? 1;
+      final unit = itemAttrs['unit'] as String? ?? 'unit';
+      final estimatedPrice =
+          (itemAttrs['estimated_price'] as num?)?.toDouble() ?? 0;
+
+      final productData =
+          (itemAttrs['product']?['data'] as Map<String, dynamic>?) ??
+          itemAttrs['product'];
+      final productId = productData is Map
+          ? (productData['documentId'] ?? productData['id']).toString()
+          : productData?.toString() ?? '';
+
+      final product = Product(
+        id: productId.isEmpty ? 'unknown' : productId,
+        name: productName,
+        description: '',
+        image: '',
+        price: estimatedPrice,
+        unit: unit,
+        categoryId: '',
+        categoryName: '',
+        isAvailable: true,
+      );
+
+      return CartItem(
+        id: (item['id'] ?? '').toString(),
+        product: product,
+        quantity: quantity,
+        specialInstructions: itemAttrs['special_instructions'] as String?,
+      );
+    }).toList();
+  }
+
+  user_models.Address _parseDeliveryAddress(Map<String, dynamic> attributes) {
+    // Handle both wrapped and flat formats
+    final addressRaw = attributes['delivery_address'];
+
+    Map<String, dynamic>? addressData;
+    if (addressRaw is Map<String, dynamic>) {
+      // Check if it has 'data' key (wrapped format)
+      if (addressRaw.containsKey('data') &&
+          addressRaw['data'] is Map<String, dynamic>) {
+        addressData = addressRaw['data'];
+      } else {
+        // Flat format: use directly
+        addressData = addressRaw;
+      }
+    }
+
+    if (addressData == null || addressData.isEmpty) {
+      return user_models.Address(
+        id: '0',
+        label: 'Delivery Address',
+        fullAddress: '',
+        landmark: null,
+        latitude: 0.0,
+        longitude: 0.0,
+        isDefault: false,
+      );
+    }
+
+    final addressAttrs =
+        (addressData['attributes'] as Map<String, dynamic>?) ?? addressData;
+
+    final label = addressAttrs?['label'] as String? ?? 'Delivery Address';
+    final addressLine = addressAttrs?['address_line'] as String? ?? '';
+    final city = addressAttrs?['city'] as String? ?? '';
+    final landmark = addressAttrs?['landmark'] as String?;
+    final fullAddress =
+        '$addressLine${city.isNotEmpty ? ', $city' : ''}${landmark != null && landmark.isNotEmpty ? ', $landmark' : ''}';
+
+    return user_models.Address(
+      id: (addressData['id'] ?? addressData['documentId'] ?? '0').toString(),
+      label: label,
+      fullAddress: fullAddress,
+      landmark: landmark,
+      latitude: (addressAttrs?['gps_lat'] as num?)?.toDouble() ?? 0.0,
+      longitude: (addressAttrs?['gps_lng'] as num?)?.toDouble() ?? 0.0,
+      isDefault: addressAttrs?['is_default'] as bool? ?? false,
+    );
+  }
+
+  Order _fromStrapi(Map<String, dynamic> data) {
+    final attributes = (data['attributes'] as Map<String, dynamic>?) ?? data;
+    final rawId = data['id'] ?? data['documentId'];
+    final orderNumber =
+        (attributes['order_number'] ?? attributes['orderNumber'])?.toString() ??
+        data['id'].toString();
+
+    return Order(
+      id: rawId?.toString() ?? '',
+      orderNumber: orderNumber,
+      items: _parseOrderItems(attributes),
+      deliveryAddress: _parseDeliveryAddress(attributes),
+      subtotal: (attributes['subtotal'] as num?)?.toDouble() ?? 0,
+      serviceFee: (attributes['service_fee'] as num?)?.toDouble() ?? 0,
+      deliveryFee: (attributes['delivery_fee'] as num?)?.toDouble() ?? 0,
+      total: (attributes['total'] as num?)?.toDouble() ?? 0,
+      status: _mapStatus(attributes['status'] as String?),
+      createdAt:
+          DateTime.tryParse(attributes['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+      estimatedDelivery: DateTime.tryParse(
+        attributes['estimated_delivery'] as String? ?? '',
+      ),
+      deliveredAt: DateTime.tryParse(
+        attributes['delivered_at'] as String? ?? '',
+      ),
+      cancellationReason: attributes['cancellation_reason'] as String?,
+      paymentMethod: PaymentMethod.mobileMoney,
+      isPaid: false,
+    );
+  }
+
   /// Fetch all orders for current customer
-  Future<bool> fetchOrders(String token, String customerId) async {
+  Future<bool> fetchOrders(String token, String userId) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      final url =
+          '$baseUrl/api/orders?filters[customer][id][\$eq]=$userId&populate[order_items][fields][0]=product_name&populate[order_items][fields][1]=quantity&populate[order_items][fields][2]=unit&populate[order_items][fields][3]=estimated_price&populate[order_items][fields][4]=special_instructions&populate[delivery_address][fields][0]=label&populate[delivery_address][fields][1]=address_line&populate[delivery_address][fields][2]=city&populate[delivery_address][fields][3]=landmark&populate[delivery_address][fields][4]=gps_lat&populate[delivery_address][fields][5]=gps_lng&sort=createdAt:desc';
+
+      print('DEBUG: Fetching orders from $url');
+      print('DEBUG: Using userId=$userId');
+      print('DEBUG: Token length=${token.length}');
+
       final response = await http.get(
-        Uri.parse(
-          '$baseUrl/api/orders?filters[customer][id][\$eq]=$customerId&populate[order_items][populate]=*&populate[delivery_address]=*&sort=createdAt:desc',
-        ),
+        Uri.parse(url),
         headers: {'Authorization': 'Bearer $token'},
       );
+
+      print('DEBUG: Orders response status=${response.statusCode}');
+      print('DEBUG: Orders response body length=${response.body.length}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         _orders = List<Order>.from(
-          (data['data'] as List).map((order) => Order.fromJson(order)),
+          (data['data'] as List).map((order) => _fromStrapi(order)),
         );
+        print('DEBUG: Orders parsed count=${_orders.length}');
         _isLoading = false;
         notifyListeners();
         return true;
       }
-      _error = 'Failed to fetch orders';
+      print('DEBUG: Orders fetch failed with status ${response.statusCode}');
+      print('DEBUG: Response: ${response.body.substring(0, 200)}');
+      _error = 'Failed to fetch orders (${response.statusCode})';
       _isLoading = false;
       notifyListeners();
       return false;
     } catch (e) {
+      print('DEBUG: Orders fetch exception: $e');
       _error = 'Error fetching orders: $e';
       _isLoading = false;
       notifyListeners();
@@ -54,7 +229,7 @@ class OrderService extends ChangeNotifier {
   }
 
   /// Get single order details
-  Future<bool> getOrder(String token, int orderId) async {
+  Future<bool> getOrder(String token, String orderId) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -62,14 +237,14 @@ class OrderService extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse(
-          '$baseUrl/api/orders/$orderId?populate[order_items][populate]=*&populate[delivery_address]=*&populate[shopper]=*&populate[rider]=*',
+          '$baseUrl/api/orders/$orderId?populate[order_items][fields][0]=product_name&populate[order_items][fields][1]=quantity&populate[order_items][fields][2]=unit&populate[order_items][fields][3]=estimated_price&populate[order_items][fields][4]=special_instructions&populate[delivery_address][fields][0]=label&populate[delivery_address][fields][1]=address_line&populate[delivery_address][fields][2]=city&populate[delivery_address][fields][3]=landmark&populate[delivery_address][fields][4]=gps_lat&populate[delivery_address][fields][5]=gps_lng',
         ),
         headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        _currentOrder = Order.fromJson(data['data']);
+        _currentOrder = _fromStrapi(data['data']);
         _isLoading = false;
         notifyListeners();
         return true;
@@ -89,8 +264,8 @@ class OrderService extends ChangeNotifier {
   /// Create new order
   Future<bool> createOrder({
     required String token,
-    required int customerId,
-    required int addressId,
+    required String customerId,
+    required String addressId,
     required double subtotal,
     required double serviceFee,
     required double deliveryFee,
@@ -98,6 +273,8 @@ class OrderService extends ChangeNotifier {
     String? specialInstructions,
   }) async {
     try {
+      final orderNumber =
+          'LC${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
       final response = await http.post(
         Uri.parse('$baseUrl/api/orders'),
         headers: {
@@ -106,6 +283,7 @@ class OrderService extends ChangeNotifier {
         },
         body: jsonEncode({
           'data': {
+            'order_number': orderNumber,
             'customer': customerId,
             'delivery_address': addressId,
             'subtotal': subtotal,
@@ -120,7 +298,7 @@ class OrderService extends ChangeNotifier {
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        _currentOrder = Order.fromJson(data['data']);
+        _currentOrder = _fromStrapi(data['data']);
         _orders.insert(0, _currentOrder!);
         notifyListeners();
         return true;
@@ -166,7 +344,7 @@ class OrderService extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final order = Order.fromJson(data['data']);
+        final order = _fromStrapi(data['data']);
         _currentOrder = order;
         _orders.insert(0, order);
         notifyListeners();
@@ -183,7 +361,7 @@ class OrderService extends ChangeNotifier {
   }
 
   /// Cancel order
-  Future<bool> cancelOrder(String token, int orderId) async {
+  Future<bool> cancelOrder(String token, String orderId) async {
     try {
       final response = await http.put(
         Uri.parse('$baseUrl/api/orders/$orderId'),
@@ -201,12 +379,12 @@ class OrderService extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final cancelledOrder = Order.fromJson(data['data']);
-        final index = _orders.indexWhere((o) => o.id == orderId.toString());
+        final cancelledOrder = _fromStrapi(data['data']);
+        final index = _orders.indexWhere((o) => o.id == orderId);
         if (index != -1) {
           _orders[index] = cancelledOrder;
         }
-        if (_currentOrder?.id == orderId.toString()) {
+        if (_currentOrder?.id == orderId) {
           _currentOrder = cancelledOrder;
         }
         notifyListeners();
@@ -270,6 +448,66 @@ class OrderService extends ChangeNotifier {
       _error = 'Error submitting rating: $e';
       notifyListeners();
       return false;
+    }
+  }
+
+  Future<Order?> createOrderWithItems({
+    required String token,
+    required String userId,
+    required String addressId,
+    required List<CartItem> items,
+    required double subtotal,
+    required double serviceFee,
+    required double deliveryFee,
+    required double total,
+    String? specialInstructions,
+  }) async {
+    final orderCreated = await createOrder(
+      token: token,
+      customerId: userId,
+      addressId: addressId,
+      subtotal: subtotal,
+      serviceFee: serviceFee,
+      deliveryFee: deliveryFee,
+      total: total,
+      specialInstructions: specialInstructions,
+    );
+
+    if (!orderCreated || _currentOrder == null) return null;
+
+    final orderId = _currentOrder!.id;
+
+    try {
+      await Future.wait(
+        items.map((item) {
+          final productId = item.product.strapiId ?? item.product.id;
+          return http.post(
+            Uri.parse('$baseUrl/api/order-items'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'data': {
+                'order': orderId,
+                'product': productId,
+                'product_name': item.product.name,
+                'quantity': item.quantity,
+                'unit': item.product.unit,
+                'estimated_price': item.product.price,
+                'special_instructions': item.specialInstructions,
+              },
+            }),
+          );
+        }),
+      );
+
+      await getOrder(token, orderId);
+      return _currentOrder;
+    } catch (e) {
+      _error = 'Error creating order items: $e';
+      notifyListeners();
+      return _currentOrder;
     }
   }
 }

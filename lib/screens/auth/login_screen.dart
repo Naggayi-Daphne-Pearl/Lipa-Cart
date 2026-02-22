@@ -9,6 +9,8 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/validators.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/address_service.dart';
+import '../../models/user.dart';
 import '../../widgets/custom_button.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -56,9 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (success) {
         if (!mounted) return;
-        // Navigate based on role
-        final role = authProvider.user?.role.name ?? 'customer';
-        context.go('/$role/home');
+        await _handlePostLogin(authProvider);
       } else if (authProvider.errorMessage != null) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -76,7 +76,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (authProvider.status == AuthStatus.otpSent) {
         if (!mounted) return;
-        context.push('/otp', extra: phoneNumber);
+        context.push(
+          '/otp',
+          extra: {
+            'phoneNumber': phoneNumber,
+            'returnRoute': widget.returnRoute,
+          },
+        );
       } else if (authProvider.errorMessage != null) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -311,5 +317,43 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handlePostLogin(AuthProvider authProvider) async {
+    if (!mounted) return;
+
+    final role = authProvider.user?.role ?? UserRole.customer;
+    if (role != UserRole.customer) {
+      context.go('/${role.name}/home');
+      return;
+    }
+
+    final returnRoute = widget.returnRoute;
+    if (returnRoute == null || returnRoute.isEmpty) {
+      context.go('/customer/home');
+      return;
+    }
+
+    if (returnRoute.startsWith('/customer/checkout')) {
+      final token = authProvider.token;
+      final user = authProvider.user;
+      if (token != null && user != null && user.addresses.isEmpty) {
+        final addressService = context.read<AddressService>();
+        final customerId = user.customerId ?? user.id;
+        final success = await addressService.fetchAddresses(token, customerId);
+        if (success) {
+          await authProvider.setAddresses(addressService.userAddresses);
+        }
+      }
+
+      final hasAddress = authProvider.user?.addresses.isNotEmpty == true;
+      if (!hasAddress) {
+        final encoded = Uri.encodeComponent(returnRoute);
+        context.go('/customer/addresses?return=$encoded');
+        return;
+      }
+    }
+
+    context.go(returnRoute);
   }
 }

@@ -623,7 +623,8 @@ class _GuestOrSignInSheet extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(context);
-                context.go('/login');
+                final returnRoute = Uri.encodeComponent('/customer/checkout');
+                context.go('/login?return=$returnRoute');
               },
               icon: const Icon(Iconsax.login),
               label: const Text('Sign In / Register'),
@@ -631,24 +632,6 @@ class _GuestOrSignInSheet extends StatelessWidget {
                 backgroundColor: AppColors.accent,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSizes.md),
-          // Guest checkout button
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                context.go('/customer/checkout', extra: {'guest': true});
-              },
-              icon: const Icon(Iconsax.card),
-              label: const Text('Continue as Guest'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.accent,
-                padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
-                side: const BorderSide(color: AppColors.accent),
               ),
             ),
           ),

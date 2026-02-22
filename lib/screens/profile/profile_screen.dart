@@ -6,16 +6,83 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/logout_helper.dart';
 import '../../core/utils/responsive.dart';
+import '../../models/order.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/order_provider.dart';
+import '../../services/address_service.dart';
+import '../../services/order_service.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isLoadingProfile = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadProfileData();
+    });
+  }
+
+  Future<void> _loadProfileData() async {
+    if (_isLoadingProfile) return;
+
+    final authProvider = context.read<AuthProvider>();
+    final token = authProvider.token;
+    final user = authProvider.user;
+
+    if (token == null || user == null) return;
+
+    setState(() => _isLoadingProfile = true);
+
+    try {
+        await authProvider.refreshProfile();
+        final refreshedUser = authProvider.user;
+        if (refreshedUser == null) return;
+
+          final addressService = context.read<AddressService>();
+          final customerId = refreshedUser.customerId ?? refreshedUser.id;
+          final addressSuccess =
+            await addressService.fetchAddresses(token, customerId);
+      if (addressSuccess) {
+        await authProvider.setAddresses(addressService.userAddresses);
+      }
+
+      final orderProvider = context.read<OrderProvider>();
+      if (orderProvider.orders.isEmpty) {
+        final orderService = context.read<OrderService>();
+        final ordersSuccess =
+            await orderService.fetchOrders(token, refreshedUser.id);
+        if (ordersSuccess) {
+          orderProvider.syncOrdersFromService(orderService.orders);
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingProfile = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+    final orderProvider = context.watch<OrderProvider>();
+    final addressService = context.watch<AddressService>();
     final user = authProvider.user;
+    final defaultAddress = authProvider.defaultAddress;
+    final ordersCount = orderProvider.orders.length;
+    final addressesCount = authProvider.user?.addresses.length ??
+      addressService.addresses.length;
+    final ratingSummary = _ratingSummary(orderProvider.orders);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -37,16 +104,31 @@ class ProfileScreen extends StatelessWidget {
                     context.horizontalPadding,
                     AppSizes.sm,
                   ),
-                  child: Text(
-                    'My Profile',
-                    style: AppTextStyles.h3.copyWith(
-                      fontWeight: FontWeight.w800,
-                      fontSize: context.responsive<double>(
-                        mobile: 26.0,
-                        tablet: 30.0,
-                        desktop: 34.0,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'My Profile',
+                          style: AppTextStyles.h3.copyWith(
+                            fontWeight: FontWeight.w800,
+                            fontSize: context.responsive<double>(
+                              mobile: 26.0,
+                              tablet: 30.0,
+                              desktop: 34.0,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      if (_isLoadingProfile)
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
 
@@ -218,11 +300,23 @@ class ProfileScreen extends StatelessWidget {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              _buildStatItem(context, '12', 'Orders'),
+                                _buildStatItem(
+                                  context,
+                                  ordersCount.toString(),
+                                  'Orders',
+                                ),
                               _buildStatDivider(context),
-                              _buildStatItem(context, '3', 'Addresses'),
+                                _buildStatItem(
+                                  context,
+                                  addressesCount.toString(),
+                                  'Addresses',
+                                ),
                               _buildStatDivider(context),
-                              _buildStatItem(context, '4.9', 'Rating'),
+                                _buildStatItem(
+                                  context,
+                                  ratingSummary,
+                                  'Rating',
+                                ),
                             ],
                           ),
                         ),
@@ -244,91 +338,101 @@ class ProfileScreen extends StatelessWidget {
                   padding: EdgeInsets.symmetric(
                     horizontal: context.horizontalPadding,
                   ),
-                  child: Container(
-                    padding: EdgeInsets.all(
-                      context.responsive<double>(
-                        mobile: AppSizes.md,
-                        tablet: AppSizes.lg,
-                        desktop: 20.0,
-                      ),
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primarySoft,
-                      borderRadius: BorderRadius.circular(
+                  child: GestureDetector(
+                    onTap: () => context.go('/customer/addresses'),
+                    child: Container(
+                      padding: EdgeInsets.all(
                         context.responsive<double>(
-                          mobile: AppSizes.radiusLg,
-                          tablet: AppSizes.radiusXl,
+                          mobile: AppSizes.md,
+                          tablet: AppSizes.lg,
                           desktop: 20.0,
                         ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft,
+                        borderRadius: BorderRadius.circular(
+                          context.responsive<double>(
+                            mobile: AppSizes.radiusLg,
+                            tablet: AppSizes.radiusXl,
+                            desktop: 20.0,
                           ),
-                          child: Icon(
-                            Iconsax.location,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Iconsax.location,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: AppSizes.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      defaultAddress?.label ??
+                                          'No address saved',
+                                      style: AppTextStyles.labelMedium.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    if (defaultAddress != null) ...[
+                                      const SizedBox(width: AppSizes.xs),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(
+                                            AppSizes.radiusFull,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Default',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  defaultAddress?.fullAddress.isNotEmpty == true
+                                      ? defaultAddress!.fullAddress
+                                      : 'Add a delivery address to speed up checkout',
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Iconsax.arrow_right_3,
                             color: AppColors.primary,
                             size: 20,
                           ),
-                        ),
-                        const SizedBox(width: AppSizes.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    'Home',
-                                    style: AppTextStyles.labelMedium.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppSizes.xs),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary,
-                                      borderRadius: BorderRadius.circular(
-                                        AppSizes.radiusFull,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'Default',
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Plot 45, Nakasero Road, Nakasero',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Iconsax.arrow_right_3,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -343,11 +447,11 @@ class ProfileScreen extends StatelessWidget {
 
                 // Account Section
                 _buildSectionTitle(context, 'ACCOUNT'),
-                _buildMenuCard(context, [
+                  _buildMenuCard(context, [
                   _MenuItem(
                     icon: Iconsax.location,
                     title: 'My Addresses',
-                    onTap: () {},
+                    onTap: () => context.go('/customer/addresses'),
                   ),
                   _MenuItem(
                     icon: Iconsax.card,
@@ -425,7 +529,7 @@ class ProfileScreen extends StatelessWidget {
                   padding: EdgeInsets.symmetric(
                     horizontal: context.horizontalPadding,
                   ),
-                  child: _buildLogoutButton(context, authProvider),
+                  child: _buildLogoutButton(context),
                 ),
 
                 const SizedBox(height: 100),
@@ -614,9 +718,9 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLogoutButton(BuildContext context, AuthProvider authProvider) {
+  Widget _buildLogoutButton(BuildContext context) {
     return GestureDetector(
-      onTap: () => _showLogoutDialog(context, authProvider),
+      onTap: () => _showLogoutDialog(context),
       child: Container(
         padding: EdgeInsets.all(
           context.responsive<double>(
@@ -666,10 +770,24 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  void _showLogoutDialog(BuildContext context, AuthProvider authProvider) {
+  String _ratingSummary(List<Order> orders) {
+    final ratings = orders
+        .map((order) => order.rating?.stars)
+        .whereType<double>()
+        .where((value) => value > 0)
+        .toList();
+
+    if (ratings.isEmpty) return 'N/A';
+
+    final total = ratings.fold<double>(0, (sum, value) => sum + value);
+    final average = total / ratings.length;
+    return average.toStringAsFixed(1);
+  }
+
+  void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusLg),
         ),
@@ -690,8 +808,11 @@ class ProfileScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              authProvider.logout();
-              context.go('/login');
+              LogoutHelper.logoutAndClear(context).then((_) {
+                if (!context.mounted) return;
+                Navigator.of(dialogContext).pop();
+                context.go('/login');
+              });
             },
             child: Text(
               'Logout',

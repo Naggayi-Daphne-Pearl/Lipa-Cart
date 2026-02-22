@@ -9,104 +9,206 @@ import '../../core/utils/formatters.dart';
 import '../../core/utils/responsive.dart';
 import '../../models/order.dart';
 import '../../providers/order_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/order_service.dart';
 
-class OrdersScreen extends StatelessWidget {
+class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
+
+  @override
+  State<OrdersScreen> createState() => _OrdersScreenState();
+}
+
+class _OrdersScreenState extends State<OrdersScreen> {
+  bool _isLoadingOrders = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchOrders();
+    });
+  }
+
+  Future<void> _fetchOrders() async {
+    if (_isLoadingOrders) return;
+    final authProvider = context.read<AuthProvider>();
+    final orderService = context.read<OrderService>();
+    final orderProvider = context.read<OrderProvider>();
+
+    if (authProvider.user == null || authProvider.token == null) {
+      return;
+    }
+
+    print('DEBUG: Logged in user ID: ${authProvider.user!.id}');
+    print('DEBUG: User phone: ${authProvider.user!.phoneNumber}');
+    print('DEBUG: Token: ${authProvider.token}');
+
+    if (mounted) {
+      setState(() => _isLoadingOrders = true);
+    }
+
+    try {
+      final success = await orderService.fetchOrders(
+        authProvider.token!,
+        authProvider.user!.id.toString(),
+      );
+
+      print('DEBUG: Orders fetch success=$success');
+      print('DEBUG: Orders count=${orderService.orders.length}');
+      print('DEBUG: Error: ${orderService.error}');
+      print('DEBUG: Active orders=${orderProvider.activeOrders.length}');
+      print('DEBUG: Past orders=${orderProvider.pastOrders.length}');
+
+      if (success && mounted) {
+        orderProvider.syncOrdersFromService(orderService.orders);
+        print('DEBUG: Orders synced to provider');
+      }
+    } catch (e) {
+      print('DEBUG: Orders fetch error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load orders: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingOrders = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final orderProvider = context.watch<OrderProvider>();
 
+    print('DEBUG: OrdersScreen build() called');
+    print('DEBUG: Active orders: ${orderProvider.activeOrders.length}');
+    print('DEBUG: Past orders: ${orderProvider.pastOrders.length}');
+    print('DEBUG: Is loading: $_isLoadingOrders');
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: ResponsiveContainer(
         child: SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title
-                Padding(
-                  padding: EdgeInsets.all(
-                    context.responsive<double>(
-                      mobile: AppSizes.lg,
-                      tablet: AppSizes.xl,
-                      desktop: 24.0,
+          child: RefreshIndicator(
+            onRefresh: _fetchOrders,
+            child: _isLoadingOrders && orderProvider.orders.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const CircularProgressIndicator(
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(height: AppSizes.md),
+                        Text(
+                          'Loading orders...',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  child: Text(
-                    'My Orders',
-                    style: AppTextStyles.h3.copyWith(
-                      fontWeight: FontWeight.w800,
-                      fontSize: context.responsive<double>(
-                        mobile: 26.0,
-                        tablet: 30.0,
-                        desktop: 34.0,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Active Orders Section
-                if (orderProvider.activeOrders.isNotEmpty) ...[
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: context.horizontalPadding,
-                    ),
-                    child: Text(
-                      'ACTIVE ORDERS',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textTertiary,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: context.responsive<double>(
-                      mobile: AppSizes.sm,
-                      tablet: AppSizes.md,
-                      desktop: AppSizes.md,
-                    ),
-                  ),
-                  ...orderProvider.activeOrders.map(
-                    (order) => _buildActiveOrderCard(context, order),
-                  ),
-                ],
-
-                // Past Orders Section
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    context.horizontalPadding,
-                    context.responsive<double>(
-                      mobile: AppSizes.lg,
-                      tablet: AppSizes.xl,
-                      desktop: 24.0,
-                    ),
-                    context.horizontalPadding,
-                    AppSizes.sm,
-                  ),
-                  child: Text(
-                    'PAST ORDERS',
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textTertiary,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-                if (orderProvider.pastOrders.isEmpty)
-                  _buildEmptyState(context, 'No past orders yet')
-                else if (context.isMobile)
-                  ...orderProvider.pastOrders.map(
-                    (order) => _buildPastOrderCard(context, order),
                   )
-                else
-                  _buildPastOrdersGrid(context, orderProvider.pastOrders),
+                : SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title
+                        Padding(
+                          padding: EdgeInsets.all(
+                            context.responsive<double>(
+                              mobile: AppSizes.lg,
+                              tablet: AppSizes.xl,
+                              desktop: 24.0,
+                            ),
+                          ),
+                          child: Text(
+                            'My Orders',
+                            style: AppTextStyles.h3.copyWith(
+                              fontWeight: FontWeight.w800,
+                              fontSize: context.responsive<double>(
+                                mobile: 26.0,
+                                tablet: 30.0,
+                                desktop: 34.0,
+                              ),
+                            ),
+                          ),
+                        ),
 
-                const SizedBox(height: 100),
-              ],
-            ),
+                        // Active Orders Section
+                        if (orderProvider.activeOrders.isNotEmpty) ...[
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: context.horizontalPadding,
+                            ),
+                            child: Text(
+                              'ACTIVE ORDERS',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.textTertiary,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            height: context.responsive<double>(
+                              mobile: AppSizes.sm,
+                              tablet: AppSizes.md,
+                              desktop: AppSizes.md,
+                            ),
+                          ),
+                          if (context.isMobile)
+                            ...orderProvider.activeOrders.map(
+                              (order) =>
+                                  _buildActiveOrderCard(context, order),
+                            )
+                          else
+                            _buildOrdersTable(
+                              context,
+                              orderProvider.activeOrders,
+                            ),
+                        ],
+
+                        // Past Orders Section
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            context.horizontalPadding,
+                            context.responsive<double>(
+                              mobile: AppSizes.lg,
+                              tablet: AppSizes.xl,
+                              desktop: 24.0,
+                            ),
+                            context.horizontalPadding,
+                            AppSizes.sm,
+                          ),
+                          child: Text(
+                            'PAST ORDERS',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textTertiary,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        if (orderProvider.pastOrders.isEmpty)
+                          _buildEmptyState(context, 'No past orders yet')
+                        else if (context.isMobile)
+                          ...orderProvider.pastOrders.map(
+                            (order) => _buildPastOrderCard(context, order),
+                          )
+                        else
+                          _buildOrdersTable(context, orderProvider.pastOrders),
+
+                        const SizedBox(height: 100),
+                      ],
+                    ),
+                  ),
           ),
         ),
       ),
@@ -431,6 +533,232 @@ class OrdersScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildOrdersTable(BuildContext context, List<Order> orders) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(
+            context.responsive<double>(
+              mobile: AppSizes.radiusLg,
+              tablet: AppSizes.radiusXl,
+              desktop: 20.0,
+            ),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            _buildOrdersTableHeader(context),
+            ...orders.map((order) => _buildOrdersTableRow(context, order)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrdersTableHeader(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSizes.lg,
+        vertical: AppSizes.md,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.grey100,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(AppSizes.radiusXl),
+          topRight: Radius.circular(AppSizes.radiusXl),
+        ),
+      ),
+      child: Row(
+        children: [
+          _buildTableHeaderCell(context, 'Order', flex: 2),
+          _buildTableHeaderCell(context, 'Placed', flex: 2),
+          _buildTableHeaderCell(context, 'Items', flex: 4),
+          _buildTableHeaderCell(context, 'Address', flex: 3),
+          _buildTableHeaderCell(context, 'Total', flex: 2),
+          _buildTableHeaderCell(context, 'Status', flex: 2),
+          _buildTableHeaderCell(context, 'Payment', flex: 2),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTableHeaderCell(
+    BuildContext context,
+    String label, {
+    required int flex,
+  }) {
+    return Expanded(
+      flex: flex,
+      child: Text(
+        label,
+        style: AppTextStyles.caption.copyWith(
+          color: AppColors.textTertiary,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrdersTableRow(BuildContext context, Order order) {
+    return InkWell(
+      onTap: () => context.push('/customer/order-tracking', extra: order),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSizes.lg,
+          vertical: AppSizes.md,
+        ),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: AppColors.grey100),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: Text(
+                '#${order.orderNumber}',
+                style: AppTextStyles.labelMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                Formatters.formatDate(order.createdAt),
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 4,
+              child: Text(
+                _orderItemsSummary(order),
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Expanded(
+              flex: 3,
+              child: Text(
+                order.deliveryAddress.fullAddress.isNotEmpty
+                    ? order.deliveryAddress.fullAddress
+                    : order.deliveryAddress.label,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                Formatters.formatCurrency(order.total),
+                style: AppTextStyles.labelMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Expanded(flex: 2, child: _buildStatusPill(order.status)),
+            Expanded(
+              flex: 2,
+              child: Text(
+                _paymentLabel(order.paymentMethod),
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _orderItemsSummary(Order order) {
+    final itemNames = order.items
+        .map((item) => item.product.name)
+        .where((name) => name.trim().isNotEmpty)
+        .toList();
+
+    if (itemNames.isEmpty) {
+      return '${order.itemCount} items';
+    }
+
+    final preview = itemNames.take(2).join(', ');
+    final remaining = itemNames.length - 2;
+    final suffix = remaining > 0 ? ', +$remaining more' : '';
+    return '${order.itemCount} items • $preview$suffix';
+  }
+
+  String _paymentLabel(PaymentMethod method) {
+    switch (method) {
+      case PaymentMethod.cashOnDelivery:
+        return 'Cash';
+      case PaymentMethod.card:
+        return 'Card';
+      case PaymentMethod.mobileMoney:
+      default:
+        return 'Mobile Money';
+    }
+  }
+
+  Widget _buildStatusPill(OrderStatus status) {
+    final color = _statusColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        status.displayName,
+        style: AppTextStyles.caption.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
+  Color _statusColor(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return AppColors.accent;
+      case OrderStatus.confirmed:
+        return AppColors.primary;
+      case OrderStatus.shopping:
+        return AppColors.primary;
+      case OrderStatus.readyForDelivery:
+        return AppColors.primary;
+      case OrderStatus.inTransit:
+        return AppColors.accent;
+      case OrderStatus.delivered:
+        return AppColors.success;
+      case OrderStatus.cancelled:
+        return AppColors.error;
+    }
   }
 
   Widget _buildPastOrderCard(BuildContext context, Order order) {
