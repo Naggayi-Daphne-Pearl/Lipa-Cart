@@ -140,8 +140,9 @@ class AddressService extends ChangeNotifier {
     bool isDefault = false,
   }) async {
     try {
-      final targetId =
-          addressDocumentId.isNotEmpty ? addressDocumentId : addressId.toString();
+      final targetId = addressDocumentId.isNotEmpty
+          ? addressDocumentId
+          : addressId.toString();
       final response = await http.put(
         Uri.parse('$baseUrl/api/addresses/$targetId'),
         headers: {
@@ -187,8 +188,9 @@ class AddressService extends ChangeNotifier {
     required String addressDocumentId,
   }) async {
     try {
-      final targetId =
-          addressDocumentId.isNotEmpty ? addressDocumentId : addressId.toString();
+      final targetId = addressDocumentId.isNotEmpty
+          ? addressDocumentId
+          : addressId.toString();
       final response = await http.delete(
         Uri.parse('$baseUrl/api/addresses/$targetId'),
         headers: {'Authorization': 'Bearer $token'},
@@ -217,8 +219,9 @@ class AddressService extends ChangeNotifier {
     required String addressDocumentId,
   }) async {
     try {
-      final targetId =
-          addressDocumentId.isNotEmpty ? addressDocumentId : addressId.toString();
+      final targetId = addressDocumentId.isNotEmpty
+          ? addressDocumentId
+          : addressId.toString();
       // Unset previous default
       if (_defaultAddress != null) {
         final previousId = _defaultAddress!.documentId.isNotEmpty

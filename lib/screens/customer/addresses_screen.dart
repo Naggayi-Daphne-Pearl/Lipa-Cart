@@ -63,18 +63,14 @@ class _AddressesScreenState extends State<AddressesScreen> {
         ),
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppColors.elegantBgGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
         child: ResponsiveContainer(
           child: SafeArea(
             child: Consumer2<AuthProvider, AddressService>(
               builder: (context, auth, addressService, _) {
                 if (addressService.isLoading) {
                   return const Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.primary,
-                    ),
+                    child: CircularProgressIndicator(color: AppColors.primary),
                   );
                 }
 
@@ -110,8 +106,9 @@ class _AddressesScreenState extends State<AddressesScreen> {
                               padding: const EdgeInsets.all(AppSizes.lg),
                               decoration: BoxDecoration(
                                 color: AppColors.surface,
-                                borderRadius:
-                                    BorderRadius.circular(AppSizes.radiusMd),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusMd,
+                                ),
                                 boxShadow: AppColors.shadowSm,
                               ),
                               child: Center(
@@ -142,32 +139,34 @@ class _AddressesScreenState extends State<AddressesScreen> {
                           else
                             Column(
                               children: addressService.addresses
-                                  .map((address) => AddressCard(
-                                        address: address,
-                                        isDefault:
-                                            addressService.defaultAddress?.id ==
-                                                address.id,
-                                        onEdit: () => _showAddressForm(
-                                          context,
-                                          auth,
-                                          addressService,
-                                          address,
-                                        ),
-                                        onDelete: () => _deleteAddress(
-                                          context,
-                                          auth,
-                                          addressService,
+                                  .map(
+                                    (address) => AddressCard(
+                                      address: address,
+                                      isDefault:
+                                          addressService.defaultAddress?.id ==
                                           address.id,
-                                          address.documentId,
-                                        ),
-                                        onSetDefault: () => _setDefault(
-                                          context,
-                                          auth,
-                                          addressService,
-                                          address.id,
-                                          address.documentId,
-                                        ),
-                                      ))
+                                      onEdit: () => _showAddressForm(
+                                        context,
+                                        auth,
+                                        addressService,
+                                        address,
+                                      ),
+                                      onDelete: () => _deleteAddress(
+                                        context,
+                                        auth,
+                                        addressService,
+                                        address.id,
+                                        address.documentId,
+                                      ),
+                                      onSetDefault: () => _setDefault(
+                                        context,
+                                        auth,
+                                        addressService,
+                                        address.id,
+                                        address.documentId,
+                                      ),
+                                    ),
+                                  )
                                   .toList(),
                             ),
 

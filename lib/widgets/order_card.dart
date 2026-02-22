@@ -22,11 +22,8 @@ class OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap ??
-          () => context.push(
-                '/customer/order-tracking',
-                extra: order,
-              ),
+      onTap:
+          onTap ?? () => context.push('/customer/order-tracking', extra: order),
       child: Container(
         margin: const EdgeInsets.symmetric(
           horizontal: AppSizes.lg,
@@ -35,9 +32,7 @@ class OrderCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-          border: Border.all(
-            color: AppColors.lightGrey.withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: AppColors.lightGrey.withValues(alpha: 0.3)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -78,7 +73,9 @@ class OrderCard extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(order.status).withValues(alpha: 0.15),
+                      color: _getStatusColor(
+                        order.status,
+                      ).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(AppSizes.radiusFull),
                     ),
                     child: Text(
@@ -120,8 +117,12 @@ class OrderCard extends StatelessWidget {
                             width: 28,
                             height: 28,
                             decoration: BoxDecoration(
-                              color: AppColors.primaryOrange.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(AppSizes.radiusXs),
+                              color: AppColors.primaryOrange.withValues(
+                                alpha: 0.1,
+                              ),
+                              borderRadius: BorderRadius.circular(
+                                AppSizes.radiusXs,
+                              ),
                             ),
                             child: Center(
                               child: Text(
@@ -210,11 +211,7 @@ class OrderCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Iconsax.eye,
-                          color: Colors.white,
-                          size: 16,
-                        ),
+                        const Icon(Iconsax.eye, color: Colors.white, size: 16),
                         const SizedBox(width: 6),
                         Text(
                           'View Details',
