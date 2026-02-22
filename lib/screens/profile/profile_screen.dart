@@ -44,14 +44,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isLoadingProfile = true);
 
     try {
-        await authProvider.refreshProfile();
-        final refreshedUser = authProvider.user;
-        if (refreshedUser == null) return;
+      await authProvider.refreshProfile();
+      final refreshedUser = authProvider.user;
+      if (refreshedUser == null) return;
 
-          final addressService = context.read<AddressService>();
-          final customerId = refreshedUser.customerId ?? refreshedUser.id;
-          final addressSuccess =
-            await addressService.fetchAddresses(token, customerId);
+      final addressService = context.read<AddressService>();
+      final customerId = refreshedUser.customerId ?? refreshedUser.id;
+      final addressSuccess = await addressService.fetchAddresses(
+        token,
+        customerId,
+      );
       if (addressSuccess) {
         await authProvider.setAddresses(addressService.userAddresses);
       }
@@ -59,8 +61,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final orderProvider = context.read<OrderProvider>();
       if (orderProvider.orders.isEmpty) {
         final orderService = context.read<OrderService>();
-        final ordersSuccess =
-            await orderService.fetchOrders(token, refreshedUser.id);
+        final ordersSuccess = await orderService.fetchOrders(
+          token,
+          refreshedUser.id,
+        );
         if (ordersSuccess) {
           orderProvider.syncOrdersFromService(orderService.orders);
         }
@@ -80,8 +84,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = authProvider.user;
     final defaultAddress = authProvider.defaultAddress;
     final ordersCount = orderProvider.orders.length;
-    final addressesCount = authProvider.user?.addresses.length ??
-      addressService.addresses.length;
+    final addressesCount =
+        authProvider.user?.addresses.length ?? addressService.addresses.length;
     final ratingSummary = _ratingSummary(orderProvider.orders);
 
     return Scaffold(
@@ -300,23 +304,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                                _buildStatItem(
-                                  context,
-                                  ordersCount.toString(),
-                                  'Orders',
-                                ),
+                              _buildStatItem(
+                                context,
+                                ordersCount.toString(),
+                                'Orders',
+                              ),
                               _buildStatDivider(context),
-                                _buildStatItem(
-                                  context,
-                                  addressesCount.toString(),
-                                  'Addresses',
-                                ),
+                              _buildStatItem(
+                                context,
+                                addressesCount.toString(),
+                                'Addresses',
+                              ),
                               _buildStatDivider(context),
-                                _buildStatItem(
-                                  context,
-                                  ratingSummary,
-                                  'Rating',
-                                ),
+                              _buildStatItem(context, ratingSummary, 'Rating'),
                             ],
                           ),
                         ),
@@ -447,7 +447,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 // Account Section
                 _buildSectionTitle(context, 'ACCOUNT'),
-                  _buildMenuCard(context, [
+                _buildMenuCard(context, [
                   _MenuItem(
                     icon: Iconsax.location,
                     title: 'My Addresses',

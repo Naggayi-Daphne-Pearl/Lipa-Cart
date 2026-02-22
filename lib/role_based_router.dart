@@ -104,15 +104,16 @@ class RoleBasedRouter {
             state.matchedLocation == '/profile-completion';
 
         final isCustomerProtectedRoute =
-          state.matchedLocation.startsWith('/customer/checkout') ||
-          state.matchedLocation.startsWith('/customer/orders') ||
-          state.matchedLocation.startsWith('/customer/order-tracking') ||
-          state.matchedLocation.startsWith('/customer/order-rating') ||
-          state.matchedLocation.startsWith('/customer/addresses') ||
-          state.matchedLocation.startsWith('/customer/profile');
+            state.matchedLocation.startsWith('/customer/checkout') ||
+            state.matchedLocation.startsWith('/customer/orders') ||
+            state.matchedLocation.startsWith('/customer/order-tracking') ||
+            state.matchedLocation.startsWith('/customer/order-rating') ||
+            state.matchedLocation.startsWith('/customer/addresses') ||
+            state.matchedLocation.startsWith('/customer/profile');
 
         // Not authenticated, trying to access protected → go to login
-        if (!isAuthenticated && (isProtectedRoute || isCustomerProtectedRoute)) {
+        if (!isAuthenticated &&
+            (isProtectedRoute || isCustomerProtectedRoute)) {
           final returnPath = Uri.encodeComponent(state.uri.toString());
           return '/login?return=$returnPath';
         }

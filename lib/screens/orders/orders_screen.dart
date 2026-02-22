@@ -165,8 +165,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           ),
                           if (context.isMobile)
                             ...orderProvider.activeOrders.map(
-                              (order) =>
-                                  _buildActiveOrderCard(context, order),
+                              (order) => _buildActiveOrderCard(context, order),
                             )
                           else
                             _buildOrdersTable(
@@ -620,9 +619,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           vertical: AppSizes.md,
         ),
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: AppColors.grey100),
-          ),
+          border: Border(bottom: BorderSide(color: AppColors.grey100)),
         ),
         child: Row(
           children: [
