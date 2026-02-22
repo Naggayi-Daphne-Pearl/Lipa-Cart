@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 
 class ShopperHomeScreen extends StatefulWidget {
-  const ShopperHomeScreen({Key? key}) : super(key: key);
+  const ShopperHomeScreen({super.key});
 
   @override
   State<ShopperHomeScreen> createState() => _ShopperHomeScreenState();

@@ -20,13 +20,13 @@ class ImgBBUploadWidget extends StatefulWidget {
   final String? hint;
 
   const ImgBBUploadWidget({
-    Key? key,
+    super.key,
     required this.onImageUploaded,
     this.onMultipleImagesUploaded,
     this.initialImageUrl,
     this.allowMultiple = false,
     this.hint,
-  }) : super(key: key);
+  });
 
   @override
   State<ImgBBUploadWidget> createState() => _ImgBBUploadWidgetState();
@@ -34,7 +34,7 @@ class ImgBBUploadWidget extends StatefulWidget {
 
 class _ImgBBUploadWidgetState extends State<ImgBBUploadWidget> {
   File? _selectedImage;
-  List<File> _selectedImages = [];
+  final List<File> _selectedImages = [];
 
   @override
   Widget build(BuildContext context) {
@@ -303,7 +303,7 @@ class _ImgBBUploadWidgetState extends State<ImgBBUploadWidget> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
                 ),

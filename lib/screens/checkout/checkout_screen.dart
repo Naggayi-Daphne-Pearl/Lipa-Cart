@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order.dart';
 import '../../models/user.dart';
@@ -27,6 +30,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Address? _selectedAddress;
   bool _isLoading = false;
   bool _consentChecked = false;
+  bool _showAddressForm = false;
 
   // Guest checkout fields
   late final TextEditingController _guestNameController;
@@ -35,6 +39,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   late final TextEditingController _guestCityController;
   late final TextEditingController _guestPasswordController;
   late final TextEditingController _guestConfirmPasswordController;
+
+  // Authenticated user address fields
+  late final TextEditingController _authAddressController;
+  late final TextEditingController _authCityController;
+  late final TextEditingController _authLandmarkController;
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
@@ -47,6 +57,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _guestCityController = TextEditingController();
     _guestPasswordController = TextEditingController();
     _guestConfirmPasswordController = TextEditingController();
+    _authAddressController = TextEditingController();
+    _authCityController = TextEditingController(text: 'Kampala');
+    _authLandmarkController = TextEditingController();
 
     if (!widget.isGuest) {
       _selectedAddress = context.read<AuthProvider>().defaultAddress;
@@ -61,6 +74,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _guestCityController.dispose();
     _guestPasswordController.dispose();
     _guestConfirmPasswordController.dispose();
+    _authAddressController.dispose();
+    _authCityController.dispose();
+    _authLandmarkController.dispose();
     super.dispose();
   }
 
@@ -173,42 +189,129 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           return;
         }
 
-        // Step 2: Create order as authenticated user
-        final orderProvider = context.read<OrderProvider>();
+        // Step 2: Save delivery address to user's profile
+        final customerId = authProvider.user?.customerId;
+        final token = authProvider.token;
 
-        // Create temporary address for the order
-        final tempAddress = Address(
-          id: '0',
-          label: 'Delivery Address',
-          fullAddress:
-              '$addressText${cityText.isNotEmpty ? ', $cityText' : ''}',
-          latitude: 0.0,
-          longitude: 0.0,
-        );
-
-        final order = await orderProvider.createOrder(
-          items: cartProvider.items,
-          deliveryAddress: tempAddress,
-          subtotal: cartProvider.subtotal,
-          serviceFee: cartProvider.serviceFee,
-          deliveryFee: cartProvider.deliveryFee,
-          paymentMethod: _selectedPayment,
-        );
-
-        setState(() => _isLoading = false);
-
-        if (order != null && mounted) {
-          cartProvider.clearCart();
-          context.push('/customer/order-success', extra: order);
-        } else if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                orderProvider.errorMessage ?? 'Failed to place order',
-              ),
-              backgroundColor: AppColors.error,
-            ),
+        if (customerId != null && token != null) {
+          // Create address in backend
+          final addressResponse = await http.post(
+            Uri.parse('${AppConstants.baseUrl}/api/addresses'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'data': {
+                'customer': customerId,
+                'label': 'My Address',
+                'address_line': addressText,
+                'city': cityText.isEmpty ? 'Kampala' : cityText,
+                'is_default': true,
+                'gps_lat': 0.0,
+                'gps_lng': 0.0,
+              },
+            }),
           );
+
+          if (addressResponse.statusCode == 201) {
+            // Parse saved address from backend response and convert to User Address model
+            final addressData = jsonDecode(addressResponse.body)['data'];
+            final backendAddress = addressData['attributes'] ?? addressData;
+
+            final savedAddress = Address(
+              id: (addressData['id'] ?? addressData['documentId'] ?? '0')
+                  .toString(),
+              label: backendAddress['label'] ?? 'My Address',
+              fullAddress:
+                  '${backendAddress['address_line']}, ${backendAddress['city']}',
+              landmark: backendAddress['landmark'],
+              latitude:
+                  (backendAddress['latitude'] ??
+                          backendAddress['gps_lat'] ??
+                          0.0)
+                      .toDouble(),
+              longitude:
+                  (backendAddress['longitude'] ??
+                          backendAddress['gps_lng'] ??
+                          0.0)
+                      .toDouble(),
+              isDefault: backendAddress['is_default'] ?? true,
+            );
+
+            // Step 3: Create order with saved address
+            final orderProvider = context.read<OrderProvider>();
+            final order = await orderProvider.createOrder(
+              items: cartProvider.items,
+              deliveryAddress: savedAddress,
+              subtotal: cartProvider.subtotal,
+              serviceFee: cartProvider.serviceFee,
+              deliveryFee: cartProvider.deliveryFee,
+              paymentMethod: _selectedPayment,
+            );
+
+            setState(() => _isLoading = false);
+
+            if (order != null && mounted) {
+              cartProvider.clearCart();
+              context.push('/customer/order-success', extra: order);
+            } else if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    orderProvider.errorMessage ?? 'Failed to place order',
+                  ),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
+          } else {
+            // Fallback: Still try to create order with temporary address
+            final orderProvider = context.read<OrderProvider>();
+            final tempAddress = Address(
+              id: '0',
+              label: 'Delivery Address',
+              fullAddress:
+                  '$addressText${cityText.isNotEmpty ? ', $cityText' : ''}',
+              latitude: 0.0,
+              longitude: 0.0,
+            );
+
+            final order = await orderProvider.createOrder(
+              items: cartProvider.items,
+              deliveryAddress: tempAddress,
+              subtotal: cartProvider.subtotal,
+              serviceFee: cartProvider.serviceFee,
+              deliveryFee: cartProvider.deliveryFee,
+              paymentMethod: _selectedPayment,
+            );
+
+            setState(() => _isLoading = false);
+
+            if (order != null && mounted) {
+              cartProvider.clearCart();
+              context.push('/customer/order-success', extra: order);
+            } else if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    orderProvider.errorMessage ?? 'Failed to place order',
+                  ),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
+          }
+        } else {
+          setState(() => _isLoading = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Account created but address could not be saved'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
         }
       } else {
         // Authenticated checkout flow
@@ -306,7 +409,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           title: 'Delivery Address',
                           icon: Iconsax.location,
                           child: _selectedAddress == null
-                              ? _buildAddAddressButton()
+                              ? (_showAddressForm
+                                    ? _buildAuthAddressForm()
+                                    : _buildAddAddressButton())
                               : _buildAddressCard(authProvider),
                         ),
                       const SizedBox(height: AppSizes.md),
@@ -601,7 +706,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget _buildAddAddressButton() {
     return GestureDetector(
       onTap: () {
-        // Navigate to add address screen
+        setState(() => _showAddressForm = true);
       },
       child: Container(
         padding: const EdgeInsets.all(AppSizes.md),
@@ -627,6 +732,206 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildAuthAddressForm() {
+    return Column(
+      children: [
+        // Address field
+        TextField(
+          controller: _authAddressController,
+          decoration: InputDecoration(
+            hintText: 'e.g., Plot 123, Kampala Road',
+            labelText: 'Delivery Address (required)',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
+          ),
+          maxLines: 2,
+        ),
+        const SizedBox(height: AppSizes.md),
+        // City field
+        TextField(
+          controller: _authCityController,
+          decoration: InputDecoration(
+            hintText: 'e.g., Kampala',
+            labelText: 'City (required)',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSizes.md),
+        // Landmark field
+        TextField(
+          controller: _authLandmarkController,
+          decoration: InputDecoration(
+            hintText: 'e.g., Near Nakumatt',
+            labelText: 'Landmark (optional)',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSizes.md),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () {
+                  setState(() {
+                    _showAddressForm = false;
+                    _authAddressController.clear();
+                    _authCityController.text = 'Kampala';
+                    _authLandmarkController.clear();
+                  });
+                },
+                child: const Text('Cancel'),
+              ),
+            ),
+            const SizedBox(width: AppSizes.sm),
+            Expanded(
+              child: CustomButton(
+                text: 'Save Address',
+                onPressed: _saveAddress,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _saveAddress() async {
+    final addressText = _authAddressController.text.trim();
+    final cityText = _authCityController.text.trim();
+    final landmarkText = _authLandmarkController.text.trim();
+
+    if (addressText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a delivery address'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    if (cityText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a city'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final customerId = authProvider.user?.customerId;
+      final token = authProvider.token;
+
+      // Debug logging
+      print('DEBUG: Attempting to save address');
+      print('DEBUG: customerId = $customerId');
+      print('DEBUG: token = ${token?.substring(0, 20)}...');
+      print('DEBUG: Full user object: ${authProvider.user?.toJson()}');
+
+      if (customerId == null || token == null) {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Session expired. Please login again.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      final addressResponse = await http.post(
+        Uri.parse('${AppConstants.baseUrl}/api/addresses'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'data': {
+            'customer': customerId,
+            'label': 'My Address',
+            'address_line': addressText,
+            'city': cityText,
+            'landmark': landmarkText.isEmpty ? null : landmarkText,
+            'is_default': true,
+            'gps_lat': 0.0,
+            'gps_lng': 0.0,
+          },
+        }),
+      );
+
+      setState(() => _isLoading = false);
+
+      if (addressResponse.statusCode == 201) {
+        final addressData = jsonDecode(addressResponse.body)['data'];
+        final backendAddress = addressData['attributes'] ?? addressData;
+
+        final savedAddress = Address(
+          id: (addressData['id'] ?? addressData['documentId'] ?? '0')
+              .toString(),
+          label: backendAddress['label'] ?? 'My Address',
+          fullAddress:
+              '${backendAddress['address_line']}, ${backendAddress['city']}',
+          landmark: backendAddress['landmark'],
+          latitude:
+              (backendAddress['latitude'] ?? backendAddress['gps_lat'] ?? 0.0)
+                  .toDouble(),
+          longitude:
+              (backendAddress['longitude'] ?? backendAddress['gps_lng'] ?? 0.0)
+                  .toDouble(),
+          isDefault: backendAddress['is_default'] ?? true,
+        );
+
+        setState(() {
+          _selectedAddress = savedAddress;
+          _showAddressForm = false;
+          _authAddressController.clear();
+          _authCityController.text = 'Kampala';
+          _authLandmarkController.clear();
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Address saved successfully'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to save address'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildGuestAddressForm() {

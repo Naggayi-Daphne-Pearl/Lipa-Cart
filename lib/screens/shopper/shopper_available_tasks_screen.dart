@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class ShopperAvailableTasksScreen extends StatefulWidget {
-  const ShopperAvailableTasksScreen({Key? key}) : super(key: key);
+  const ShopperAvailableTasksScreen({super.key});
 
   @override
   State<ShopperAvailableTasksScreen> createState() =>

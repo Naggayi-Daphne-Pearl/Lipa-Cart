@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class ShopperCompletedTasksScreen extends StatefulWidget {
-  const ShopperCompletedTasksScreen({Key? key}) : super(key: key);
+  const ShopperCompletedTasksScreen({super.key});
 
   @override
   State<ShopperCompletedTasksScreen> createState() =>

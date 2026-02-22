@@ -5,7 +5,7 @@ import '../../services/address_service.dart';
 import '../../models/address.dart';
 
 class AddressesScreen extends StatefulWidget {
-  const AddressesScreen({Key? key}) : super(key: key);
+  const AddressesScreen({super.key});
 
   @override
   State<AddressesScreen> createState() => _AddressesScreenState();
@@ -227,13 +227,13 @@ class AddressCard extends StatelessWidget {
   final VoidCallback onSetDefault;
 
   const AddressCard({
-    Key? key,
+    super.key,
     required this.address,
     required this.isDefault,
     required this.onEdit,
     required this.onDelete,
     required this.onSetDefault,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -344,12 +344,12 @@ class AddressForm extends StatefulWidget {
   onSave;
 
   const AddressForm({
-    Key? key,
+    super.key,
     this.address,
     required this.userId,
     required this.token,
     required this.onSave,
-  }) : super(key: key);
+  });
 
   @override
   State<AddressForm> createState() => _AddressFormState();

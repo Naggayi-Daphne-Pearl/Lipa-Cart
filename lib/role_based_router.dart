@@ -335,7 +335,7 @@ class RoleBasedRouter {
 // Shell widgets for bottom navigation
 class CustomerMainShell extends StatefulWidget {
   final Widget child;
-  const CustomerMainShell({Key? key, required this.child}) : super(key: key);
+  const CustomerMainShell({super.key, required this.child});
 
   @override
   State<CustomerMainShell> createState() => _CustomerMainShellState();
@@ -377,7 +377,7 @@ class _CustomerMainShellState extends State<CustomerMainShell> {
 // Placeholder shells for other roles (implement similarly)
 class ShopperMainShell extends StatelessWidget {
   final Widget child;
-  const ShopperMainShell({Key? key, required this.child}) : super(key: key);
+  const ShopperMainShell({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -398,7 +398,7 @@ class ShopperMainShell extends StatelessWidget {
 
 class RiderMainShell extends StatelessWidget {
   final Widget child;
-  const RiderMainShell({Key? key, required this.child}) : super(key: key);
+  const RiderMainShell({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -422,7 +422,7 @@ class RiderMainShell extends StatelessWidget {
 
 class AdminMainShell extends StatelessWidget {
   final Widget child;
-  const AdminMainShell({Key? key, required this.child}) : super(key: key);
+  const AdminMainShell({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) => Scaffold(

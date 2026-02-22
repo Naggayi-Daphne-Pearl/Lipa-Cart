@@ -6,7 +6,7 @@ class AppConstants {
   static const String appTagline = 'Fresh groceries delivered to your doorstep';
 
   // API Endpoints
-  static const String baseUrl = 'https://lipa-cart-strapi-production.up.railway.app';
+  static const String baseUrl = 'http://localhost:1337';
   static const String apiUrl = '$baseUrl/api';
 
   // Storage Keys

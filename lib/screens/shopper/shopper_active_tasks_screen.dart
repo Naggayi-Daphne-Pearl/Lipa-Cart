@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class ShopperActiveTasksScreen extends StatefulWidget {
-  const ShopperActiveTasksScreen({Key? key}) : super(key: key);
+  const ShopperActiveTasksScreen({super.key});
 
   @override
   State<ShopperActiveTasksScreen> createState() =>

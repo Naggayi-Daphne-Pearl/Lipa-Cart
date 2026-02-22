@@ -8,12 +8,12 @@ class SmoothTransitionWrapper extends StatefulWidget {
   final TransitionType transitionType;
 
   const SmoothTransitionWrapper({
-    Key? key,
+    super.key,
     required this.child,
     this.duration = const Duration(milliseconds: 400),
     this.curve = Curves.easeInOutCubic,
     this.transitionType = TransitionType.slideFromRight,
-  }) : super(key: key);
+  });
 
   @override
   State<SmoothTransitionWrapper> createState() => _SmoothTransitionWrapperState();

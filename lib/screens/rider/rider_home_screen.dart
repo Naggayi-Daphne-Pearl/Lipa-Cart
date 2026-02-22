@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 
 class RiderHomeScreen extends StatefulWidget {
-  const RiderHomeScreen({Key? key}) : super(key: key);
+  const RiderHomeScreen({super.key});
 
   @override
   State<RiderHomeScreen> createState() => _RiderHomeScreenState();

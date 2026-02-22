@@ -33,6 +33,7 @@ class User {
   final String? email;
   final String? profileImage;
   final UserRole role;
+  final String? customerId;
   final List<Address> addresses;
   final DateTime createdAt;
 
@@ -43,6 +44,7 @@ class User {
     this.email,
     this.profileImage,
     this.role = UserRole.customer,
+    this.customerId,
     this.addresses = const [],
     required this.createdAt,
   });
@@ -54,6 +56,7 @@ class User {
     String? email,
     String? profileImage,
     UserRole? role,
+    String? customerId,
     List<Address>? addresses,
     DateTime? createdAt,
   }) {
@@ -64,6 +67,7 @@ class User {
       email: email ?? this.email,
       profileImage: profileImage ?? this.profileImage,
       role: role ?? this.role,
+      customerId: customerId ?? this.customerId,
       addresses: addresses ?? this.addresses,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -77,25 +81,39 @@ class User {
       'email': email,
       'profileImage': profileImage,
       'role': role.name,
+      'customerId': customerId,
       'addresses': addresses.map((a) => a.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
     };
   }
 
   factory User.fromJson(Map<String, dynamic> json) {
+    final createdAtRaw = json['createdAt'];
+    DateTime createdAtValue;
+    if (createdAtRaw is String) {
+      createdAtValue = DateTime.parse(createdAtRaw);
+    } else if (createdAtRaw is int) {
+      createdAtValue = DateTime.fromMillisecondsSinceEpoch(createdAtRaw);
+    } else {
+      createdAtValue = DateTime.now();
+    }
+
     return User(
-      id: json['id'] as String,
-      phoneNumber: json['phoneNumber'] as String,
+      id: (json['id'] ?? '').toString(),
+      phoneNumber: (json['phoneNumber'] ?? json['phone'] ?? '').toString(),
       name: json['name'] as String?,
       email: json['email'] as String?,
-      profileImage: json['profileImage'] as String?,
-      role: UserRoleExtension.fromString(json['role'] as String?),
+      profileImage: (json['profileImage'] ?? json['profile_photo']) as String?,
+      role: UserRoleExtension.fromString(
+        (json['role'] ?? json['user_type']) as String?,
+      ),
+      customerId: (json['customerId'] ?? json['customer_id'])?.toString(),
       addresses:
           (json['addresses'] as List<dynamic>?)
               ?.map((a) => Address.fromJson(a as Map<String, dynamic>))
               .toList() ??
           [],
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: createdAtValue,
     );
   }
 }

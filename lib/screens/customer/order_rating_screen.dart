@@ -14,7 +14,7 @@ import '../../widgets/smooth_transition_wrapper.dart';
 class OrderRatingScreen extends StatefulWidget {
   final Order order;
 
-  const OrderRatingScreen({Key? key, required this.order}) : super(key: key);
+  const OrderRatingScreen({super.key, required this.order});
 
   @override
   State<OrderRatingScreen> createState() => _OrderRatingScreenState();

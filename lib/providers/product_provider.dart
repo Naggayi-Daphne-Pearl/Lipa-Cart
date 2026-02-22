@@ -12,8 +12,8 @@ class ProductProvider extends ChangeNotifier {
   String _searchQuery = '';
 
   // Filter properties
-  double _minPrice = 0;
-  double _maxPrice = 1000000;
+  final double _minPrice = 0;
+  final double _maxPrice = 1000000;
   double _selectedMinPrice = 0;
   double _selectedMaxPrice = 1000000;
   double _minRating = 0;

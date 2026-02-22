@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../core/constants/app_constants.dart';
@@ -15,6 +16,35 @@ enum AuthStatus {
 }
 
 class AuthProvider extends ChangeNotifier {
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  static const String _legacyTokenKey = 'auth_token';
+
+  Future<String?> _readToken() async {
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_legacyTokenKey);
+    }
+    return _secureStorage.read(key: AppConstants.tokenKey);
+  }
+
+  Future<void> _writeToken(String token) async {
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_legacyTokenKey, token);
+      return;
+    }
+    await _secureStorage.write(key: AppConstants.tokenKey, value: token);
+  }
+
+  Future<void> _deleteToken() async {
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_legacyTokenKey);
+      return;
+    }
+    await _secureStorage.delete(key: AppConstants.tokenKey);
+  }
+
   AuthStatus _status = AuthStatus.initial;
   User? _user;
   String? _token;
@@ -36,7 +66,7 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final savedToken = prefs.getString(AppConstants.tokenKey);
+      final savedToken = await _readToken();
       final savedUserJson = prefs.getString(AppConstants.userKey);
 
       if (savedToken == null || savedUserJson == null) {
@@ -56,7 +86,7 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       // Token invalid or session data corrupted
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(AppConstants.tokenKey);
+      await _deleteToken();
       await prefs.remove(AppConstants.userKey);
 
       _token = null;
@@ -92,19 +122,20 @@ class AuthProvider extends ChangeNotifier {
       final jwt = response['jwt'] as String;
       final userData = response['user'] as Map<String, dynamic>;
 
-      // Save JWT to SharedPreferences
+      // Save JWT to secure storage
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(AppConstants.tokenKey, jwt);
+      await _writeToken(jwt);
 
       // Create User object
       _token = jwt;
       _user = User(
-        id: userData['id'] ?? userData['documentId'] ?? '',
-        phoneNumber: userData['phone'] ?? phoneNumber,
+        id: (userData['id'] ?? userData['documentId'] ?? '').toString(),
+        phoneNumber: (userData['phone'] ?? phoneNumber).toString(),
         email: userData['email'],
         role: UserRoleExtension.fromString(userData['user_type'] ?? userType),
         name: userData['name'],
         profileImage: userData['profile_photo'],
+        customerId: userData['customer_id']?.toString(),
         createdAt: DateTime.now(),
       );
 
@@ -140,19 +171,20 @@ class AuthProvider extends ChangeNotifier {
       final jwt = response['jwt'] as String;
       final userData = response['user'] as Map<String, dynamic>;
 
-      // Save JWT to SharedPreferences
+      // Save JWT to secure storage
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(AppConstants.tokenKey, jwt);
+      await _writeToken(jwt);
 
       // Create User object
       _token = jwt;
       _user = User(
-        id: userData['id'] ?? userData['documentId'] ?? '',
-        phoneNumber: userData['phone'] ?? phoneNumber,
+        id: (userData['id'] ?? userData['documentId'] ?? '').toString(),
+        phoneNumber: (userData['phone'] ?? phoneNumber).toString(),
         email: userData['email'],
         role: UserRoleExtension.fromString(userData['user_type'] ?? 'customer'),
         name: userData['name'],
         profileImage: userData['profile_photo'],
+        customerId: userData['customer_id']?.toString(),
         createdAt: DateTime.now(),
       );
 
@@ -198,15 +230,15 @@ class AuthProvider extends ChangeNotifier {
       final jwt = response['jwt'] as String;
       final userData = response['user'] as Map<String, dynamic>;
 
-      // Save JWT to SharedPreferences
+      // Save JWT to secure storage
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(AppConstants.tokenKey, jwt);
+      await _writeToken(jwt);
 
       // Create User object with role from response
       _token = jwt;
       _user = User(
-        id: userData['id'] ?? userData['documentId'] ?? '',
-        phoneNumber: userData['phone'] ?? phoneNumber,
+        id: (userData['id'] ?? userData['documentId'] ?? '').toString(),
+        phoneNumber: (userData['phone'] ?? phoneNumber).toString(),
         email: userData['email'],
         role: UserRoleExtension.fromString(userData['user_type'] ?? 'customer'),
         name: userData['name'],
@@ -325,7 +357,7 @@ class AuthProvider extends ChangeNotifier {
   /// Logout and clear stored session
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(AppConstants.tokenKey);
+    await _deleteToken();
     await prefs.remove(AppConstants.userKey);
 
     _user = null;
@@ -345,9 +377,9 @@ class AuthProvider extends ChangeNotifier {
       final jwt = response['jwt'] as String;
       final userData = response['user'] as Map<String, dynamic>;
 
-      // Save new JWT to SharedPreferences
+      // Save new JWT to secure storage
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(AppConstants.tokenKey, jwt);
+      await _writeToken(jwt);
 
       // Update token
       _token = jwt;

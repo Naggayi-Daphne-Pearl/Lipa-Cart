@@ -6,7 +6,7 @@ import '../../services/order_service.dart';
 class OrderDetailScreen extends StatefulWidget {
   final int orderId;
 
-  const OrderDetailScreen({Key? key, required this.orderId}) : super(key: key);
+  const OrderDetailScreen({super.key, required this.orderId});
 
   @override
   State<OrderDetailScreen> createState() => _OrderDetailScreenState();
@@ -355,10 +355,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     if (confirmed == true && context.mounted) {
       await orderService.cancelOrder(auth.token!, widget.orderId);
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Order cancelled')));
+      }
     }
   }
 

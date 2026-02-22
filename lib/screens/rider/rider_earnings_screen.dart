@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class RiderEarningsScreen extends StatefulWidget {
-  const RiderEarningsScreen({Key? key}) : super(key: key);
+  const RiderEarningsScreen({super.key});
 
   @override
   State<RiderEarningsScreen> createState() => _RiderEarningsScreenState();
