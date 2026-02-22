@@ -26,14 +26,18 @@ class AppBottomNav extends StatelessWidget {
         context.go('/customer/categories');
         break;
       case 2:
+        // Lists
+        context.go('/customer/shopping-lists');
+        break;
+      case 3:
         // Cart
         context.go('/customer/cart');
         break;
-      case 3:
+      case 4:
         // Orders
         context.go('/customer/orders');
         break;
-      case 4:
+      case 5:
         // Profile
         context.go('/customer/profile');
         break;
@@ -81,20 +85,27 @@ class AppBottomNav extends StatelessWidget {
                 label: 'Browse',
                 index: 1,
               ),
+              _buildNavItem(
+                context: context,
+                icon: Iconsax.clipboard_text,
+                activeIcon: Iconsax.clipboard_text,
+                label: 'Lists',
+                index: 2,
+              ),
               _buildCartNavItem(context, cartProvider.itemCount),
               _buildNavItem(
                 context: context,
                 icon: Iconsax.receipt_item,
                 activeIcon: Iconsax.receipt_item,
                 label: 'Orders',
-                index: 3,
+                index: 4,
               ),
               _buildNavItem(
                 context: context,
                 icon: Iconsax.user,
                 activeIcon: Iconsax.user,
                 label: 'Profile',
-                index: 4,
+                index: 5,
               ),
             ],
           ),
@@ -138,10 +149,10 @@ class AppBottomNav extends StatelessWidget {
   }
 
   Widget _buildCartNavItem(BuildContext context, int itemCount) {
-    final isSelected = currentIndex == 2;
+    final isSelected = currentIndex == 3;
 
     return GestureDetector(
-      onTap: () => _onNavTap(context, 2),
+      onTap: () => _onNavTap(context, 3),
       behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisSize: MainAxisSize.min,

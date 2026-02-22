@@ -10,6 +10,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/address_service.dart';
 import '../../models/address.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class AddressesScreen extends StatefulWidget {
   final String? returnRoute;
@@ -50,6 +51,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
+      bottomNavigationBar: const AppBottomNav(currentIndex: 5),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

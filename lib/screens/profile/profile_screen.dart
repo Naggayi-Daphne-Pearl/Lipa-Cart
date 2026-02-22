@@ -13,9 +13,12 @@ import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../services/address_service.dart';
 import '../../services/order_service.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final bool showBottomNav;
+
+  const ProfileScreen({super.key, this.showBottomNav = true});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -90,6 +93,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      bottomNavigationBar:
+          widget.showBottomNav ? const AppBottomNav(currentIndex: 5) : null,
       body: ResponsiveContainer(
         child: SafeArea(
           child: SingleChildScrollView(

@@ -58,7 +58,7 @@ class CartScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      bottomNavigationBar: const AppBottomNav(currentIndex: 2),
+      bottomNavigationBar: const AppBottomNav(currentIndex: 3),
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
         child: SafeArea(

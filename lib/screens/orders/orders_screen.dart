@@ -11,9 +11,12 @@ import '../../models/order.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class OrdersScreen extends StatefulWidget {
-  const OrdersScreen({super.key});
+  final bool showBottomNav;
+
+  const OrdersScreen({super.key, this.showBottomNav = true});
 
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
@@ -92,6 +95,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      bottomNavigationBar:
+          widget.showBottomNav ? const AppBottomNav(currentIndex: 4) : null,
       body: ResponsiveContainer(
         child: SafeArea(
           child: RefreshIndicator(

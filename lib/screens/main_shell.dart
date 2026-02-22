@@ -31,9 +31,9 @@ class _MainShellState extends State<MainShell> {
   final List<Widget> _screens = const [
     HomeScreen(), // stack index 0
     BrowseScreen(), // stack index 1
-    ShoppingListsScreen(), // stack index 2
-    OrdersScreen(), // stack index 3
-    ProfileScreen(), // stack index 4
+    ShoppingListsScreen(showBottomNav: false), // stack index 2
+    OrdersScreen(showBottomNav: false), // stack index 3
+    ProfileScreen(showBottomNav: false), // stack index 4
   ];
 
   // Maps tab index to stack index

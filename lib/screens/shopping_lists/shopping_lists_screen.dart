@@ -8,9 +8,12 @@ import '../../core/constants/app_sizes.dart';
 import '../../models/shopping_list.dart';
 import '../../providers/shopping_list_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../widgets/app_bottom_nav.dart';
 
 class ShoppingListsScreen extends StatefulWidget {
-  const ShoppingListsScreen({super.key});
+  final bool showBottomNav;
+
+  const ShoppingListsScreen({super.key, this.showBottomNav = true});
 
   @override
   State<ShoppingListsScreen> createState() => _ShoppingListsScreenState();
@@ -31,6 +34,8 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      bottomNavigationBar:
+          widget.showBottomNav ? const AppBottomNav(currentIndex: 2) : null,
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
         child: SafeArea(

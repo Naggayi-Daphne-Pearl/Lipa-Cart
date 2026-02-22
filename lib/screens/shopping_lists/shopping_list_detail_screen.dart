@@ -36,7 +36,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
 
     if (list == null) {
       return Scaffold(
-        bottomNavigationBar: const AppBottomNav(currentIndex: 0),
+        bottomNavigationBar: const AppBottomNav(currentIndex: 2),
         body: Center(child: Text('List not found')),
       );
     }

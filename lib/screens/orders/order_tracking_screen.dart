@@ -18,7 +18,7 @@ class OrderTrackingScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      bottomNavigationBar: const AppBottomNav(currentIndex: 3),
+      bottomNavigationBar: const AppBottomNav(currentIndex: 4),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
