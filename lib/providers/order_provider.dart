@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/order.dart';
 import '../models/cart_item.dart';
 import '../models/user.dart';
+import '../core/constants/app_constants.dart';
 
 class OrderProvider extends ChangeNotifier {
   final List<Order> _orders = [];
@@ -10,6 +13,11 @@ class OrderProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   final _uuid = const Uuid();
+  bool _didBootstrap = false;
+
+  OrderProvider() {
+    _bootstrap();
+  }
 
   List<Order> get orders => List.unmodifiable(_orders);
   Order? get currentOrder => _currentOrder;
@@ -25,6 +33,59 @@ class OrderProvider extends ChangeNotifier {
       .where((o) =>
           o.status == OrderStatus.delivered || o.status == OrderStatus.cancelled)
       .toList();
+
+  Future<void> _bootstrap() async {
+    if (_didBootstrap) return;
+    _didBootstrap = true;
+    await _restoreOrders();
+  }
+
+  Future<void> _restoreOrders() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rawOrders = prefs.getString(AppConstants.ordersKey);
+      if (rawOrders != null && rawOrders.isNotEmpty) {
+        final data = jsonDecode(rawOrders) as List<dynamic>;
+        _orders
+          ..clear()
+          ..addAll(
+            data
+                .map((e) => Order.fromJson(e as Map<String, dynamic>))
+                .toList(),
+          );
+      }
+
+      final rawCurrent = prefs.getString(AppConstants.currentOrderKey);
+      if (rawCurrent != null && rawCurrent.isNotEmpty) {
+        _currentOrder = Order.fromJson(
+          jsonDecode(rawCurrent) as Map<String, dynamic>,
+        );
+      }
+
+      notifyListeners();
+    } catch (_) {
+      // Ignore corrupted cache
+    }
+  }
+
+  Future<void> _persistOrders() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final ordersPayload = jsonEncode(_orders.map((o) => o.toJson()).toList());
+      await prefs.setString(AppConstants.ordersKey, ordersPayload);
+
+      if (_currentOrder != null) {
+        await prefs.setString(
+          AppConstants.currentOrderKey,
+          jsonEncode(_currentOrder!.toJson()),
+        );
+      } else {
+        await prefs.remove(AppConstants.currentOrderKey);
+      }
+    } catch (_) {
+      // Ignore persistence errors
+    }
+  }
 
   Future<Order?> createOrder({
     required List<CartItem> items,
@@ -59,6 +120,7 @@ class OrderProvider extends ChangeNotifier {
 
       _orders.insert(0, order);
       _currentOrder = order;
+      _persistOrders();
       _isLoading = false;
       notifyListeners();
       return order;
@@ -95,6 +157,7 @@ class OrderProvider extends ChangeNotifier {
 
   void setCurrentOrder(Order? order) {
     _currentOrder = order;
+    _persistOrders();
     notifyListeners();
   }
 
@@ -105,6 +168,7 @@ class OrderProvider extends ChangeNotifier {
       if (_currentOrder?.id == orderId) {
         _currentOrder = _orders[index];
       }
+      _persistOrders();
       notifyListeners();
     }
   }
@@ -119,6 +183,7 @@ class OrderProvider extends ChangeNotifier {
       if (_currentOrder?.id == orderId) {
         _currentOrder = _orders[index];
       }
+      _persistOrders();
       notifyListeners();
     }
   }

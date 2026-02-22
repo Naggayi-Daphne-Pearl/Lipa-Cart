@@ -64,6 +64,25 @@ class ShoppingListItem {
     );
   }
 
+  factory ShoppingListItem.fromJson(Map<String, dynamic> json) {
+    Product? linkedProduct;
+    final linkedProductJson = json['linkedProduct'] as Map<String, dynamic>?;
+    if (linkedProductJson != null) {
+      linkedProduct = Product.fromJson(linkedProductJson);
+    }
+
+    return ShoppingListItem(
+      id: (json['id'] ?? '').toString(),
+      name: json['name'] as String? ?? '',
+      description: json['description'] as String?,
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      unit: json['unit'] as String?,
+      budgetAmount: (json['budgetAmount'] as num?)?.toDouble(),
+      linkedProduct: linkedProduct,
+      isChecked: json['isChecked'] as bool? ?? false,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -73,6 +92,7 @@ class ShoppingListItem {
       'unit': unit,
       'budgetAmount': budgetAmount,
       'linkedProductId': linkedProduct?.id,
+      'linkedProduct': linkedProduct?.toJson(),
       'isChecked': isChecked,
     };
   }
@@ -148,6 +168,22 @@ class ShoppingList {
           DateTime.tryParse(attributes['createdAt'] as String? ?? '') ??
               DateTime.now(),
       updatedAt: DateTime.tryParse(attributes['updatedAt'] as String? ?? ''),
+    );
+  }
+
+  factory ShoppingList.fromJson(Map<String, dynamic> json) {
+    return ShoppingList(
+      id: (json['id'] ?? '').toString(),
+      name: json['name'] as String? ?? '',
+      description: json['description'] as String?,
+      emoji: json['emoji'] as String? ?? '🛒',
+      color: json['color'] as String? ?? '#15874B',
+      items: (json['items'] as List<dynamic>? ?? [])
+          .map((i) => ShoppingListItem.fromJson(i as Map<String, dynamic>))
+          .toList(),
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
     );
   }
 

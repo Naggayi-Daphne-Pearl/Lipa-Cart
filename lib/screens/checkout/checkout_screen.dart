@@ -14,6 +14,7 @@ import '../../models/user.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
+import '../../services/address_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/app_bottom_nav.dart';
 
@@ -63,6 +64,26 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     if (!widget.isGuest) {
       _selectedAddress = context.read<AuthProvider>().defaultAddress;
+      _loadSavedAddresses();
+    }
+  }
+
+  Future<void> _loadSavedAddresses() async {
+    final authProvider = context.read<AuthProvider>();
+    final addressService = context.read<AddressService>();
+
+    if (authProvider.user == null || authProvider.token == null) return;
+    final customerId = authProvider.user?.customerId;
+    if (customerId == null || customerId.isEmpty) return;
+    if (authProvider.user!.addresses.isNotEmpty) return;
+
+    final success = await addressService.fetchAddresses(
+      authProvider.token!,
+      customerId,
+    );
+    if (success && mounted) {
+      await authProvider.setAddresses(addressService.userAddresses);
+      setState(() => _selectedAddress = authProvider.defaultAddress);
     }
   }
 

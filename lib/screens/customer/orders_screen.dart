@@ -23,9 +23,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
     final auth = context.read<AuthProvider>();
     final orderService = context.read<OrderService>();
 
-    if (auth.user != null && auth.token != null) {
+    final customerId = auth.user?.customerId;
+    if (auth.user != null && auth.token != null && customerId != null) {
       // Get customer ID from user profile
-      await orderService.fetchOrders(auth.token!, auth.user!.id);
+      await orderService.fetchOrders(auth.token!, customerId);
     }
   }
 

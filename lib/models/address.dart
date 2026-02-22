@@ -1,6 +1,6 @@
 class Address {
   final int id;
-  final int userId;
+  final int customerId;
   final String label;
   final String addressLine;
   final String city;
@@ -13,7 +13,7 @@ class Address {
 
   Address({
     required this.id,
-    required this.userId,
+    required this.customerId,
     required this.label,
     required this.addressLine,
     required this.city,
@@ -28,7 +28,7 @@ class Address {
   factory Address.empty() {
     return Address(
       id: 0,
-      userId: 0,
+      customerId: 0,
       label: '',
       addressLine: '',
       city: '',
@@ -38,9 +38,12 @@ class Address {
   }
 
   factory Address.fromJson(Map<String, dynamic> json) {
+    final customerData = json['customer'];
+    final customerId = customerData is Map ? customerData['id'] : customerData;
+
     return Address(
       id: json['id'] ?? 0,
-      userId: json['user'] is Map ? json['user']['id'] : json['user'] ?? 0,
+      customerId: customerId ?? 0,
       label: json['label'] ?? 'Address',
       addressLine: json['address_line'] ?? '',
       city: json['city'] ?? '',

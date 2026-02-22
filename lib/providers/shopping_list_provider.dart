@@ -1,14 +1,52 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/shopping_list.dart';
 import '../models/product.dart';
 import '../services/strapi_service.dart';
+import '../core/constants/app_constants.dart';
 
 class ShoppingListProvider extends ChangeNotifier {
   List<ShoppingList> _lists = [];
   bool _isLoading = false;
+  bool _didBootstrap = false;
+
+  ShoppingListProvider() {
+    _bootstrap();
+  }
 
   List<ShoppingList> get lists => _lists;
   bool get isLoading => _isLoading;
+
+  Future<void> _bootstrap() async {
+    if (_didBootstrap) return;
+    _didBootstrap = true;
+    await _restoreLists();
+  }
+
+  Future<void> _restoreLists() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(AppConstants.shoppingListsKey);
+      if (raw == null || raw.isEmpty) return;
+      final data = jsonDecode(raw) as List<dynamic>;
+      _lists =
+          data.map((e) => ShoppingList.fromJson(e as Map<String, dynamic>)).toList();
+      notifyListeners();
+    } catch (_) {
+      // Ignore corrupted cache
+    }
+  }
+
+  Future<void> _persistLists() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final payload = jsonEncode(_lists.map((l) => l.toJson()).toList());
+      await prefs.setString(AppConstants.shoppingListsKey, payload);
+    } catch (_) {
+      // Ignore persistence errors
+    }
+  }
 
   // Predefined colors and emojis for lists
   static const List<String> listColors = [
@@ -39,6 +77,7 @@ class ShoppingListProvider extends ChangeNotifier {
     }
 
     _isLoading = false;
+    _persistLists();
     notifyListeners();
   }
 
@@ -66,6 +105,7 @@ class ShoppingListProvider extends ChangeNotifier {
       createdAt: DateTime.now(),
     );
     _lists.insert(0, newList);
+    _persistLists();
     notifyListeners();
   }
 
@@ -73,12 +113,14 @@ class ShoppingListProvider extends ChangeNotifier {
     final index = _lists.indexWhere((l) => l.id == updatedList.id);
     if (index != -1) {
       _lists[index] = updatedList.copyWith(updatedAt: DateTime.now());
+      _persistLists();
       notifyListeners();
     }
   }
 
   void deleteList(String listId) {
     _lists.removeWhere((l) => l.id == listId);
+    _persistLists();
     notifyListeners();
   }
 
@@ -91,6 +133,7 @@ class ShoppingListProvider extends ChangeNotifier {
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
+      _persistLists();
       notifyListeners();
     }
   }
@@ -115,6 +158,7 @@ class ShoppingListProvider extends ChangeNotifier {
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
+      _persistLists();
       notifyListeners();
     }
   }
@@ -133,6 +177,7 @@ class ShoppingListProvider extends ChangeNotifier {
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
+      _persistLists();
       notifyListeners();
     }
   }
@@ -151,6 +196,7 @@ class ShoppingListProvider extends ChangeNotifier {
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
+      _persistLists();
       notifyListeners();
     }
   }
@@ -169,6 +215,7 @@ class ShoppingListProvider extends ChangeNotifier {
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
+      _persistLists();
       notifyListeners();
     }
   }
@@ -182,6 +229,7 @@ class ShoppingListProvider extends ChangeNotifier {
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
+      _persistLists();
       notifyListeners();
     }
   }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/address_service.dart';
 import '../../models/address.dart';
+import '../../models/user.dart' as user_models;
 
 class AddressesScreen extends StatefulWidget {
   const AddressesScreen({super.key});
@@ -22,8 +23,15 @@ class _AddressesScreenState extends State<AddressesScreen> {
     final authProvider = context.read<AuthProvider>();
     final addressService = context.read<AddressService>();
 
-    if (authProvider.user != null && authProvider.token != null) {
-      await addressService.fetchAddresses(authProvider.token!, authProvider.user!.id);
+    final customerId = authProvider.user?.customerId;
+    if (authProvider.user != null && authProvider.token != null && customerId != null) {
+      final success = await addressService.fetchAddresses(
+        authProvider.token!,
+        customerId,
+      );
+      if (success) {
+        await authProvider.setAddresses(addressService.userAddresses);
+      }
     }
   }
 
@@ -140,7 +148,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
       isScrollControlled: true,
       builder: (context) => AddressForm(
         address: address,
-        userId: auth.user?.id ?? '',
+        userId: auth.user?.customerId ?? '',
         token: auth.token ?? '',
         onSave:
             (
@@ -154,7 +162,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
               if (address == null) {
                 await addressService.createAddress(
                   token: auth.token!,
-                  userId: auth.user!.id,
+                  customerId: auth.user!.customerId ?? '',
                   label: label,
                   addressLine: addressLine,
                   city: city,
@@ -174,6 +182,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                   isDefault: isDefault,
                 );
               }
+              await auth.setAddresses(addressService.userAddresses);
               if (context.mounted) Navigator.pop(context);
             },
       ),
@@ -206,6 +215,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
 
     if (confirmed == true && context.mounted) {
       await addressService.deleteAddress(auth.token!, id);
+      await auth.setAddresses(addressService.userAddresses);
     }
   }
 
@@ -216,6 +226,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
     int id,
   ) async {
     await addressService.setDefaultAddress(auth.token!, id);
+    await auth.setAddresses(addressService.userAddresses);
   }
 }
 

@@ -5,6 +5,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../core/constants/app_constants.dart';
+import '../services/web_cookie_storage_stub.dart'
+  if (dart.library.html) '../services/web_cookie_storage.dart';
 
 enum AuthStatus {
   initial,
@@ -19,10 +21,26 @@ class AuthProvider extends ChangeNotifier {
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
   static const String _legacyTokenKey = 'auth_token';
 
+  AuthProvider() {
+    _bootstrap();
+  }
+
   Future<String?> _readToken() async {
     if (kIsWeb) {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getString(_legacyTokenKey);
+      final cookieToken = WebCookieStorage.read(AppConstants.tokenKey);
+      if (cookieToken != null && cookieToken.isNotEmpty) {
+        return cookieToken;
+      }
+
+      final legacyToken = prefs.getString(_legacyTokenKey);
+      if (legacyToken != null && legacyToken.isNotEmpty) {
+        WebCookieStorage.write(AppConstants.tokenKey, legacyToken);
+        await prefs.remove(_legacyTokenKey);
+        return legacyToken;
+      }
+
+      return null;
     }
     return _secureStorage.read(key: AppConstants.tokenKey);
   }
@@ -30,7 +48,8 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _writeToken(String token) async {
     if (kIsWeb) {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_legacyTokenKey, token);
+      WebCookieStorage.write(AppConstants.tokenKey, token);
+      await prefs.remove(_legacyTokenKey);
       return;
     }
     await _secureStorage.write(key: AppConstants.tokenKey, value: token);
@@ -39,6 +58,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _deleteToken() async {
     if (kIsWeb) {
       final prefs = await SharedPreferences.getInstance();
+      WebCookieStorage.delete(AppConstants.tokenKey);
       await prefs.remove(_legacyTokenKey);
       return;
     }
@@ -50,6 +70,7 @@ class AuthProvider extends ChangeNotifier {
   String? _token;
   String? _errorMessage;
   bool _isFirstLaunch = true;
+  bool _didBootstrap = false;
 
   AuthStatus get status => _status;
   User? get user => _user;
@@ -57,6 +78,19 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
   bool get isFirstLaunch => _isFirstLaunch;
+  Future<void> _bootstrap() async {
+    if (_didBootstrap) return;
+    _didBootstrap = true;
+    await initializeFirstLaunch();
+    await tryAutoLogin();
+  }
+
+  Future<void> _persistUser() async {
+    if (_user == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AppConstants.userKey, jsonEncode(_user!.toJson()));
+  }
+
 
   /// Check for existing session and restore if valid
   /// Called on app startup
@@ -325,6 +359,7 @@ class AuthProvider extends ChangeNotifier {
     }
     addresses.add(address);
     _user = _user!.copyWith(addresses: addresses);
+    await _persistUser();
     notifyListeners();
   }
 
@@ -333,6 +368,7 @@ class AuthProvider extends ChangeNotifier {
 
     final addresses = _user!.addresses.where((a) => a.id != addressId).toList();
     _user = _user!.copyWith(addresses: addresses);
+    await _persistUser();
     notifyListeners();
   }
 
@@ -343,6 +379,14 @@ class AuthProvider extends ChangeNotifier {
       return a.copyWith(isDefault: a.id == addressId);
     }).toList();
     _user = _user!.copyWith(addresses: addresses);
+    await _persistUser();
+    notifyListeners();
+  }
+
+  Future<void> setAddresses(List<Address> addresses) async {
+    if (_user == null) return;
+    _user = _user!.copyWith(addresses: addresses);
+    await _persistUser();
     notifyListeners();
   }
 

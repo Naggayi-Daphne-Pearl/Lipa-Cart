@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/address.dart';
+import '../models/user.dart' as user_models;
 import '../core/constants/app_constants.dart';
 
 class AddressService extends ChangeNotifier {
@@ -17,8 +18,28 @@ class AddressService extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  /// Fetch all addresses for current user
-  Future<bool> fetchAddresses(String token, String userId) async {
+  List<user_models.Address> get userAddresses {
+    return _addresses.map(_toUserAddress).toList();
+  }
+
+  user_models.Address _toUserAddress(Address address) {
+    final landmark = address.landmark;
+    final fullAddress =
+        '${address.addressLine}, ${address.city}${landmark != null && landmark.isNotEmpty ? ', $landmark' : ''}';
+
+    return user_models.Address(
+      id: address.id.toString(),
+      label: address.label,
+      fullAddress: fullAddress,
+      landmark: landmark,
+      latitude: address.gpsLat ?? 0.0,
+      longitude: address.gpsLng ?? 0.0,
+      isDefault: address.isDefault,
+    );
+  }
+
+  /// Fetch all addresses for current customer
+  Future<bool> fetchAddresses(String token, String customerId) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -26,7 +47,7 @@ class AddressService extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse(
-          '$baseUrl/api/addresses?filters[user][id][\$eq]=$userId&populate=*',
+          '$baseUrl/api/addresses?filters[customer][id][\$eq]=$customerId&populate=*',
         ),
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -60,7 +81,7 @@ class AddressService extends ChangeNotifier {
   /// Create new address
   Future<bool> createAddress({
     required String token,
-    required String userId,
+    required String customerId,
     required String label,
     required String addressLine,
     required String city,
@@ -77,7 +98,7 @@ class AddressService extends ChangeNotifier {
         },
         body: jsonEncode({
           'data': {
-            'user': userId,
+            'customer': customerId,
             'label': label,
             'address_line': addressLine,
             'city': city,
