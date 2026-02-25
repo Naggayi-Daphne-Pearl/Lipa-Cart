@@ -99,8 +99,10 @@ class _MainShellState extends State<MainShell> {
                 decoration: const BoxDecoration(
                   gradient: AppColors.elegantBgGradient,
                 ),
-                child:
-                    IndexedStack(index: _getStackIndex(), children: _screens),
+                child: IndexedStack(
+                  index: _getStackIndex(),
+                  children: _screens,
+                ),
               ),
             ),
 

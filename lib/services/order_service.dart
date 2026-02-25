@@ -54,7 +54,9 @@ class OrderService extends ChangeNotifier {
     // Handle both wrapped and flat formats
     final orderItemsRaw = attributes['order_items'];
 
-    print('DEBUG: _parseOrderItems - orderItemsRaw type: ${orderItemsRaw.runtimeType}');
+    print(
+      'DEBUG: _parseOrderItems - orderItemsRaw type: ${orderItemsRaw.runtimeType}',
+    );
     print('DEBUG: _parseOrderItems - orderItemsRaw value: $orderItemsRaw');
 
     List<dynamic> orderItems = [];
@@ -79,7 +81,9 @@ class OrderService extends ChangeNotifier {
       final estimatedPrice =
           (itemAttrs['estimated_price'] as num?)?.toDouble() ?? 0;
 
-      print('DEBUG: Parsed order item - name: $productName, qty: $quantity, price: $estimatedPrice');
+      print(
+        'DEBUG: Parsed order item - name: $productName, qty: $quantity, price: $estimatedPrice',
+      );
 
       final productData =
           (itemAttrs['product']?['data'] as Map<String, dynamic>?) ??
@@ -171,7 +175,7 @@ class OrderService extends ChangeNotifier {
     print('DEBUG: _fromStrapi - Order ID: $rawId');
     print('DEBUG: _fromStrapi - Order Number: $orderNumber');
     print('DEBUG: _fromStrapi - Attributes keys: ${attributes.keys.toList()}');
-    
+
     final items = _parseOrderItems(attributes);
     print('DEBUG: _fromStrapi - Final order items count: ${items.length}');
 
@@ -225,20 +229,30 @@ class OrderService extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         print('DEBUG: fetchOrders response data keys: ${(data as Map).keys}');
-        print('DEBUG: fetchOrders data["data"] type: ${data["data"].runtimeType}');
-        print('DEBUG: fetchOrders total orders in response: ${(data["data"] as List).length}');
-        
+        print(
+          'DEBUG: fetchOrders data["data"] type: ${data["data"].runtimeType}',
+        );
+        print(
+          'DEBUG: fetchOrders total orders in response: ${(data["data"] as List).length}',
+        );
+
         _orders = List<Order>.from(
           (data['data'] as List).map((order) {
-            print('DEBUG: Processing order in list - id: ${order["id"]}, has attributes: ${order.containsKey("attributes")}');
+            print(
+              'DEBUG: Processing order in list - id: ${order["id"]}, has attributes: ${order.containsKey("attributes")}',
+            );
             final parsed = _fromStrapi(order);
-            print('DEBUG: Parsed order - id: ${parsed.id}, items count: ${parsed.items.length}, itemCount: ${parsed.itemCount}');
+            print(
+              'DEBUG: Parsed order - id: ${parsed.id}, items count: ${parsed.items.length}, itemCount: ${parsed.itemCount}',
+            );
             return parsed;
           }),
         );
         print('DEBUG: Orders parsed count=${_orders.length}');
         for (var i = 0; i < _orders.length; i++) {
-          print('DEBUG: Order $i - items: ${_orders[i].items.length}, itemCount: ${_orders[i].itemCount}');
+          print(
+            'DEBUG: Order $i - items: ${_orders[i].items.length}, itemCount: ${_orders[i].itemCount}',
+          );
         }
         _isLoading = false;
         notifyListeners();

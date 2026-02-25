@@ -64,8 +64,7 @@ class CategoryProductsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final productProvider = context.watch<ProductProvider>();
     final cartProvider = context.watch<CartProvider>();
-    final products =
-        productProvider.getFilteredProductsByCategory(categoryId);
+    final products = productProvider.getFilteredProductsByCategory(categoryId);
 
     void showFilterSheet() {
       showModalBottomSheet(

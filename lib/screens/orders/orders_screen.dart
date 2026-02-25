@@ -198,11 +198,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           ),
                         ),
 
-                        SizedBox(height: context.responsive<double>(
-                          mobile: AppSizes.md,
-                          tablet: AppSizes.lg,
-                          desktop: AppSizes.lg,
-                        )),
+                        SizedBox(
+                          height: context.responsive<double>(
+                            mobile: AppSizes.md,
+                            tablet: AppSizes.lg,
+                            desktop: AppSizes.lg,
+                          ),
+                        ),
 
                         // Orders List
                         _selectedTab == OrderTab.active
@@ -210,10 +212,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 context,
                                 activeAndDeliveredOrders,
                               )
-                            : _buildOrdersList(
-                                context,
-                                cancelledOrders,
-                              ),
+                            : _buildOrdersList(context, cancelledOrders),
 
                         const SizedBox(height: 100),
                       ],
@@ -225,11 +224,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
-  Widget _buildTabButton(
-    BuildContext context,
-    String label,
-    OrderTab tab,
-  ) {
+  Widget _buildTabButton(BuildContext context, String label, OrderTab tab) {
     final isSelected = _selectedTab == tab;
     return GestureDetector(
       onTap: () => setState(() => _selectedTab = tab),
@@ -243,17 +238,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
             child: Text(
               label,
               style: AppTextStyles.labelMedium.copyWith(
-                color:
-                    isSelected ? AppColors.primary : AppColors.textSecondary,
+                color: isSelected ? AppColors.primary : AppColors.textSecondary,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
           ),
           if (isSelected)
-            Container(
-              height: 3,
-              color: AppColors.primary,
-            )
+            Container(height: 3, color: AppColors.primary)
           else
             const SizedBox(height: 3),
         ],
@@ -273,13 +264,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     print('DEBUG: _buildOrdersList - displaying ${orders.length} orders');
     for (var i = 0; i < orders.length; i++) {
-      print('DEBUG: Order in list $i - id: ${orders[i].id}, items: ${orders[i].items.length}, itemCount: ${orders[i].itemCount}');
+      print(
+        'DEBUG: Order in list $i - id: ${orders[i].id}, items: ${orders[i].items.length}, itemCount: ${orders[i].itemCount}',
+      );
     }
 
     return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: context.horizontalPadding,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
       child: Column(
         children: orders
             .map((order) => _buildCleanOrderCard(context, order))
@@ -292,8 +283,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
     // Get the first product image from the order
     final firstProduct = order.items.isNotEmpty ? order.items.first : null;
     final imageUrl = firstProduct?.product.image;
-    
-    print('DEBUG: _buildCleanOrderCard - order: ${order.orderNumber}, items: ${order.items.length}, itemCount: ${order.itemCount}, firstProduct: ${firstProduct?.product.name}');
+
+    print(
+      'DEBUG: _buildCleanOrderCard - order: ${order.orderNumber}, items: ${order.items.length}, itemCount: ${order.itemCount}, firstProduct: ${firstProduct?.product.name}',
+    );
 
     return GestureDetector(
       onTap: () => context.push('/customer/order-tracking', extra: order),
@@ -347,15 +340,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.grey100,
-                  borderRadius: BorderRadius.circular(
-                    AppSizes.radiusMd,
-                  ),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                 ),
                 child: imageUrl != null && imageUrl.isNotEmpty
                     ? ClipRRect(
-                        borderRadius: BorderRadius.circular(
-                          AppSizes.radiusMd,
-                        ),
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                         child: Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
@@ -412,11 +401,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       ),
                     ),
 
-                    SizedBox(height: context.responsive<double>(
-                      mobile: AppSizes.sm,
-                      tablet: AppSizes.md,
-                      desktop: AppSizes.md,
-                    )),
+                    SizedBox(
+                      height: context.responsive<double>(
+                        mobile: AppSizes.sm,
+                        tablet: AppSizes.md,
+                        desktop: AppSizes.md,
+                      ),
+                    ),
 
                     // Status and Date Row
                     Row(
@@ -465,10 +456,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     final (bgColor, textColor, label) = _getStatusColors(status);
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 4,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(AppSizes.radiusFull),
@@ -489,47 +477,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
   ) {
     switch (status) {
       case OrderStatus.pending:
-        return (
-          const Color(0xFFFFF4E6),
-          const Color(0xFFFF9800),
-          'Processing'
-        );
+        return (const Color(0xFFFFF4E6), const Color(0xFFFF9800), 'Processing');
       case OrderStatus.confirmed:
-        return (
-          const Color(0xFFE3F2FD),
-          const Color(0xFF1976D2),
-          'Confirmed'
-        );
+        return (const Color(0xFFE3F2FD), const Color(0xFF1976D2), 'Confirmed');
       case OrderStatus.shopping:
-        return (
-          const Color(0xFFE3F2FD),
-          const Color(0xFF1976D2),
-          'Shopping'
-        );
+        return (const Color(0xFFE3F2FD), const Color(0xFF1976D2), 'Shopping');
       case OrderStatus.readyForDelivery:
-        return (
-          const Color(0xFFE3F2FD),
-          const Color(0xFF1976D2),
-          'Ready'
-        );
+        return (const Color(0xFFE3F2FD), const Color(0xFF1976D2), 'Ready');
       case OrderStatus.inTransit:
-        return (
-          const Color(0xFFFFF4E6),
-          const Color(0xFFFF9800),
-          'On the way'
-        );
+        return (const Color(0xFFFFF4E6), const Color(0xFFFF9800), 'On the way');
       case OrderStatus.delivered:
-        return (
-          const Color(0xFFE8F5E9),
-          const Color(0xFF388E3C),
-          'Delivered'
-        );
+        return (const Color(0xFFE8F5E9), const Color(0xFF388E3C), 'Delivered');
       case OrderStatus.cancelled:
-        return (
-          const Color(0xFFFFEBEE),
-          const Color(0xFFD32F2F),
-          'Cancelled'
-        );
+        return (const Color(0xFFFFEBEE), const Color(0xFFD32F2F), 'Cancelled');
     }
   }
 

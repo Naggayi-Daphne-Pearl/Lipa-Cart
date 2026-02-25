@@ -46,9 +46,7 @@ class _ProductFilterSheetState extends State<ProductFilterSheet> {
           Container(
             padding: const EdgeInsets.all(AppSizes.md),
             decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: AppColors.lightGrey),
-              ),
+              border: Border(bottom: BorderSide(color: AppColors.lightGrey)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -157,8 +155,9 @@ class _ProductFilterSheetState extends State<ProductFilterSheet> {
                                 color: isSelected
                                     ? AppColors.primaryOrange
                                     : AppColors.surface,
-                                borderRadius:
-                                    BorderRadius.circular(AppSizes.radiusXs),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusXs,
+                                ),
                                 border: Border.all(
                                   color: isSelected
                                       ? AppColors.primaryOrange
@@ -212,9 +211,7 @@ class _ProductFilterSheetState extends State<ProductFilterSheet> {
           Container(
             padding: const EdgeInsets.all(AppSizes.md),
             decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: AppColors.lightGrey),
-              ),
+              border: Border(top: BorderSide(color: AppColors.lightGrey)),
             ),
             child: SizedBox(
               width: double.infinity,

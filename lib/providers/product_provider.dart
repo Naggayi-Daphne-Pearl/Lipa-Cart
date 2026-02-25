@@ -33,7 +33,8 @@ class ProductProvider extends ChangeNotifier {
   double get selectedMaxPrice => _selectedMaxPrice;
   double get minRating => _minRating;
   bool get inStockOnly => _inStockOnly;
-  bool get hasActiveFilters => _selectedMinPrice != _minPrice ||
+  bool get hasActiveFilters =>
+      _selectedMinPrice != _minPrice ||
       _selectedMaxPrice != _maxPrice ||
       _minRating > 0 ||
       _inStockOnly;
@@ -97,7 +98,9 @@ class ProductProvider extends ChangeNotifier {
         return product.name.toLowerCase().contains(lowercaseQuery) ||
             product.description.toLowerCase().contains(lowercaseQuery) ||
             product.categoryName.toLowerCase().contains(lowercaseQuery) ||
-            product.tags.any((tag) => tag.toLowerCase().contains(lowercaseQuery));
+            product.tags.any(
+              (tag) => tag.toLowerCase().contains(lowercaseQuery),
+            );
       }).toList();
     }
     notifyListeners();
@@ -112,7 +115,8 @@ class ProductProvider extends ChangeNotifier {
   // Filter methods
   List<Product> _applyFilters(List<Product> products) {
     return products.where((product) {
-      final priceMatch = product.price >= _selectedMinPrice &&
+      final priceMatch =
+          product.price >= _selectedMinPrice &&
           product.price <= _selectedMaxPrice;
       final ratingMatch = product.rating >= _minRating;
       final stockMatch = !_inStockOnly || product.isAvailable;
