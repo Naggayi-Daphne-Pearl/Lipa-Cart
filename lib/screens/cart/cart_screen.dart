@@ -57,7 +57,7 @@ class CartScreen extends StatelessWidget {
     final amountToFreeDelivery = _freeDeliveryThreshold - cartProvider.subtotal;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background,
       bottomNavigationBar: const AppBottomNav(currentIndex: 3),
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),

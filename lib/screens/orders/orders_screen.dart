@@ -105,7 +105,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         .toList();
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background,
       bottomNavigationBar: widget.showBottomNav
           ? const AppBottomNav(currentIndex: 4)
           : null,
@@ -138,7 +138,18 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       children: [
                         // Header
                         Padding(
-                          padding: EdgeInsets.all(
+                          padding: EdgeInsets.fromLTRB(
+                            context.responsive<double>(
+                              mobile: AppSizes.lg,
+                              tablet: AppSizes.xl,
+                              desktop: 24.0,
+                            ),
+                            AppSizes.md,
+                            context.responsive<double>(
+                              mobile: AppSizes.lg,
+                              tablet: AppSizes.xl,
+                              desktop: 24.0,
+                            ),
                             context.responsive<double>(
                               mobile: AppSizes.lg,
                               tablet: AppSizes.xl,

@@ -59,7 +59,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
     final filteredRecipes = _getFilteredRecipes(provider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background,
       bottomNavigationBar: context.isMobile
           ? const AppBottomNav(currentIndex: 0)
           : null,

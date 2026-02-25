@@ -56,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final recipeProvider = context.watch<RecipeProvider>();
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background,
       body: RefreshIndicator(
         onRefresh: () => productProvider.refreshProducts(),
         color: AppColors.accent,
@@ -117,234 +117,52 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 fit: BoxFit.contain,
                               ),
-                              SizedBox(
-                                width: context.responsive<double>(
-                                  mobile: AppSizes.lg,
-                                  tablet: AppSizes.xl,
-                                  desktop: 32.0,
-                                ),
-                              ),
+                              
+                              const Spacer(),
 
-                              if (context.isDesktop) const Spacer(),
-
-                              // User greeting for desktop
-                              if (context.isDesktop)
-                                Row(
-                                  children: [
-                                    Text(
-                                      _getGreeting(
-                                        authProvider.user?.name
-                                                ?.split(' ')
-                                                .first ??
-                                            'there',
-                                      ),
-                                      style: AppTextStyles.bodyMedium.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSizes.md),
-                                  ],
-                                ),
-
-                              // Quick actions for desktop
-                              if (context.isDesktop)
-                                Row(
-                                  children: [
-                                    // Cart quick access
-                                    GestureDetector(
-                                      onTap: () => context.go('/customer/cart'),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.surface,
-                                          borderRadius: BorderRadius.circular(
-                                            AppSizes.radiusMd,
-                                          ),
-                                          border: Border.all(
-                                            color: AppColors.grey200,
-                                            width: 1,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Stack(
-                                              clipBehavior: Clip.none,
-                                              children: [
-                                                Icon(
-                                                  Iconsax.bag_2,
-                                                  color: AppColors.primary,
-                                                  size: 20,
-                                                ),
-                                                if (cartProvider.itemCount > 0)
-                                                  Positioned(
-                                                    right: -6,
-                                                    top: -6,
-                                                    child: Container(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                            4,
-                                                          ),
-                                                      decoration:
-                                                          const BoxDecoration(
-                                                            color: AppColors
-                                                                .accent,
-                                                            shape:
-                                                                BoxShape.circle,
-                                                          ),
-                                                      constraints:
-                                                          const BoxConstraints(
-                                                            minWidth: 16,
-                                                            minHeight: 16,
-                                                          ),
-                                                      child: Text(
-                                                        cartProvider.itemCount >
-                                                                9
-                                                            ? '9+'
-                                                            : cartProvider
-                                                                  .itemCount
-                                                                  .toString(),
-                                                        style: const TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: 9,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                        ),
-                                                        textAlign:
-                                                            TextAlign.center,
-                                                      ),
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              'Cart',
-                                              style: AppTextStyles.labelMedium
-                                                  .copyWith(
-                                                    fontWeight: FontWeight.w600,
-                                                    color:
-                                                        AppColors.textPrimary,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSizes.sm),
-                                  ],
-                                ),
-
-                              // User avatar and notifications
-                              Row(
-                                children: [
-                                  if (!context.isMobile) ...[
-                                    // User profile button for desktop
-                                    GestureDetector(
-                                      onTap: () =>
-                                          context.go('/customer/profile'),
-                                      child: Container(
-                                        width: 40,
-                                        height: 40,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.surface,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: AppColors.primary.withValues(
-                                              alpha: 0.3,
-                                            ),
-                                            width: 2,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(
-                                                alpha: 0.05,
-                                              ),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child:
-                                            authProvider.user?.profileImage !=
-                                                null
-                                            ? ClipOval(
-                                                child: Image.network(
-                                                  authProvider
-                                                      .user!
-                                                      .profileImage!,
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              )
-                                            : Center(
-                                                child: Text(
-                                                  authProvider.user?.name
-                                                          ?.substring(0, 1)
-                                                          .toUpperCase() ??
-                                                      'G',
-                                                  style: AppTextStyles
-                                                      .labelMedium
-                                                      .copyWith(
-                                                        color:
-                                                            AppColors.primary,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                      ),
-                                                ),
-                                              ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSizes.sm),
-                                  ],
-
-                                  // Notifications Bell
-                                  Container(
-                                    width: 44,
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.surface,
-                                      borderRadius: BorderRadius.circular(
-                                        AppSizes.radiusMd,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.06,
-                                          ),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Stack(
-                                      children: [
-                                        const Center(
-                                          child: Icon(
-                                            Iconsax.notification,
-                                            color: AppColors.textPrimary,
-                                            size: 22,
-                                          ),
-                                        ),
-                                        // Notification badge
-                                        Positioned(
-                                          right: 10,
-                                          top: 10,
-                                          child: Container(
-                                            width: 8,
-                                            height: 8,
-                                            decoration: const BoxDecoration(
-                                              color: AppColors.error,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                              // Notifications Bell (always on the right)
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusMd,
                                   ),
-                                ],
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.06,
+                                      ),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Stack(
+                                  children: [
+                                    const Center(
+                                      child: Icon(
+                                        Iconsax.notification,
+                                        color: AppColors.textPrimary,
+                                        size: 22,
+                                      ),
+                                    ),
+                                    // Notification badge
+                                    Positioned(
+                                      right: 10,
+                                      top: 10,
+                                      child: Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.error,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -353,17 +171,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         // Mobile greeting section
                         if (context.isMobile)
                           Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              context.horizontalPadding,
-                              AppSizes.xs,
-                              context.horizontalPadding,
-                              AppSizes.sm,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: context.horizontalPadding,
+                              vertical: AppSizes.md,
                             ),
                             child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Container(
-                                  width: 40,
-                                  height: 40,
+                                  width: 48,
+                                  height: 48,
                                   decoration: BoxDecoration(
                                     color: AppColors.surface,
                                     shape: BoxShape.circle,
@@ -373,6 +190,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                       width: 2,
                                     ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.05),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ],
                                   ),
                                   child: authProvider.user?.profileImage != null
                                       ? ClipOval(
@@ -387,36 +211,35 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     ?.substring(0, 1)
                                                     .toUpperCase() ??
                                                 'G',
-                                            style: AppTextStyles.labelMedium
-                                                .copyWith(
-                                                  color: AppColors.primary,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
+                                            style: AppTextStyles.h4.copyWith(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                           ),
                                         ),
                                 ),
-                                const SizedBox(width: AppSizes.sm),
+                                const SizedBox(width: AppSizes.md),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
                                         _getGreeting(
-                                          authProvider.user?.name
-                                                  ?.split(' ')
-                                                  .first ??
-                                              'there',
+                                          authProvider.user?.name?.split(' ').first ?? 'there',
                                         ),
                                         style: AppTextStyles.h5.copyWith(
-                                          fontWeight: FontWeight.w700,
+                                          fontWeight: FontWeight.w800,
                                           color: AppColors.textPrimary,
+                                          fontSize: 20,
                                         ),
                                       ),
+                                      const SizedBox(height: 2),
                                       Text(
                                         'What would you buy today?',
-                                        style: AppTextStyles.caption.copyWith(
+                                        style: AppTextStyles.bodySmall.copyWith(
                                           color: AppColors.textSecondary,
+                                          fontSize: 13,
                                         ),
                                       ),
                                     ],

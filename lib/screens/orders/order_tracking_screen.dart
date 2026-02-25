@@ -16,8 +16,7 @@ class OrderTrackingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
+      backgroundColor: AppColors.background,
       bottomNavigationBar: const AppBottomNav(currentIndex: 4),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -30,19 +29,20 @@ class OrderTrackingScreen extends StatelessWidget {
       ),
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSizes.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Order header card
-              Container(
-                padding: const EdgeInsets.all(AppSizes.md),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  boxShadow: [
-                    BoxShadow(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSizes.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Order header card
+                Container(
+                  padding: const EdgeInsets.all(AppSizes.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    boxShadow: [
+                      BoxShadow(
                       color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
@@ -566,6 +566,7 @@ class OrderTrackingScreen extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 

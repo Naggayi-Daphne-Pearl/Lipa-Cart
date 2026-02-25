@@ -49,7 +49,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background,
       extendBodyBehindAppBar: true,
       bottomNavigationBar: const AppBottomNav(currentIndex: 5),
       appBar: AppBar(

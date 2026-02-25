@@ -46,7 +46,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
     final checkedItems = list.items.where((i) => i.isChecked).toList();
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background,
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
         child: Column(

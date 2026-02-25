@@ -430,7 +430,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background,
       extendBodyBehindAppBar: true,
       bottomNavigationBar: const AppBottomNav(currentIndex: 3),
       appBar: AppBar(

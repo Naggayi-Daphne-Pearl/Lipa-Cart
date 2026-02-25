@@ -63,7 +63,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
     final filteredProducts = _getFilteredProducts(productProvider);
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background,
       body: ResponsiveContainer(
         child: SafeArea(
           child: Column(

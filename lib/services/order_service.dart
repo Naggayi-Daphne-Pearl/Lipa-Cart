@@ -521,36 +521,66 @@ class OrderService extends ChangeNotifier {
     if (!orderCreated || _currentOrder == null) return null;
 
     final orderId = _currentOrder!.id;
+    print('DEBUG: createOrderWithItems - Order created with ID: $orderId');
+    print('DEBUG: createOrderWithItems - Creating ${items.length} order items');
 
     try {
-      await Future.wait(
-        items.map((item) {
+      final createItemResponses = await Future.wait(
+        items.asMap().entries.map((entry) async {
+          final index = entry.key;
+          final item = entry.value;
           final productId = item.product.strapiId ?? item.product.id;
-          return http.post(
-            Uri.parse('$baseUrl/api/order-items'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
-            body: jsonEncode({
-              'data': {
-                'order': orderId,
-                'product': productId,
-                'product_name': item.product.name,
-                'quantity': item.quantity,
-                'unit': item.product.unit,
-                'estimated_price': item.product.price,
-                'special_instructions': item.specialInstructions,
+          print('DEBUG: [Item $index] Creating order item - product: ${item.product.name}, quantity: ${item.quantity}, productId: $productId, orderId: $orderId');
+          
+          try {
+            final response = await http.post(
+              Uri.parse('$baseUrl/api/order-items'),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $token',
               },
-            }),
-          );
+              body: jsonEncode({
+                'data': {
+                  'order': orderId,
+                  'product': productId,
+                  'product_name': item.product.name,
+                  'quantity': item.quantity,
+                  'unit': item.product.unit,
+                  'estimated_price': item.product.price,
+                  'special_instructions': item.specialInstructions,
+                },
+              }),
+            );
+            
+            print('DEBUG: [Item $index] response status: ${response.statusCode}');
+            if (response.statusCode != 201 && response.statusCode != 200) {
+              print('DEBUG: [Item $index] FAILED - status: ${response.statusCode}, body: ${response.body}');
+              return false;
+            } else {
+              print('DEBUG: [Item $index] SUCCESS - body: ${response.body}');
+              return true;
+            }
+          } catch (itemError) {
+            print('DEBUG: [Item $index] EXCEPTION: $itemError');
+            return false;
+          }
         }),
       );
+      
+      final successCount = createItemResponses.where((r) => r).length;
+      print('DEBUG: Order items created - $successCount/${items.length} successful');
+      
+      if (successCount == 0) {
+        print('DEBUG: WARNING - No order items were created successfully!');
+      }
 
+      print('DEBUG: All order items posted. Fetching updated order...');
       await getOrder(token, orderId);
+      print('DEBUG: Order fetched after item creation - items count: ${_currentOrder?.items.length ?? 0}');
       return _currentOrder;
     } catch (e) {
       _error = 'Error creating order items: $e';
+      print('DEBUG: Error creating order items: $e');
       notifyListeners();
       return _currentOrder;
     }

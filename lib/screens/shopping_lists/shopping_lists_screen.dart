@@ -37,7 +37,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     final provider = context.watch<ShoppingListProvider>();
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.background,
       bottomNavigationBar: widget.showBottomNav
           ? const AppBottomNav(currentIndex: 2)
           : null,
