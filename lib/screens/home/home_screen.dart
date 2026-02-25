@@ -117,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 fit: BoxFit.contain,
                               ),
-                              
+
                               const Spacer(),
 
                               // Notifications Bell (always on the right)
@@ -192,7 +192,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.05),
+                                        color: Colors.black.withValues(
+                                          alpha: 0.05,
+                                        ),
                                         blurRadius: 4,
                                         offset: const Offset(0, 1),
                                       ),
@@ -221,12 +223,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(width: AppSizes.md),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
                                         _getGreeting(
-                                          authProvider.user?.name?.split(' ').first ?? 'there',
+                                          authProvider.user?.name
+                                                  ?.split(' ')
+                                                  .first ??
+                                              'there',
                                         ),
                                         style: AppTextStyles.h5.copyWith(
                                           fontWeight: FontWeight.w800,

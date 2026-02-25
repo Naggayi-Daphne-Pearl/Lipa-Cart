@@ -530,8 +530,10 @@ class OrderService extends ChangeNotifier {
           final index = entry.key;
           final item = entry.value;
           final productId = item.product.strapiId ?? item.product.id;
-          print('DEBUG: [Item $index] Creating order item - product: ${item.product.name}, quantity: ${item.quantity}, productId: $productId, orderId: $orderId');
-          
+          print(
+            'DEBUG: [Item $index] Creating order item - product: ${item.product.name}, quantity: ${item.quantity}, productId: $productId, orderId: $orderId',
+          );
+
           try {
             final response = await http.post(
               Uri.parse('$baseUrl/api/order-items'),
@@ -551,10 +553,14 @@ class OrderService extends ChangeNotifier {
                 },
               }),
             );
-            
-            print('DEBUG: [Item $index] response status: ${response.statusCode}');
+
+            print(
+              'DEBUG: [Item $index] response status: ${response.statusCode}',
+            );
             if (response.statusCode != 201 && response.statusCode != 200) {
-              print('DEBUG: [Item $index] FAILED - status: ${response.statusCode}, body: ${response.body}');
+              print(
+                'DEBUG: [Item $index] FAILED - status: ${response.statusCode}, body: ${response.body}',
+              );
               return false;
             } else {
               print('DEBUG: [Item $index] SUCCESS - body: ${response.body}');
@@ -566,17 +572,21 @@ class OrderService extends ChangeNotifier {
           }
         }),
       );
-      
+
       final successCount = createItemResponses.where((r) => r).length;
-      print('DEBUG: Order items created - $successCount/${items.length} successful');
-      
+      print(
+        'DEBUG: Order items created - $successCount/${items.length} successful',
+      );
+
       if (successCount == 0) {
         print('DEBUG: WARNING - No order items were created successfully!');
       }
 
       print('DEBUG: All order items posted. Fetching updated order...');
       await getOrder(token, orderId);
-      print('DEBUG: Order fetched after item creation - items count: ${_currentOrder?.items.length ?? 0}');
+      print(
+        'DEBUG: Order fetched after item creation - items count: ${_currentOrder?.items.length ?? 0}',
+      );
       return _currentOrder;
     } catch (e) {
       _error = 'Error creating order items: $e';

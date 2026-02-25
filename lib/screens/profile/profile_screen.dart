@@ -201,11 +201,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
 
-                SizedBox(height: context.responsive<double>(
-                  mobile: AppSizes.lg,
-                  tablet: AppSizes.xl,
-                  desktop: AppSizes.xl,
-                )),
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.lg,
+                    tablet: AppSizes.xl,
+                    desktop: AppSizes.xl,
+                  ),
+                ),
 
                 // Quick Action Buttons
                 Padding(
@@ -304,129 +306,122 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
 
-                SizedBox(height: context.responsive<double>(
-                  mobile: AppSizes.lg,
-                  tablet: AppSizes.xl,
-                  desktop: AppSizes.xl,
-                )),
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.lg,
+                    tablet: AppSizes.xl,
+                    desktop: AppSizes.xl,
+                  ),
+                ),
 
                 // Help & Support Section
                 Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: context.horizontalPadding,
                   ),
-                  child: _buildMenuSection(
-                    context,
-                    'Need Assistance?',
-                    [
-                      _MenuItem(
-                        icon: Iconsax.info_circle,
-                        title: 'Help & Support',
-                        onTap: () {},
-                      ),
-                    ],
-                    showDividers: false,
-                  ),
+                  child: _buildMenuSection(context, 'Need Assistance?', [
+                    _MenuItem(
+                      icon: Iconsax.info_circle,
+                      title: 'Help & Support',
+                      onTap: () {},
+                    ),
+                  ], showDividers: false),
                 ),
 
-                SizedBox(height: context.responsive<double>(
-                  mobile: AppSizes.lg,
-                  tablet: AppSizes.xl,
-                  desktop: AppSizes.xl,
-                )),
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.lg,
+                    tablet: AppSizes.xl,
+                    desktop: AppSizes.xl,
+                  ),
+                ),
 
                 // My Account Section
                 Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: context.horizontalPadding,
                   ),
-                  child: _buildMenuSection(
-                    context,
-                    'My Lipa Cart',
-                    [
-                      _MenuItem(
-                        icon: Iconsax.receipt,
-                        title: 'Orders',
-                        onTap: () => context.go('/customer/orders'),
-                      ),
-                      _MenuItem(
-                        icon: Iconsax.message,
-                        title: 'Inbox',
-                        onTap: () {},
-                      ),
-                      _MenuItem(
-                        icon: Iconsax.star,
-                        title: 'Ratings & Reviews',
-                        onTap: () {},
-                      ),
-                      _MenuItem(
-                        icon: Iconsax.ticket_discount,
-                        title: 'Vouchers',
-                        onTap: () {},
-                      ),
-                      _MenuItem(
-                        icon: Iconsax.heart,
-                        title: 'Wishlist',
-                        onTap: () {},
-                      ),
-                      _MenuItem(
-                        icon: Iconsax.shop,
-                        title: 'Followed Sellers',
-                        onTap: () {},
-                      ),
-                      _MenuItem(
-                        icon: Iconsax.eye,
-                        title: 'Recently Viewed',
-                        onTap: () {},
-                      ),
-                      _MenuItem(
-                        icon: Iconsax.search_normal,
-                        title: 'Recently Searched',
-                        onTap: () {},
-                      ),
-                    ],
-                  ),
+                  child: _buildMenuSection(context, 'My Lipa Cart', [
+                    _MenuItem(
+                      icon: Iconsax.receipt,
+                      title: 'Orders',
+                      onTap: () => context.go('/customer/orders'),
+                    ),
+                    _MenuItem(
+                      icon: Iconsax.message,
+                      title: 'Inbox',
+                      onTap: () {},
+                    ),
+                    _MenuItem(
+                      icon: Iconsax.star,
+                      title: 'Ratings & Reviews',
+                      onTap: () {},
+                    ),
+                    _MenuItem(
+                      icon: Iconsax.ticket_discount,
+                      title: 'Vouchers',
+                      onTap: () {},
+                    ),
+                    _MenuItem(
+                      icon: Iconsax.heart,
+                      title: 'Wishlist',
+                      onTap: () {},
+                    ),
+                    _MenuItem(
+                      icon: Iconsax.shop,
+                      title: 'Followed Sellers',
+                      onTap: () {},
+                    ),
+                    _MenuItem(
+                      icon: Iconsax.eye,
+                      title: 'Recently Viewed',
+                      onTap: () {},
+                    ),
+                    _MenuItem(
+                      icon: Iconsax.search_normal,
+                      title: 'Recently Searched',
+                      onTap: () {},
+                    ),
+                  ]),
                 ),
 
-                SizedBox(height: context.responsive<double>(
-                  mobile: AppSizes.lg,
-                  tablet: AppSizes.xl,
-                  desktop: AppSizes.xl,
-                )),
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.lg,
+                    tablet: AppSizes.xl,
+                    desktop: AppSizes.xl,
+                  ),
+                ),
 
                 // My Settings Section
                 Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: context.horizontalPadding,
                   ),
-                  child: _buildMenuSection(
-                    context,
-                    'My Settings',
-                    [
-                      _MenuItem(
-                        icon: Iconsax.location,
-                        title: 'Addresses',
-                        onTap: () => context.go('/customer/addresses'),
-                      ),
-                      _MenuItem(
-                        icon: Iconsax.notification,
-                        title: 'Notifications',
-                        onTap: () {},
-                      ),
-                      _MenuItem(
-                        icon: Iconsax.setting_2,
-                        title: 'Settings',
-                        onTap: () {},
-                      ),
-                      _MenuItem(
-                        icon: Iconsax.logout,
-                        title: 'Logout',
-                        onTap: () async {
-                          await LogoutHelper.logoutAndClear(context);
-                        },
-                      ),
-                    ],
-                  ),
+                  child: _buildMenuSection(context, 'My Settings', [
+                    _MenuItem(
+                      icon: Iconsax.location,
+                      title: 'Addresses',
+                      onTap: () => context.go('/customer/addresses'),
+                    ),
+                    _MenuItem(
+                      icon: Iconsax.notification,
+                      title: 'Notifications',
+                      onTap: () {},
+                    ),
+                    _MenuItem(
+                      icon: Iconsax.setting_2,
+                      title: 'Settings',
+                      onTap: () {},
+                    ),
+                    _MenuItem(
+                      icon: Iconsax.logout,
+                      title: 'Logout',
+                      onTap: () async {
+                        await LogoutHelper.logoutAndClear(context);
+                      },
+                    ),
+                  ]),
                 ),
 
                 const SizedBox(height: 100),
@@ -483,7 +478,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               final index = entry.key;
               final item = entry.value;
               final isLast = index == items.length - 1;
-              return _buildMenuItem(context, item, showDivider: showDividers && !isLast);
+              return _buildMenuItem(
+                context,
+                item,
+                showDivider: showDividers && !isLast,
+              );
             }).toList(),
           ),
         ),

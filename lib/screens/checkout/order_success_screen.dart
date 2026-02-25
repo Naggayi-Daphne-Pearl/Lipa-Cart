@@ -215,8 +215,10 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                     children: [
                       CustomButton(
                         text: 'Track Order',
-                        onPressed: () =>
-                            context.go('/customer/order-tracking', extra: order),
+                        onPressed: () => context.go(
+                          '/customer/order-tracking',
+                          extra: order,
+                        ),
                       ),
                       const SizedBox(height: AppSizes.sm),
                       CustomButton(
