@@ -55,20 +55,6 @@ class _OtpScreenState extends State<OtpScreen> {
     super.dispose();
   }
 
-  String _homeForRole(UserRole? role) {
-    switch (role) {
-      case UserRole.admin:
-        return '/admin/dashboard';
-      case UserRole.rider:
-        return '/rider/home';
-      case UserRole.shopper:
-        return '/shopper/home';
-      case UserRole.customer:
-      default:
-        return '/customer/home';
-    }
-  }
-
   Future<void> _verifyOtp() async {
     if (_otpController.text.length != AppConstants.otpLength) {
       ScaffoldMessenger.of(context).showSnackBar(

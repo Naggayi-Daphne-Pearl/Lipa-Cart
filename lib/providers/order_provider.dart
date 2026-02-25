@@ -154,9 +154,17 @@ class OrderProvider extends ChangeNotifier {
 
   /// Sync orders from backend service
   void syncOrdersFromService(List<Order> backendOrders) {
+    print('DEBUG: syncOrdersFromService - received ${backendOrders.length} orders');
+    for (var i = 0; i < backendOrders.length; i++) {
+      print('DEBUG: Syncing order $i - id: ${backendOrders[i].id}, items: ${backendOrders[i].items.length}, itemCount: ${backendOrders[i].itemCount}');
+    }
     _orders
       ..clear()
       ..addAll(backendOrders);
+    print('DEBUG: After sync - provider now has ${_orders.length} orders');
+    for (var i = 0; i < _orders.length; i++) {
+      print('DEBUG: Provider order $i - id: ${_orders[i].id}, items: ${_orders[i].items.length}, itemCount: ${_orders[i].itemCount}');
+    }
     _persistOrders();
     notifyListeners();
   }

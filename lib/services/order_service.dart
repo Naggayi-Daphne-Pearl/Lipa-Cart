@@ -54,23 +54,32 @@ class OrderService extends ChangeNotifier {
     // Handle both wrapped and flat formats
     final orderItemsRaw = attributes['order_items'];
 
+    print('DEBUG: _parseOrderItems - orderItemsRaw type: ${orderItemsRaw.runtimeType}');
+    print('DEBUG: _parseOrderItems - orderItemsRaw value: $orderItemsRaw');
+
     List<dynamic> orderItems = [];
     if (orderItemsRaw is List<dynamic>) {
       // Flat format: direct array
       orderItems = orderItemsRaw;
+      print('DEBUG: Parsed as direct array, count: ${orderItems.length}');
     } else if (orderItemsRaw is Map<String, dynamic> &&
         orderItemsRaw.containsKey('data')) {
       // Wrapped format: {data: [...]}
       orderItems = (orderItemsRaw['data'] as List<dynamic>?) ?? [];
+      print('DEBUG: Parsed as wrapped format, count: ${orderItems.length}');
+    } else {
+      print('DEBUG: No order_items found or invalid format');
     }
 
-    return orderItems.map((item) {
+    final parsedItems = orderItems.map((item) {
       final itemAttrs = (item['attributes'] as Map<String, dynamic>?) ?? item;
       final productName = itemAttrs['product_name'] as String? ?? 'Item';
       final quantity = (itemAttrs['quantity'] as num?)?.toDouble() ?? 1;
       final unit = itemAttrs['unit'] as String? ?? 'unit';
       final estimatedPrice =
           (itemAttrs['estimated_price'] as num?)?.toDouble() ?? 0;
+
+      print('DEBUG: Parsed order item - name: $productName, qty: $quantity, price: $estimatedPrice');
 
       final productData =
           (itemAttrs['product']?['data'] as Map<String, dynamic>?) ??
@@ -98,6 +107,9 @@ class OrderService extends ChangeNotifier {
         specialInstructions: itemAttrs['special_instructions'] as String?,
       );
     }).toList();
+
+    print('DEBUG: Final parsed items count: ${parsedItems.length}');
+    return parsedItems;
   }
 
   user_models.Address _parseDeliveryAddress(Map<String, dynamic> attributes) {
@@ -131,10 +143,10 @@ class OrderService extends ChangeNotifier {
     final addressAttrs =
         (addressData['attributes'] as Map<String, dynamic>?) ?? addressData;
 
-    final label = addressAttrs?['label'] as String? ?? 'Delivery Address';
-    final addressLine = addressAttrs?['address_line'] as String? ?? '';
-    final city = addressAttrs?['city'] as String? ?? '';
-    final landmark = addressAttrs?['landmark'] as String?;
+    final label = addressAttrs['label'] as String? ?? 'Delivery Address';
+    final addressLine = addressAttrs['address_line'] as String? ?? '';
+    final city = addressAttrs['city'] as String? ?? '';
+    final landmark = addressAttrs['landmark'] as String?;
     final fullAddress =
         '$addressLine${city.isNotEmpty ? ', $city' : ''}${landmark != null && landmark.isNotEmpty ? ', $landmark' : ''}';
 
@@ -143,9 +155,9 @@ class OrderService extends ChangeNotifier {
       label: label,
       fullAddress: fullAddress,
       landmark: landmark,
-      latitude: (addressAttrs?['gps_lat'] as num?)?.toDouble() ?? 0.0,
-      longitude: (addressAttrs?['gps_lng'] as num?)?.toDouble() ?? 0.0,
-      isDefault: addressAttrs?['is_default'] as bool? ?? false,
+      latitude: (addressAttrs['gps_lat'] as num?)?.toDouble() ?? 0.0,
+      longitude: (addressAttrs['gps_lng'] as num?)?.toDouble() ?? 0.0,
+      isDefault: addressAttrs['is_default'] as bool? ?? false,
     );
   }
 
@@ -156,10 +168,17 @@ class OrderService extends ChangeNotifier {
         (attributes['order_number'] ?? attributes['orderNumber'])?.toString() ??
         data['id'].toString();
 
+    print('DEBUG: _fromStrapi - Order ID: $rawId');
+    print('DEBUG: _fromStrapi - Order Number: $orderNumber');
+    print('DEBUG: _fromStrapi - Attributes keys: ${attributes.keys.toList()}');
+    
+    final items = _parseOrderItems(attributes);
+    print('DEBUG: _fromStrapi - Final order items count: ${items.length}');
+
     return Order(
       id: rawId?.toString() ?? '',
       orderNumber: orderNumber,
-      items: _parseOrderItems(attributes),
+      items: items,
       deliveryAddress: _parseDeliveryAddress(attributes),
       subtotal: (attributes['subtotal'] as num?)?.toDouble() ?? 0,
       serviceFee: (attributes['service_fee'] as num?)?.toDouble() ?? 0,
@@ -205,10 +224,22 @@ class OrderService extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        print('DEBUG: fetchOrders response data keys: ${(data as Map).keys}');
+        print('DEBUG: fetchOrders data["data"] type: ${data["data"].runtimeType}');
+        print('DEBUG: fetchOrders total orders in response: ${(data["data"] as List).length}');
+        
         _orders = List<Order>.from(
-          (data['data'] as List).map((order) => _fromStrapi(order)),
+          (data['data'] as List).map((order) {
+            print('DEBUG: Processing order in list - id: ${order["id"]}, has attributes: ${order.containsKey("attributes")}');
+            final parsed = _fromStrapi(order);
+            print('DEBUG: Parsed order - id: ${parsed.id}, items count: ${parsed.items.length}, itemCount: ${parsed.itemCount}');
+            return parsed;
+          }),
         );
         print('DEBUG: Orders parsed count=${_orders.length}');
+        for (var i = 0; i < _orders.length; i++) {
+          print('DEBUG: Order $i - items: ${_orders[i].items.length}, itemCount: ${_orders[i].itemCount}');
+        }
         _isLoading = false;
         notifyListeners();
         return true;

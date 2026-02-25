@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
@@ -70,89 +71,107 @@ class _MainShellState extends State<MainShell> {
     final cartProvider = context.watch<CartProvider>();
     final isDesktopOrTablet = context.isTablet || context.isDesktop;
 
-    return Scaffold(
-      body: Row(
-        children: [
-          // Sidebar navigation for tablet/desktop
-          if (isDesktopOrTablet) _buildSideNavigation(cartProvider.itemCount),
+    return WillPopScope(
+      onWillPop: () async {
+        if (_showCartSidebar) {
+          setState(() => _showCartSidebar = false);
+          return false;
+        }
 
-          // Main content
-          Expanded(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: AppColors.elegantBgGradient,
+        if (_selectedTab != 0) {
+          setState(() => _selectedTab = 0);
+          return false;
+        }
+
+        // Prevent returning to splash; exit app on root tab.
+        SystemNavigator.pop();
+        return false;
+      },
+      child: Scaffold(
+        body: Row(
+          children: [
+            // Sidebar navigation for tablet/desktop
+            if (isDesktopOrTablet) _buildSideNavigation(cartProvider.itemCount),
+
+            // Main content
+            Expanded(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: AppColors.elegantBgGradient,
+                ),
+                child:
+                    IndexedStack(index: _getStackIndex(), children: _screens),
               ),
-              child: IndexedStack(index: _getStackIndex(), children: _screens),
             ),
-          ),
 
-          // Cart sidebar for web/tablet
-          if (isDesktopOrTablet && _showCartSidebar)
-            _buildCartSidebar(cartProvider),
-        ],
+            // Cart sidebar for web/tablet
+            if (isDesktopOrTablet && _showCartSidebar)
+              _buildCartSidebar(cartProvider),
+          ],
+        ),
+        // Bottom navigation for mobile
+        bottomNavigationBar: isDesktopOrTablet
+            ? null
+            : Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(AppSizes.radiusXl),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.black.withValues(alpha: 0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSizes.xs,
+                      vertical: AppSizes.md,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildNavItem(
+                          icon: Iconsax.home_2,
+                          activeIcon: Iconsax.home_15,
+                          label: 'Home',
+                          index: 0,
+                        ),
+                        _buildNavItem(
+                          icon: Iconsax.search_normal,
+                          activeIcon: Iconsax.search_normal_1,
+                          label: 'Browse',
+                          index: 1,
+                        ),
+                        _buildNavItem(
+                          icon: Iconsax.clipboard_text,
+                          activeIcon: Iconsax.clipboard_text,
+                          label: 'Lists',
+                          index: 2,
+                        ),
+                        _buildCartNavItem(cartProvider.itemCount),
+                        _buildNavItem(
+                          icon: Iconsax.receipt_item,
+                          activeIcon: Iconsax.receipt_item,
+                          label: 'Orders',
+                          index: 4,
+                        ),
+                        _buildNavItem(
+                          icon: Iconsax.user,
+                          activeIcon: Iconsax.user,
+                          label: 'Profile',
+                          index: 5,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
       ),
-      // Bottom navigation for mobile
-      bottomNavigationBar: isDesktopOrTablet
-          ? null
-          : Container(
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppSizes.radiusXl),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.black.withValues(alpha: 0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSizes.xs,
-                    vertical: AppSizes.md,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildNavItem(
-                        icon: Iconsax.home_2,
-                        activeIcon: Iconsax.home_15,
-                        label: 'Home',
-                        index: 0,
-                      ),
-                      _buildNavItem(
-                        icon: Iconsax.search_normal,
-                        activeIcon: Iconsax.search_normal_1,
-                        label: 'Browse',
-                        index: 1,
-                      ),
-                      _buildNavItem(
-                        icon: Iconsax.clipboard_text,
-                        activeIcon: Iconsax.clipboard_text,
-                        label: 'Lists',
-                        index: 2,
-                      ),
-                      _buildCartNavItem(cartProvider.itemCount),
-                      _buildNavItem(
-                        icon: Iconsax.receipt_item,
-                        activeIcon: Iconsax.receipt_item,
-                        label: 'Orders',
-                        index: 4,
-                      ),
-                      _buildNavItem(
-                        icon: Iconsax.user,
-                        activeIcon: Iconsax.user,
-                        label: 'Profile',
-                        index: 5,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
     );
   }
 

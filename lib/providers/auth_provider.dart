@@ -168,6 +168,10 @@ class AuthProvider extends ChangeNotifier {
         role: UserRoleExtension.fromString(userData['user_type'] ?? userType),
         name: userData['name'],
         profileImage: userData['profile_photo'],
+        isPremium:
+            userData['isPremium'] as bool? ??
+            userData['is_premium'] as bool? ??
+            false,
         customerId: userData['customer_id']?.toString(),
         createdAt: DateTime.now(),
       );
@@ -217,6 +221,10 @@ class AuthProvider extends ChangeNotifier {
         role: UserRoleExtension.fromString(userData['user_type'] ?? 'customer'),
         name: userData['name'],
         profileImage: userData['profile_photo'],
+        isPremium:
+            userData['isPremium'] as bool? ??
+            userData['is_premium'] as bool? ??
+            false,
         customerId: userData['customer_id']?.toString(),
         createdAt: DateTime.now(),
       );
@@ -276,6 +284,10 @@ class AuthProvider extends ChangeNotifier {
         role: UserRoleExtension.fromString(userData['user_type'] ?? 'customer'),
         name: userData['name'],
         profileImage: userData['profile_photo'],
+        isPremium:
+            userData['isPremium'] as bool? ??
+            userData['is_premium'] as bool? ??
+            false,
         createdAt: DateTime.now(),
       );
 
@@ -363,6 +375,10 @@ class AuthProvider extends ChangeNotifier {
           ),
           name: response['name'],
           profileImage: response['profile_photo'],
+          isPremium:
+              response['isPremium'] as bool? ??
+              response['is_premium'] as bool? ??
+              false,
           customerId: response['customer_id']?.toString(),
           createdAt: DateTime.now(),
         );
@@ -377,6 +393,10 @@ class AuthProvider extends ChangeNotifier {
           ),
           name: response['name'] ?? _user!.name,
           profileImage: response['profile_photo'] ?? _user!.profileImage,
+          isPremium:
+              response['isPremium'] as bool? ??
+              response['is_premium'] as bool? ??
+              _user!.isPremium,
           customerId: response['customer_id']?.toString() ?? _user!.customerId,
         );
       }
@@ -473,11 +493,17 @@ class AuthProvider extends ChangeNotifier {
       // Update user if data changed
       if (userData['name'] != _user?.name ||
           userData['email'] != _user?.email ||
-          userData['profile_photo'] != _user?.profileImage) {
+          userData['profile_photo'] != _user?.profileImage ||
+          userData['isPremium'] != _user?.isPremium ||
+          userData['is_premium'] != _user?.isPremium) {
         _user = _user!.copyWith(
           name: userData['name'],
           email: userData['email'],
           profileImage: userData['profile_photo'],
+          isPremium:
+              userData['isPremium'] as bool? ??
+              userData['is_premium'] as bool? ??
+              _user!.isPremium,
         );
 
         // Save updated user data

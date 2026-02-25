@@ -63,6 +63,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _authCityController = TextEditingController(text: 'Kampala');
     _authLandmarkController = TextEditingController();
 
+    // Clear snackbars from previous screens (e.g. "View Cart" actions)
+    // so checkout starts with a clean UI.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      messenger?.hideCurrentSnackBar(reason: SnackBarClosedReason.remove);
+      messenger?.clearSnackBars();
+    });
+
     if (!widget.isGuest) {
       _selectedAddress = context.read<AuthProvider>().defaultAddress;
       _loadSavedAddresses();
@@ -302,7 +311,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           } else {
             // Fallback: Still try to create order with temporary address
             final orderProvider = context.read<OrderProvider>();
-            final orderService = context.read<OrderService>();
             final tempAddress = Address(
               id: '0',
               label: 'Delivery Address',

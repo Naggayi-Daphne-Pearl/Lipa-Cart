@@ -122,8 +122,11 @@ class Order {
     this.hasBeenRated = false,
   });
 
-  int get itemCount =>
-      items.fold(0, (sum, item) => sum + item.quantity.toInt());
+  int get itemCount {
+    final sum = items.fold(0, (sum, item) => sum + item.quantity.toInt());
+    // If sum is 0 but items exist, return items count as fallback
+    return sum > 0 ? sum : items.length;
+  }
 
   // Convenience getters
   String get statusLabel => status.displayName;

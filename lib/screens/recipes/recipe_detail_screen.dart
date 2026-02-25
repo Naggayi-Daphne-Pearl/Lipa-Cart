@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -785,27 +784,34 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
 
   void _addSelectedToCart(Recipe recipe, CartProvider cartProvider) {
     int addedCount = 0;
+    int skippedCount = 0;
+
     for (final ingredient in recipe.ingredients) {
-      if (_selectedIngredients.contains(ingredient.id) &&
-          ingredient.linkedProduct != null) {
-        cartProvider.addToCart(ingredient.linkedProduct!);
-        addedCount++;
+      if (_selectedIngredients.contains(ingredient.id)) {
+        if (ingredient.linkedProduct != null) {
+          cartProvider.addToCart(ingredient.linkedProduct!);
+          addedCount++;
+        } else {
+          skippedCount++;
+        }
       }
+    }
+
+    String message =
+        'Added $addedCount ingredient${addedCount != 1 ? 's' : ''} to cart';
+    if (skippedCount > 0) {
+      message += ' ($skippedCount unavailable)';
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Added $addedCount ingredients to cart'),
+        content: Text(message),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
         ),
-        action: SnackBarAction(
-          label: 'View Cart',
-          textColor: Colors.white,
-          onPressed: () => context.go('/customer/cart'),
-        ),
+        duration: const Duration(seconds: 2),
       ),
     );
   }

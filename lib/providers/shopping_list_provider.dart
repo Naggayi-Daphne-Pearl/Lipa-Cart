@@ -7,6 +7,8 @@ import '../services/strapi_service.dart';
 import '../core/constants/app_constants.dart';
 
 class ShoppingListProvider extends ChangeNotifier {
+  static const int freeTierListLimit = 3;
+
   List<ShoppingList> _lists = [];
   bool _isLoading = false;
   bool _didBootstrap = false;
@@ -80,12 +82,12 @@ class ShoppingListProvider extends ChangeNotifier {
     '🧺',
   ];
 
-  Future<void> loadLists() async {
+  Future<void> loadLists({String? authToken}) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      _lists = await StrapiService.getShoppingLists();
+      _lists = await StrapiService.getShoppingLists(authToken: authToken);
     } catch (e) {
       debugPrint('Strapi fetch failed, using sample data: $e');
       _lists = _getSampleLists();
@@ -104,12 +106,22 @@ class ShoppingListProvider extends ChangeNotifier {
     }
   }
 
-  void createList({
+  bool canCreateList({required bool isPremium}) {
+    if (isPremium) return true;
+    return _lists.length < freeTierListLimit;
+  }
+
+  bool createList({
     required String name,
     String? description,
     String emoji = '🛒',
     String color = '#15874B',
+    bool isPremium = false,
   }) {
+    if (!canCreateList(isPremium: isPremium)) {
+      return false;
+    }
+
     final newList = ShoppingList(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: name,
@@ -122,6 +134,7 @@ class ShoppingListProvider extends ChangeNotifier {
     _lists.insert(0, newList);
     _persistLists();
     notifyListeners();
+    return true;
   }
 
   void updateList(ShoppingList updatedList) {
@@ -159,6 +172,7 @@ class ShoppingListProvider extends ChangeNotifier {
       name: product.name,
       quantity: quantity,
       unit: product.unit,
+      unitPrice: product.price,
       linkedProduct: product,
     );
     addItemToList(listId, item);
@@ -227,6 +241,25 @@ class ShoppingListProvider extends ChangeNotifier {
       final updatedItems = list.items.map((item) {
         if (item.id == itemId) {
           return item.copyWith(description: description);
+        }
+        return item;
+      }).toList();
+      _lists[listIndex] = list.copyWith(
+        items: updatedItems,
+        updatedAt: DateTime.now(),
+      );
+      _persistLists();
+      notifyListeners();
+    }
+  }
+
+  void updateItemUnitPrice(String listId, String itemId, double? unitPrice) {
+    final listIndex = _lists.indexWhere((l) => l.id == listId);
+    if (listIndex != -1) {
+      final list = _lists[listIndex];
+      final updatedItems = list.items.map((item) {
+        if (item.id == itemId) {
+          return item.copyWith(unitPrice: unitPrice);
         }
         return item;
       }).toList();

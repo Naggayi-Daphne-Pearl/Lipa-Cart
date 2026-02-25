@@ -93,6 +93,13 @@ class Recipe {
       final qty = i['quantity'];
       final unit = i['unit'] as String? ?? '';
       final notes = i['notes'] as String? ?? '';
+      final productData = i['product'];
+      Product? linkedProduct;
+      if (productData is Map<String, dynamic>) {
+        final resolvedProduct =
+            (productData['data'] as Map<String, dynamic>?) ?? productData;
+        linkedProduct = Product.fromStrapi(resolvedProduct, baseUrl: baseUrl);
+      }
       String quantityStr = '';
       if (qty != null) quantityStr = '$qty $unit'.trim();
       if (notes.isNotEmpty) quantityStr += ' ($notes)';
@@ -101,14 +108,20 @@ class Recipe {
         id: (i['id'] ?? '').toString(),
         name: i['name'] as String? ?? '',
         quantity: quantityStr,
+        linkedProduct: linkedProduct,
       );
     }).toList();
 
     // Parse instructions component
     final instructionsData = attributes['instructions'] as List<dynamic>? ?? [];
-    final sortedInstructions = List<Map<String, dynamic>>.from(
-      instructionsData.map((e) => e as Map<String, dynamic>),
-    )..sort((a, b) => ((a['step_number'] as int?) ?? 0).compareTo((b['step_number'] as int?) ?? 0));
+    final sortedInstructions =
+        List<Map<String, dynamic>>.from(
+          instructionsData.map((e) => e as Map<String, dynamic>),
+        )..sort(
+          (a, b) => ((a['step_number'] as int?) ?? 0).compareTo(
+            (b['step_number'] as int?) ?? 0,
+          ),
+        );
     final instructions = sortedInstructions
         .map<String>((i) => i['description'] as String? ?? '')
         .toList();
@@ -122,7 +135,8 @@ class Recipe {
 
     // Difficulty enum: Strapi stores lowercase
     final difficultyRaw = attributes['difficulty'] as String? ?? 'medium';
-    final difficulty = '${difficultyRaw[0].toUpperCase()}${difficultyRaw.substring(1)}';
+    final difficulty =
+        '${difficultyRaw[0].toUpperCase()}${difficultyRaw.substring(1)}';
 
     return Recipe(
       id: (json['documentId'] ?? json['id']).toString(),
@@ -141,7 +155,7 @@ class Recipe {
       reviewCount: attributes['review_count'] as int? ?? 0,
       createdAt:
           DateTime.tryParse(attributes['createdAt'] as String? ?? '') ??
-              DateTime.now(),
+          DateTime.now(),
     );
   }
 
@@ -228,7 +242,8 @@ class Recipe {
     Product? findProduct(String name) {
       try {
         return sampleProducts.firstWhere(
-            (p) => p.name.toLowerCase().contains(name.toLowerCase()));
+          (p) => p.name.toLowerCase().contains(name.toLowerCase()),
+        );
       } catch (_) {
         return null;
       }
@@ -240,7 +255,8 @@ class Recipe {
         name: 'Luwombo (Steamed Chicken Stew)',
         description:
             'A traditional Ugandan dish where chicken is steamed in banana leaves with groundnut sauce. A ceremonial favourite often served at special occasions, originating from the Buganda Kingdom.',
-        image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400',
+        image:
+            'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400',
         authorName: 'Chef Aisha',
         prepTime: 30,
         cookTime: 90,
@@ -279,11 +295,7 @@ class Recipe {
             name: 'Banana Leaves (for wrapping)',
             quantity: '6 pieces',
           ),
-          RecipeIngredient(
-            id: '1-6',
-            name: 'Salt',
-            quantity: '1 tsp',
-          ),
+          RecipeIngredient(id: '1-6', name: 'Salt', quantity: '1 tsp'),
         ],
         instructions: [
           'Mix groundnut paste with a little water to form a smooth sauce.',
@@ -298,7 +310,8 @@ class Recipe {
         name: 'Rolex (Rolled Eggs)',
         description:
             'Uganda\'s beloved street food — a chapati rolled around a fried egg omelette with vegetables. The name comes from "rolled eggs". Quick, cheap, and delicious.',
-        image: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400',
+        image:
+            'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400',
         authorName: 'Street Food Joe',
         prepTime: 5,
         cookTime: 10,
@@ -309,11 +322,7 @@ class Recipe {
         tags: ['Quick', 'Street Food', 'Ugandan', 'Budget'],
         createdAt: DateTime(2025, 1, 5),
         ingredients: [
-          RecipeIngredient(
-            id: '2-1',
-            name: 'Chapati',
-            quantity: '1 piece',
-          ),
+          RecipeIngredient(id: '2-1', name: 'Chapati', quantity: '1 piece'),
           RecipeIngredient(
             id: '2-2',
             name: 'Eggs',
@@ -357,7 +366,8 @@ class Recipe {
         name: 'Matoke (Steamed Green Bananas)',
         description:
             'The staple dish of Uganda — green bananas steamed and mashed, often served with a meat or groundnut sauce. Every Ugandan home has their own version.',
-        image: 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?w=400',
+        image:
+            'https://images.unsplash.com/photo-1603833665858-e61d17a86224?w=400',
         authorName: 'Mama Grace',
         prepTime: 15,
         cookTime: 45,
@@ -392,16 +402,8 @@ class Recipe {
             quantity: '3 tbsp',
             linkedProduct: findProduct('Cooking Oil'),
           ),
-          RecipeIngredient(
-            id: '3-5',
-            name: 'Salt',
-            quantity: '1 tsp',
-          ),
-          RecipeIngredient(
-            id: '3-6',
-            name: 'Water',
-            quantity: '500ml',
-          ),
+          RecipeIngredient(id: '3-5', name: 'Salt', quantity: '1 tsp'),
+          RecipeIngredient(id: '3-6', name: 'Water', quantity: '500ml'),
         ],
         instructions: [
           'Peel the green bananas and place in a pot lined with banana leaves or a steamer.',

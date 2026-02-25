@@ -22,8 +22,12 @@ class StrapiService {
     final body = json.decode(response.body);
     final data = body['data'] as List<dynamic>;
     return data
-        .map((item) =>
-            Category.fromStrapi(item as Map<String, dynamic>, baseUrl: _baseUrl))
+        .map(
+          (item) => Category.fromStrapi(
+            item as Map<String, dynamic>,
+            baseUrl: _baseUrl,
+          ),
+        )
         .toList();
   }
 
@@ -39,14 +43,28 @@ class StrapiService {
     final body = json.decode(response.body);
     final data = body['data'] as List<dynamic>;
     return data
-        .map((item) =>
-            Product.fromStrapi(item as Map<String, dynamic>, baseUrl: _baseUrl))
+        .map(
+          (item) => Product.fromStrapi(
+            item as Map<String, dynamic>,
+            baseUrl: _baseUrl,
+          ),
+        )
         .toList();
   }
 
-  static Future<List<ShoppingList>> getShoppingLists() async {
+  static Future<List<ShoppingList>> getShoppingLists({
+    String? authToken,
+  }) async {
+    final url = authToken != null
+        ? '$_apiUrl/shopping-lists/me?populate[items][populate][product][populate]=*'
+        : '$_apiUrl/shopping-lists?populate[items][populate][product][populate]=*';
+
+    final headers = <String, String>{
+      if (authToken != null) 'Authorization': 'Bearer $authToken',
+    };
+
     final response = await http
-        .get(Uri.parse('$_apiUrl/shopping-lists?populate=*'))
+        .get(Uri.parse(url), headers: headers.isNotEmpty ? headers : null)
         .timeout(AppConstants.apiTimeout);
 
     if (response.statusCode != 200) {
@@ -62,7 +80,11 @@ class StrapiService {
 
   static Future<List<Recipe>> getRecipes() async {
     final response = await http
-        .get(Uri.parse('$_apiUrl/recipes?populate=*'))
+        .get(
+          Uri.parse(
+            '$_apiUrl/recipes?populate[image]=*&populate[ingredients][populate][product][populate]=*&populate[instructions]=*',
+          ),
+        )
         .timeout(AppConstants.apiTimeout);
 
     if (response.statusCode != 200) {
@@ -72,8 +94,12 @@ class StrapiService {
     final body = json.decode(response.body);
     final data = body['data'] as List<dynamic>;
     return data
-        .map((item) =>
-            Recipe.fromStrapi(item as Map<String, dynamic>, baseUrl: _baseUrl))
+        .map(
+          (item) => Recipe.fromStrapi(
+            item as Map<String, dynamic>,
+            baseUrl: _baseUrl,
+          ),
+        )
         .toList();
   }
 }

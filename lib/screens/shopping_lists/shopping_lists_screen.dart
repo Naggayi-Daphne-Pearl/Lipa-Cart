@@ -8,6 +8,7 @@ import '../../core/constants/app_sizes.dart';
 import '../../models/shopping_list.dart';
 import '../../providers/shopping_list_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 
 class ShoppingListsScreen extends StatefulWidget {
@@ -24,7 +25,10 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ShoppingListProvider>().loadLists();
+      final authProvider = context.read<AuthProvider>();
+      context.read<ShoppingListProvider>().loadLists(
+        authToken: authProvider.token,
+      );
     });
   }
 
@@ -377,6 +381,13 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
   }
 
   void _showCreateListSheet(BuildContext context) {
+    final shoppingListProvider = context.read<ShoppingListProvider>();
+    final isPremium = context.read<AuthProvider>().user?.isPremium ?? false;
+    if (!shoppingListProvider.canCreateList(isPremium: isPremium)) {
+      _showFreeTierLimitDialog(context);
+      return;
+    }
+
     final nameController = TextEditingController();
     final descController = TextEditingController();
     String selectedEmoji = '🛒';
@@ -559,15 +570,23 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       if (nameController.text.isNotEmpty) {
-                        context.read<ShoppingListProvider>().createList(
-                          name: nameController.text,
-                          description: descController.text.isEmpty
-                              ? null
-                              : descController.text,
-                          emoji: selectedEmoji,
-                          color: selectedColor,
-                        );
-                        Navigator.pop(context);
+                        final didCreate = context
+                            .read<ShoppingListProvider>()
+                            .createList(
+                              name: nameController.text,
+                              description: descController.text.isEmpty
+                                  ? null
+                                  : descController.text,
+                              emoji: selectedEmoji,
+                              color: selectedColor,
+                              isPremium: isPremium,
+                            );
+                        if (didCreate) {
+                          Navigator.pop(context);
+                        } else {
+                          Navigator.pop(context);
+                          _showFreeTierLimitDialog(context);
+                        }
                       }
                     },
                     style: ElevatedButton.styleFrom(
@@ -769,7 +788,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
           item.linkedProduct!,
           quantity: item.quantity.toDouble(),
         );
-        addedCount++;
+        addedCount += item.quantity;
       }
     }
 
@@ -807,5 +826,32 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
   Color _parseColor(String hexColor) {
     final hex = hexColor.replaceAll('#', '');
     return Color(int.parse('FF$hex', radix: 16));
+  }
+
+  void _showFreeTierLimitDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+        ),
+        title: const Text('Free Plan Limit Reached'),
+        content: Text(
+          'You can create up to ${ShoppingListProvider.freeTierListLimit} shopping lists on the free plan. Upgrade to premium for unlimited lists.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'OK',
+              style: AppTextStyles.labelMedium.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

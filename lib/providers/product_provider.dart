@@ -33,12 +33,20 @@ class ProductProvider extends ChangeNotifier {
   double get selectedMaxPrice => _selectedMaxPrice;
   double get minRating => _minRating;
   bool get inStockOnly => _inStockOnly;
+  bool get hasActiveFilters => _selectedMinPrice != _minPrice ||
+      _selectedMaxPrice != _maxPrice ||
+      _minRating > 0 ||
+      _inStockOnly;
 
   List<Product> get featuredProducts =>
       _products.where((p) => p.isFeatured).toList();
 
   List<Product> getProductsByCategory(String categoryId) {
     return _products.where((p) => p.categoryId == categoryId).toList();
+  }
+
+  List<Product> getFilteredProductsByCategory(String categoryId) {
+    return _applyFilters(getProductsByCategory(categoryId));
   }
 
   Product? getProductById(String id) {

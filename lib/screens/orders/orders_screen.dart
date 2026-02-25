@@ -22,8 +22,11 @@ class OrdersScreen extends StatefulWidget {
   State<OrdersScreen> createState() => _OrdersScreenState();
 }
 
+enum OrderTab { active, cancelled }
+
 class _OrdersScreenState extends State<OrdersScreen> {
   bool _isLoadingOrders = false;
+  OrderTab _selectedTab = OrderTab.active;
 
   @override
   void initState() {
@@ -93,6 +96,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
     print('DEBUG: Past orders: ${orderProvider.pastOrders.length}');
     print('DEBUG: Is loading: $_isLoadingOrders');
 
+    // Separate cancelled orders from past orders
+    final activeAndDeliveredOrders = orderProvider.orders
+        .where((o) => o.status != OrderStatus.cancelled)
+        .toList();
+    final cancelledOrders = orderProvider.orders
+        .where((o) => o.status == OrderStatus.cancelled)
+        .toList();
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       bottomNavigationBar: widget.showBottomNav
@@ -125,7 +136,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Title
+                        // Header
                         Padding(
                           padding: EdgeInsets.all(
                             context.responsive<double>(
@@ -134,81 +145,75 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               desktop: 24.0,
                             ),
                           ),
-                          child: Text(
-                            'My Orders',
-                            style: AppTextStyles.h3.copyWith(
-                              fontWeight: FontWeight.w800,
-                              fontSize: context.responsive<double>(
-                                mobile: 26.0,
-                                tablet: 30.0,
-                                desktop: 34.0,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'My Orders',
+                                style: AppTextStyles.h3.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: context.responsive<double>(
+                                    mobile: 26.0,
+                                    tablet: 30.0,
+                                    desktop: 34.0,
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                         ),
 
-                        // Active Orders Section
-                        if (orderProvider.activeOrders.isNotEmpty) ...[
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: context.horizontalPadding,
-                            ),
-                            child: Text(
-                              'ACTIVE ORDERS',
-                              style: AppTextStyles.caption.copyWith(
-                                color: AppColors.textTertiary,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            height: context.responsive<double>(
-                              mobile: AppSizes.sm,
-                              tablet: AppSizes.md,
-                              desktop: AppSizes.md,
-                            ),
-                          ),
-                          if (context.isMobile)
-                            ...orderProvider.activeOrders.map(
-                              (order) => _buildActiveOrderCard(context, order),
-                            )
-                          else
-                            _buildOrdersTable(
-                              context,
-                              orderProvider.activeOrders,
-                            ),
-                        ],
-
-                        // Past Orders Section
+                        // Tab Bar
                         Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            context.horizontalPadding,
-                            context.responsive<double>(
-                              mobile: AppSizes.lg,
-                              tablet: AppSizes.xl,
-                              desktop: 24.0,
-                            ),
-                            context.horizontalPadding,
-                            AppSizes.sm,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: context.horizontalPadding,
                           ),
-                          child: Text(
-                            'PAST ORDERS',
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textTertiary,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: AppColors.grey200,
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTabButton(
+                                    context,
+                                    'Ongoing/Delivered',
+                                    OrderTab.active,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _buildTabButton(
+                                    context,
+                                    'Canceled/Returned',
+                                    OrderTab.cancelled,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        if (orderProvider.pastOrders.isEmpty)
-                          _buildEmptyState(context, 'No past orders yet')
-                        else if (context.isMobile)
-                          ...orderProvider.pastOrders.map(
-                            (order) => _buildPastOrderCard(context, order),
-                          )
-                        else
-                          _buildOrdersTable(context, orderProvider.pastOrders),
+
+                        SizedBox(height: context.responsive<double>(
+                          mobile: AppSizes.md,
+                          tablet: AppSizes.lg,
+                          desktop: AppSizes.lg,
+                        )),
+
+                        // Orders List
+                        _selectedTab == OrderTab.active
+                            ? _buildOrdersList(
+                                context,
+                                activeAndDeliveredOrders,
+                              )
+                            : _buildOrdersList(
+                                context,
+                                cancelledOrders,
+                              ),
 
                         const SizedBox(height: 100),
                       ],
@@ -220,741 +225,323 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
-  Widget _buildPastOrdersGrid(BuildContext context, List<Order> orders) {
-    final columns = context.responsive<int>(
-      mobile: 1,
-      tablet: 2,
-      desktop: 2,
-      largeDesktop: 3,
-    );
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: columns,
-        crossAxisSpacing: context.responsive<double>(
-          mobile: AppSizes.md,
-          tablet: AppSizes.lg,
-          desktop: 24.0,
-        ),
-        mainAxisSpacing: context.responsive<double>(
-          mobile: AppSizes.md,
-          tablet: AppSizes.lg,
-          desktop: 24.0,
-        ),
-        childAspectRatio: context.responsive<double>(
-          mobile: 1.0,
-          tablet: 2.0,
-          desktop: 2.2,
-        ),
-      ),
-      itemCount: orders.length,
-      itemBuilder: (context, index) =>
-          _buildPastOrderCard(context, orders[index]),
-    );
-  }
-
-  Widget _buildActiveOrderCard(BuildContext context, Order order) {
-    return Container(
-      margin: EdgeInsets.symmetric(
-        horizontal: context.horizontalPadding,
-        vertical: context.responsive<double>(
-          mobile: AppSizes.sm,
-          tablet: AppSizes.md,
-          desktop: AppSizes.md,
-        ),
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.accent,
-        borderRadius: BorderRadius.circular(
-          context.responsive<double>(
-            mobile: AppSizes.radiusXl,
-            tablet: 20.0,
-            desktop: 24.0,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accent.withValues(alpha: 0.2),
-            blurRadius: context.responsive<double>(
-              mobile: 8.0,
-              tablet: 12.0,
-              desktop: 16.0,
-            ),
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+  Widget _buildTabButton(
+    BuildContext context,
+    String label,
+    OrderTab tab,
+  ) {
+    final isSelected = _selectedTab == tab;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTab = tab),
       child: Column(
         children: [
-          // Order Info
           Padding(
-            padding: EdgeInsets.all(
-              context.responsive<double>(
-                mobile: AppSizes.lg,
-                tablet: AppSizes.xl,
-                desktop: 24.0,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSizes.md,
+              vertical: AppSizes.md,
+            ),
+            child: Text(
+              label,
+              style: AppTextStyles.labelMedium.copyWith(
+                color:
+                    isSelected ? AppColors.primary : AppColors.textSecondary,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Order #${order.orderNumber}',
-                      style: AppTextStyles.caption.copyWith(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: context.responsive<double>(
-                          mobile: 12.0,
-                          tablet: 13.0,
-                          desktop: 14.0,
-                        ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => context.push(
-                        '/customer/order-tracking',
-                        extra: order,
-                      ),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: context.responsive<double>(
-                            mobile: AppSizes.md,
-                            tablet: AppSizes.lg,
-                            desktop: AppSizes.lg,
-                          ),
-                          vertical: AppSizes.xs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(
-                            AppSizes.radiusFull,
-                          ),
-                        ),
-                        child: Text(
-                          'Track Order',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSizes.xs),
-                Text(
-                  _getEstimatedTime(order),
-                  style: AppTextStyles.h4.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: context.responsive<double>(
-                      mobile: 22.0,
-                      tablet: 26.0,
-                      desktop: 28.0,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  height: context.responsive<double>(
-                    mobile: AppSizes.lg,
-                    tablet: AppSizes.xl,
-                    desktop: AppSizes.xl,
-                  ),
-                ),
-                // Progress Indicator
-                _buildProgressIndicator(context, order.status),
-              ],
-            ),
           ),
-          // Rider Info
-          Container(
-            padding: const EdgeInsets.all(AppSizes.md),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(AppSizes.radiusXl),
-                bottomRight: Radius.circular(AppSizes.radiusXl),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  ),
-                  child: const Icon(
-                    Iconsax.truck_fast,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: AppSizes.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'John K.',
-                        style: AppTextStyles.labelMedium.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        'Your delivery rider',
-                        style: AppTextStyles.caption.copyWith(
-                          color: Colors.white.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  ),
-                  child: Icon(Iconsax.call, color: AppColors.accent, size: 20),
-                ),
-              ],
-            ),
-          ),
+          if (isSelected)
+            Container(
+              height: 3,
+              color: AppColors.primary,
+            )
+          else
+            const SizedBox(height: 3),
         ],
       ),
     );
   }
 
-  Widget _buildProgressIndicator(BuildContext context, OrderStatus status) {
-    final stages = [
-      ('Ordered', OrderStatus.pending),
-      ('Shopping', OrderStatus.shopping),
-      ('Ready', OrderStatus.readyForDelivery),
-      ('On', OrderStatus.inTransit),
-      ('Delivered', OrderStatus.delivered),
-    ];
+  Widget _buildOrdersList(BuildContext context, List<Order> orders) {
+    if (orders.isEmpty) {
+      return _buildEmptyState(
+        context,
+        _selectedTab == OrderTab.active
+            ? 'No ongoing orders yet'
+            : 'No canceled orders',
+      );
+    }
 
-    final currentIndex = stages.indexWhere((s) => s.$2 == status);
-    final dotSize = context.responsive<double>(
-      mobile: 8.0,
-      tablet: 10.0,
-      desktop: 12.0,
-    );
-    final currentDotSize = context.responsive<double>(
-      mobile: 12.0,
-      tablet: 14.0,
-      desktop: 16.0,
-    );
+    print('DEBUG: _buildOrdersList - displaying ${orders.length} orders');
+    for (var i = 0; i < orders.length; i++) {
+      print('DEBUG: Order in list $i - id: ${orders[i].id}, items: ${orders[i].items.length}, itemCount: ${orders[i].itemCount}');
+    }
 
-    return Row(
-      children: [
-        // Progress line
-        Expanded(
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Background line
-              Container(
-                height: context.responsive<double>(
-                  mobile: 3.0,
-                  tablet: 4.0,
-                  desktop: 5.0,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              // Progress line
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FractionallySizedBox(
-                  widthFactor: currentIndex >= 0
-                      ? (currentIndex + 1) / stages.length
-                      : 0.2,
-                  child: Container(
-                    height: context.responsive<double>(
-                      mobile: 3.0,
-                      tablet: 4.0,
-                      desktop: 5.0,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-              ),
-              // Stage dots
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: stages.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final stage = entry.value;
-                  final isCompleted = currentIndex >= index;
-                  final isCurrent = currentIndex == index;
-
-                  return Column(
-                    children: [
-                      Container(
-                        width: isCurrent ? currentDotSize : dotSize,
-                        height: isCurrent ? currentDotSize : dotSize,
-                        decoration: BoxDecoration(
-                          color: isCompleted
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.3),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(height: AppSizes.xs),
-                      Text(
-                        stage.$1,
-                        style: AppTextStyles.caption.copyWith(
-                          color: isCompleted
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.5),
-                          fontSize: context.responsive<double>(
-                            mobile: 10.0,
-                            tablet: 11.0,
-                            desktop: 12.0,
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: context.horizontalPadding,
+      ),
+      child: Column(
+        children: orders
+            .map((order) => _buildCleanOrderCard(context, order))
+            .toList(),
+      ),
     );
   }
 
-  Widget _buildOrdersTable(BuildContext context, List<Order> orders) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+  Widget _buildCleanOrderCard(BuildContext context, Order order) {
+    // Get the first product image from the order
+    final firstProduct = order.items.isNotEmpty ? order.items.first : null;
+    final imageUrl = firstProduct?.product.image;
+    
+    print('DEBUG: _buildCleanOrderCard - order: ${order.orderNumber}, items: ${order.items.length}, itemCount: ${order.itemCount}, firstProduct: ${firstProduct?.product.name}');
+
+    return GestureDetector(
+      onTap: () => context.push('/customer/order-tracking', extra: order),
       child: Container(
+        margin: EdgeInsets.only(
+          bottom: context.responsive<double>(
+            mobile: AppSizes.md,
+            tablet: AppSizes.lg,
+            desktop: AppSizes.lg,
+          ),
+        ),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(
             context.responsive<double>(
-              mobile: AppSizes.radiusLg,
-              tablet: AppSizes.radiusXl,
-              desktop: 20.0,
+              mobile: AppSizes.radiusMd,
+              tablet: AppSizes.radiusLg,
+              desktop: 12.0,
             ),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Column(
-          children: [
-            _buildOrdersTableHeader(context),
-            ...orders.map((order) => _buildOrdersTableRow(context, order)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOrdersTableHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSizes.lg,
-        vertical: AppSizes.md,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.grey100,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(AppSizes.radiusXl),
-          topRight: Radius.circular(AppSizes.radiusXl),
-        ),
-      ),
-      child: Row(
-        children: [
-          _buildTableHeaderCell(context, 'Order', flex: 2),
-          _buildTableHeaderCell(context, 'Placed', flex: 2),
-          _buildTableHeaderCell(context, 'Items', flex: 4),
-          _buildTableHeaderCell(context, 'Address', flex: 3),
-          _buildTableHeaderCell(context, 'Total', flex: 2),
-          _buildTableHeaderCell(context, 'Status', flex: 2),
-          _buildTableHeaderCell(context, 'Payment', flex: 2),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTableHeaderCell(
-    BuildContext context,
-    String label, {
-    required int flex,
-  }) {
-    return Expanded(
-      flex: flex,
-      child: Text(
-        label,
-        style: AppTextStyles.caption.copyWith(
-          color: AppColors.textTertiary,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.3,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOrdersTableRow(BuildContext context, Order order) {
-    return InkWell(
-      onTap: () => context.push('/customer/order-tracking', extra: order),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSizes.lg,
-          vertical: AppSizes.md,
-        ),
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.grey100)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 2,
-              child: Text(
-                '#${order.orderNumber}',
-                style: AppTextStyles.labelMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Text(
-                Formatters.formatDate(order.createdAt),
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
-            Expanded(
-              flex: 4,
-              child: Text(
-                _orderItemsSummary(order),
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Expanded(
-              flex: 3,
-              child: Text(
-                order.deliveryAddress.fullAddress.isNotEmpty
-                    ? order.deliveryAddress.fullAddress
-                    : order.deliveryAddress.label,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Text(
-                Formatters.formatCurrency(order.total),
-                style: AppTextStyles.labelMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            Expanded(flex: 2, child: _buildStatusPill(order.status)),
-            Expanded(
-              flex: 2,
-              child: Text(
-                _paymentLabel(order.paymentMethod),
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _orderItemsSummary(Order order) {
-    final itemNames = order.items
-        .map((item) => item.product.name)
-        .where((name) => name.trim().isNotEmpty)
-        .toList();
-
-    if (itemNames.isEmpty) {
-      return '${order.itemCount} items';
-    }
-
-    final preview = itemNames.take(2).join(', ');
-    final remaining = itemNames.length - 2;
-    final suffix = remaining > 0 ? ', +$remaining more' : '';
-    return '${order.itemCount} items • $preview$suffix';
-  }
-
-  String _paymentLabel(PaymentMethod method) {
-    switch (method) {
-      case PaymentMethod.cashOnDelivery:
-        return 'Cash';
-      case PaymentMethod.card:
-        return 'Card';
-      case PaymentMethod.mobileMoney:
-      default:
-        return 'Mobile Money';
-    }
-  }
-
-  Widget _buildStatusPill(OrderStatus status) {
-    final color = _statusColor(status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        status.displayName,
-        style: AppTextStyles.caption.copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-
-  Color _statusColor(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return AppColors.accent;
-      case OrderStatus.confirmed:
-        return AppColors.primary;
-      case OrderStatus.shopping:
-        return AppColors.primary;
-      case OrderStatus.readyForDelivery:
-        return AppColors.primary;
-      case OrderStatus.inTransit:
-        return AppColors.accent;
-      case OrderStatus.delivered:
-        return AppColors.success;
-      case OrderStatus.cancelled:
-        return AppColors.error;
-    }
-  }
-
-  Widget _buildPastOrderCard(BuildContext context, Order order) {
-    return Container(
-      margin: EdgeInsets.only(
-        left: context.isMobile ? context.horizontalPadding : 0,
-        right: context.isMobile ? context.horizontalPadding : 0,
-        bottom: context.isMobile ? AppSizes.md : 0,
-      ),
-      padding: EdgeInsets.all(
-        context.responsive<double>(
-          mobile: AppSizes.md,
-          tablet: AppSizes.lg,
-          desktop: 20.0,
-        ),
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(
-          context.responsive<double>(
-            mobile: AppSizes.radiusLg,
-            tablet: AppSizes.radiusXl,
-            desktop: 20.0,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: context.responsive<double>(
-              mobile: 8.0,
-              tablet: 12.0,
+        child: Padding(
+          padding: EdgeInsets.all(
+            context.responsive<double>(
+              mobile: AppSizes.md,
+              tablet: AppSizes.lg,
               desktop: 16.0,
             ),
-            offset: const Offset(0, 4),
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Order header
-          Row(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Product Image
               Container(
                 width: context.responsive<double>(
-                  mobile: 40.0,
-                  tablet: 44.0,
-                  desktop: 48.0,
+                  mobile: 70.0,
+                  tablet: 80.0,
+                  desktop: 90.0,
                 ),
                 height: context.responsive<double>(
-                  mobile: 40.0,
-                  tablet: 44.0,
-                  desktop: 48.0,
+                  mobile: 70.0,
+                  tablet: 80.0,
+                  desktop: 90.0,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                ),
-                child: Icon(
-                  Iconsax.tick_circle,
-                  color: AppColors.primary,
-                  size: context.responsive<double>(
-                    mobile: 20.0,
-                    tablet: 22.0,
-                    desktop: 24.0,
+                  color: AppColors.grey100,
+                  borderRadius: BorderRadius.circular(
+                    AppSizes.radiusMd,
                   ),
                 ),
+                child: imageUrl != null && imageUrl.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(
+                          AppSizes.radiusMd,
+                        ),
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Iconsax.image,
+                              color: AppColors.textTertiary,
+                              size: 32,
+                            );
+                          },
+                        ),
+                      )
+                    : Icon(
+                        Iconsax.image,
+                        color: AppColors.textTertiary,
+                        size: 32,
+                      ),
               ),
-              const SizedBox(width: AppSizes.md),
+
+              const SizedBox(width: AppSizes.lg),
+
+              // Order Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Product Name
                     Text(
-                      'Order #${order.orderNumber}',
+                      firstProduct?.product.name ?? 'Order',
                       style: AppTextStyles.labelMedium.copyWith(
                         fontWeight: FontWeight.w600,
                         fontSize: context.responsive<double>(
                           mobile: 14.0,
                           tablet: 15.0,
-                          desktop: 16.0,
+                          desktop: 15.0,
+                        ),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+
+                    const SizedBox(height: AppSizes.xs),
+
+                    // Order Number
+                    Text(
+                      'Order #${order.orderNumber}',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: context.responsive<double>(
+                          mobile: 12.0,
+                          tablet: 12.0,
+                          desktop: 13.0,
                         ),
                       ),
                     ),
-                    Text(
-                      Formatters.formatDate(order.createdAt),
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+
+                    SizedBox(height: context.responsive<double>(
+                      mobile: AppSizes.sm,
+                      tablet: AppSizes.md,
+                      desktop: AppSizes.md,
+                    )),
+
+                    // Status and Date Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Status Badge
+                        _buildStatusBadge(order.status),
+
+                        // Date
+                        Text(
+                          Formatters.formatDate(order.createdAt),
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            fontSize: context.responsive<double>(
+                              mobile: 11.0,
+                              tablet: 12.0,
+                              desktop: 12.0,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                  border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Iconsax.tick_circle,
-                      color: AppColors.primary,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Delivered',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+
+              const SizedBox(width: AppSizes.md),
+
+              // Arrow Icon
+              Align(
+                alignment: Alignment.topRight,
+                child: Icon(
+                  Iconsax.arrow_right_3,
+                  color: AppColors.textSecondary,
+                  size: 18,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSizes.md),
-          // Divider
-          Divider(color: AppColors.grey200, height: 1),
-          const SizedBox(height: AppSizes.md),
-          // Order details
-          Row(
-            children: [
-              Icon(Iconsax.location, color: AppColors.textSecondary, size: 16),
-              const SizedBox(width: AppSizes.xs),
-              Expanded(
-                child: Text(
-                  order.deliveryAddress.label,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Text(
-                Formatters.formatCurrency(order.total),
-                style: AppTextStyles.labelMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                  fontSize: context.responsive<double>(
-                    mobile: 14.0,
-                    tablet: 15.0,
-                    desktop: 16.0,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSizes.xs),
-              Icon(
-                Iconsax.arrow_right_3,
-                color: AppColors.textSecondary,
-                size: 16,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSizes.md),
-          // Reorder button
-          GestureDetector(
-            onTap: () {
-              // TODO: Implement reorder functionality
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Iconsax.refresh, color: AppColors.accent, size: 18),
-                const SizedBox(width: AppSizes.xs),
-                Text(
-                  'Reorder',
-                  style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.accent,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
+  Widget _buildStatusBadge(OrderStatus status) {
+    final (bgColor, textColor, label) = _getStatusColors(status);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.caption.copyWith(
+          color: textColor,
+          fontWeight: FontWeight.w600,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+
+  (Color bgColor, Color textColor, String label) _getStatusColors(
+    OrderStatus status,
+  ) {
+    switch (status) {
+      case OrderStatus.pending:
+        return (
+          const Color(0xFFFFF4E6),
+          const Color(0xFFFF9800),
+          'Processing'
+        );
+      case OrderStatus.confirmed:
+        return (
+          const Color(0xFFE3F2FD),
+          const Color(0xFF1976D2),
+          'Confirmed'
+        );
+      case OrderStatus.shopping:
+        return (
+          const Color(0xFFE3F2FD),
+          const Color(0xFF1976D2),
+          'Shopping'
+        );
+      case OrderStatus.readyForDelivery:
+        return (
+          const Color(0xFFE3F2FD),
+          const Color(0xFF1976D2),
+          'Ready'
+        );
+      case OrderStatus.inTransit:
+        return (
+          const Color(0xFFFFF4E6),
+          const Color(0xFFFF9800),
+          'On the way'
+        );
+      case OrderStatus.delivered:
+        return (
+          const Color(0xFFE8F5E9),
+          const Color(0xFF388E3C),
+          'Delivered'
+        );
+      case OrderStatus.cancelled:
+        return (
+          const Color(0xFFFFEBEE),
+          const Color(0xFFD32F2F),
+          'Cancelled'
+        );
+    }
+  }
+
   Widget _buildEmptyState(BuildContext context, String message) {
     return Padding(
-      padding: const EdgeInsets.all(AppSizes.xl),
+      padding: EdgeInsets.all(
+        context.responsive<double>(
+          mobile: AppSizes.xl,
+          tablet: AppSizes.xl,
+          desktop: AppSizes.xl,
+        ),
+      ),
       child: Center(
         child: Column(
           children: [
@@ -999,24 +586,5 @@ class _OrdersScreenState extends State<OrdersScreen> {
         ),
       ),
     );
-  }
-
-  String _getEstimatedTime(Order order) {
-    switch (order.status) {
-      case OrderStatus.pending:
-        return 'Processing...';
-      case OrderStatus.confirmed:
-        return '45-60 min away';
-      case OrderStatus.shopping:
-        return '35-45 min away';
-      case OrderStatus.readyForDelivery:
-        return '25-35 min away';
-      case OrderStatus.inTransit:
-        return '15-25 min away';
-      case OrderStatus.delivered:
-        return 'Delivered';
-      case OrderStatus.cancelled:
-        return 'Cancelled';
-    }
   }
 }

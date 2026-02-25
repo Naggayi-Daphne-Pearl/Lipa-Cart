@@ -10,6 +10,7 @@ import '../../providers/cart_provider.dart';
 import '../../widgets/category_card.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/product_filter_sheet.dart';
 
 class CategoriesScreen extends StatelessWidget {
   const CategoriesScreen({super.key});
@@ -63,7 +64,28 @@ class CategoryProductsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final productProvider = context.watch<ProductProvider>();
     final cartProvider = context.watch<CartProvider>();
-    final products = productProvider.getProductsByCategory(categoryId);
+    final products =
+        productProvider.getFilteredProductsByCategory(categoryId);
+
+    void showFilterSheet() {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) => ProductFilterSheet(
+            scrollController: scrollController,
+            productProvider: productProvider,
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.backgroundGrey,
@@ -74,6 +96,13 @@ class CategoryProductsScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(categoryName),
+        actions: [
+          IconButton(
+            icon: const Icon(Iconsax.filter),
+            onPressed: showFilterSheet,
+            tooltip: 'Filters',
+          ),
+        ],
       ),
       body: products.isEmpty
           ? Center(
@@ -111,6 +140,39 @@ class CategoryProductsScreen extends StatelessWidget {
                           color: AppColors.textMedium,
                         ),
                       ),
+                      const Spacer(),
+                      if (productProvider.hasActiveFilters)
+                        TextButton.icon(
+                          onPressed: () => productProvider.resetFilters(),
+                          icon: const Icon(
+                            Iconsax.close_circle,
+                            size: 16,
+                            color: AppColors.primaryOrange,
+                          ),
+                          label: Text(
+                            'Clear filters',
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: AppColors.primaryOrange,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        )
+                      else
+                        TextButton.icon(
+                          onPressed: showFilterSheet,
+                          icon: const Icon(
+                            Iconsax.filter,
+                            size: 16,
+                            color: AppColors.primaryOrange,
+                          ),
+                          label: Text(
+                            'Filters',
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: AppColors.primaryOrange,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

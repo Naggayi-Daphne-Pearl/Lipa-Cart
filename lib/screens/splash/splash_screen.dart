@@ -81,7 +81,7 @@ class _SplashScreenState extends State<SplashScreen>
       // First time user - show onboarding
       context.replace('/onboarding');
     } else {
-      // Guest user (not authenticated) - allow browsing as customer
+      // Guest mode - go to customer home
       context.replace('/customer/home');
     }
   }
@@ -94,67 +94,80 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(color: AppColors.background),
-        child: Center(
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              return FadeTransition(
-                opacity: _fadeAnimation,
-                child: ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Logo container
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF1B7F4E), Color(0xFF15874B)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(32),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.4),
-                              blurRadius: 32,
-                              offset: const Offset(0, 12),
+    return WillPopScope(
+      onWillPop: () async => false, // Disable back button on splash screen
+      child: Scaffold(
+        body: Container(
+          decoration: BoxDecoration(color: AppColors.background),
+          child: Center(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Logo container
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF1B7F4E), Color(0xFF15874B)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(24.0),
-                          child: SvgPicture.asset(
-                            'assets/images/logos/logo-on-green-1.svg',
-                            fit: BoxFit.contain,
+                            borderRadius: BorderRadius.circular(32),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.4),
+                                blurRadius: 32,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: SvgPicture.asset(
+                              'assets/images/logos/logo-on-green-1.svg',
+                              fit: BoxFit.contain,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        AppConstants.appName,
-                        style: AppTextStyles.h2.copyWith(
-                          color: AppColors.textPrimary,
-                          letterSpacing: 2,
+                        const SizedBox(height: 24),
+                        Text(
+                          AppConstants.appName,
+                          style: AppTextStyles.h2.copyWith(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Fresh Groceries Delivered',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
+                        const SizedBox(height: 8),
+                        Text(
+                          AppConstants.appTagline,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 32),
+                        const SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            valueColor:
+                                AlwaysStoppedAnimation(AppColors.primary),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),

@@ -6,6 +6,7 @@ class ShoppingListItem {
   final String? description; // Personal notes/preferences for the item
   final int quantity;
   final String? unit;
+  final double? unitPrice; // Expected price per unit (UGX)
   final double? budgetAmount; // Budget in UGX - "Give me 5000 worth"
   final Product? linkedProduct; // Optional link to actual product
   final bool isChecked;
@@ -16,6 +17,7 @@ class ShoppingListItem {
     this.description,
     this.quantity = 1,
     this.unit,
+    this.unitPrice,
     this.budgetAmount,
     this.linkedProduct,
     this.isChecked = false,
@@ -27,6 +29,7 @@ class ShoppingListItem {
     String? description,
     int? quantity,
     String? unit,
+    double? unitPrice,
     double? budgetAmount,
     Product? linkedProduct,
     bool? isChecked,
@@ -37,6 +40,7 @@ class ShoppingListItem {
       description: description ?? this.description,
       quantity: quantity ?? this.quantity,
       unit: unit ?? this.unit,
+      unitPrice: unitPrice ?? this.unitPrice,
       budgetAmount: budgetAmount ?? this.budgetAmount,
       linkedProduct: linkedProduct ?? this.linkedProduct,
       isChecked: isChecked ?? this.isChecked,
@@ -59,6 +63,9 @@ class ShoppingListItem {
       description: attributes['notes'] as String?,
       quantity: (attributes['quantity'] as num?)?.toInt() ?? 1,
       unit: attributes['unit'] as String?,
+      unitPrice:
+          (attributes['unit_price'] as num?)?.toDouble() ??
+          (attributes['expected_price'] as num?)?.toDouble(),
       budgetAmount: (attributes['budget_amount'] as num?)?.toDouble(),
       linkedProduct: linkedProduct,
     );
@@ -77,6 +84,7 @@ class ShoppingListItem {
       description: json['description'] as String?,
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
       unit: json['unit'] as String?,
+      unitPrice: (json['unitPrice'] as num?)?.toDouble(),
       budgetAmount: (json['budgetAmount'] as num?)?.toDouble(),
       linkedProduct: linkedProduct,
       isChecked: json['isChecked'] as bool? ?? false,
@@ -90,6 +98,7 @@ class ShoppingListItem {
       'description': description,
       'quantity': quantity,
       'unit': unit,
+      'unitPrice': unitPrice,
       'budgetAmount': budgetAmount,
       'linkedProductId': linkedProduct?.id,
       'linkedProduct': linkedProduct?.toJson(),
@@ -127,6 +136,10 @@ class ShoppingList {
   // Get items that have linked products (can be added to cart)
   List<ShoppingListItem> get purchasableItems =>
       items.where((i) => i.linkedProduct != null && !i.isChecked).toList();
+
+  // Get items that don't have linked products yet
+  List<ShoppingListItem> get itemsWithoutProducts =>
+      items.where((i) => i.linkedProduct == null && !i.isChecked).toList();
 
   ShoppingList copyWith({
     String? id,

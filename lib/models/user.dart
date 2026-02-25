@@ -32,6 +32,7 @@ class User {
   final String? name;
   final String? email;
   final String? profileImage;
+  final bool isPremium;
   final UserRole role;
   final String? customerId;
   final List<Address> addresses;
@@ -43,6 +44,7 @@ class User {
     this.name,
     this.email,
     this.profileImage,
+    this.isPremium = false,
     this.role = UserRole.customer,
     this.customerId,
     this.addresses = const [],
@@ -55,6 +57,7 @@ class User {
     String? name,
     String? email,
     String? profileImage,
+    bool? isPremium,
     UserRole? role,
     String? customerId,
     List<Address>? addresses,
@@ -66,6 +69,7 @@ class User {
       name: name ?? this.name,
       email: email ?? this.email,
       profileImage: profileImage ?? this.profileImage,
+      isPremium: isPremium ?? this.isPremium,
       role: role ?? this.role,
       customerId: customerId ?? this.customerId,
       addresses: addresses ?? this.addresses,
@@ -80,6 +84,7 @@ class User {
       'name': name,
       'email': email,
       'profileImage': profileImage,
+      'isPremium': isPremium,
       'role': role.name,
       'customerId': customerId,
       'addresses': addresses.map((a) => a.toJson()).toList(),
@@ -104,6 +109,8 @@ class User {
       name: json['name'] as String?,
       email: json['email'] as String?,
       profileImage: (json['profileImage'] ?? json['profile_photo']) as String?,
+      isPremium:
+          json['isPremium'] as bool? ?? json['is_premium'] as bool? ?? false,
       role: UserRoleExtension.fromString(
         (json['role'] ?? json['user_type']) as String?,
       ),

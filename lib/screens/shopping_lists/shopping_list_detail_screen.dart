@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/shopping_list.dart';
+import '../../models/product.dart';
 import '../../providers/shopping_list_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
@@ -218,6 +218,66 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                   : ListView(
                       padding: const EdgeInsets.all(AppSizes.lg),
                       children: [
+                        // Shopping cart stats header
+                        Container(
+                          padding: const EdgeInsets.all(AppSizes.md),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusMd,
+                            ),
+                            border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Iconsax.bag_2,
+                                    color: AppColors.primary,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: AppSizes.sm),
+                                  Expanded(
+                                    child: Text(
+                                      '${list.purchasableItems.length} item${list.purchasableItems.length != 1 ? 's' : ''} ready for cart',
+                                      style: AppTextStyles.labelMedium.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (list.itemsWithoutProducts.isNotEmpty) ...[
+                                const SizedBox(height: AppSizes.sm),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Iconsax.warning_2,
+                                      color: AppColors.accent,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: AppSizes.sm),
+                                    Expanded(
+                                      child: Text(
+                                        '${list.itemsWithoutProducts.length} item${list.itemsWithoutProducts.length != 1 ? 's' : ''} need product matching',
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          color: AppColors.accent,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: AppSizes.lg),
+
                         // Unchecked items
                         if (uncheckedItems.isNotEmpty) ...[
                           Text(
@@ -496,6 +556,21 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
+                          ] else if (item.unitPrice != null) ...[
+                            Text(
+                              '${item.quantity} ${item.unit ?? ''}',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(width: AppSizes.sm),
+                            Text(
+                              '${Formatters.formatCurrency(item.unitPrice!)} each',
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: color,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ] else ...[
                             Text(
                               '${item.quantity} ${item.unit ?? ''}',
@@ -629,6 +704,39 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 ),
               ),
             ),
+          // Product not linked indicator
+          if (!item.isChecked && item.linkedProduct == null)
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: AppColors.accent.withValues(alpha: 0.3),
+                  ),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSizes.sm),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Iconsax.info_circle,
+                      size: 16,
+                      color: AppColors.accent,
+                    ),
+                    const SizedBox(width: AppSizes.xs),
+                    Text(
+                      'Product not linked - can\'t add to cart',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -690,15 +798,24 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
   void _addItem(
     String name,
     String? description,
+    double? unitPrice,
     double? budgetAmount,
     ShoppingListProvider provider,
   ) {
     if (name.trim().isNotEmpty) {
-      // Try to find a matching product
+      // Try to find a matching product by exact name first, then partial match.
       final productProvider = context.read<ProductProvider>();
-      final matchingProduct = productProvider.products.firstWhere(
-        (p) => p.name.toLowerCase().contains(name.toLowerCase()),
-        orElse: () => productProvider.products.first,
+      final normalized = name.trim().toLowerCase();
+      Product? matchingProduct;
+      for (final product in productProvider.products) {
+        if (product.name.toLowerCase() == normalized) {
+          matchingProduct = product;
+          break;
+        }
+      }
+      matchingProduct ??= productProvider.products.cast<Product?>().firstWhere(
+        (p) => p?.name.toLowerCase().contains(normalized) ?? false,
+        orElse: () => null,
       );
 
       final item = ShoppingListItem(
@@ -708,11 +825,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
             ? null
             : description?.trim(),
         quantity: 1,
+        unitPrice: unitPrice,
         budgetAmount: budgetAmount,
-        linkedProduct:
-            matchingProduct.name.toLowerCase().contains(name.toLowerCase())
-            ? matchingProduct
-            : null,
+        linkedProduct: matchingProduct,
       );
 
       provider.addItemToList(widget.listId, item);
@@ -721,28 +836,34 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
 
   void _addAllToCart(ShoppingList list, CartProvider cartProvider) {
     int addedCount = 0;
+    int itemsWithoutProduct = 0;
+
     for (final item in list.purchasableItems) {
       if (item.linkedProduct != null) {
-        for (int i = 0; i < item.quantity; i++) {
-          cartProvider.addToCart(item.linkedProduct!);
-        }
-        addedCount++;
+        cartProvider.addToCart(
+          item.linkedProduct!,
+          quantity: item.quantity.toDouble(),
+        );
+        addedCount += item.quantity;
+      } else {
+        itemsWithoutProduct++;
       }
+    }
+
+    String message = 'Added $addedCount items to cart';
+    if (itemsWithoutProduct > 0) {
+      message += ' ($itemsWithoutProduct items couldn\'t be added)';
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Added $addedCount items to cart'),
+        content: Text(message),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
         ),
-        action: SnackBarAction(
-          label: 'View Cart',
-          textColor: Colors.white,
-          onPressed: () => context.go('/customer/cart'),
-        ),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -839,6 +960,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
   void _showAddItemDialog(ShoppingList list, Color color) {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
+    final priceController = TextEditingController();
     final budgetController = TextEditingController();
 
     showDialog(
@@ -897,6 +1019,39 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 ),
                 autofocus: true,
                 textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: AppSizes.md),
+              Text(
+                'Expected Price Per Item (Optional)',
+                style: AppTextStyles.labelMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: AppSizes.xs),
+              TextField(
+                controller: priceController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'e.g., 2500',
+                  hintStyle: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                  prefixText: 'UGX ',
+                  prefixStyle: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide(color: AppColors.grey300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide(color: color, width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.all(AppSizes.md),
+                ),
               ),
               const SizedBox(height: AppSizes.md),
               Text(
@@ -1018,7 +1173,11 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
             onPressed: () {
               final name = nameController.text.trim();
               final description = descriptionController.text.trim();
+              final priceText = priceController.text.trim();
               final budgetText = budgetController.text.trim();
+              final unitPrice = priceText.isEmpty
+                  ? null
+                  : double.tryParse(priceText);
               final budgetAmount = budgetText.isEmpty
                   ? null
                   : double.tryParse(budgetText);
@@ -1027,6 +1186,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 _addItem(
                   name,
                   description.isEmpty ? null : description,
+                  unitPrice,
                   budgetAmount,
                   context.read<ShoppingListProvider>(),
                 );
