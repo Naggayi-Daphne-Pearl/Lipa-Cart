@@ -228,13 +228,16 @@ class ShoppingListProvider extends ChangeNotifier {
 
     final list = _lists[index];
     final normalizedName = item.name.trim().toLowerCase();
-    final incomingProductId = item.linkedProduct?.strapiId ?? item.linkedProduct?.id;
+    final incomingProductId =
+        item.linkedProduct?.strapiId ?? item.linkedProduct?.id;
 
     final duplicateIndex = list.items.indexWhere((existing) {
       final existingName = existing.name.trim().toLowerCase();
-      final existingProductId = existing.linkedProduct?.strapiId ?? existing.linkedProduct?.id;
+      final existingProductId =
+          existing.linkedProduct?.strapiId ?? existing.linkedProduct?.id;
       final sameProduct = existingProductId == incomingProductId;
-      final bothUnlinked = existingProductId == null && incomingProductId == null;
+      final bothUnlinked =
+          existingProductId == null && incomingProductId == null;
       return existingName == normalizedName && (sameProduct || bothUnlinked);
     });
 
@@ -246,7 +249,9 @@ class ShoppingListProvider extends ChangeNotifier {
       final existing = list.items[duplicateIndex];
       final mergedItem = existing.copyWith(
         quantity: existing.quantity + item.quantity,
-        description: (existing.description == null || existing.description!.trim().isEmpty)
+        description:
+            (existing.description == null ||
+                existing.description!.trim().isEmpty)
             ? item.description
             : existing.description,
         unitPrice: existing.unitPrice ?? item.unitPrice,
@@ -260,10 +265,10 @@ class ShoppingListProvider extends ChangeNotifier {
       updatedItems = [...list.items, item];
     }
 
-      final updatedList = list.copyWith(
-        items: updatedItems,
-        updatedAt: DateTime.now(),
-      );
+    final updatedList = list.copyWith(
+      items: updatedItems,
+      updatedAt: DateTime.now(),
+    );
     _lists[index] = updatedList;
     await _persistLists();
     notifyListeners();

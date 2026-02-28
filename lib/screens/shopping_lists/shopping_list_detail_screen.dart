@@ -479,11 +479,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
               GestureDetector(
                 onTap: () => context
                     .read<ShoppingListProvider>()
-                    .toggleItemChecked(
-                      list.id,
-                      item.id,
-                      authToken: authToken,
-                    ),
+                    .toggleItemChecked(list.id, item.id, authToken: authToken),
                 child: Container(
                   width: 60,
                   height: 70,
@@ -686,11 +682,13 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                       const SizedBox(width: AppSizes.xs),
                       GestureDetector(
                         onTap: () {
-                          context.read<ShoppingListProvider>().removeItemFromList(
-                            list.id,
-                            item.id,
-                            authToken: authToken,
-                          );
+                          context
+                              .read<ShoppingListProvider>()
+                              .removeItemFromList(
+                                list.id,
+                                item.id,
+                                authToken: authToken,
+                              );
                         },
                         child: Container(
                           width: 28,
@@ -892,11 +890,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
         linkedProduct: matchingProduct,
       );
 
-      return provider.addItemToList(
-        widget.listId,
-        item,
-        authToken: authToken,
-      );
+      return provider.addItemToList(widget.listId, item, authToken: authToken);
     }
 
     return Future.value(false);
@@ -1603,9 +1597,8 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 showDialog(
                   context: context,
                   barrierDismissible: false,
-                  builder: (_) => const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  builder: (_) =>
+                      const Center(child: CircularProgressIndicator()),
                 );
 
                 try {

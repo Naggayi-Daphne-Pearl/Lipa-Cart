@@ -351,7 +351,9 @@ class OrderService extends ChangeNotifier {
         final data = jsonDecode(response.body);
         _currentOrder = _fromStrapi(data['data']);
         _orders.insert(0, _currentOrder!);
-        print('DEBUG: Order created successfully with ID: ${_currentOrder!.id}');
+        print(
+          'DEBUG: Order created successfully with ID: ${_currentOrder!.id}',
+        );
         notifyListeners();
         return true;
       }
@@ -569,9 +571,7 @@ class OrderService extends ChangeNotifier {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'items': itemsData,
-        }),
+        body: jsonEncode({'items': itemsData}),
       );
 
       print('DEBUG: Bulk create response status: ${response.statusCode}');
@@ -585,21 +585,24 @@ class OrderService extends ChangeNotifier {
           final errorData = jsonDecode(response.body);
           final errorMsg = errorData['error']?['message'] ?? 'Unknown error';
           if (errorMsg.contains('do not exist')) {
-            _error = 'Some products do not exist in the database. '
+            _error =
+                'Some products do not exist in the database. '
                 'This may happen if you\'re using sample data. '
                 'Error: $errorMsg';
           } else {
             _error = 'Failed to create order items: $errorMsg';
           }
         } catch (_) {
-          _error = 'Failed to create order items (status ${response.statusCode})';
+          _error =
+              'Failed to create order items (status ${response.statusCode})';
         }
         notifyListeners();
         return _currentOrder;
       }
 
       final responseData = jsonDecode(response.body);
-      final createdCount = responseData['meta']?['count'] ?? responseData['data']?.length ?? 0;
+      final createdCount =
+          responseData['meta']?['count'] ?? responseData['data']?.length ?? 0;
       final failedCount = responseData['meta']?['failed'] ?? 0;
       print(
         'DEBUG: Bulk create complete - ${createdCount} created, ${failedCount} failed',

@@ -110,7 +110,8 @@ class CartProvider extends ChangeNotifier {
 
     if (existingIndex >= 0) {
       _items[existingIndex].quantity += quantity;
-      if (specialInstructions != null && specialInstructions.trim().isNotEmpty) {
+      if (specialInstructions != null &&
+          specialInstructions.trim().isNotEmpty) {
         _items[existingIndex] = _items[existingIndex].copyWith(
           specialInstructions: specialInstructions.trim(),
         );
