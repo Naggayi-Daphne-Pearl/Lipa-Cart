@@ -111,62 +111,173 @@ class ShoppingListProvider extends ChangeNotifier {
     return _lists.length < freeTierListLimit;
   }
 
-  bool createList({
+  Future<bool> createList({
     required String name,
     String? description,
     String emoji = '🛒',
     String color = '#15874B',
     bool isPremium = false,
-  }) {
+    String? authToken,
+  }) async {
     if (!canCreateList(isPremium: isPremium)) {
       return false;
     }
 
-    final newList = ShoppingList(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+    if (authToken == null || authToken.isEmpty) {
+      throw Exception('Authentication required to create shopping lists');
+    }
+
+    final newList = await StrapiService.createShoppingList(
       name: name,
       description: description,
       emoji: emoji,
       color: color,
-      items: [],
-      createdAt: DateTime.now(),
+      authToken: authToken,
     );
+
     _lists.insert(0, newList);
-    _persistLists();
+    await _persistLists();
     notifyListeners();
     return true;
   }
 
-  void updateList(ShoppingList updatedList) {
+  Future<bool> updateList(ShoppingList updatedList, {String? authToken}) async {
     final index = _lists.indexWhere((l) => l.id == updatedList.id);
-    if (index != -1) {
-      _lists[index] = updatedList.copyWith(updatedAt: DateTime.now());
-      _persistLists();
-      notifyListeners();
+    if (index == -1) {
+      return false;
+    }
+
+    if (authToken == null || authToken.isEmpty) {
+      throw Exception('Authentication required to update shopping lists');
+    }
+
+    final savedList = await StrapiService.updateShoppingList(
+      listId: updatedList.id,
+      name: updatedList.name,
+      description: updatedList.description,
+      emoji: updatedList.emoji ?? '🛒',
+      color: updatedList.color,
+      items: updatedList.items,
+      authToken: authToken,
+    );
+
+    _lists[index] = savedList;
+    await _persistLists();
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> _syncListItemsToBackend({
+    required ShoppingList list,
+    String? authToken,
+  }) async {
+    if (authToken == null || authToken.isEmpty) return;
+
+    try {
+      final savedList = await StrapiService.updateShoppingList(
+        listId: list.id,
+        name: list.name,
+        description: list.description,
+        emoji: list.emoji ?? '🛒',
+        color: list.color,
+        items: list.items,
+        authToken: authToken,
+      );
+
+      final refreshedIndex = _lists.indexWhere((l) => l.id == savedList.id);
+      if (refreshedIndex != -1) {
+        _lists[refreshedIndex] = savedList;
+        await _persistLists();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Failed to sync shopping list items: $e');
     }
   }
 
-  void deleteList(String listId) {
+  Future<bool> deleteList(String listId, {String? authToken}) async {
+    final index = _lists.indexWhere((l) => l.id == listId);
+    if (index == -1) {
+      return false;
+    }
+
+    if (authToken == null || authToken.isEmpty) {
+      throw Exception('Authentication required to delete shopping lists');
+    }
+
+    await StrapiService.deleteShoppingList(
+      listId: listId,
+      authToken: authToken,
+    );
+
     _lists.removeWhere((l) => l.id == listId);
-    _persistLists();
+    await _persistLists();
     notifyListeners();
+    return true;
   }
 
-  void addItemToList(String listId, ShoppingListItem item) {
+  Future<bool> addItemToList(
+    String listId,
+    ShoppingListItem item, {
+    String? authToken,
+  }) async {
     final index = _lists.indexWhere((l) => l.id == listId);
-    if (index != -1) {
-      final list = _lists[index];
-      final updatedItems = [...list.items, item];
-      _lists[index] = list.copyWith(
+    if (index == -1) {
+      return false;
+    }
+
+    final list = _lists[index];
+    final normalizedName = item.name.trim().toLowerCase();
+    final incomingProductId = item.linkedProduct?.strapiId ?? item.linkedProduct?.id;
+
+    final duplicateIndex = list.items.indexWhere((existing) {
+      final existingName = existing.name.trim().toLowerCase();
+      final existingProductId = existing.linkedProduct?.strapiId ?? existing.linkedProduct?.id;
+      final sameProduct = existingProductId == incomingProductId;
+      final bothUnlinked = existingProductId == null && incomingProductId == null;
+      return existingName == normalizedName && (sameProduct || bothUnlinked);
+    });
+
+    final bool mergedExisting;
+    List<ShoppingListItem> updatedItems;
+
+    if (duplicateIndex != -1) {
+      mergedExisting = true;
+      final existing = list.items[duplicateIndex];
+      final mergedItem = existing.copyWith(
+        quantity: existing.quantity + item.quantity,
+        description: (existing.description == null || existing.description!.trim().isEmpty)
+            ? item.description
+            : existing.description,
+        unitPrice: existing.unitPrice ?? item.unitPrice,
+        budgetAmount: existing.budgetAmount ?? item.budgetAmount,
+      );
+
+      updatedItems = [...list.items];
+      updatedItems[duplicateIndex] = mergedItem;
+    } else {
+      mergedExisting = false;
+      updatedItems = [...list.items, item];
+    }
+
+      final updatedList = list.copyWith(
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
-      _persistLists();
-      notifyListeners();
-    }
+    _lists[index] = updatedList;
+    await _persistLists();
+    notifyListeners();
+    await _syncListItemsToBackend(list: updatedList, authToken: authToken);
+
+    return mergedExisting;
   }
 
-  void addProductToList(String listId, Product product, {int quantity = 1}) {
+  Future<void> addProductToList(
+    String listId,
+    Product product, {
+    int quantity = 1,
+    String? authToken,
+  }) async {
     final item = ShoppingListItem(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: product.name,
@@ -175,24 +286,34 @@ class ShoppingListProvider extends ChangeNotifier {
       unitPrice: product.price,
       linkedProduct: product,
     );
-    addItemToList(listId, item);
+    await addItemToList(listId, item, authToken: authToken);
   }
 
-  void removeItemFromList(String listId, String itemId) {
+  Future<void> removeItemFromList(
+    String listId,
+    String itemId, {
+    String? authToken,
+  }) async {
     final index = _lists.indexWhere((l) => l.id == listId);
     if (index != -1) {
       final list = _lists[index];
       final updatedItems = list.items.where((i) => i.id != itemId).toList();
-      _lists[index] = list.copyWith(
+      final updatedList = list.copyWith(
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
-      _persistLists();
+      _lists[index] = updatedList;
+      await _persistLists();
       notifyListeners();
+      await _syncListItemsToBackend(list: updatedList, authToken: authToken);
     }
   }
 
-  void toggleItemChecked(String listId, String itemId) {
+  Future<void> toggleItemChecked(
+    String listId,
+    String itemId, {
+    String? authToken,
+  }) async {
     final listIndex = _lists.indexWhere((l) => l.id == listId);
     if (listIndex != -1) {
       final list = _lists[listIndex];
@@ -202,16 +323,23 @@ class ShoppingListProvider extends ChangeNotifier {
         }
         return item;
       }).toList();
-      _lists[listIndex] = list.copyWith(
+      final updatedList = list.copyWith(
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
-      _persistLists();
+      _lists[listIndex] = updatedList;
+      await _persistLists();
       notifyListeners();
+      await _syncListItemsToBackend(list: updatedList, authToken: authToken);
     }
   }
 
-  void updateItemQuantity(String listId, String itemId, int quantity) {
+  Future<void> updateItemQuantity(
+    String listId,
+    String itemId,
+    int quantity, {
+    String? authToken,
+  }) async {
     final listIndex = _lists.indexWhere((l) => l.id == listId);
     if (listIndex != -1) {
       final list = _lists[listIndex];
@@ -221,20 +349,23 @@ class ShoppingListProvider extends ChangeNotifier {
         }
         return item;
       }).toList();
-      _lists[listIndex] = list.copyWith(
+      final updatedList = list.copyWith(
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
-      _persistLists();
+      _lists[listIndex] = updatedList;
+      await _persistLists();
       notifyListeners();
+      await _syncListItemsToBackend(list: updatedList, authToken: authToken);
     }
   }
 
-  void updateItemDescription(
+  Future<void> updateItemDescription(
     String listId,
     String itemId,
-    String? description,
-  ) {
+    String? description, {
+    String? authToken,
+  }) async {
     final listIndex = _lists.indexWhere((l) => l.id == listId);
     if (listIndex != -1) {
       final list = _lists[listIndex];
@@ -244,16 +375,23 @@ class ShoppingListProvider extends ChangeNotifier {
         }
         return item;
       }).toList();
-      _lists[listIndex] = list.copyWith(
+      final updatedList = list.copyWith(
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
-      _persistLists();
+      _lists[listIndex] = updatedList;
+      await _persistLists();
       notifyListeners();
+      await _syncListItemsToBackend(list: updatedList, authToken: authToken);
     }
   }
 
-  void updateItemUnitPrice(String listId, String itemId, double? unitPrice) {
+  Future<void> updateItemUnitPrice(
+    String listId,
+    String itemId,
+    double? unitPrice, {
+    String? authToken,
+  }) async {
     final listIndex = _lists.indexWhere((l) => l.id == listId);
     if (listIndex != -1) {
       final list = _lists[listIndex];
@@ -263,26 +401,30 @@ class ShoppingListProvider extends ChangeNotifier {
         }
         return item;
       }).toList();
-      _lists[listIndex] = list.copyWith(
+      final updatedList = list.copyWith(
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
-      _persistLists();
+      _lists[listIndex] = updatedList;
+      await _persistLists();
       notifyListeners();
+      await _syncListItemsToBackend(list: updatedList, authToken: authToken);
     }
   }
 
-  void clearCheckedItems(String listId) {
+  Future<void> clearCheckedItems(String listId, {String? authToken}) async {
     final index = _lists.indexWhere((l) => l.id == listId);
     if (index != -1) {
       final list = _lists[index];
       final updatedItems = list.items.where((i) => !i.isChecked).toList();
-      _lists[index] = list.copyWith(
+      final updatedList = list.copyWith(
         items: updatedItems,
         updatedAt: DateTime.now(),
       );
-      _persistLists();
+      _lists[index] = updatedList;
+      await _persistLists();
       notifyListeners();
+      await _syncListItemsToBackend(list: updatedList, authToken: authToken);
     }
   }
 
@@ -436,5 +578,22 @@ class ShoppingListProvider extends ChangeNotifier {
         createdAt: DateTime.now(),
       ),
     ];
+  }
+
+  void linkProductToItem(String listId, String itemId, Product product) {
+    final listIndex = _lists.indexWhere((l) => l.id == listId);
+    if (listIndex < 0) return;
+
+    final list = _lists[listIndex];
+    final itemIndex = list.items.indexWhere((i) => i.id == itemId);
+    if (itemIndex < 0) return;
+
+    final updatedItem = list.items[itemIndex].copyWith(linkedProduct: product);
+    final updatedItems = List<ShoppingListItem>.from(list.items);
+    updatedItems[itemIndex] = updatedItem;
+    _lists[listIndex] = list.copyWith(items: updatedItems);
+
+    _persistLists();
+    notifyListeners();
   }
 }

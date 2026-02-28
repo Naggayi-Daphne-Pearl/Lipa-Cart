@@ -88,6 +88,9 @@ class Recipe {
 
     // Parse ingredients component
     final ingredientsData = attributes['ingredients'] as List<dynamic>? ?? [];
+    print(
+      'DEBUG Recipe.fromStrapi - parsing ${ingredientsData.length} ingredients',
+    );
     final ingredients = ingredientsData.map<RecipeIngredient>((item) {
       final i = item as Map<String, dynamic>;
       final qty = i['quantity'];
@@ -98,7 +101,13 @@ class Recipe {
       if (productData is Map<String, dynamic>) {
         final resolvedProduct =
             (productData['data'] as Map<String, dynamic>?) ?? productData;
+        print(
+          'DEBUG Recipe.fromStrapi - raw product data for ingredient ${i['name']}: $resolvedProduct',
+        );
         linkedProduct = Product.fromStrapi(resolvedProduct, baseUrl: baseUrl);
+        print(
+          'DEBUG Recipe.fromStrapi - parsed linkedProduct.id=${linkedProduct.id}, strapiId=${linkedProduct.strapiId}',
+        );
       }
       String quantityStr = '';
       if (qty != null) quantityStr = '$qty $unit'.trim();

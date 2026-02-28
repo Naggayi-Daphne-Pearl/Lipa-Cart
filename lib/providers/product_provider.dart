@@ -78,10 +78,22 @@ class ProductProvider extends ChangeNotifier {
       ]);
       _products = results[0] as List<Product>;
       _categories = results[1] as List<Category>;
+      debugPrint('✓ Products loaded successfully: ${_products.length} products');
     } catch (e) {
-      debugPrint('Strapi fetch failed, using sample data: $e');
+      debugPrint('✗ Strapi API failed: $e');
+      debugPrint('  Backend URL: http://192.168.1.1:1337');
+      debugPrint('  Endpoint: GET /api/products?populate=*');
+      debugPrint('  Check if: (1) backend is running, (2) products exist in DB, (3) network is accessible');
+
+      // CRITICAL: Using sample data means order creation will fail!
+      // Products from sample data have hardcoded IDs ('13', '15', etc.)
+      // that don't exist in the Strapi database, causing "product does not exist" errors
       _products = Product.getSampleProducts();
       _categories = Category.getSampleCategories();
+
+      _errorMessage = 'Products loaded from sample data. Backend API is unavailable. '
+          'Orders created from recipes/shopping lists may fail. '
+          'Check that the Strapi backend is running.';
     }
 
     _isLoading = false;

@@ -186,7 +186,18 @@ class RoleBasedRouter {
         GoRoute(
           path: '/customer/product',
           builder: (context, state) {
-            final product = state.extra as Product?;
+            // Handle both Product object and serialized Map
+            final productData = state.extra;
+            final Product? product;
+
+            if (productData is Map<String, dynamic>) {
+              product = Product.fromJson(productData);
+            } else if (productData is Product) {
+              product = productData;
+            } else {
+              product = null;
+            }
+
             if (product == null) return const MainShell();
             return ProductDetailScreen(product: product);
           },
@@ -219,7 +230,19 @@ class RoleBasedRouter {
               return OrderSuccessScreen(order: order, isGuest: false);
             } else if (state.extra is Map<String, dynamic>) {
               final extra = state.extra as Map<String, dynamic>;
-              final order = extra['order'] as Order?;
+
+              // Handle order being either Order object or Map
+              final orderData = extra['order'];
+              final Order? order;
+
+              if (orderData is Map<String, dynamic>) {
+                order = Order.fromJson(orderData);
+              } else if (orderData is Order) {
+                order = orderData;
+              } else {
+                order = null;
+              }
+
               final isGuest = extra['isGuest'] as bool? ?? false;
               if (order == null) return const MainShell();
               return OrderSuccessScreen(order: order, isGuest: isGuest);
@@ -234,7 +257,18 @@ class RoleBasedRouter {
         GoRoute(
           path: '/customer/order-tracking',
           builder: (context, state) {
-            final order = state.extra as Order?;
+            // Handle both Order object and serialized Map
+            final orderData = state.extra;
+            final Order? order;
+
+            if (orderData is Map<String, dynamic>) {
+              order = Order.fromJson(orderData);
+            } else if (orderData is Order) {
+              order = orderData;
+            } else {
+              order = null;
+            }
+
             if (order == null) return const MainShell();
             return OrderTrackingScreen(order: order);
           },
@@ -242,7 +276,18 @@ class RoleBasedRouter {
         GoRoute(
           path: '/customer/order-rating',
           builder: (context, state) {
-            final order = state.extra as Order?;
+            // Handle both Order object and serialized Map
+            final orderData = state.extra;
+            final Order? order;
+
+            if (orderData is Map<String, dynamic>) {
+              order = Order.fromJson(orderData);
+            } else if (orderData is Order) {
+              order = orderData;
+            } else {
+              order = null;
+            }
+
             if (order == null) return const MainShell();
             return OrderRatingScreen(order: order);
           },

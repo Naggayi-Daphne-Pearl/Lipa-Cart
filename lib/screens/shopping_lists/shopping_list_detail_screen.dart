@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -10,6 +11,7 @@ import '../../models/product.dart';
 import '../../providers/shopping_list_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 
 class ShoppingListDetailScreen extends StatefulWidget {
@@ -32,6 +34,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
   Widget build(BuildContext context) {
     final listProvider = context.watch<ShoppingListProvider>();
     final cartProvider = context.watch<CartProvider>();
+    final authToken = context.watch<AuthProvider>().token;
     final list = listProvider.getListById(widget.listId);
 
     if (list == null) {
@@ -44,6 +47,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
     final color = _parseColor(list.color);
     final uncheckedItems = list.items.where((i) => !i.isChecked).toList();
     final checkedItems = list.items.where((i) => i.isChecked).toList();
+    final actionableItems = uncheckedItems;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -243,7 +247,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                   const SizedBox(width: AppSizes.sm),
                                   Expanded(
                                     child: Text(
-                                      '${list.purchasableItems.length} item${list.purchasableItems.length != 1 ? 's' : ''} ready for cart',
+                                      '${actionableItems.length} item${actionableItems.length != 1 ? 's' : ''} ready for order',
                                       style: AppTextStyles.labelMedium.copyWith(
                                         color: AppColors.primary,
                                         fontWeight: FontWeight.w600,
@@ -252,27 +256,6 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                   ),
                                 ],
                               ),
-                              if (list.itemsWithoutProducts.isNotEmpty) ...[
-                                const SizedBox(height: AppSizes.sm),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Iconsax.warning_2,
-                                      color: AppColors.accent,
-                                      size: 16,
-                                    ),
-                                    const SizedBox(width: AppSizes.sm),
-                                    Expanded(
-                                      child: Text(
-                                        '${list.itemsWithoutProducts.length} item${list.itemsWithoutProducts.length != 1 ? 's' : ''} need product matching',
-                                        style: AppTextStyles.bodySmall.copyWith(
-                                          color: AppColors.accent,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
                             ],
                           ),
                         ),
@@ -290,7 +273,8 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                           ),
                           const SizedBox(height: AppSizes.sm),
                           ...uncheckedItems.map(
-                            (item) => _buildItemCard(item, list, color),
+                            (item) =>
+                                _buildItemCard(item, list, color, authToken),
                           ),
                         ],
                         // Checked items
@@ -311,6 +295,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                               GestureDetector(
                                 onTap: () => listProvider.clearCheckedItems(
                                   widget.listId,
+                                  authToken: authToken,
                                 ),
                                 child: Text(
                                   'Clear all',
@@ -324,7 +309,8 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                           ),
                           const SizedBox(height: AppSizes.sm),
                           ...checkedItems.map(
-                            (item) => _buildItemCard(item, list, color),
+                            (item) =>
+                                _buildItemCard(item, list, color, authToken),
                           ),
                         ],
                         const SizedBox(height: 100),
@@ -351,68 +337,115 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
           ],
         ),
         child: SafeArea(
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Add item button
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => _showAddItemDialog(list, color),
-                  child: Container(
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: AppColors.grey100,
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                    ),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: AppSizes.md),
-                        Icon(Iconsax.add_circle, color: color, size: 22),
-                        const SizedBox(width: AppSizes.sm),
-                        Text(
-                          'Add item to list...',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w500,
+              Row(
+                children: [
+                  // Add item button
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _showAddItemDialog(list, color),
+                      child: Container(
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: AppColors.grey100,
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
                           ),
                         ),
-                      ],
+                        child: Row(
+                          children: [
+                            const SizedBox(width: AppSizes.md),
+                            Icon(Iconsax.add_circle, color: color, size: 22),
+                            const SizedBox(width: AppSizes.sm),
+                            Text(
+                              'Add Item',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-              const SizedBox(width: AppSizes.md),
-              // Add all to cart
-              if (list.purchasableItems.isNotEmpty)
-                GestureDetector(
-                  onTap: () => _addAllToCart(list, cartProvider),
-                  child: Container(
-                    height: 52,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSizes.md,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Iconsax.bag_2,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        const SizedBox(width: AppSizes.xs),
-                        Text(
-                          'Add All',
-                          style: AppTextStyles.labelMedium.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
+              // Order buttons (for all unchecked items)
+              if (actionableItems.isNotEmpty) ...[
+                const SizedBox(height: AppSizes.md),
+                Row(
+                  children: [
+                    // Add to Cart (secondary)
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _addAllToCart(list, cartProvider),
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: AppColors.grey100,
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusMd,
+                            ),
+                            border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Iconsax.bag_2, size: 18),
+                              const SizedBox(width: AppSizes.xs),
+                              Text(
+                                'Add to Cart',
+                                style: AppTextStyles.labelMedium.copyWith(
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: AppSizes.md),
+                    // Order This List (primary)
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _orderList(list, cartProvider),
+                        child: Container(
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusMd,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Iconsax.shopping_cart,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                              const SizedBox(width: AppSizes.xs),
+                              Text(
+                                'Order Now',
+                                style: AppTextStyles.labelMedium.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+              ],
             ],
           ),
         ),
@@ -420,7 +453,12 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
     );
   }
 
-  Widget _buildItemCard(ShoppingListItem item, ShoppingList list, Color color) {
+  Widget _buildItemCard(
+    ShoppingListItem item,
+    ShoppingList list,
+    Color color,
+    String? authToken,
+  ) {
     final cartProvider = context.watch<CartProvider>();
     final isInCart =
         item.linkedProduct != null &&
@@ -441,7 +479,11 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
               GestureDetector(
                 onTap: () => context
                     .read<ShoppingListProvider>()
-                    .toggleItemChecked(list.id, item.id),
+                    .toggleItemChecked(
+                      list.id,
+                      item.id,
+                      authToken: authToken,
+                    ),
                 child: Container(
                   width: 60,
                   height: 70,
@@ -613,6 +655,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                   list.id,
                                   item.id,
                                   item.quantity - 1,
+                                  authToken: authToken,
                                 );
                           }
                         },
@@ -636,10 +679,60 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                 list.id,
                                 item.id,
                                 item.quantity + 1,
+                                authToken: authToken,
                               );
                         },
                       ),
+                      const SizedBox(width: AppSizes.xs),
+                      GestureDetector(
+                        onTap: () {
+                          context.read<ShoppingListProvider>().removeItemFromList(
+                            list.id,
+                            item.id,
+                            authToken: authToken,
+                          );
+                        },
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(
+                            Iconsax.trash,
+                            size: 14,
+                            color: AppColors.error,
+                          ),
+                        ),
+                      ),
                     ],
+                  ),
+                ),
+              if (item.isChecked)
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSizes.sm),
+                  child: GestureDetector(
+                    onTap: () {
+                      context.read<ShoppingListProvider>().removeItemFromList(
+                        list.id,
+                        item.id,
+                        authToken: authToken,
+                      );
+                    },
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Icon(
+                        Iconsax.trash,
+                        size: 14,
+                        color: AppColors.error,
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -704,39 +797,6 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 ),
               ),
             ),
-          // Product not linked indicator
-          if (!item.isChecked && item.linkedProduct == null)
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: AppColors.accent.withValues(alpha: 0.3),
-                  ),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSizes.sm),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Iconsax.info_circle,
-                      size: 16,
-                      color: AppColors.accent,
-                    ),
-                    const SizedBox(width: AppSizes.xs),
-                    Text(
-                      'Product not linked - can\'t add to cart',
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: AppColors.accent,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -795,13 +855,15 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
     );
   }
 
-  void _addItem(
+  Future<bool> _addItem(
     String name,
     String? description,
     double? unitPrice,
     double? budgetAmount,
-    ShoppingListProvider provider,
-  ) {
+    ShoppingListProvider provider, {
+    int quantity = 1,
+    String? authToken,
+  }) {
     if (name.trim().isNotEmpty) {
       // Try to find a matching product by exact name first, then partial match.
       final productProvider = context.read<ProductProvider>();
@@ -824,36 +886,56 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
         description: description?.trim().isEmpty ?? true
             ? null
             : description?.trim(),
-        quantity: 1,
+        quantity: quantity,
         unitPrice: unitPrice,
         budgetAmount: budgetAmount,
         linkedProduct: matchingProduct,
       );
 
-      provider.addItemToList(widget.listId, item);
+      return provider.addItemToList(
+        widget.listId,
+        item,
+        authToken: authToken,
+      );
     }
+
+    return Future.value(false);
   }
 
   void _addAllToCart(ShoppingList list, CartProvider cartProvider) {
     int addedCount = 0;
-    int itemsWithoutProduct = 0;
 
-    for (final item in list.purchasableItems) {
+    for (final item in list.items.where((i) => !i.isChecked)) {
       if (item.linkedProduct != null) {
         cartProvider.addToCart(
           item.linkedProduct!,
           quantity: item.quantity.toDouble(),
+          specialInstructions: item.description,
         );
         addedCount += item.quantity;
       } else {
-        itemsWithoutProduct++;
+        final stubProduct = Product(
+          id: 'custom_${item.id}',
+          strapiId: null,
+          name: item.name,
+          description: item.description ?? '',
+          image: '',
+          price: item.unitPrice ?? 0,
+          unit: item.unit ?? 'item',
+          categoryId: '',
+          categoryName: '',
+          isAvailable: true,
+        );
+        cartProvider.addToCart(
+          stubProduct,
+          quantity: item.quantity.toDouble(),
+          specialInstructions: item.description,
+        );
+        addedCount += item.quantity;
       }
     }
 
     String message = 'Added $addedCount items to cart';
-    if (itemsWithoutProduct > 0) {
-      message += ' ($itemsWithoutProduct items couldn\'t be added)';
-    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -863,9 +945,84 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
         ),
-        duration: const Duration(seconds: 2),
+        duration: const Duration(seconds: 3),
+        action: SnackBarAction(
+          label: 'Checkout',
+          onPressed: () => GoRouter.of(context).go('/customer/checkout'),
+        ),
       ),
     );
+  }
+
+  void _orderList(ShoppingList list, CartProvider cartProvider) {
+    int linkedCount = 0;
+    int freeTextCount = 0;
+
+    // Include ALL unchecked items - both linked products and free-text
+    for (final item in list.items.where((i) => !i.isChecked)) {
+      if (item.linkedProduct != null) {
+        // Linked item - use real product from catalog
+        cartProvider.addToCart(
+          item.linkedProduct!,
+          quantity: item.quantity.toDouble(),
+          specialInstructions: item.description,
+        );
+        linkedCount++;
+      } else {
+        // Free-text item - create stub product with null strapiId
+        // This tells the backend: product_name only, no product relation
+        final stubProduct = Product(
+          id: 'custom_${item.id}',
+          strapiId: null, // null = no backend product link
+          name: item.name,
+          description: item.description ?? '',
+          image: '',
+          price: item.unitPrice ?? 0,
+          unit: item.unit ?? 'item',
+          categoryId: '',
+          categoryName: '',
+          isAvailable: true,
+        );
+        cartProvider.addToCart(
+          stubProduct,
+          quantity: item.quantity.toDouble(),
+          specialInstructions: item.description,
+        );
+        freeTextCount++;
+      }
+    }
+
+    final total = linkedCount + freeTextCount;
+    if (total > 0) {
+      // Show shopper guidance note if there are free-text items
+      if (freeTextCount > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '$freeTextCount item${freeTextCount != 1 ? 's' : ''} as shopper guidance',
+            ),
+            backgroundColor: AppColors.accent.withValues(alpha: 0.8),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      GoRouter.of(context).go('/customer/checkout');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('List is empty'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+          ),
+        ),
+      );
+    }
   }
 
   void _showOptionsMenu(BuildContext context, ShoppingList list) {
@@ -898,7 +1055,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 title: const Text('Edit List'),
                 onTap: () {
                   Navigator.pop(context);
-                  // TODO: Show edit sheet
+                  _showEditListSheet(list);
                 },
               ),
               ListTile(
@@ -945,10 +1102,26 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              context.read<ShoppingListProvider>().deleteList(list.id);
-              Navigator.pop(context);
-              Navigator.pop(context);
+            onPressed: () async {
+              try {
+                final authToken = context.read<AuthProvider>().token;
+                await context.read<ShoppingListProvider>().deleteList(
+                  list.id,
+                  authToken: authToken,
+                );
+                if (!mounted) return;
+                Navigator.pop(context);
+                Navigator.pop(context);
+              } catch (_) {
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Failed to delete list. Please try again.'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
             },
             child: Text('Delete', style: TextStyle(color: AppColors.error)),
           ),
@@ -957,8 +1130,211 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
     );
   }
 
+  void _showEditListSheet(ShoppingList list) {
+    final nameController = TextEditingController(text: list.name);
+    final descController = TextEditingController(text: list.description ?? '');
+    String selectedEmoji = list.emoji ?? '🛒';
+    String selectedColor = list.color;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppSizes.radiusXl),
+            ),
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSizes.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.grey300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.lg),
+                Text(
+                  'Edit List',
+                  style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: AppSizes.lg),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'List Name',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.md),
+                TextField(
+                  controller: descController,
+                  decoration: InputDecoration(
+                    labelText: 'Description (optional)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.lg),
+                Text(
+                  'Choose an Icon',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: AppSizes.sm),
+                Wrap(
+                  spacing: AppSizes.sm,
+                  runSpacing: AppSizes.sm,
+                  children: ShoppingListProvider.listEmojis.map((emoji) {
+                    final isSelected = selectedEmoji == emoji;
+                    return GestureDetector(
+                      onTap: () => setSheetState(() => selectedEmoji = emoji),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primarySoft
+                              : AppColors.grey100,
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                          border: isSelected
+                              ? Border.all(color: AppColors.primary, width: 2)
+                              : null,
+                        ),
+                        child: Center(
+                          child: Text(
+                            emoji,
+                            style: const TextStyle(fontSize: 24),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: AppSizes.lg),
+                Text(
+                  'Choose a Color',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: AppSizes.sm),
+                Wrap(
+                  spacing: AppSizes.sm,
+                  runSpacing: AppSizes.sm,
+                  children: ShoppingListProvider.listColors.map((colorHex) {
+                    final color = _parseColor(colorHex);
+                    final isSelected = selectedColor == colorHex;
+                    return GestureDetector(
+                      onTap: () =>
+                          setSheetState(() => selectedColor = colorHex),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                          border: isSelected
+                              ? Border.all(color: Colors.white, width: 3)
+                              : null,
+                        ),
+                        child: isSelected
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 24,
+                              )
+                            : null,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: AppSizes.xl),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (nameController.text.trim().isEmpty) return;
+                      try {
+                        final authToken = context.read<AuthProvider>().token;
+                        await context.read<ShoppingListProvider>().updateList(
+                          list.copyWith(
+                            name: nameController.text.trim(),
+                            description: descController.text.trim().isEmpty
+                                ? null
+                                : descController.text.trim(),
+                            emoji: selectedEmoji,
+                            color: selectedColor,
+                          ),
+                          authToken: authToken,
+                        );
+
+                        if (!mounted) return;
+                        Navigator.pop(context);
+                      } catch (_) {
+                        if (!mounted) return;
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Failed to update list.'),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSizes.md,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      ),
+                    ),
+                    child: Text(
+                      'Save Changes',
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.md),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showAddItemDialog(ShoppingList list, Color color) {
     final nameController = TextEditingController();
+    final quantityController = TextEditingController(text: '1');
     final descriptionController = TextEditingController();
     final priceController = TextEditingController();
     final budgetController = TextEditingController();
@@ -1019,6 +1395,44 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 ),
                 autofocus: true,
                 textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: AppSizes.md),
+              Text(
+                'Quantity',
+                style: AppTextStyles.labelMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: AppSizes.xs),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: quantityController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: 'e.g., 2',
+                        hintStyle: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textTertiary,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                          borderSide: BorderSide(color: AppColors.grey300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                          borderSide: BorderSide(color: color, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.all(AppSizes.md),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSizes.md),
               Text(
@@ -1170,40 +1584,70 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
             ),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               final name = nameController.text.trim();
+              final quantityText = quantityController.text.trim();
               final description = descriptionController.text.trim();
               final priceText = priceController.text.trim();
               final budgetText = budgetController.text.trim();
+              final quantity = int.tryParse(quantityText) ?? 1;
               final unitPrice = priceText.isEmpty
                   ? null
                   : double.tryParse(priceText);
               final budgetAmount = budgetText.isEmpty
                   ? null
                   : double.tryParse(budgetText);
+              final authToken = context.read<AuthProvider>().token;
 
               if (name.isNotEmpty) {
-                _addItem(
-                  name,
-                  description.isEmpty ? null : description,
-                  unitPrice,
-                  budgetAmount,
-                  context.read<ShoppingListProvider>(),
-                );
-                Navigator.pop(context);
-
-                // Show success message
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Added "$name" to list'),
-                    backgroundColor: AppColors.success,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                    ),
-                    duration: const Duration(seconds: 1),
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const Center(
+                    child: CircularProgressIndicator(),
                   ),
                 );
+
+                try {
+                  final mergedDuplicate = await _addItem(
+                    name,
+                    description.isEmpty ? null : description,
+                    unitPrice,
+                    budgetAmount,
+                    context.read<ShoppingListProvider>(),
+                    quantity: quantity,
+                    authToken: authToken,
+                  );
+                  if (!context.mounted) return;
+
+                  Navigator.of(context, rootNavigator: true).pop();
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        mergedDuplicate
+                            ? 'Updated quantity for "$name"'
+                            : 'Added "$name" to list',
+                      ),
+                      backgroundColor: AppColors.success,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      ),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                } catch (_) {
+                  if (!context.mounted) return;
+                  Navigator.of(context, rootNavigator: true).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to add item. Please try again.'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
               }
             },
             child: Container(
@@ -1301,10 +1745,12 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
           if (item.description != null && item.description!.isNotEmpty)
             TextButton(
               onPressed: () {
+                final authToken = context.read<AuthProvider>().token;
                 context.read<ShoppingListProvider>().updateItemDescription(
                   list.id,
                   item.id,
                   null,
+                  authToken: authToken,
                 );
                 Navigator.pop(context);
               },
@@ -1318,10 +1764,12 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
           TextButton(
             onPressed: () {
               final description = descriptionController.text.trim();
+              final authToken = context.read<AuthProvider>().token;
               context.read<ShoppingListProvider>().updateItemDescription(
                 list.id,
                 item.id,
                 description.isEmpty ? null : description,
+                authToken: authToken,
               );
               Navigator.pop(context);
             },

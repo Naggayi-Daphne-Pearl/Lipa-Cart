@@ -54,7 +54,13 @@ class ShoppingListItem {
     if (productData is Map<String, dynamic>) {
       final resolvedProduct =
           (productData['data'] as Map<String, dynamic>?) ?? productData;
+      print(
+        'DEBUG ShoppingListItem.fromStrapi - raw product data: $resolvedProduct',
+      );
       linkedProduct = Product.fromStrapi(resolvedProduct);
+      print(
+        'DEBUG ShoppingListItem.fromStrapi - parsed product id: ${linkedProduct.id}, strapiId: ${linkedProduct.strapiId}',
+      );
     }
 
     return ShoppingListItem(

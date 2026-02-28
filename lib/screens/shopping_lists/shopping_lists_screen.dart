@@ -26,15 +26,20 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = context.read<AuthProvider>();
-      context.read<ShoppingListProvider>().loadLists(
-        authToken: authProvider.token,
-      );
+
+      // Only load lists if user is authenticated
+      if (authProvider.isAuthenticated && authProvider.token != null) {
+        context.read<ShoppingListProvider>().loadLists(
+          authToken: authProvider.token,
+        );
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ShoppingListProvider>();
+    final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -97,7 +102,9 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
 
               // Lists
               Expanded(
-                child: provider.isLoading
+                child: !authProvider.isAuthenticated
+                    ? _buildUnauthenticatedState()
+                    : provider.isLoading
                     ? const Center(
                         child: CircularProgressIndicator(
                           color: AppColors.primary,
@@ -120,18 +127,20 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateListSheet(context),
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Iconsax.add, color: Colors.white),
-        label: Text(
-          'New List',
-          style: AppTextStyles.labelMedium.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
+      floatingActionButton: authProvider.isAuthenticated
+          ? FloatingActionButton.extended(
+              onPressed: () => _showCreateListSheet(context),
+              backgroundColor: AppColors.primary,
+              icon: const Icon(Iconsax.add, color: Colors.white),
+              label: Text(
+                'New List',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            )
+          : null,
     );
   }
 
@@ -380,9 +389,78 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     );
   }
 
+  Widget _buildUnauthenticatedState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSizes.xl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Iconsax.lock,
+                size: 56,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: AppSizes.lg),
+            Text(
+              'Sign In Required',
+              style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: AppSizes.sm),
+            Text(
+              'Please sign in to view and create\nshopping lists',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSizes.xl),
+            GestureDetector(
+              onTap: () => context.go('/login'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSizes.xl,
+                  vertical: AppSizes.md,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Iconsax.login, color: Colors.white, size: 20),
+                    const SizedBox(width: AppSizes.sm),
+                    Text(
+                      'Sign In',
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showCreateListSheet(BuildContext context) {
     final shoppingListProvider = context.read<ShoppingListProvider>();
-    final isPremium = context.read<AuthProvider>().user?.isPremium ?? false;
+    final authProvider = context.read<AuthProvider>();
+    final isPremium = authProvider.user?.isPremium ?? false;
+    final authToken = authProvider.token;
     if (!shoppingListProvider.canCreateList(isPremium: isPremium)) {
       _showFreeTierLimitDialog(context);
       return;
@@ -568,24 +646,39 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (nameController.text.isNotEmpty) {
-                        final didCreate = context
-                            .read<ShoppingListProvider>()
-                            .createList(
-                              name: nameController.text,
-                              description: descController.text.isEmpty
-                                  ? null
-                                  : descController.text,
-                              emoji: selectedEmoji,
-                              color: selectedColor,
-                              isPremium: isPremium,
-                            );
-                        if (didCreate) {
+                        try {
+                          final didCreate = await context
+                              .read<ShoppingListProvider>()
+                              .createList(
+                                name: nameController.text,
+                                description: descController.text.isEmpty
+                                    ? null
+                                    : descController.text,
+                                emoji: selectedEmoji,
+                                color: selectedColor,
+                                isPremium: isPremium,
+                                authToken: authToken,
+                              );
+                          if (!mounted) return;
+                          if (didCreate) {
+                            Navigator.pop(context);
+                          } else {
+                            Navigator.pop(context);
+                            _showFreeTierLimitDialog(context);
+                          }
+                        } catch (_) {
+                          if (!mounted) return;
                           Navigator.pop(context);
-                        } else {
-                          Navigator.pop(context);
-                          _showFreeTierLimitDialog(context);
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Failed to create list. Please try again.',
+                              ),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
                         }
                       }
                     },
@@ -692,6 +785,14 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
             // Options
             ListTile(
               leading: Icon(Iconsax.edit, color: color),
+              title: const Text('Edit List'),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditListSheet(list);
+              },
+            ),
+            ListTile(
+              leading: Icon(Iconsax.document_text, color: color),
               title: const Text('View Details'),
               onTap: () {
                 Navigator.pop(context);
@@ -747,22 +848,38 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
             ),
           ),
           TextButton(
-            onPressed: () {
-              context.read<ShoppingListProvider>().deleteList(list.id);
-              Navigator.pop(context);
+            onPressed: () async {
+              try {
+                final authToken = context.read<AuthProvider>().token;
+                await context.read<ShoppingListProvider>().deleteList(
+                  list.id,
+                  authToken: authToken,
+                );
+                if (!mounted) return;
+                Navigator.pop(context);
 
-              // Show success message
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Deleted "${list.name}"'),
-                  backgroundColor: AppColors.error,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                // Show success message
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Deleted "${list.name}"'),
+                    backgroundColor: AppColors.error,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    ),
+                    duration: const Duration(seconds: 2),
                   ),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
+                );
+              } catch (_) {
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Failed to delete list. Please try again.'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
             },
             child: const Text(
               'Delete',
@@ -773,6 +890,226 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showEditListSheet(ShoppingList list) {
+    final nameController = TextEditingController(text: list.name);
+    final descController = TextEditingController(text: list.description ?? '');
+    String selectedEmoji = list.emoji ?? '🛒';
+    String selectedColor = list.color;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppSizes.radiusXl),
+            ),
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSizes.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.grey300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.lg),
+                Text(
+                  'Edit List',
+                  style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: AppSizes.lg),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'List Name',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.md),
+                TextField(
+                  controller: descController,
+                  decoration: InputDecoration(
+                    labelText: 'Description (optional)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.lg),
+                Text(
+                  'Choose an Icon',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: AppSizes.sm),
+                Wrap(
+                  spacing: AppSizes.sm,
+                  runSpacing: AppSizes.sm,
+                  children: ShoppingListProvider.listEmojis.map((emoji) {
+                    final isSelected = selectedEmoji == emoji;
+                    return GestureDetector(
+                      onTap: () => setSheetState(() => selectedEmoji = emoji),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primarySoft
+                              : AppColors.grey100,
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                          border: isSelected
+                              ? Border.all(color: AppColors.primary, width: 2)
+                              : null,
+                        ),
+                        child: Center(
+                          child: Text(
+                            emoji,
+                            style: const TextStyle(fontSize: 24),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: AppSizes.lg),
+                Text(
+                  'Choose a Color',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: AppSizes.sm),
+                Wrap(
+                  spacing: AppSizes.sm,
+                  runSpacing: AppSizes.sm,
+                  children: ShoppingListProvider.listColors.map((colorHex) {
+                    final color = _parseColor(colorHex);
+                    final isSelected = selectedColor == colorHex;
+                    return GestureDetector(
+                      onTap: () =>
+                          setSheetState(() => selectedColor = colorHex),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                          border: isSelected
+                              ? Border.all(color: Colors.white, width: 3)
+                              : null,
+                        ),
+                        child: isSelected
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 24,
+                              )
+                            : null,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: AppSizes.xl),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (nameController.text.trim().isEmpty) return;
+                      try {
+                        final authToken = context.read<AuthProvider>().token;
+                        final didUpdate = await context
+                            .read<ShoppingListProvider>()
+                            .updateList(
+                              list.copyWith(
+                                name: nameController.text.trim(),
+                                description: descController.text.trim().isEmpty
+                                    ? null
+                                    : descController.text.trim(),
+                                emoji: selectedEmoji,
+                                color: selectedColor,
+                              ),
+                              authToken: authToken,
+                            );
+
+                        if (!mounted) return;
+                        if (didUpdate) {
+                          Navigator.pop(context);
+                        }
+                      } catch (_) {
+                        if (!mounted) return;
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Failed to update list.'),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSizes.md,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      ),
+                    ),
+                    child: Text(
+                      'Save Changes',
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.md),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -813,10 +1150,10 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
         ),
         duration: const Duration(seconds: 3),
         action: SnackBarAction(
-          label: 'View Cart',
+          label: 'Checkout',
           textColor: Colors.white,
           onPressed: () {
-            context.go('/customer/cart');
+            GoRouter.of(context).go('/customer/checkout');
           },
         ),
       ),

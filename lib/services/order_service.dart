@@ -212,7 +212,7 @@ class OrderService extends ChangeNotifier {
 
     try {
       final url =
-          '$baseUrl/api/orders?filters[customer][id][\$eq]=$userId&populate[order_items][fields][0]=product_name&populate[order_items][fields][1]=quantity&populate[order_items][fields][2]=unit&populate[order_items][fields][3]=estimated_price&populate[order_items][fields][4]=special_instructions&populate[delivery_address][fields][0]=label&populate[delivery_address][fields][1]=address_line&populate[delivery_address][fields][2]=city&populate[delivery_address][fields][3]=landmark&populate[delivery_address][fields][4]=gps_lat&populate[delivery_address][fields][5]=gps_lng&sort=createdAt:desc';
+          '$baseUrl/api/orders?filters[customer][id][\$eq]=$userId&populate[order_items]=*&populate[delivery_address]=*&sort=createdAt:desc';
 
       print('DEBUG: Fetching orders from $url');
       print('DEBUG: Using userId=$userId');
@@ -282,7 +282,7 @@ class OrderService extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse(
-          '$baseUrl/api/orders/$orderId?populate[order_items][fields][0]=product_name&populate[order_items][fields][1]=quantity&populate[order_items][fields][2]=unit&populate[order_items][fields][3]=estimated_price&populate[order_items][fields][4]=special_instructions&populate[delivery_address][fields][0]=label&populate[delivery_address][fields][1]=address_line&populate[delivery_address][fields][2]=city&populate[delivery_address][fields][3]=landmark&populate[delivery_address][fields][4]=gps_lat&populate[delivery_address][fields][5]=gps_lng',
+          '$baseUrl/api/orders/$orderId?populate[order_items]=*&populate[delivery_address]=*',
         ),
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -320,6 +320,10 @@ class OrderService extends ChangeNotifier {
     try {
       final orderNumber =
           'LC${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
+
+      print('DEBUG: Creating order with number: $orderNumber');
+      print('DEBUG: Customer ID: $customerId, Address ID: $addressId');
+
       final response = await http.post(
         Uri.parse('$baseUrl/api/orders'),
         headers: {
@@ -341,17 +345,24 @@ class OrderService extends ChangeNotifier {
         }),
       );
 
+      print('DEBUG: Order creation response status: ${response.statusCode}');
+
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         _currentOrder = _fromStrapi(data['data']);
         _orders.insert(0, _currentOrder!);
+        print('DEBUG: Order created successfully with ID: ${_currentOrder!.id}');
         notifyListeners();
         return true;
       }
-      _error = 'Failed to create order';
+
+      print('DEBUG: Order creation FAILED - status: ${response.statusCode}');
+      print('DEBUG: Response body: ${response.body}');
+      _error = 'Failed to create order (${response.statusCode})';
       notifyListeners();
       return false;
     } catch (e) {
+      print('DEBUG: Order creation exception: $e');
       _error = 'Error creating order: $e';
       notifyListeners();
       return false;
@@ -525,64 +536,83 @@ class OrderService extends ChangeNotifier {
     print('DEBUG: createOrderWithItems - Creating ${items.length} order items');
 
     try {
-      final createItemResponses = await Future.wait(
-        items.asMap().entries.map((entry) async {
-          final index = entry.key;
-          final item = entry.value;
-          final productId = item.product.strapiId ?? item.product.id;
-          print(
-            'DEBUG: [Item $index] Creating order item - product: ${item.product.name}, quantity: ${item.quantity}, productId: $productId, orderId: $orderId',
-          );
+      // Prepare all items for bulk creation
+      final itemsData = items.asMap().entries.map((entry) {
+        final index = entry.key;
+        final item = entry.value;
+        final productId = item.product.id;
 
-          try {
-            final response = await http.post(
-              Uri.parse('$baseUrl/api/order-items'),
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer $token',
-              },
-              body: jsonEncode({
-                'data': {
-                  'order': orderId,
-                  'product': productId,
-                  'product_name': item.product.name,
-                  'quantity': item.quantity,
-                  'unit': item.product.unit,
-                  'estimated_price': item.product.price,
-                  'special_instructions': item.specialInstructions,
-                },
-              }),
-            );
+        print(
+          'DEBUG: [Item $index] Creating order item - product: ${item.product.name}, quantity: ${item.quantity}, productId: $productId (strapiId: ${item.product.strapiId}), orderId: $orderId',
+        );
 
-            print(
-              'DEBUG: [Item $index] response status: ${response.statusCode}',
-            );
-            if (response.statusCode != 201 && response.statusCode != 200) {
-              print(
-                'DEBUG: [Item $index] FAILED - status: ${response.statusCode}, body: ${response.body}',
-              );
-              return false;
-            } else {
-              print('DEBUG: [Item $index] SUCCESS - body: ${response.body}');
-              return true;
-            }
-          } catch (itemError) {
-            print('DEBUG: [Item $index] EXCEPTION: $itemError');
-            return false;
-          }
+        return {
+          'order': orderId,
+          // Only include product if it's a real linked product (strapiId != null)
+          if (item.product.strapiId != null) 'product': productId,
+          'product_name': item.product.name,
+          'quantity': item.quantity,
+          'unit': item.product.unit,
+          'estimated_price': item.product.price,
+          if (item.specialInstructions != null)
+            'special_instructions': item.specialInstructions,
+        };
+      }).toList();
+
+      print('DEBUG: Bulk creating ${itemsData.length} order items');
+      print('DEBUG: Request body: ${jsonEncode({'items': itemsData})}');
+
+      // Single bulk request to create all items
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/order-items/bulk'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'items': itemsData,
         }),
       );
 
-      final successCount = createItemResponses.where((r) => r).length;
-      print(
-        'DEBUG: Order items created - $successCount/${items.length} successful',
-      );
+      print('DEBUG: Bulk create response status: ${response.statusCode}');
+      print('DEBUG: Bulk create response body: ${response.body}');
 
-      if (successCount == 0) {
-        print('DEBUG: WARNING - No order items were created successfully!');
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        print('DEBUG: Bulk create FAILED - status: ${response.statusCode}');
+
+        // Parse error for better diagnostics
+        try {
+          final errorData = jsonDecode(response.body);
+          final errorMsg = errorData['error']?['message'] ?? 'Unknown error';
+          if (errorMsg.contains('do not exist')) {
+            _error = 'Some products do not exist in the database. '
+                'This may happen if you\'re using sample data. '
+                'Error: $errorMsg';
+          } else {
+            _error = 'Failed to create order items: $errorMsg';
+          }
+        } catch (_) {
+          _error = 'Failed to create order items (status ${response.statusCode})';
+        }
+        notifyListeners();
+        return _currentOrder;
       }
 
-      print('DEBUG: All order items posted. Fetching updated order...');
+      final responseData = jsonDecode(response.body);
+      final createdCount = responseData['meta']?['count'] ?? responseData['data']?.length ?? 0;
+      final failedCount = responseData['meta']?['failed'] ?? 0;
+      print(
+        'DEBUG: Bulk create complete - ${createdCount} created, ${failedCount} failed',
+      );
+
+      if (createdCount == 0 && failedCount > 0) {
+        print('DEBUG: WARNING - All items failed to create!');
+        _error = 'All order items failed to create. Check backend logs.';
+        notifyListeners();
+        return _currentOrder;
+      }
+
+      print('DEBUG: Fetching updated order...');
       await getOrder(token, orderId);
       print(
         'DEBUG: Order fetched after item creation - items count: ${_currentOrder?.items.length ?? 0}',

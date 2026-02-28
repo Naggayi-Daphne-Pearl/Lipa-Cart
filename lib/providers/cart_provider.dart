@@ -44,17 +44,31 @@ class CartProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(AppConstants.cartKey);
-      if (raw == null || raw.isEmpty) return;
+      if (raw == null || raw.isEmpty) {
+        print('DEBUG CartProvider._restoreCart - No cart data to restore');
+        return;
+      }
       final data = jsonDecode(raw) as List<dynamic>;
+      final items = data
+          .map((e) => CartItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      print(
+        'DEBUG CartProvider._restoreCart - Restored ${items.length} items from cache',
+      );
+      for (var i = 0; i < items.length; i++) {
+        final item = items[i];
+        print(
+          'DEBUG CartProvider._restoreCart - Item $i: product.id=${item.product.id}, product.strapiId=${item.product.strapiId}, name=${item.product.name}, qty=${item.quantity}',
+        );
+      }
+
       _items
         ..clear()
-        ..addAll(
-          data
-              .map((e) => CartItem.fromJson(e as Map<String, dynamic>))
-              .toList(),
-        );
+        ..addAll(items);
       notifyListeners();
-    } catch (_) {
+    } catch (e) {
+      print('DEBUG CartProvider._restoreCart - Error restoring cart: $e');
       // Ignore corrupted cache
     }
   }
@@ -81,16 +95,41 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  void addToCart(Product product, {double quantity = 1}) {
+  void addToCart(
+    Product product, {
+    double quantity = 1,
+    String? specialInstructions,
+  }) {
+    print(
+      'DEBUG CartProvider.addToCart - product.id: ${product.id}, product.strapiId: ${product.strapiId}, product.name: ${product.name}, quantity: $quantity',
+    );
+
     final existingIndex = _items.indexWhere(
       (item) => item.product.id == product.id,
     );
 
     if (existingIndex >= 0) {
       _items[existingIndex].quantity += quantity;
+      if (specialInstructions != null && specialInstructions.trim().isNotEmpty) {
+        _items[existingIndex] = _items[existingIndex].copyWith(
+          specialInstructions: specialInstructions.trim(),
+        );
+      }
+      print(
+        'DEBUG CartProvider.addToCart - Updated existing item, new quantity: ${_items[existingIndex].quantity}',
+      );
     } else {
-      _items.add(
-        CartItem(id: _uuid.v4(), product: product, quantity: quantity),
+      final newItem = CartItem(
+        id: _uuid.v4(),
+        product: product,
+        quantity: quantity,
+        specialInstructions: specialInstructions?.trim().isEmpty ?? true
+            ? null
+            : specialInstructions?.trim(),
+      );
+      _items.add(newItem);
+      print(
+        'DEBUG CartProvider.addToCart - Added new item to cart, cart size now: ${_items.length}',
       );
     }
     _persistCart();

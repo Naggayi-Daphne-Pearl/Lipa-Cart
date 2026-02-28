@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/recipe.dart';
+import '../../models/cart_item.dart';
 import '../../providers/recipe_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
@@ -391,7 +395,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           ),
         ],
       ),
-      // Bottom bar with add to cart
+      // Bottom bar with add to cart and order now
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(AppSizes.lg),
         decoration: BoxDecoration(
@@ -408,12 +412,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           ],
         ),
         child: SafeArea(
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               // Price estimate
-              Expanded(
+              SizedBox(
+                width: double.infinity,
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -432,32 +437,85 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                   ],
                 ),
               ),
-              // Add to cart button
-              GestureDetector(
-                onTap: () => _addSelectedToCart(recipe, cartProvider),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSizes.xl,
-                    vertical: AppSizes.md,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Iconsax.bag_2, color: Colors.white, size: 20),
-                      const SizedBox(width: AppSizes.sm),
-                      Text(
-                        'Add ${_selectedIngredients.length} Items',
-                        style: AppTextStyles.labelMedium.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
+              const SizedBox(height: AppSizes.md),
+              // Two buttons: Add to Cart and Order Ingredients
+              Row(
+                children: [
+                  // Add to Cart (secondary)
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: _selectedIngredients.isEmpty
+                          ? null
+                          : () => _addSelectedToCart(recipe, cartProvider),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSizes.md,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _selectedIngredients.isEmpty
+                              ? AppColors.grey200
+                              : AppColors.grey100,
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          border: Border.all(
+                            color: _selectedIngredients.isEmpty
+                                ? AppColors.grey300
+                                : AppColors.primary.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Iconsax.bag_2, size: 18),
+                            const SizedBox(width: AppSizes.xs),
+                            Text(
+                              'Add to Cart',
+                              style: AppTextStyles.labelMedium.copyWith(
+                                color: _selectedIngredients.isEmpty
+                                    ? AppColors.textSecondary
+                                    : AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(width: AppSizes.md),
+                  // Order Ingredients (primary)
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: _selectedIngredients.isEmpty
+                          ? null
+                          : () => _orderIngredients(recipe, cartProvider),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSizes.md,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _selectedIngredients.isEmpty
+                              ? AppColors.grey400
+                              : AppColors.primary,
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Iconsax.shopping_cart,
+                                color: Colors.white, size: 18),
+                            const SizedBox(width: AppSizes.xs),
+                            Text(
+                              'Order',
+                              style: AppTextStyles.labelMedium.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -782,6 +840,15 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     return total;
   }
 
+  double _extractQuantityFromString(String quantityStr) {
+    // Extract numeric part from strings like "2 cups", "500g", "3 pieces"
+    final match = RegExp(r'(\d+\.?\d*)').firstMatch(quantityStr);
+    if (match != null) {
+      return double.tryParse(match.group(1)!) ?? 1.0;
+    }
+    return 1.0; // Default to 1 if no number found
+  }
+
   void _addSelectedToCart(Recipe recipe, CartProvider cartProvider) {
     int addedCount = 0;
     int skippedCount = 0;
@@ -789,7 +856,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     for (final ingredient in recipe.ingredients) {
       if (_selectedIngredients.contains(ingredient.id)) {
         if (ingredient.linkedProduct != null) {
-          cartProvider.addToCart(ingredient.linkedProduct!);
+          // Extract numeric quantity from ingredient quantity string
+          final quantity = _extractQuantityFromString(ingredient.quantity);
+          cartProvider.addToCart(ingredient.linkedProduct!, quantity: quantity);
           addedCount++;
         } else {
           skippedCount++;
@@ -826,6 +895,37 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
         return AppColors.error;
       default:
         return AppColors.textSecondary;
+    }
+  }
+
+  void _orderIngredients(Recipe recipe, CartProvider cartProvider) {
+    // Build cart items from selected ingredients
+    int addedCount = 0;
+
+    for (final ingredient in recipe.ingredients) {
+      if (_selectedIngredients.contains(ingredient.id)) {
+        if (ingredient.linkedProduct != null) {
+          final quantity = _extractQuantityFromString(ingredient.quantity);
+          cartProvider.addToCart(ingredient.linkedProduct!, quantity: quantity);
+          addedCount++;
+        }
+      }
+    }
+
+    // Navigate to checkout
+    if (addedCount > 0) {
+      GoRouter.of(context).go('/customer/checkout');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('No items available to order'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+          ),
+        ),
+      );
     }
   }
 }
