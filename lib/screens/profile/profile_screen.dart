@@ -419,6 +419,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       title: 'Logout',
                       onTap: () async {
                         await LogoutHelper.logoutAndClear(context);
+                        if (context.mounted) {
+                          GoRouter.of(context).go('/login');
+                        }
                       },
                     ),
                   ]),

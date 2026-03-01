@@ -668,13 +668,14 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                             Navigator.pop(context);
                             _showFreeTierLimitDialog(context);
                           }
-                        } catch (_) {
+                        } catch (e) {
+                          debugPrint('ERROR: Failed to create shopping list: $e');
                           if (!mounted) return;
                           Navigator.pop(context);
                           ScaffoldMessenger.of(this.context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text(
-                                'Failed to create list. Please try again.',
+                                'Failed to create list: ${e.toString()}',
                               ),
                               backgroundColor: AppColors.error,
                             ),

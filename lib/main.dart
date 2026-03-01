@@ -10,6 +10,7 @@ import 'providers/order_provider.dart';
 import 'providers/shopping_list_provider.dart';
 import 'providers/recipe_provider.dart';
 import 'providers/imgbb_upload_provider.dart';
+import 'providers/shopper_provider.dart';
 import 'services/order_service.dart';
 import 'services/address_service.dart';
 import 'role_based_router.dart';
@@ -52,6 +53,7 @@ class LipaCartApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ShoppingListProvider()),
         ChangeNotifierProvider(create: (_) => RecipeProvider()),
         ChangeNotifierProvider(create: (_) => ImgBBUploadProvider()),
+        ChangeNotifierProvider(create: (_) => ShopperProvider()),
       ],
       child: Builder(
         builder: (context) {

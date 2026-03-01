@@ -116,4 +116,12 @@ class ImgBBUploadProvider extends ChangeNotifier {
     _uploadedUrls.clear();
     notifyListeners();
   }
+
+  /// Clear all upload data (for logout)
+  Future<void> clearAll() async {
+    _isUploading = false;
+    _uploadError = null;
+    _uploadedUrls.clear();
+    notifyListeners();
+  }
 }

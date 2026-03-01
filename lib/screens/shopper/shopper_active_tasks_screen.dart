@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import '../../providers/auth_provider.dart';
+import '../../models/user.dart';
 
 class ShopperActiveTasksScreen extends StatefulWidget {
   const ShopperActiveTasksScreen({super.key});
@@ -9,6 +13,29 @@ class ShopperActiveTasksScreen extends StatefulWidget {
 }
 
 class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _validateRole();
+  }
+
+  void _validateRole() {
+    final authProvider = context.read<AuthProvider>();
+
+    // Validate user role - only shoppers can access this screen
+    if (authProvider.user?.role != UserRole.shopper) {
+      Future.microtask(() {
+        GoRouter.of(context).go(
+          authProvider.user?.role == UserRole.admin
+              ? '/admin/dashboard'
+              : authProvider.user?.role == UserRole.rider
+              ? '/rider/home'
+              : '/customer/home',
+        );
+      });
+    }
+  }
+
   final List<Map<String, dynamic>> tasks = [
     {
       'id': 'TASK101',

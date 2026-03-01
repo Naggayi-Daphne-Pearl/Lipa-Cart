@@ -5,6 +5,7 @@ import '../models/category.dart';
 import '../models/product.dart';
 import '../models/recipe.dart';
 import '../models/shopping_list.dart';
+import '../models/order.dart';
 
 class StrapiService {
   static String get _apiUrl => AppConstants.apiUrl;
@@ -230,5 +231,198 @@ class StrapiService {
           ),
         )
         .toList();
+  }
+
+  // =============== SHOPPER METHODS ===============
+
+  /// Get shopper profile with stats
+  static Future<Map<String, dynamic>?> getShopperProfile(
+    String shopperId,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$_apiUrl/shoppers/$shopperId?populate=*'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['data']['attributes'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      print('ERROR: getShopperProfile - $e');
+      return null;
+    }
+  }
+
+  /// Get available orders (status = payment_confirmed)
+  static Future<List<Order>> getAvailableOrdersForShopper(String token) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse(
+              '$_apiUrl/orders?filters[status][\$eq]=payment_confirmed&populate[order_items][populate][0]=product',
+            ),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final list =
+            (data['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
+            [];
+        return list.map((o) => Order.fromJson(o['attributes'])).toList();
+      }
+      return [];
+    } catch (e) {
+      print('ERROR: getAvailableOrdersForShopper - $e');
+      return [];
+    }
+  }
+
+  /// Get active orders for shopper (shopper_assigned OR shopping status)
+  static Future<List<Order>> getActiveOrdersForShopper(
+    String token,
+    String shopperId,
+  ) async {
+    try {
+      // Strapi v5 syntax: filter by relation ID directly
+      final response = await http
+          .get(
+            Uri.parse(
+              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=shopper_assigned&filters[\$or][1][status][\$eq]=shopping&filters[shopper][\$eq]=$shopperId&populate[order_items][populate][0]=product',
+            ),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final list =
+            (data['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
+            [];
+        return list.map((o) => Order.fromJson(o['attributes'])).toList();
+      }
+      return [];
+    } catch (e) {
+      print('ERROR: getActiveOrdersForShopper - $e');
+      return [];
+    }
+  }
+
+  /// Get completed orders for shopper (delivered OR cancelled)
+  static Future<List<Order>> getCompletedOrdersForShopper(
+    String token,
+    String shopperId,
+  ) async {
+    try {
+      // Strapi v5 syntax: filter by relation ID directly
+      final response = await http
+          .get(
+            Uri.parse(
+              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=delivered&filters[\$or][1][status][\$eq]=cancelled&filters[shopper][\$eq]=$shopperId&populate[order_items][populate][0]=product',
+            ),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final list =
+            (data['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
+            [];
+        return list.map((o) => Order.fromJson(o['attributes'])).toList();
+      }
+      return [];
+    } catch (e) {
+      print('ERROR: getCompletedOrdersForShopper - $e');
+      return [];
+    }
+  }
+
+  /// Assign order to shopper
+  static Future<bool> assignOrderToShopper(
+    String orderId,
+    String shopperId,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .patch(
+            Uri.parse('$_apiUrl/orders/$orderId'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: json.encode({
+              'data': {'shopper': shopperId, 'status': 'shopper_assigned'},
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('ERROR: assignOrderToShopper - $e');
+      return false;
+    }
+  }
+
+  /// Toggle shopper online/offline status
+  static Future<bool> updateShopperStatus(
+    String shopperId,
+    bool isOnline,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .patch(
+            Uri.parse('$_apiUrl/shoppers/$shopperId'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: json.encode({
+              'data': {'is_online': isOnline},
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('ERROR: updateShopperStatus - $e');
+      return false;
+    }
+  }
+
+  /// Update order status
+  static Future<bool> updateOrderStatus(
+    String orderId,
+    String status,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .patch(
+            Uri.parse('$_apiUrl/orders/$orderId'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: json.encode({
+              'data': {'status': status},
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('ERROR: updateOrderStatus - $e');
+      return false;
+    }
   }
 }

@@ -84,6 +84,7 @@ class RoleBasedRouter {
       redirect: (context, state) {
         final isAuthenticated = authProvider.isAuthenticated;
         final isInitial = authProvider.status == AuthStatus.initial;
+        final userRole = authProvider.user?.role;
 
         // Still loading - let splash handle
         if (isInitial) return null;
@@ -121,6 +122,37 @@ class RoleBasedRouter {
         // Already authenticated, trying to access auth routes → go to role home
         if (isAuthenticated && isAuthRoute) {
           return _homeForRole(authProvider.user?.role);
+        }
+
+        // === ROLE-BASED ACCESS CONTROL ===
+        // Ensure users can only access routes for their role
+
+        // Shopper routes - only accessible by shoppers
+        if (state.matchedLocation.startsWith('/shopper/')) {
+          if (isAuthenticated && userRole != UserRole.shopper) {
+            return _homeForRole(userRole);
+          }
+        }
+
+        // Rider routes - only accessible by riders
+        if (state.matchedLocation.startsWith('/rider/')) {
+          if (isAuthenticated && userRole != UserRole.rider) {
+            return _homeForRole(userRole);
+          }
+        }
+
+        // Admin routes - only accessible by admins
+        if (state.matchedLocation.startsWith('/admin/')) {
+          if (isAuthenticated && userRole != UserRole.admin) {
+            return _homeForRole(userRole);
+          }
+        }
+
+        // Customer-specific protected routes - only for customers
+        if (isCustomerProtectedRoute) {
+          if (isAuthenticated && userRole != UserRole.customer) {
+            return _homeForRole(userRole);
+          }
         }
 
         // No redirect needed

@@ -45,9 +45,10 @@ class AddressService extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Strapi v5 syntax: filter by relation ID directly
       final response = await http.get(
         Uri.parse(
-          '$baseUrl/api/addresses?filters[customer][id][\$eq]=$customerId&populate=*',
+          '$baseUrl/api/addresses?filters[customer][\$eq]=$customerId&populate=customer',
         ),
         headers: {'Authorization': 'Bearer $token'},
       );

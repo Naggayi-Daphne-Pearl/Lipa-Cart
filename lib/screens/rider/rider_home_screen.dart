@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../models/user.dart';
 import '../../core/utils/logout_helper.dart';
 
 class RiderHomeScreen extends StatefulWidget {
@@ -12,6 +13,29 @@ class RiderHomeScreen extends StatefulWidget {
 }
 
 class _RiderHomeScreenState extends State<RiderHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _validateRole();
+  }
+
+  void _validateRole() {
+    final authProvider = context.read<AuthProvider>();
+
+    // Validate user role - only riders can access this screen
+    if (authProvider.user?.role != UserRole.rider) {
+      Future.microtask(() {
+        GoRouter.of(context).go(
+          authProvider.user?.role == UserRole.admin
+              ? '/admin/dashboard'
+              : authProvider.user?.role == UserRole.shopper
+              ? '/shopper/home'
+              : '/customer/home',
+        );
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

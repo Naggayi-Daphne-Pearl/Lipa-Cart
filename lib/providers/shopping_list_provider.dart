@@ -127,18 +127,25 @@ class ShoppingListProvider extends ChangeNotifier {
       throw Exception('Authentication required to create shopping lists');
     }
 
-    final newList = await StrapiService.createShoppingList(
-      name: name,
-      description: description,
-      emoji: emoji,
-      color: color,
-      authToken: authToken,
-    );
+    try {
+      debugPrint('DEBUG: Creating shopping list - name: $name, authToken: ${authToken.substring(0, 20)}...');
+      final newList = await StrapiService.createShoppingList(
+        name: name,
+        description: description,
+        emoji: emoji,
+        color: color,
+        authToken: authToken,
+      );
 
-    _lists.insert(0, newList);
-    await _persistLists();
-    notifyListeners();
-    return true;
+      debugPrint('DEBUG: Shopping list created successfully - ID: ${newList.id}');
+      _lists.insert(0, newList);
+      await _persistLists();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('ERROR: Failed to create shopping list: $e');
+      rethrow;
+    }
   }
 
   Future<bool> updateList(ShoppingList updatedList, {String? authToken}) async {

@@ -52,12 +52,35 @@ class OrderService extends ChangeNotifier {
 
   List<CartItem> _parseOrderItems(Map<String, dynamic> attributes) {
     // Handle both wrapped and flat formats
-    final orderItemsRaw = attributes['order_items'];
+    // Try multiple field names: order_items, toc_items, items
+    final orderItemsRaw =
+        attributes['order_items'] ??
+        attributes['toc_items'] ??
+        attributes['items'];
+
+    print(
+      'DEBUG: _parseOrderItems - Full attributes keys: ${attributes.keys.toList()}',
+    );
 
     print(
       'DEBUG: _parseOrderItems - orderItemsRaw type: ${orderItemsRaw.runtimeType}',
     );
-    print('DEBUG: _parseOrderItems - orderItemsRaw value: $orderItemsRaw');
+    print(
+      'DEBUG: _parseOrderItems - orderItemsRaw is null: ${orderItemsRaw == null}',
+    );
+
+    if (orderItemsRaw == null) {
+      print('DEBUG: _parseOrderItems - No order items found in any field');
+      print('DEBUG: _parseOrderItems - Attributes details:');
+      attributes.forEach((key, value) {
+        print('  $key: ${value.runtimeType}');
+      });
+      return [];
+    }
+
+    print(
+      'DEBUG: _parseOrderItems - orderItemsRaw keys: ${orderItemsRaw is Map ? orderItemsRaw.keys.toList() : "not a map"}',
+    );
 
     List<dynamic> orderItems = [];
     if (orderItemsRaw is List<dynamic>) {
@@ -120,6 +143,13 @@ class OrderService extends ChangeNotifier {
     // Handle both wrapped and flat formats
     final addressRaw = attributes['delivery_address'];
 
+    print(
+      'DEBUG: _parseDeliveryAddress - addressRaw type: ${addressRaw.runtimeType}',
+    );
+    print(
+      'DEBUG: _parseDeliveryAddress - addressRaw is null: ${addressRaw == null}',
+    );
+
     Map<String, dynamic>? addressData;
     if (addressRaw is Map<String, dynamic>) {
       // Check if it has 'data' key (wrapped format)
@@ -132,11 +162,14 @@ class OrderService extends ChangeNotifier {
       }
     }
 
-    if (addressData == null || addressData.isEmpty) {
+    if (addressData == null) {
+      print(
+        'DEBUG: _parseDeliveryAddress - No address data found, returning empty address',
+      );
       return user_models.Address(
         id: '0',
         label: 'Delivery Address',
-        fullAddress: '',
+        fullAddress: 'No address provided',
         landmark: null,
         latitude: 0.0,
         longitude: 0.0,
@@ -166,42 +199,64 @@ class OrderService extends ChangeNotifier {
   }
 
   Order _fromStrapi(Map<String, dynamic> data) {
-    final attributes = (data['attributes'] as Map<String, dynamic>?) ?? data;
-    final rawId = data['id'] ?? data['documentId'];
-    final orderNumber =
-        (attributes['order_number'] ?? attributes['orderNumber'])?.toString() ??
-        data['id'].toString();
+    try {
+      print('DEBUG: _fromStrapi - data keys: ${data.keys.toList()}');
 
-    print('DEBUG: _fromStrapi - Order ID: $rawId');
-    print('DEBUG: _fromStrapi - Order Number: $orderNumber');
-    print('DEBUG: _fromStrapi - Attributes keys: ${attributes.keys.toList()}');
+      final attributes = (data['attributes'] as Map<String, dynamic>?) ?? data;
 
-    final items = _parseOrderItems(attributes);
-    print('DEBUG: _fromStrapi - Final order items count: ${items.length}');
+      final rawId = data['id'] ?? data['documentId'];
+      final documentId = data['documentId'] as String?;
 
-    return Order(
-      id: rawId?.toString() ?? '',
-      orderNumber: orderNumber,
-      items: items,
-      deliveryAddress: _parseDeliveryAddress(attributes),
-      subtotal: (attributes['subtotal'] as num?)?.toDouble() ?? 0,
-      serviceFee: (attributes['service_fee'] as num?)?.toDouble() ?? 0,
-      deliveryFee: (attributes['delivery_fee'] as num?)?.toDouble() ?? 0,
-      total: (attributes['total'] as num?)?.toDouble() ?? 0,
-      status: _mapStatus(attributes['status'] as String?),
-      createdAt:
-          DateTime.tryParse(attributes['createdAt'] as String? ?? '') ??
-          DateTime.now(),
-      estimatedDelivery: DateTime.tryParse(
-        attributes['estimated_delivery'] as String? ?? '',
-      ),
-      deliveredAt: DateTime.tryParse(
-        attributes['delivered_at'] as String? ?? '',
-      ),
-      cancellationReason: attributes['cancellation_reason'] as String?,
-      paymentMethod: PaymentMethod.mobileMoney,
-      isPaid: false,
-    );
+      print('DEBUG: _fromStrapi - rawId: $rawId, documentId: $documentId');
+
+      final orderNumber =
+          (attributes['order_number'] ?? attributes['orderNumber'])
+              ?.toString() ??
+          (data['id']?.toString() ?? 'UNKNOWN');
+
+      print('DEBUG: _fromStrapi - Order ID: $rawId, DocumentId: $documentId');
+      print('DEBUG: _fromStrapi - Order Number: $orderNumber');
+      print(
+        'DEBUG: _fromStrapi - Attributes keys: ${attributes.keys.toList()}',
+      );
+
+      final items = _parseOrderItems(attributes);
+      print('DEBUG: _fromStrapi - Final order items count: ${items.length}');
+
+      print('DEBUG: _fromStrapi - Parsing delivery address...');
+      final deliveryAddress = _parseDeliveryAddress(attributes);
+      print(
+        'DEBUG: _fromStrapi - Delivery address parsed: ${deliveryAddress?.fullAddress}',
+      );
+
+      return Order(
+        id: rawId?.toString() ?? '',
+        documentId: documentId,
+        orderNumber: orderNumber,
+        items: items,
+        deliveryAddress: deliveryAddress,
+        subtotal: (attributes['subtotal'] as num?)?.toDouble() ?? 0,
+        serviceFee: (attributes['service_fee'] as num?)?.toDouble() ?? 0,
+        deliveryFee: (attributes['delivery_fee'] as num?)?.toDouble() ?? 0,
+        total: (attributes['total'] as num?)?.toDouble() ?? 0,
+        status: _mapStatus(attributes['status'] as String?),
+        createdAt:
+            DateTime.tryParse(attributes['createdAt'] as String? ?? '') ??
+            DateTime.now(),
+        estimatedDelivery: DateTime.tryParse(
+          attributes['estimated_delivery'] as String? ?? '',
+        ),
+        deliveredAt: DateTime.tryParse(
+          attributes['delivered_at'] as String? ?? '',
+        ),
+        cancellationReason: attributes['cancellation_reason'] as String?,
+        paymentMethod: PaymentMethod.mobileMoney,
+        isPaid: false,
+      );
+    } catch (e) {
+      print('ERROR: _fromStrapi - ${e.toString()}');
+      rethrow;
+    }
   }
 
   /// Fetch all orders for current customer
@@ -211,8 +266,9 @@ class OrderService extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Strapi v5 syntax: explicitly populate order_items with nested product details
       final url =
-          '$baseUrl/api/orders?filters[customer][id][\$eq]=$userId&populate[order_items]=*&populate[delivery_address]=*&sort=createdAt:desc';
+          '$baseUrl/api/orders?filters[customer][\$eq]=$userId&populate[order_items][populate][0]=product&populate[delivery_address][populate][0]=customer&sort[0]=createdAt:desc';
 
       print('DEBUG: Fetching orders from $url');
       print('DEBUG: Using userId=$userId');
@@ -235,6 +291,33 @@ class OrderService extends ChangeNotifier {
         print(
           'DEBUG: fetchOrders total orders in response: ${(data["data"] as List).length}',
         );
+
+        // Check first order structure
+        if ((data["data"] as List).isNotEmpty) {
+          final firstOrder = (data["data"] as List)[0];
+          print(
+            'DEBUG: First order keys: ${(firstOrder as Map).keys.toList()}',
+          );
+          final attrs = firstOrder['attributes'];
+          if (attrs != null) {
+            print(
+              'DEBUG: First order attributes keys: ${(attrs as Map).keys.toList()}',
+            );
+            print(
+              'DEBUG: Has order_items? ${attrs.containsKey("order_items")}',
+            );
+            if (attrs.containsKey('order_items')) {
+              print(
+                'DEBUG: order_items type: ${attrs["order_items"].runtimeType}',
+              );
+              print('DEBUG: order_items: ${attrs["order_items"]}');
+            }
+          } else {
+            print(
+              'DEBUG: First order attributes is NULL - API structure issue',
+            );
+          }
+        }
 
         _orders = List<Order>.from(
           (data['data'] as List).map((order) {
@@ -259,7 +342,7 @@ class OrderService extends ChangeNotifier {
         return true;
       }
       print('DEBUG: Orders fetch failed with status ${response.statusCode}');
-      print('DEBUG: Response: ${response.body.substring(0, 200)}');
+      print('DEBUG: Response body: ${response.body}');
       _error = 'Failed to fetch orders (${response.statusCode})';
       _isLoading = false;
       notifyListeners();
@@ -282,7 +365,7 @@ class OrderService extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse(
-          '$baseUrl/api/orders/$orderId?populate[order_items]=*&populate[delivery_address]=*',
+          '$baseUrl/api/orders/$orderId?populate[order_items][populate][0]=product&populate[delivery_address][populate][0]=customer',
         ),
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -534,7 +617,12 @@ class OrderService extends ChangeNotifier {
     if (!orderCreated || _currentOrder == null) return null;
 
     final orderId = _currentOrder!.id;
-    print('DEBUG: createOrderWithItems - Order created with ID: $orderId');
+    final orderDocumentId =
+        _currentOrder!.documentId ??
+        orderId; // Use documentId for Strapi v5 relations
+    print(
+      'DEBUG: createOrderWithItems - Order created with ID: $orderId, DocumentId: $orderDocumentId',
+    );
     print('DEBUG: createOrderWithItems - Creating ${items.length} order items');
 
     try {
@@ -545,11 +633,11 @@ class OrderService extends ChangeNotifier {
         final productId = item.product.id;
 
         print(
-          'DEBUG: [Item $index] Creating order item - product: ${item.product.name}, quantity: ${item.quantity}, productId: $productId (strapiId: ${item.product.strapiId}), orderId: $orderId',
+          'DEBUG: [Item $index] Creating order item - product: ${item.product.name}, quantity: ${item.quantity}, productId: $productId (strapiId: ${item.product.strapiId}), orderId: $orderDocumentId',
         );
 
         return {
-          'order': orderId,
+          'order': orderDocumentId, // Use documentId for Strapi v5 relations
           // Only include product if it's a real linked product (strapiId != null)
           if (item.product.strapiId != null) 'product': productId,
           'product_name': item.product.name,

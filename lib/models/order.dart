@@ -73,6 +73,7 @@ extension OrderStatusExtension on OrderStatus {
 
 class Order {
   final String id;
+  final String? documentId; // For Strapi v5 relations
   final String orderNumber;
   final List<CartItem> items;
   final Address deliveryAddress;
@@ -81,6 +82,8 @@ class Order {
   final double deliveryFee;
   final double total;
   final OrderStatus status;
+  final String? customerId;
+  final User? customer;
   final String? shopperId;
   final String? shopperName;
   final String? shopperPhone;
@@ -98,6 +101,7 @@ class Order {
 
   Order({
     required this.id,
+    this.documentId,
     required this.orderNumber,
     required this.items,
     required this.deliveryAddress,
@@ -106,6 +110,8 @@ class Order {
     required this.deliveryFee,
     required this.total,
     required this.status,
+    this.customerId,
+    this.customer,
     this.shopperId,
     this.shopperName,
     this.shopperPhone,
@@ -145,6 +151,8 @@ class Order {
     double? deliveryFee,
     double? total,
     OrderStatus? status,
+    String? customerId,
+    User? customer,
     String? shopperId,
     String? shopperName,
     String? shopperPhone,
@@ -170,6 +178,8 @@ class Order {
       deliveryFee: deliveryFee ?? this.deliveryFee,
       total: total ?? this.total,
       status: status ?? this.status,
+      customerId: customerId ?? this.customerId,
+      customer: customer ?? this.customer,
       shopperId: shopperId ?? this.shopperId,
       shopperName: shopperName ?? this.shopperName,
       shopperPhone: shopperPhone ?? this.shopperPhone,
@@ -198,6 +208,8 @@ class Order {
       'deliveryFee': deliveryFee,
       'total': total,
       'status': status.name,
+      'customerId': customerId,
+      'customer': customer?.customerId,
       'shopperId': shopperId,
       'shopperName': shopperName,
       'shopperPhone': shopperPhone,
@@ -233,6 +245,10 @@ class Order {
         (s) => s.name == json['status'],
         orElse: () => OrderStatus.pending,
       ),
+      customerId: json['customerId'] as String?,
+      customer: json['customer'] != null
+          ? User.fromJson(json['customer'] as Map<String, dynamic>)
+          : null,
       shopperId: json['shopperId'] as String?,
       shopperName: json['shopperName'] as String?,
       shopperPhone: json['shopperPhone'] as String?,

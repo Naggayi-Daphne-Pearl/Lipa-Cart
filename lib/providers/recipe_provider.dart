@@ -64,9 +64,12 @@ class RecipeProvider extends ChangeNotifier {
     return _recipes.where((recipe) {
       return recipe.name.toLowerCase().contains(lowercaseQuery) ||
           recipe.description.toLowerCase().contains(lowercaseQuery) ||
-          recipe.tags.any((tag) => tag.toLowerCase().contains(lowercaseQuery)) ||
-          recipe.ingredients
-              .any((i) => i.name.toLowerCase().contains(lowercaseQuery));
+          recipe.tags.any(
+            (tag) => tag.toLowerCase().contains(lowercaseQuery),
+          ) ||
+          recipe.ingredients.any(
+            (i) => i.name.toLowerCase().contains(lowercaseQuery),
+          );
     }).toList();
   }
 
@@ -101,7 +104,8 @@ class RecipeProvider extends ChangeNotifier {
         name: 'Nyama Choma',
         description:
             'Classic Kenyan grilled meat with kachumbari salad. Perfect for family gatherings and celebrations.',
-        image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800',
+        image:
+            'https://images.unsplash.com/photo-1544025162-d76694265947?w=800',
         authorName: 'Chef Wanjiku',
         prepTime: 30,
         cookTime: 45,
@@ -141,11 +145,7 @@ class RecipeProvider extends ChangeNotifier {
             quantity: '2 pieces',
             linkedProduct: findProduct('Lemon'),
           ),
-          RecipeIngredient(
-            id: '6',
-            name: 'Salt',
-            quantity: 'To taste',
-          ),
+          RecipeIngredient(id: '6', name: 'Salt', quantity: 'To taste'),
         ],
         instructions: [
           'Season the beef ribs with salt and let them rest for 30 minutes at room temperature.',
@@ -165,7 +165,8 @@ class RecipeProvider extends ChangeNotifier {
         name: 'Pilau',
         description:
             'Aromatic Swahili spiced rice dish with tender meat. A coastal Kenyan favorite with rich flavors.',
-        image: 'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=800',
+        image:
+            'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=800',
         authorName: 'Mama Fatuma',
         prepTime: 20,
         cookTime: 50,
@@ -199,11 +200,7 @@ class RecipeProvider extends ChangeNotifier {
             quantity: '6 cloves',
             linkedProduct: findProduct('Garlic'),
           ),
-          RecipeIngredient(
-            id: '5',
-            name: 'Pilau Masala',
-            quantity: '2 tbsp',
-          ),
+          RecipeIngredient(id: '5', name: 'Pilau Masala', quantity: '2 tbsp'),
           RecipeIngredient(
             id: '6',
             name: 'Potatoes',
@@ -229,7 +226,8 @@ class RecipeProvider extends ChangeNotifier {
         name: 'Ugali & Sukuma Wiki',
         description:
             'The quintessential Kenyan meal. Cornmeal porridge served with sautéed collard greens.',
-        image: 'https://images.unsplash.com/photo-1604329760661-e71dc83f8f26?w=800',
+        image:
+            'https://images.unsplash.com/photo-1604329760661-e71dc83f8f26?w=800',
         authorName: 'Chef Kamau',
         prepTime: 10,
         cookTime: 25,
@@ -286,7 +284,8 @@ class RecipeProvider extends ChangeNotifier {
         name: 'Chicken Tikka Masala',
         description:
             'Creamy, spiced tomato-based curry with tender chicken pieces. A family favorite.',
-        image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800',
+        image:
+            'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800',
         authorName: 'Chef Patel',
         prepTime: 25,
         cookTime: 35,
@@ -350,7 +349,8 @@ class RecipeProvider extends ChangeNotifier {
         name: 'Avocado Toast',
         description:
             'Simple, nutritious breakfast with creamy avocado on crusty bread. Quick and delicious.',
-        image: 'https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?w=800',
+        image:
+            'https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?w=800',
         authorName: 'Chef Sarah',
         prepTime: 5,
         cookTime: 5,
@@ -403,7 +403,8 @@ class RecipeProvider extends ChangeNotifier {
         name: 'Chapati',
         description:
             'Soft, layered flatbread perfect for scooping up stews and curries. A Kenyan staple.',
-        image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800',
+        image:
+            'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800',
         authorName: 'Mama Njeri',
         prepTime: 40,
         cookTime: 30,
@@ -425,16 +426,8 @@ class RecipeProvider extends ChangeNotifier {
             quantity: '1/2 cup',
             linkedProduct: findProduct('Oil'),
           ),
-          RecipeIngredient(
-            id: '3',
-            name: 'Salt',
-            quantity: '1 tsp',
-          ),
-          RecipeIngredient(
-            id: '4',
-            name: 'Warm Water',
-            quantity: '1 cup',
-          ),
+          RecipeIngredient(id: '3', name: 'Salt', quantity: '1 tsp'),
+          RecipeIngredient(id: '4', name: 'Warm Water', quantity: '1 cup'),
         ],
         instructions: [
           'Mix flour and salt in a large bowl.',
@@ -453,7 +446,8 @@ class RecipeProvider extends ChangeNotifier {
         name: 'Fruit Smoothie Bowl',
         description:
             'Refreshing blend of tropical fruits topped with granola and fresh fruits. Perfect breakfast.',
-        image: 'https://images.unsplash.com/photo-1590301157890-4810ed352733?w=800',
+        image:
+            'https://images.unsplash.com/photo-1590301157890-4810ed352733?w=800',
         authorName: 'Chef Lisa',
         prepTime: 10,
         cookTime: 0,
@@ -508,7 +502,8 @@ class RecipeProvider extends ChangeNotifier {
         name: 'Beef Stir Fry',
         description:
             'Quick and flavorful beef with colorful vegetables. Ready in under 30 minutes.',
-        image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=800',
+        image:
+            'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=800',
         authorName: 'Chef Chen',
         prepTime: 15,
         cookTime: 10,
@@ -536,22 +531,14 @@ class RecipeProvider extends ChangeNotifier {
             quantity: '1 head',
             linkedProduct: findProduct('Broccoli'),
           ),
-          RecipeIngredient(
-            id: '4',
-            name: 'Soy Sauce',
-            quantity: '3 tbsp',
-          ),
+          RecipeIngredient(id: '4', name: 'Soy Sauce', quantity: '3 tbsp'),
           RecipeIngredient(
             id: '5',
             name: 'Garlic',
             quantity: '3 cloves',
             linkedProduct: findProduct('Garlic'),
           ),
-          RecipeIngredient(
-            id: '6',
-            name: 'Ginger',
-            quantity: '1 inch piece',
-          ),
+          RecipeIngredient(id: '6', name: 'Ginger', quantity: '1 inch piece'),
         ],
         instructions: [
           'Slice beef thinly against the grain.',
@@ -566,5 +553,14 @@ class RecipeProvider extends ChangeNotifier {
         createdAt: DateTime.now().subtract(const Duration(days: 1)),
       ),
     ];
+  }
+
+  /// Clear all recipe data (for logout)
+  Future<void> clearAll() async {
+    _recipes = [];
+    _favoriteRecipes = [];
+    _isLoading = false;
+    _errorMessage = null;
+    notifyListeners();
   }
 }
