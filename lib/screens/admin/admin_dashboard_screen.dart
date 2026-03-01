@@ -316,6 +316,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
         elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
         actions: [
           IconButton(
             onPressed: () => _showLogoutDialog(context),
@@ -324,162 +326,239 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ],
       ),
+      backgroundColor: const Color(0xFFFAFAFA),
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
           final user = authProvider.user;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Admin Header
+                // Admin Header - Modern Light Theme
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Welcome, ${user?.name ?? 'Admin'}',
-                        style: AppTextStyles.h4,
+                        style: AppTextStyles.h4.copyWith(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        user?.email ?? 'admin@lipacart.com',
-                        style: AppTextStyles.bodySmall,
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.email_outlined,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            user?.email ?? 'admin@lipacart.com',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-                // Quick Stats
+                // Quick Stats - Orange/Green Theme
                 Text(
                   'Quick Stats',
-                  style: AppTextStyles.h5,
+                  style: AppTextStyles.h5.copyWith(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 GridView.count(
                   crossAxisCount: _getGridColumns(context),
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 1.2,
+                  mainAxisSpacing: 20,
+                  crossAxisSpacing: 20,
+                  childAspectRatio: 1.15,
                   children: [
                     _StatCard(
                       title: 'Total Users',
                       value: _statsLoading ? '...' : '${_stats['totalUsers']}',
-                      icon: Icons.people,
-                      color: AppColors.primary,
+                      icon: Icons.people_outline,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFFFF9500).withValues(alpha: 0.15),
+                          const Color(0xFFFF9500).withValues(alpha: 0.05),
+                        ],
+                      ),
+                      accentColor: const Color(0xFFFF9500),
                     ),
                     _StatCard(
                       title: 'Total Orders',
                       value: _statsLoading ? '...' : '${_stats['totalOrders']}',
-                      icon: Icons.shopping_cart,
-                      color: Colors.green,
+                      icon: Icons.shopping_bag_outlined,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF10B981).withValues(alpha: 0.15),
+                          const Color(0xFF10B981).withValues(alpha: 0.05),
+                        ],
+                      ),
+                      accentColor: const Color(0xFF10B981),
                     ),
                     _StatCard(
                       title: 'Total Products',
                       value: _statsLoading ? '...' : '${_stats['totalProducts']}',
-                      icon: Icons.inventory,
-                      color: AppColors.accent,
+                      icon: Icons.inventory_2_outlined,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFFFF9500).withValues(alpha: 0.15),
+                          const Color(0xFFFF9500).withValues(alpha: 0.05),
+                        ],
+                      ),
+                      accentColor: const Color(0xFFFF9500),
                     ),
                     _StatCard(
                       title: 'Total Shoppers',
                       value: _statsLoading ? '...' : '${_stats['shopperCount']}',
-                      icon: Icons.store,
-                      color: Colors.purple,
+                      icon: Icons.storefront_outlined,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF10B981).withValues(alpha: 0.15),
+                          const Color(0xFF10B981).withValues(alpha: 0.05),
+                        ],
+                      ),
+                      accentColor: const Color(0xFF10B981),
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
                 // Management Sections
                 Text(
                   'Management',
-                  style: AppTextStyles.h5,
+                  style: AppTextStyles.h5.copyWith(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 GridView.count(
                   crossAxisCount: _getGridColumns(context),
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 1.3,
+                  mainAxisSpacing: 20,
+                  crossAxisSpacing: 20,
+                  childAspectRatio: 1.25,
                   children: [
                     _ManagementCard(
-                      icon: Icons.inventory_2,
+                      icon: Icons.inventory_2_outlined,
                       title: 'Products',
                       count: _statsLoading ? '...' : '${_stats['totalProducts']}',
-                      color: AppColors.accent,
+                      accentColor: const Color(0xFFFF9500),
                       onTap: () => context.go('/admin/products'),
                     ),
                     _ManagementCard(
-                      icon: Icons.receipt,
+                      icon: Icons.receipt_long_outlined,
                       title: 'Orders',
                       count: _statsLoading ? '...' : '${_stats['totalOrders']}',
-                      color: Colors.orange,
+                      accentColor: const Color(0xFF10B981),
                       onTap: () => context.go('/admin/orders'),
                     ),
                     _ManagementCard(
-                      icon: Icons.store,
+                      icon: Icons.storefront_outlined,
                       title: 'Shoppers',
                       count: _statsLoading ? '...' : '${_stats['shopperCount']}',
-                      color: Colors.purple,
+                      accentColor: const Color(0xFFFF9500),
                       onTap: () => context.go('/admin/users'),
                     ),
                     _ManagementCard(
-                      icon: Icons.two_wheeler,
+                      icon: Icons.two_wheeler_outlined,
                       title: 'Riders',
                       count: _statsLoading ? '...' : '${_stats['riderCount']}',
-                      color: Colors.blue,
+                      accentColor: const Color(0xFF10B981),
                       onTap: () => context.go('/admin/riders'),
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-                // Quick Actions
+                // Quick Actions - Modern Buttons
                 Text(
                   'Quick Actions',
-                  style: AppTextStyles.h5,
+                  style: AppTextStyles.h5.copyWith(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 Row(
-                  spacing: 12,
+                  spacing: 16,
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () => _showAddStaffDialog('shopper'),
-                        icon: const Icon(Icons.person_add),
+                        icon: const Icon(Icons.person_add_outlined),
                         label: const Text('Add Shopper'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: const Color(0xFFFF9500),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
                         ),
                       ),
                     ),
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () => _showAddStaffDialog('rider'),
-                        icon: const Icon(Icons.two_wheeler),
+                        icon: const Icon(Icons.two_wheeler_outlined),
                         label: const Text('Add Rider'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accent,
+                          backgroundColor: const Color(0xFF10B981),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
                         ),
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 32),
               ],
             ),
           );
@@ -518,39 +597,65 @@ class _StatCard extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
-  final Color color;
+  final LinearGradient gradient;
+  final Color accentColor;
 
   const _StatCard({
     required this.title,
     required this.value,
     required this.icon,
-    required this.color,
+    required this.gradient,
+    required this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: accentColor.withValues(alpha: 0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, color: color, size: 32),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: accentColor, size: 28),
+          ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 value,
-                style: AppTextStyles.h4,
+                style: AppTextStyles.h4.copyWith(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: accentColor,
+                ),
               ),
               Text(
                 title,
-                style: AppTextStyles.bodySmall,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: Colors.grey[700],
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
@@ -560,67 +665,96 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _ManagementCard extends StatelessWidget {
+class _ManagementCard extends StatefulWidget {
   final IconData icon;
   final String title;
   final String count;
-  final Color color;
+  final Color accentColor;
   final VoidCallback onTap;
 
   const _ManagementCard({
     required this.icon,
     required this.title,
     required this.count,
-    required this.color,
+    required this.accentColor,
     required this.onTap,
   });
 
   @override
+  State<_ManagementCard> createState() => _ManagementCardState();
+}
+
+class _ManagementCardState extends State<_ManagementCard> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[200]!),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withValues(alpha: 0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Material(
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: _isHovered
+                    ? widget.accentColor.withValues(alpha: 0.3)
+                    : Colors.grey[200]!,
+                width: _isHovered ? 1.5 : 1,
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: _isHovered
+                      ? widget.accentColor.withValues(alpha: 0.1)
+                      : Colors.grey.withValues(alpha: 0.05),
+                  blurRadius: _isHovered ? 12 : 8,
+                  offset: const Offset(0, 2),
                 ),
-                child: Icon(icon, color: color, size: 28),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    count,
-                    style: AppTextStyles.h4.copyWith(color: color),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: widget.accentColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  Text(
-                    title,
-                    style: AppTextStyles.bodySmall,
+                  child: Icon(
+                    widget.icon,
+                    color: widget.accentColor,
+                    size: 28,
                   ),
-                ],
-              ),
-            ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.count,
+                      style: AppTextStyles.h4.copyWith(
+                        color: widget.accentColor,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.title,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
