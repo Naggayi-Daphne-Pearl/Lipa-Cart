@@ -425,4 +425,41 @@ class StrapiService {
       return false;
     }
   }
+
+  /// Submit KYC documents for shopper verification
+  static Future<bool> submitShopperKyc({
+    required String shopperId,
+    required String idNumber,
+    required String idPhotoUrl,
+    required String facePhotoUrl,
+    required String token,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$_apiUrl/shoppers/kyc/submit'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: json.encode({
+              'id_number': idNumber,
+              'id_photo_url': idPhotoUrl,
+              'face_photo_url': facePhotoUrl,
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        print('KYC submission successful');
+        return true;
+      } else {
+        print('ERROR: KYC submission failed - ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('ERROR: submitShopperKyc - $e');
+      return false;
+    }
+  }
 }

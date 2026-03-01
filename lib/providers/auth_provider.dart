@@ -173,6 +173,8 @@ class AuthProvider extends ChangeNotifier {
             userData['is_premium'] as bool? ??
             false,
         customerId: userData['customer_id']?.toString(),
+        shopperId: userData['shopper_id']?.toString(),
+        kycStatus: userData['kyc_status'] as String?,
         createdAt: DateTime.now(),
       );
 
@@ -226,6 +228,8 @@ class AuthProvider extends ChangeNotifier {
             userData['is_premium'] as bool? ??
             false,
         customerId: userData['customer_id']?.toString(),
+        shopperId: userData['shopper_id']?.toString(),
+        kycStatus: userData['kyc_status'] as String?,
         createdAt: DateTime.now(),
       );
 
@@ -288,6 +292,8 @@ class AuthProvider extends ChangeNotifier {
             userData['isPremium'] as bool? ??
             userData['is_premium'] as bool? ??
             false,
+        shopperId: userData['shopper_id']?.toString(),
+        kycStatus: userData['kyc_status'] as String?,
         createdAt: DateTime.now(),
       );
 
@@ -380,6 +386,8 @@ class AuthProvider extends ChangeNotifier {
               response['is_premium'] as bool? ??
               false,
           customerId: response['customer_id']?.toString(),
+          shopperId: response['shopper_id']?.toString(),
+          kycStatus: response['kyc_status'] as String?,
           createdAt: DateTime.now(),
         );
       } else {
@@ -398,6 +406,8 @@ class AuthProvider extends ChangeNotifier {
               response['is_premium'] as bool? ??
               _user!.isPremium,
           customerId: response['customer_id']?.toString() ?? _user!.customerId,
+          shopperId: response['shopper_id']?.toString() ?? _user!.shopperId,
+          kycStatus: (response['kyc_status'] as String?) ?? _user!.kycStatus,
         );
       }
 

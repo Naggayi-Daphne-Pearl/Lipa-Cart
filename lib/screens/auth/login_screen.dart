@@ -322,7 +322,31 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handlePostLogin(AuthProvider authProvider) async {
     if (!mounted) return;
 
-    final role = authProvider.user?.role ?? UserRole.customer;
+    final user = authProvider.user;
+    final role = user?.role ?? UserRole.customer;
+
+    // KYC gate for shoppers
+    if (role == UserRole.shopper) {
+      final kycStatus = user?.kycStatus ?? 'not_submitted';
+      if (kycStatus == 'approved') {
+        context.go('/shopper/home');
+      } else if (kycStatus == 'pending_review') {
+        context.go('/shopper/pending-approval');
+      } else if (kycStatus == 'rejected') {
+        context.go('/shopper/kyc?rejected=true');
+      } else {
+        context.go('/shopper/kyc');
+      }
+      return;
+    }
+
+    // Admin goes to dashboard
+    if (role == UserRole.admin) {
+      context.go('/admin/dashboard');
+      return;
+    }
+
+    // Other non-customer roles (rider) go to their home screen
     if (role != UserRole.customer) {
       context.go('/${role.name}/home');
       return;
@@ -336,7 +360,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (returnRoute.startsWith('/customer/checkout')) {
       final token = authProvider.token;
-      final user = authProvider.user;
       if (token != null && user != null && user.addresses.isEmpty) {
         final addressService = context.read<AddressService>();
         final customerId = user.customerId ?? user.id;

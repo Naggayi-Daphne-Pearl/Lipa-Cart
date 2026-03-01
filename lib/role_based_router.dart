@@ -53,6 +53,8 @@ import 'screens/shopper/shopper_available_tasks_screen.dart';
 import 'screens/shopper/shopper_active_tasks_screen.dart';
 import 'screens/shopper/shopper_earnings_screen.dart';
 import 'screens/shopper/shopper_completed_tasks_screen.dart';
+import 'screens/shopper/shopper_kyc_screen.dart';
+import 'screens/shopper/shopper_pending_approval_screen.dart';
 
 /// Helper to get home route based on user role
 String _homeForRole(UserRole? role) {
@@ -421,6 +423,17 @@ class RoleBasedRouter {
         GoRoute(
           path: '/shopper/earnings',
           builder: (context, state) => const ShopperEarningsScreen(),
+        ),
+        GoRoute(
+          path: '/shopper/kyc',
+          builder: (context, state) {
+            final isRejected = state.uri.queryParameters['rejected'] == 'true';
+            return ShopperKycScreen(isRejected: isRejected);
+          },
+        ),
+        GoRoute(
+          path: '/shopper/pending-approval',
+          builder: (context, state) => const ShopperPendingApprovalScreen(),
         ),
       ],
     );

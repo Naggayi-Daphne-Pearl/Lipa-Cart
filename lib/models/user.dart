@@ -35,6 +35,8 @@ class User {
   final bool isPremium;
   final UserRole role;
   final String? customerId;
+  final String? shopperId;
+  final String? kycStatus;
   final List<Address> addresses;
   final DateTime createdAt;
 
@@ -47,6 +49,8 @@ class User {
     this.isPremium = false,
     this.role = UserRole.customer,
     this.customerId,
+    this.shopperId,
+    this.kycStatus,
     this.addresses = const [],
     required this.createdAt,
   });
@@ -60,6 +64,8 @@ class User {
     bool? isPremium,
     UserRole? role,
     String? customerId,
+    String? shopperId,
+    String? kycStatus,
     List<Address>? addresses,
     DateTime? createdAt,
   }) {
@@ -72,6 +78,8 @@ class User {
       isPremium: isPremium ?? this.isPremium,
       role: role ?? this.role,
       customerId: customerId ?? this.customerId,
+      shopperId: shopperId ?? this.shopperId,
+      kycStatus: kycStatus ?? this.kycStatus,
       addresses: addresses ?? this.addresses,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -87,6 +95,8 @@ class User {
       'isPremium': isPremium,
       'role': role.name,
       'customerId': customerId,
+      'shopperId': shopperId,
+      'kycStatus': kycStatus,
       'addresses': addresses.map((a) => a.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
     };
@@ -115,6 +125,8 @@ class User {
         (json['role'] ?? json['user_type']) as String?,
       ),
       customerId: (json['customerId'] ?? json['customer_id'])?.toString(),
+      shopperId: (json['shopperId'] ?? json['shopper_id'])?.toString(),
+      kycStatus: (json['kycStatus'] ?? json['kyc_status']) as String?,
       addresses:
           (json['addresses'] as List<dynamic>?)
               ?.map((a) => Address.fromJson(a as Map<String, dynamic>))
