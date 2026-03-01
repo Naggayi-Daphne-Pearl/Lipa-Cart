@@ -229,6 +229,47 @@ class OrderService extends ChangeNotifier {
         'DEBUG: _fromStrapi - Delivery address parsed: ${deliveryAddress?.fullAddress}',
       );
 
+      // Parse customer data if available
+      print('DEBUG: _fromStrapi - Parsing customer data...');
+      user_models.User? customer;
+      final customerData = attributes['customer'];
+      if (customerData != null) {
+        try {
+          print(
+            'DEBUG: _fromStrapi - Customer data type: ${customerData.runtimeType}',
+          );
+
+          Map<String, dynamic> customerMap;
+          if (customerData is Map<String, dynamic>) {
+            // Check if it's wrapped in {data: {...}}
+            if (customerData.containsKey('data') &&
+                customerData['data'] is Map<String, dynamic>) {
+              customerMap = customerData['data'];
+              final attrs =
+                  customerMap['attributes'] as Map<String, dynamic>?;
+              if (attrs != null) {
+                customerMap = {...customerMap, ...attrs};
+              }
+            } else {
+              // Flat format - check if it has attributes
+              final attrs =
+                  customerData['attributes'] as Map<String, dynamic>?;
+              if (attrs != null) {
+                customerMap = {...customerData, ...attrs};
+              } else {
+                customerMap = customerData;
+              }
+            }
+            customer = user_models.User.fromJson(customerMap);
+            print(
+              'DEBUG: _fromStrapi - Customer parsed: ${customer.name ?? customer.phoneNumber}',
+            );
+          }
+        } catch (e) {
+          print('DEBUG: _fromStrapi - Error parsing customer: $e');
+        }
+      }
+
       return Order(
         id: rawId?.toString() ?? '',
         documentId: documentId,
@@ -240,6 +281,8 @@ class OrderService extends ChangeNotifier {
         deliveryFee: (attributes['delivery_fee'] as num?)?.toDouble() ?? 0,
         total: (attributes['total'] as num?)?.toDouble() ?? 0,
         status: _mapStatus(attributes['status'] as String?),
+        customerId: (attributes['customer_id'] ?? customer?.id) as String?,
+        customer: customer,
         createdAt:
             DateTime.tryParse(attributes['createdAt'] as String? ?? '') ??
             DateTime.now(),
@@ -349,6 +392,62 @@ class OrderService extends ChangeNotifier {
       return false;
     } catch (e) {
       print('DEBUG: Orders fetch exception: $e');
+      _error = 'Error fetching orders: $e';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Fetch ALL orders for admin dashboard (no customer filter)
+  Future<bool> fetchAllOrders(String token) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      // Fetch all orders without customer filter - populate specific relations
+      final url =
+          '$baseUrl/api/orders?populate[0]=order_items&populate[1]=customer&populate[2]=delivery_address&sort[0]=createdAt:desc';
+
+      print('DEBUG: Fetching all orders from $url');
+      print('DEBUG: Token length=${token.length}');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      print('DEBUG: All orders response status=${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        _orders = List<Order>.from(
+          (data['data'] as List).map((item) {
+            try {
+              return _fromStrapi(item);
+            } catch (e) {
+              print('ERROR: Failed to parse order: $e');
+              rethrow;
+            }
+          }),
+        );
+
+        print('DEBUG: All orders parsed count=${_orders.length}');
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+
+      print('DEBUG: All orders fetch failed with status ${response.statusCode}');
+      print('DEBUG: Response body: ${response.body}');
+      _error = 'Failed to fetch orders (${response.statusCode})';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      print('DEBUG: All orders fetch exception: $e');
       _error = 'Error fetching orders: $e';
       _isLoading = false;
       notifyListeners();

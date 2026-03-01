@@ -33,9 +33,11 @@ import 'screens/customer/addresses_screen.dart';
 import 'screens/customer/order_rating_screen.dart';
 
 // Admin screens
+import 'screens/admin/admin_shell.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/admin_products_screen.dart';
 import 'screens/admin/admin_users_screen.dart';
+import 'screens/admin/admin_riders_screen.dart';
 import 'screens/admin/admin_orders_screen.dart';
 import 'screens/admin/admin_analytics_screen.dart';
 import 'screens/admin/admin_user_management_screen.dart';
@@ -358,27 +360,45 @@ class RoleBasedRouter {
         // Admin Routes
         GoRoute(
           path: '/admin/dashboard',
-          builder: (context, state) => const AdminDashboardScreen(),
+          builder: (context, state) => AdminShell(
+            child: const AdminDashboardScreen(),
+          ),
         ),
         GoRoute(
           path: '/admin/products',
-          builder: (context, state) => const AdminProductsScreen(),
+          builder: (context, state) => AdminShell(
+            child: const AdminProductsScreen(),
+          ),
         ),
         GoRoute(
           path: '/admin/users',
-          builder: (context, state) => const AdminUsersScreen(),
+          builder: (context, state) => AdminShell(
+            child: const AdminUsersScreen(),
+          ),
         ),
         GoRoute(
           path: '/admin/orders',
-          builder: (context, state) => const AdminOrdersScreen(),
+          builder: (context, state) => AdminShell(
+            child: const AdminOrdersScreen(),
+          ),
         ),
         GoRoute(
           path: '/admin/analytics',
-          builder: (context, state) => const AdminAnalyticsScreen(),
+          builder: (context, state) => AdminShell(
+            child: const AdminAnalyticsScreen(),
+          ),
         ),
         GoRoute(
           path: '/admin/user-management',
-          builder: (context, state) => const AdminUserManagementScreen(),
+          builder: (context, state) => AdminShell(
+            child: const AdminUserManagementScreen(),
+          ),
+        ),
+        GoRoute(
+          path: '/admin/riders',
+          builder: (context, state) => AdminShell(
+            child: const AdminRidersScreen(),
+          ),
         ),
 
         // Rider Routes

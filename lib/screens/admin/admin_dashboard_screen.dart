@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/user.dart';
 import '../../core/utils/logout_helper.dart';
+import '../../services/admin_user_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_text_styles.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -13,10 +16,20 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  Map<String, int> _stats = {
+    'totalUsers': 0,
+    'totalOrders': 0,
+    'totalProducts': 0,
+    'shopperCount': 0,
+    'riderCount': 0,
+  };
+  bool _statsLoading = true;
+
   @override
   void initState() {
     super.initState();
     _validateRole();
+    _loadStats();
   }
 
   void _validateRole() {
@@ -34,6 +47,267 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         );
       });
     }
+  }
+
+  int _getGridColumns(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    if (width > 1200) {
+      return 4; // Desktop: 4 columns
+    } else if (width > 800) {
+      return 3; // Tablet: 3 columns
+    } else {
+      return 2; // Mobile: 2 columns
+    }
+  }
+
+  Future<void> _loadStats() async {
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final token = authProvider.token;
+      if (token == null) return;
+
+      final stats = await AdminUserService.getStats(token);
+      if (mounted) {
+        setState(() {
+          _stats = {
+            'totalUsers': stats['totalUsers'] ?? 0,
+            'totalOrders': stats['totalOrders'] ?? 0,
+            'totalProducts': stats['totalProducts'] ?? 0,
+            'shopperCount': stats['shopperCount'] ?? 0,
+            'riderCount': stats['riderCount'] ?? 0,
+          };
+          _statsLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _statsLoading = false);
+      }
+    }
+  }
+
+  void _showAddStaffDialog(String userType) {
+    final phoneController = TextEditingController();
+    final nameController = TextEditingController();
+    final passwordController = TextEditingController();
+    final emailController = TextEditingController();
+    bool obscurePassword = true;
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: EdgeInsets.only(
+            top: 24,
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Add ${userType == 'shopper' ? 'Shopper' : 'Rider'}',
+                      style: AppTextStyles.h4,
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Full Name
+                Text('Full Name', style: AppTextStyles.labelSmall),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    hintText: 'Enter full name',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Phone Number
+                Text('Phone Number', style: AppTextStyles.labelSmall),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: phoneController,
+                  decoration: InputDecoration(
+                    hintText: 'Enter phone (e.g., 785796401)',
+                    prefixText: '+256',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 16),
+
+                // Password
+                Text('Password', style: AppTextStyles.labelSmall),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: passwordController,
+                  obscureText: obscurePassword,
+                  decoration: InputDecoration(
+                    hintText: 'Minimum 6 characters',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    suffixIcon: IconButton(
+                      onPressed: () => setState(() => obscurePassword = !obscurePassword),
+                      icon: Icon(
+                        obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Email (optional)
+                Text('Email (Optional)', style: AppTextStyles.labelSmall),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    hintText: 'Enter email address',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                const SizedBox(height: 24),
+
+                // Submit Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            // Validate
+                            if (nameController.text.isEmpty ||
+                                phoneController.text.isEmpty ||
+                                passwordController.text.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please fill in all required fields'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            if (phoneController.text.length != 9) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Phone must be 9 digits'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            if (passwordController.text.length < 6) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Password must be at least 6 characters'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            // Validate email format if provided
+                            if (emailController.text.isNotEmpty) {
+                              final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+                              if (!emailRegex.hasMatch(emailController.text)) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please enter a valid email address (e.g., test@example.com)'),
+                                  ),
+                                );
+                                return;
+                              }
+                            }
+
+                            setState(() => isSubmitting = true);
+
+                            try {
+                              final authProvider = context.read<AuthProvider>();
+                              final token = authProvider.token;
+                              if (token == null) throw Exception('No auth token');
+
+                              final success = await AdminUserService.createStaff(
+                                phone: '+256${phoneController.text}',
+                                password: passwordController.text,
+                                name: nameController.text,
+                                userType: userType,
+                                email: emailController.text.isEmpty ? null : emailController.text,
+                                token: token,
+                              );
+
+                              if (mounted) {
+                                Navigator.pop(context);
+                                if (success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '${userType == 'shopper' ? 'Shopper' : 'Rider'} added successfully!',
+                                      ),
+                                      backgroundColor: AppColors.success,
+                                    ),
+                                  );
+                                  _loadStats();
+                                }
+                              }
+                            } catch (e) {
+                              setState(() => isSubmitting = false);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: $e'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    child: isSubmitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'Add ${userType == 'shopper' ? 'Shopper' : 'Rider'}',
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -63,7 +337,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -71,15 +345,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     children: [
                       Text(
                         'Welcome, ${user?.name ?? 'Admin'}',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: AppTextStyles.h4,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         user?.email ?? 'admin@lipacart.com',
-                        style: TextStyle(color: Colors.grey[600]),
+                        style: AppTextStyles.bodySmall,
                       ),
                     ],
                   ),
@@ -89,73 +360,125 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 // Quick Stats
                 Text(
                   'Quick Stats',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: AppTextStyles.h5,
                 ),
                 const SizedBox(height: 12),
                 GridView.count(
-                  crossAxisCount: 2,
+                  crossAxisCount: _getGridColumns(context),
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 1.2,
                   children: [
                     _StatCard(
                       title: 'Total Users',
-                      value: '0',
+                      value: _statsLoading ? '...' : '${_stats['totalUsers']}',
                       icon: Icons.people,
-                      color: Colors.blue,
+                      color: AppColors.primary,
                     ),
                     _StatCard(
                       title: 'Total Orders',
-                      value: '0',
+                      value: _statsLoading ? '...' : '${_stats['totalOrders']}',
                       icon: Icons.shopping_cart,
                       color: Colors.green,
                     ),
                     _StatCard(
                       title: 'Total Products',
-                      value: '0',
+                      value: _statsLoading ? '...' : '${_stats['totalProducts']}',
                       icon: Icons.inventory,
-                      color: Colors.orange,
+                      color: AppColors.accent,
                     ),
                     _StatCard(
-                      title: 'Revenue',
-                      value: 'KES 0',
-                      icon: Icons.attach_money,
+                      title: 'Total Shoppers',
+                      value: _statsLoading ? '...' : '${_stats['shopperCount']}',
+                      icon: Icons.store,
                       color: Colors.purple,
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
 
-                // Admin Actions
+                // Management Sections
                 Text(
-                  'Admin Actions',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  'Management',
+                  style: AppTextStyles.h5,
                 ),
                 const SizedBox(height: 12),
-                ListTile(
-                  leading: const Icon(Icons.inventory_2),
-                  title: const Text('Manage Products'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () => context.go('/admin/products'),
+                GridView.count(
+                  crossAxisCount: _getGridColumns(context),
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 1.3,
+                  children: [
+                    _ManagementCard(
+                      icon: Icons.inventory_2,
+                      title: 'Products',
+                      count: _statsLoading ? '...' : '${_stats['totalProducts']}',
+                      color: AppColors.accent,
+                      onTap: () => context.go('/admin/products'),
+                    ),
+                    _ManagementCard(
+                      icon: Icons.receipt,
+                      title: 'Orders',
+                      count: _statsLoading ? '...' : '${_stats['totalOrders']}',
+                      color: Colors.orange,
+                      onTap: () => context.go('/admin/orders'),
+                    ),
+                    _ManagementCard(
+                      icon: Icons.store,
+                      title: 'Shoppers',
+                      count: _statsLoading ? '...' : '${_stats['shopperCount']}',
+                      color: Colors.purple,
+                      onTap: () => context.go('/admin/users'),
+                    ),
+                    _ManagementCard(
+                      icon: Icons.two_wheeler,
+                      title: 'Riders',
+                      count: _statsLoading ? '...' : '${_stats['riderCount']}',
+                      color: Colors.blue,
+                      onTap: () => context.go('/admin/riders'),
+                    ),
+                  ],
                 ),
-                ListTile(
-                  leading: const Icon(Icons.people),
-                  title: const Text('Manage Users'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () => context.go('/admin/users'),
+                const SizedBox(height: 24),
+
+                // Quick Actions
+                Text(
+                  'Quick Actions',
+                  style: AppTextStyles.h5,
                 ),
-                ListTile(
-                  leading: const Icon(Icons.receipt),
-                  title: const Text('View Orders'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () => context.go('/admin/orders'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.bar_chart),
-                  title: const Text('Analytics'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () => context.go('/admin/analytics'),
+                const SizedBox(height: 12),
+                Row(
+                  spacing: 12,
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showAddStaffDialog('shopper'),
+                        icon: const Icon(Icons.person_add),
+                        label: const Text('Add Shopper'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showAddStaffDialog('rider'),
+                        icon: const Icon(Icons.two_wheeler),
+                        label: const Text('Add Rider'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -209,9 +532,9 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,18 +546,83 @@ class _StatCard extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: AppTextStyles.h4,
               ),
               Text(
                 title,
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                style: AppTextStyles.bodySmall,
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ManagementCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String count;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ManagementCard({
+    required this.icon,
+    required this.title,
+    required this.count,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[200]!),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    count,
+                    style: AppTextStyles.h4.copyWith(color: color),
+                  ),
+                  Text(
+                    title,
+                    style: AppTextStyles.bodySmall,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

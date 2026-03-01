@@ -28,6 +28,7 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  String _selectedRole = 'customer'; // customer, shopper, or rider
 
   @override
   void dispose() {
@@ -57,7 +58,7 @@ class _SignupScreenState extends State<SignupScreen> {
       email: _emailController.text.trim().isEmpty
           ? null
           : _emailController.text.trim(),
-      userType: 'customer',
+      userType: _selectedRole,
     );
 
     setState(() => _isLoading = false);
@@ -137,6 +138,38 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSizes.xl),
+
+                // Role selection
+                Text('Account Type *', style: AppTextStyles.labelMedium),
+                const SizedBox(height: AppSizes.sm),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _RoleButton(
+                        label: 'Customer',
+                        isSelected: _selectedRole == 'customer',
+                        onTap: () => setState(() => _selectedRole = 'customer'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _RoleButton(
+                        label: 'Shopper',
+                        isSelected: _selectedRole == 'shopper',
+                        onTap: () => setState(() => _selectedRole = 'shopper'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _RoleButton(
+                        label: 'Rider',
+                        isSelected: _selectedRole == 'rider',
+                        onTap: () => setState(() => _selectedRole = 'rider'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSizes.lg),
 
                 // Phone number field
                 Text('Phone Number *', style: AppTextStyles.labelMedium),
@@ -371,6 +404,44 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoleButton extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _RoleButton({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.transparent,
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.mediumGrey,
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: isSelected ? Colors.white : AppColors.textDark,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
       ),

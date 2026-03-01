@@ -107,4 +107,88 @@ class AdminUserService {
       throw Exception('Error toggling user status: $e');
     }
   }
+
+  /// Get dashboard statistics (admin only)
+  /// Returns counts of total users, orders, products, shoppers, and riders
+  static Future<Map<String, dynamic>> getStats(String token) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$_apiUrl/admin/stats'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 401) {
+        throw Exception('Unauthorized - Admin access required');
+      }
+
+      if (response.statusCode == 403) {
+        throw Exception('Forbidden - Admin access required');
+      }
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load statistics: ${response.statusCode}');
+      }
+
+      final body = jsonDecode(response.body);
+      return body as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('Error loading statistics: $e');
+    }
+  }
+
+  /// Create staff account (shopper or rider) - admin only
+  /// Requires phone, password, name, and userType
+  static Future<bool> createStaff({
+    required String phone,
+    required String password,
+    required String name,
+    required String userType,
+    String? email,
+    required String token,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$_apiUrl/admin/create-staff'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'phone': phone,
+              'password': password,
+              'name': name,
+              'email': email,
+              'userType': userType,
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 401) {
+        throw Exception('Unauthorized - Admin access required');
+      }
+
+      if (response.statusCode == 403) {
+        throw Exception('Forbidden - Admin access required');
+      }
+
+      if (response.statusCode == 400) {
+        final body = jsonDecode(response.body);
+        throw Exception(body['message'] ?? 'Invalid request');
+      }
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to create staff account: ${response.statusCode}');
+      }
+
+      return true;
+    } catch (e) {
+      throw Exception('Error creating staff account: $e');
+    }
+  }
 }
