@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iconsax/iconsax.dart';
+import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/rider_provider.dart';
 import '../../models/user.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/constants/app_sizes.dart';
 import '../../core/utils/logout_helper.dart';
 
 class RiderHomeScreen extends StatefulWidget {
@@ -13,144 +18,995 @@ class RiderHomeScreen extends StatefulWidget {
 }
 
 class _RiderHomeScreenState extends State<RiderHomeScreen> {
+  int _currentNavIndex = 0;
+
+  // Rider orange theme colors
+  static const Color _brandColor = AppColors.accent;
+
+  static const Color _brandColorSoft = AppColors.accentSoft;
+  static const Color _brandColorMuted = AppColors.accentMuted;
+
   @override
   void initState() {
     super.initState();
-    _validateRole();
+    _validateRoleAndLoad();
   }
 
-  void _validateRole() {
+  void _validateRoleAndLoad() {
     final authProvider = context.read<AuthProvider>();
 
-    // Validate user role - only riders can access this screen
     if (authProvider.user?.role != UserRole.rider) {
       Future.microtask(() {
         GoRouter.of(context).go(
           authProvider.user?.role == UserRole.admin
               ? '/admin/dashboard'
               : authProvider.user?.role == UserRole.shopper
-              ? '/shopper/home'
-              : '/customer/home',
+                  ? '/shopper/home'
+                  : '/customer/home',
         );
       });
+      return;
+    }
+
+    _loadData();
+  }
+
+  void _loadData() {
+    final authProvider = context.read<AuthProvider>();
+    final riderProvider = context.read<RiderProvider>();
+
+    if (authProvider.token != null && authProvider.user?.id != null) {
+      riderProvider.loadRiderProfile(
+        authProvider.token!,
+        authProvider.user!.id,
+      );
+      riderProvider.fetchAvailableDeliveries(authProvider.token!);
+      riderProvider.fetchActiveDeliveries(
+        authProvider.token!,
+        authProvider.user!.id,
+      );
+    }
+  }
+
+  Future<void> _onRefresh() async {
+    _loadData();
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  String _getInitials(String? name) {
+    if (name == null || name.isEmpty) return 'R';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  }
+
+  String _getDisplayName(String? name) {
+    if (name == null || name.isEmpty) return 'Rider';
+    return name
+        .split(' ')
+        .map((w) => w.isNotEmpty
+            ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}'
+            : '')
+        .join(' ');
+  }
+
+  String _formatEarnings(double amount) {
+    if (amount == 0) return 'UGX 0';
+    if (amount >= 1000000) {
+      return 'UGX ${(amount / 1000000).toStringAsFixed(1)}M';
+    }
+    if (amount >= 1000) {
+      return 'UGX ${(amount / 1000).toStringAsFixed(0)}K';
+    }
+    return 'UGX ${amount.toStringAsFixed(0)}';
+  }
+
+  void _onNavTap(int index) {
+    setState(() => _currentNavIndex = index);
+    switch (index) {
+      case 0:
+        break;
+      case 1:
+        context.push('/rider/available-deliveries');
+        setState(() => _currentNavIndex = 0);
+        break;
+      case 2:
+        context.push('/rider/earnings');
+        setState(() => _currentNavIndex = 0);
+        break;
+      case 3:
+        _showProfileMenu();
+        setState(() => _currentNavIndex = 0);
+        break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Rider Dashboard'),
-        elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: () => _showLogoutDialog(context),
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-          ),
-        ],
-      ),
-      body: Consumer<AuthProvider>(
-        builder: (context, authProvider, _) {
+      backgroundColor: AppColors.background,
+      body: Consumer2<AuthProvider, RiderProvider>(
+        builder: (context, authProvider, riderProvider, _) {
           final user = authProvider.user;
+          final isOnline = riderProvider.isOnline;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Rider Header
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
+          return RefreshIndicator(
+            onRefresh: _onRefresh,
+            color: _brandColor,
+            child: CustomScrollView(
+              slivers: [
+                // Custom App Bar
+                SliverAppBar(
+                  expandedHeight: 0,
+                  floating: true,
+                  backgroundColor: AppColors.surface,
+                  surfaceTintColor: Colors.transparent,
+                  title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Welcome back, ${user?.name ?? 'Rider'}',
-                        style: const TextStyle(
+                        'Dashboard',
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 8),
                       Text(
-                        'You are online',
+                        DateFormat('EEEE, MMM d').format(DateTime.now()),
                         style: TextStyle(
-                          color: Colors.green[700],
-                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                          color: AppColors.textTertiary,
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 24),
-
-                // Delivery Stats
-                Text(
-                  'Today\'s Stats',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
-                GridView.count(
-                  crossAxisCount: 3,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  children: [
-                    _StatCard(
-                      title: 'Completed',
-                      value: '0',
-                      color: Colors.green,
+                  actions: [
+                    // Online status indicator
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap: () {
+                          if (authProvider.token != null &&
+                              user?.id != null) {
+                            riderProvider.toggleOnlineStatus(
+                              authProvider.token!,
+                              user!.id,
+                              !isOnline,
+                            );
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isOnline
+                                ? _brandColorSoft
+                                : AppColors.grey100,
+                            borderRadius:
+                                BorderRadius.circular(AppSizes.radiusFull),
+                            border: Border.all(
+                              color: isOnline
+                                  ? _brandColor
+                                  : AppColors.grey300,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: isOnline
+                                      ? _brandColor
+                                      : AppColors.grey400,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                isOnline ? 'Online' : 'Offline',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: isOnline
+                                      ? _brandColor
+                                      : AppColors.grey600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                    _StatCard(title: 'Active', value: '0', color: Colors.blue),
-                    _StatCard(
-                      title: 'Earnings',
-                      value: 'KES 0',
-                      color: Colors.orange,
-                    ),
+                    const SizedBox(width: 4),
                   ],
                 ),
-                const SizedBox(height: 24),
 
-                // Quick Actions
-                Text(
-                  'Quick Actions',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  leading: const Icon(Icons.local_shipping),
-                  title: const Text('Available Deliveries'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () => context.go('/rider/available-deliveries'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.local_activity),
-                  title: const Text('Active Deliveries'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () => context.go('/rider/active-deliveries'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.money),
-                  title: const Text('Earnings'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () => context.go('/rider/earnings'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.star),
-                  title: const Text('Ratings'),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () => context.go('/rider/ratings'),
+                // Body content
+                SliverPadding(
+                  padding: const EdgeInsets.all(AppSizes.md),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      // Welcome Card
+                      _buildWelcomeCard(user, isOnline),
+                      const SizedBox(height: AppSizes.lg),
+
+                      // Today's Summary
+                      _buildSectionHeader(
+                        'Today\'s Summary',
+                        icon: Iconsax.chart_1,
+                      ),
+                      const SizedBox(height: AppSizes.sm),
+                      _buildStatsGrid(riderProvider),
+                      const SizedBox(height: AppSizes.lg),
+
+                      // Performance Section
+                      _buildSectionHeader(
+                        'Your Performance',
+                        icon: Iconsax.star_1,
+                      ),
+                      const SizedBox(height: AppSizes.sm),
+                      _buildPerformanceCard(riderProvider),
+                      const SizedBox(height: AppSizes.lg),
+
+                      // Quick Actions
+                      _buildSectionHeader(
+                        'Quick Actions',
+                        icon: Iconsax.flash_1,
+                      ),
+                      const SizedBox(height: AppSizes.sm),
+                      _buildQuickActions(context),
+                      const SizedBox(height: AppSizes.lg),
+                    ]),
+                  ),
                 ),
               ],
             ),
           );
         },
+      ),
+      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildWelcomeCard(User? user, bool isOnline) {
+    final initials = _getInitials(user?.name);
+    final displayName = _getDisplayName(user?.name);
+
+    return Container(
+      padding: const EdgeInsets.all(AppSizes.md),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.accent, AppColors.accentLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        boxShadow: [
+          BoxShadow(
+            color: _brandColor.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.4),
+                width: 2,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                initials,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSizes.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome back,',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  displayName,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isOnline
+                      ? 'You\'re visible for deliveries'
+                      : 'Go online to receive deliveries',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, {IconData? icon}) {
+    return Row(
+      children: [
+        if (icon != null) ...[
+          Icon(icon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+        ],
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsGrid(RiderProvider riderProvider) {
+    final availableCount = riderProvider.availableDeliveries.length;
+    final activeCount = riderProvider.activeDeliveries.length;
+    final completedCount = riderProvider.completedOrders;
+    final earnings = riderProvider.totalEarnings;
+
+    final allZero =
+        availableCount == 0 && activeCount == 0 && completedCount == 0;
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                icon: Iconsax.truck,
+                title: 'Available',
+                value: '$availableCount',
+                color: AppColors.info,
+                bgColor: AppColors.cardBlue,
+                onTap: () => context.push('/rider/available-deliveries'),
+              ),
+            ),
+            const SizedBox(width: AppSizes.sm),
+            Expanded(
+              child: _buildStatCard(
+                icon: Iconsax.timer_1,
+                title: 'Active',
+                value: '$activeCount',
+                color: _brandColor,
+                bgColor: AppColors.cardOrange,
+                onTap: () => context.push('/rider/active-deliveries'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSizes.sm),
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                icon: Iconsax.tick_circle,
+                title: 'Completed',
+                value: '$completedCount',
+                color: AppColors.success,
+                bgColor: AppColors.cardGreen,
+                onTap: () => context.push('/rider/ratings'),
+              ),
+            ),
+            const SizedBox(width: AppSizes.sm),
+            Expanded(
+              child: _buildStatCard(
+                icon: Iconsax.wallet_2,
+                title: 'Earnings',
+                value: _formatEarnings(earnings),
+                color: _brandColor,
+                bgColor: AppColors.cardYellow,
+                onTap: () => context.push('/rider/earnings'),
+              ),
+            ),
+          ],
+        ),
+        if (allZero) ...[
+          const SizedBox(height: AppSizes.md),
+          GestureDetector(
+            onTap: () => context.push('/rider/available-deliveries'),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSizes.md),
+              decoration: BoxDecoration(
+                color: _brandColorSoft,
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                border: Border.all(color: _brandColorMuted),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: _brandColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                    ),
+                    child: Icon(Iconsax.truck_fast,
+                        color: _brandColor, size: 20),
+                  ),
+                  const SizedBox(width: AppSizes.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Start delivering today!',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: _brandColor,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Browse available deliveries and pick your first order',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios,
+                      size: 14, color: _brandColor),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+    required Color bgColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppSizes.md),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+          border: Border.all(color: AppColors.grey200),
+          boxShadow: AppColors.shadowSm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusXs),
+                  ),
+                  child: Icon(icon, color: color, size: 18),
+                ),
+                Icon(Icons.arrow_forward_ios,
+                    size: 12, color: AppColors.grey400),
+              ],
+            ),
+            const SizedBox(height: AppSizes.sm),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textTertiary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPerformanceCard(RiderProvider riderProvider) {
+    final rating = riderProvider.averageRating;
+    final reviews = riderProvider.totalReviews;
+    final hasData = reviews > 0;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSizes.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        border: Border.all(color: AppColors.grey200),
+        boxShadow: AppColors.shadowSm,
+      ),
+      child: hasData
+          ? Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Average Rating',
+                        style: TextStyle(
+                          color: AppColors.textTertiary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        rating.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(5, (i) {
+                          if (i < rating.floor()) {
+                            return const Icon(Icons.star_rounded,
+                                size: 18, color: Colors.amber);
+                          } else if (i < rating) {
+                            return const Icon(Icons.star_half_rounded,
+                                size: 18, color: Colors.amber);
+                          }
+                          return Icon(Icons.star_outline_rounded,
+                              size: 18, color: AppColors.grey300);
+                        }),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 60,
+                  color: AppColors.grey200,
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Reviews',
+                        style: TextStyle(
+                          color: AppColors.textTertiary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '$reviews',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'customer ratings',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              children: [
+                Icon(Iconsax.star_1, size: 36, color: AppColors.grey300),
+                const SizedBox(height: AppSizes.sm),
+                const Text(
+                  'No ratings yet',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Complete your first delivery to start building your reputation!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildQuickActionTile(
+                icon: Iconsax.truck_fast,
+                label: 'Browse Deliveries',
+                color: AppColors.info,
+                bgColor: AppColors.cardBlue,
+                onTap: () => context.push('/rider/available-deliveries'),
+              ),
+            ),
+            const SizedBox(width: AppSizes.sm),
+            Expanded(
+              child: _buildQuickActionTile(
+                icon: Iconsax.task_square,
+                label: 'Active Orders',
+                color: _brandColor,
+                bgColor: AppColors.cardOrange,
+                onTap: () => context.push('/rider/active-deliveries'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSizes.sm),
+        Row(
+          children: [
+            Expanded(
+              child: _buildQuickActionTile(
+                icon: Iconsax.chart_2,
+                label: 'Earnings History',
+                color: _brandColor,
+                bgColor: AppColors.cardYellow,
+                onTap: () => context.push('/rider/earnings'),
+              ),
+            ),
+            const SizedBox(width: AppSizes.sm),
+            Expanded(
+              child: _buildQuickActionTile(
+                icon: Iconsax.star_1,
+                label: 'My Ratings',
+                color: AppColors.success,
+                bgColor: AppColors.cardGreen,
+                onTap: () => context.push('/rider/ratings'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActionTile({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required Color bgColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+            vertical: AppSizes.md, horizontal: AppSizes.sm),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+          border: Border.all(color: AppColors.grey200),
+          boxShadow: AppColors.shadowSm,
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(height: AppSizes.sm),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                icon: Iconsax.home_2,
+                activeIcon: Iconsax.home_25,
+                label: 'Home',
+                index: 0,
+              ),
+              _buildNavItem(
+                icon: Iconsax.truck,
+                activeIcon: Iconsax.truck_tick,
+                label: 'Deliveries',
+                index: 1,
+              ),
+              _buildNavItem(
+                icon: Iconsax.wallet_2,
+                activeIcon: Iconsax.wallet_25,
+                label: 'Earnings',
+                index: 2,
+              ),
+              _buildNavItem(
+                icon: Iconsax.profile_circle,
+                activeIcon: Iconsax.profile_circle5,
+                label: 'Profile',
+                index: 3,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    required int index,
+  }) {
+    final isActive = _currentNavIndex == index;
+    return GestureDetector(
+      onTap: () => _onNavTap(index),
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 64,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isActive ? activeIcon : icon,
+                size: 24,
+                color: isActive ? _brandColor : AppColors.grey500,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                  color: isActive ? _brandColor : AppColors.grey500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showProfileMenu() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppSizes.radiusLg)),
+      ),
+      builder: (ctx) {
+        final user = context.read<AuthProvider>().user;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSizes.md),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSizes.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.grey300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Profile header
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        color: AppColors.accentSoft,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          _getInitials(user?.name),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.accent,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSizes.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _getDisplayName(user?.name),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const Text(
+                            'Rider',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSizes.md),
+                const Divider(height: 1, color: AppColors.grey200),
+                const SizedBox(height: AppSizes.sm),
+                _buildProfileMenuItem(
+                  icon: Iconsax.star_1,
+                  label: 'My Ratings',
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    context.push('/rider/ratings');
+                  },
+                ),
+                _buildProfileMenuItem(
+                  icon: Iconsax.chart_2,
+                  label: 'Earnings',
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    context.push('/rider/earnings');
+                  },
+                ),
+                _buildProfileMenuItem(
+                  icon: Iconsax.logout,
+                  label: 'Logout',
+                  color: AppColors.error,
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _showLogoutDialog(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileMenuItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color? color,
+    Widget? trailing,
+  }) {
+    final itemColor = color ?? AppColors.textPrimary;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+            vertical: AppSizes.sm, horizontal: AppSizes.xs),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: (color ?? AppColors.grey500).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSizes.radiusXs),
+              ),
+              child: Icon(icon, size: 20, color: itemColor),
+            ),
+            const SizedBox(width: AppSizes.sm),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: itemColor,
+                ),
+              ),
+            ),
+            if (trailing != null) trailing,
+            if (trailing == null)
+              Icon(Icons.arrow_forward_ios,
+                  size: 14, color: AppColors.grey400),
+          ],
+        ),
       ),
     );
   }
@@ -159,12 +1015,18 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        ),
         title: const Text('Logout'),
         content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () async {
@@ -173,45 +1035,10 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
               Navigator.of(dialogContext).pop();
               GoRouter.of(context).go('/login');
             },
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final Color color;
-
-  const _StatCard({
-    required this.title,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            value,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            title,
-            style: TextStyle(color: Colors.grey[600], fontSize: 11),
-            textAlign: TextAlign.center,
+            child: const Text(
+              'Logout',
+              style: TextStyle(color: AppColors.error),
+            ),
           ),
         ],
       ),

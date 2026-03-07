@@ -1,4 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:iconsax/iconsax.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/rider_provider.dart';
+import '../../models/order.dart';
+import '../../models/user.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/constants/app_sizes.dart';
+import '../../core/utils/formatters.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class RiderActiveDeliveriesScreen extends StatefulWidget {
   const RiderActiveDeliveriesScreen({super.key});
@@ -10,168 +21,308 @@ class RiderActiveDeliveriesScreen extends StatefulWidget {
 
 class _RiderActiveDeliveriesScreenState
     extends State<RiderActiveDeliveriesScreen> {
-  final List<Map<String, dynamic>> deliveries = [
-    {
-      'id': 'DEL101',
-      'customer': 'Alice Johnson',
-      'status': 'in_transit',
-      'progress': 0.65,
-      'items': 4,
-      'pickupLocation': 'Parklands',
-      'deliveryLocation': 'Runda',
-    },
-  ];
+  static const Color _brandColor = AppColors.accent;
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'pending':
-        return Colors.orange;
-      case 'in_transit':
-        return Colors.blue;
-      case 'arrived':
-        return Colors.purple;
-      default:
-        return Colors.grey;
+  @override
+  void initState() {
+    super.initState();
+    _validateRoleAndLoad();
+  }
+
+  void _validateRoleAndLoad() {
+    final authProvider = context.read<AuthProvider>();
+
+    if (authProvider.user?.role != UserRole.rider) {
+      Future.microtask(() {
+        GoRouter.of(context).go(
+          authProvider.user?.role == UserRole.admin
+              ? '/admin/dashboard'
+              : authProvider.user?.role == UserRole.shopper
+                  ? '/shopper/home'
+                  : '/customer/home',
+        );
+      });
+      return;
+    }
+
+    final riderProvider = context.read<RiderProvider>();
+    final token = authProvider.token;
+    final userId = authProvider.user?.id;
+    if (token != null && userId != null) {
+      riderProvider.fetchActiveDeliveries(token, userId);
     }
   }
 
-  String _getStatusText(String status) {
+  Future<void> _refresh() async {
+    final auth = context.read<AuthProvider>();
+    final rider = context.read<RiderProvider>();
+    final token = auth.token;
+    final userId = auth.user?.id;
+    if (token != null && userId != null) {
+      await rider.fetchActiveDeliveries(token, userId);
+    }
+  }
+
+  Color _getStatusColor(OrderStatus status) {
     switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'in_transit':
-        return 'In Transit';
-      case 'arrived':
-        return 'Arrived';
+      case OrderStatus.inTransit:
+        return AppColors.info;
+      case OrderStatus.readyForDelivery:
+        return _brandColor;
+      case OrderStatus.confirmed:
+        return AppColors.accent;
       default:
-        return 'Unknown';
+        return AppColors.grey500;
+    }
+  }
+
+  String _getStatusText(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.readyForDelivery:
+        return 'Pickup Ready';
+      case OrderStatus.inTransit:
+        return 'In Transit';
+      default:
+        return status.displayName;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Active Deliveries')),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: deliveries.length,
-        itemBuilder: (context, index) {
-          final delivery = deliveries[index];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Active Deliveries'),
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: Consumer<RiderProvider>(
+        builder: (context, rider, _) {
+          if (rider.isLoading) {
+            return const AppLoadingPage();
+          }
+
+          if (rider.activeDeliveries.isEmpty) {
+            return Center(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            delivery['id'],
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Text(
-                            delivery['customer'],
-                            style: TextStyle(color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _getStatusColor(
-                            delivery['status'],
-                          ).withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _getStatusText(delivery['status']),
-                          style: TextStyle(
-                            color: _getStatusColor(delivery['status']),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentSoft,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Iconsax.truck,
+                        size: 48, color: _brandColor),
                   ),
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: delivery['progress'],
-                      minHeight: 8,
+                  const SizedBox(height: AppSizes.md),
+                  const Text(
+                    'No active deliveries',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  _InfoRow(label: 'Items', value: '${delivery['items']} items'),
-                  const SizedBox(height: 8),
-                  _InfoRow(label: 'Pickup', value: delivery['pickupLocation']),
-                  const SizedBox(height: 8),
-                  _InfoRow(
-                    label: 'Delivery',
-                    value: delivery['deliveryLocation'],
+                  const SizedBox(height: AppSizes.sm),
+                  const Text(
+                    'Accept a delivery from available orders',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textTertiary,
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.navigation),
-                          label: const Text('Navigate'),
-                          onPressed: () {},
-                        ),
+                  const SizedBox(height: AppSizes.lg),
+                  ElevatedButton.icon(
+                    onPressed: () =>
+                        context.go('/rider/available-deliveries'),
+                    icon: const Icon(Iconsax.truck_fast, size: 18),
+                    label: const Text('Browse Available Deliveries'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _brandColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppSizes.radiusSm),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.check),
-                          label: const Text('Delivered'),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Delivery marked as complete!'),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            color: _brandColor,
+            child: ListView.builder(
+              padding: const EdgeInsets.all(AppSizes.md),
+              itemCount: rider.activeDeliveries.length,
+              itemBuilder: (context, index) {
+                return _buildDeliveryCard(rider.activeDeliveries[index]);
+              },
             ),
           );
         },
       ),
     );
   }
-}
 
-class _InfoRow extends StatelessWidget {
-  final String label;
-  final String value;
+  Widget _buildDeliveryCard(Order order) {
+    final itemCount = order.items.length;
+    final statusColor = _getStatusColor(order.status);
+    final statusText = _getStatusText(order.status);
 
-  const _InfoRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.grey)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
-      ],
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSizes.sm),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        border: Border.all(color: AppColors.grey200),
+        boxShadow: AppColors.shadowSm,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSizes.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '#${order.orderNumber}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                  ),
+                  child: Text(
+                    statusText,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSizes.sm),
+            // Delivery address
+            Row(
+              children: [
+                Icon(Iconsax.location,
+                    size: 16, color: AppColors.textTertiary),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    order.deliveryAddress.fullAddress,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSizes.sm),
+            // Items summary
+            Row(
+              children: [
+                Icon(Iconsax.box_1,
+                    size: 16, color: AppColors.textTertiary),
+                const SizedBox(width: 4),
+                Text(
+                  '$itemCount items',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  Formatters.formatCurrency(order.deliveryFee),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: AppColors.accent,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSizes.sm),
+            // Action buttons
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Iconsax.routing_2, size: 18),
+                    label: const Text('Navigate'),
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _brandColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppSizes.radiusSm),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSizes.sm),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Iconsax.tick_circle, size: 18),
+                    label: const Text('Delivered'),
+                    onPressed: () async {
+                      final auth = context.read<AuthProvider>();
+                      final rider = context.read<RiderProvider>();
+                      final success = await rider.completeDelivery(
+                        auth.token!,
+                        order.id,
+                        auth.user!.id,
+                      );
+                      if (success && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content:
+                                const Text('Delivery marked as complete!'),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      }
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.success,
+                      side: const BorderSide(color: AppColors.success),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppSizes.radiusSm),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
