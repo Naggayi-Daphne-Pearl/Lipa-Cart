@@ -23,7 +23,7 @@ class OrdersScreen extends StatefulWidget {
   State<OrdersScreen> createState() => _OrdersScreenState();
 }
 
-enum OrderTab { active, cancelled }
+enum OrderTab { active, delivered, cancelled }
 
 class _OrdersScreenState extends State<OrdersScreen> {
   bool _isLoadingOrders = false;
@@ -47,10 +47,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
       return;
     }
 
-    print('DEBUG: Logged in user ID: ${authProvider.user!.id}');
-    print('DEBUG: User phone: ${authProvider.user!.phoneNumber}');
-    print('DEBUG: Token: ${authProvider.token}');
-
     if (mounted) {
       setState(() => _isLoadingOrders = true);
     }
@@ -61,18 +57,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
         authProvider.user!.id.toString(),
       );
 
-      print('DEBUG: Orders fetch success=$success');
-      print('DEBUG: Orders count=${orderService.orders.length}');
-      print('DEBUG: Error: ${orderService.error}');
-      print('DEBUG: Active orders=${orderProvider.activeOrders.length}');
-      print('DEBUG: Past orders=${orderProvider.pastOrders.length}');
-
       if (success && mounted) {
         orderProvider.syncOrdersFromService(orderService.orders);
-        print('DEBUG: Orders synced to provider');
       }
     } catch (e) {
-      print('DEBUG: Orders fetch error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -92,14 +80,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
   Widget build(BuildContext context) {
     final orderProvider = context.watch<OrderProvider>();
 
-    print('DEBUG: OrdersScreen build() called');
-    print('DEBUG: Active orders: ${orderProvider.activeOrders.length}');
-    print('DEBUG: Past orders: ${orderProvider.pastOrders.length}');
-    print('DEBUG: Is loading: $_isLoadingOrders');
-
-    // Separate cancelled orders from past orders
-    final activeAndDeliveredOrders = orderProvider.orders
-        .where((o) => o.status != OrderStatus.cancelled)
+    // Filter orders by tab
+    final activeOrders = orderProvider.orders
+        .where((o) => o.status != OrderStatus.cancelled && o.status != OrderStatus.delivered)
+        .toList();
+    final deliveredOrders = orderProvider.orders
+        .where((o) => o.status == OrderStatus.delivered)
         .toList();
     final cancelledOrders = orderProvider.orders
         .where((o) => o.status == OrderStatus.cancelled)
@@ -192,14 +178,21 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 Expanded(
                                   child: _buildTabButton(
                                     context,
-                                    'Ongoing/Delivered',
+                                    'Active',
                                     OrderTab.active,
                                   ),
                                 ),
                                 Expanded(
                                   child: _buildTabButton(
                                     context,
-                                    'Canceled/Returned',
+                                    'Delivered',
+                                    OrderTab.delivered,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _buildTabButton(
+                                    context,
+                                    'Cancelled',
                                     OrderTab.cancelled,
                                   ),
                                 ),
@@ -217,12 +210,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
 
                         // Orders List
-                        _selectedTab == OrderTab.active
-                            ? _buildOrdersList(
-                                context,
-                                activeAndDeliveredOrders,
-                              )
-                            : _buildOrdersList(context, cancelledOrders),
+                        if (_selectedTab == OrderTab.active)
+                          _buildOrdersList(context, activeOrders)
+                        else if (_selectedTab == OrderTab.delivered)
+                          _buildOrdersList(context, deliveredOrders)
+                        else
+                          _buildOrdersList(context, cancelledOrders),
 
                         const SizedBox(height: 100),
                       ],
@@ -264,19 +257,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   Widget _buildOrdersList(BuildContext context, List<Order> orders) {
     if (orders.isEmpty) {
-      return _buildEmptyState(
-        context,
-        _selectedTab == OrderTab.active
-            ? 'No ongoing orders yet'
-            : 'No canceled orders',
-      );
-    }
-
-    print('DEBUG: _buildOrdersList - displaying ${orders.length} orders');
-    for (var i = 0; i < orders.length; i++) {
-      print(
-        'DEBUG: Order in list $i - id: ${orders[i].id}, items: ${orders[i].items.length}, itemCount: ${orders[i].itemCount}',
-      );
+      final message = switch (_selectedTab) {
+        OrderTab.active => 'No active orders yet',
+        OrderTab.delivered => 'No delivered orders yet',
+        OrderTab.cancelled => 'No cancelled orders',
+      };
+      return _buildEmptyState(context, message);
     }
 
     return Padding(
@@ -293,10 +279,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
     // Get the first product image from the order
     final firstProduct = order.items.isNotEmpty ? order.items.first : null;
     final imageUrl = firstProduct?.product.image;
-
-    print(
-      'DEBUG: _buildCleanOrderCard - order: ${order.orderNumber}, items: ${order.items.length}, itemCount: ${order.itemCount}, firstProduct: ${firstProduct?.product.name}',
-    );
 
     return GestureDetector(
       onTap: () => context.push('/customer/order-tracking', extra: order),
@@ -549,6 +531,28 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   mobile: 14.0,
                   tablet: 15.0,
                   desktop: 16.0,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSizes.lg),
+            ElevatedButton(
+              onPressed: () => context.go('/customer/categories'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSizes.xl,
+                  vertical: AppSizes.md,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                ),
+              ),
+              child: Text(
+                'Browse Products',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),

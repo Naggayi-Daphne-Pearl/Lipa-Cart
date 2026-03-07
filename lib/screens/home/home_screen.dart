@@ -108,16 +108,25 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           child: Row(
                             children: [
-                              // App Logo
-                              SvgPicture.asset(
-                                'assets/images/logos/logo-on-white.svg',
-                                height: context.responsive<double>(
-                                  mobile: 20.0,
-                                  tablet: 24.0,
-                                  desktop: 28.0,
+                              // App Logo (mobile only) or Greeting (desktop)
+                              if (context.isMobile)
+                                SvgPicture.asset(
+                                  'assets/images/logos/logo-on-white.svg',
+                                  height: context.responsive<double>(
+                                    mobile: 20.0,
+                                    tablet: 24.0,
+                                    desktop: 28.0,
+                                  ),
+                                  fit: BoxFit.contain,
+                                )
+                              else
+                                Text(
+                                  'Hi, ${authProvider.user?.name ?? 'there'}',
+                                  style: AppTextStyles.bodyLarge.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
                                 ),
-                                fit: BoxFit.contain,
-                              ),
 
                               const Spacer(),
 
@@ -389,9 +398,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               // Background card with vibrant gradient
                               Container(
                                 height: context.responsive(
-                                  mobile: 160.0,
-                                  tablet: 180.0,
-                                  desktop: 200.0,
+                                  mobile: 140.0,
+                                  tablet: 150.0,
+                                  desktop: 160.0,
                                 ),
                                 width: double.infinity,
                                 decoration: BoxDecoration(
@@ -628,70 +637,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
 
-                        // Search bar inside hero
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            context.horizontalPadding,
-                            0,
-                            context.horizontalPadding,
-                            AppSizes.lg,
-                          ),
-                          child: GestureDetector(
-                            onTap: () => context.go('/customer/search'),
-                            child: Container(
-                              height: 52,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSizes.md,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(
-                                  AppSizes.radiusLg,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.06),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Iconsax.search_normal,
-                                    color: AppColors.textTertiary,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: AppSizes.sm),
-                                  Expanded(
-                                    child: Text(
-                                      'Search...',
-                                      style: AppTextStyles.bodyMedium.copyWith(
-                                        color: AppColors.textTertiary,
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 36,
-                                    height: 36,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.grey100,
-                                      borderRadius: BorderRadius.circular(
-                                        AppSizes.radiusMd,
-                                      ),
-                                    ),
-                                    child: const Icon(
-                                      Iconsax.setting_4,
-                                      color: AppColors.textPrimary,
-                                      size: 18,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -738,7 +683,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: GestureDetector(
                           onTap: () => context.go('/customer/shopping-lists'),
                           child: Container(
-                            padding: const EdgeInsets.all(AppSizes.lg),
+                            padding: const EdgeInsets.all(AppSizes.md),
                             decoration: BoxDecoration(
                               color: AppColors.primarySoft,
                               borderRadius: BorderRadius.circular(16),
@@ -757,8 +702,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
-                                  width: 52,
-                                  height: 52,
+                                  width: 44,
+                                  height: 44,
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
                                       begin: Alignment.topLeft,
@@ -782,7 +727,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: const Icon(
                                     Iconsax.clipboard_text5,
                                     color: Colors.white,
-                                    size: 26,
+                                    size: 22,
                                   ),
                                 ),
                                 const SizedBox(height: AppSizes.sm),
@@ -813,7 +758,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: GestureDetector(
                           onTap: () => context.go('/customer/recipes'),
                           child: Container(
-                            padding: const EdgeInsets.all(AppSizes.lg),
+                            padding: const EdgeInsets.all(AppSizes.md),
                             decoration: BoxDecoration(
                               color: AppColors.accentSoft,
                               borderRadius: BorderRadius.circular(16),
@@ -832,8 +777,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
-                                  width: 52,
-                                  height: 52,
+                                  width: 44,
+                                  height: 44,
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
                                       begin: Alignment.topLeft,
@@ -857,7 +802,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: const Icon(
                                     Iconsax.book5,
                                     color: Colors.white,
-                                    size: 26,
+                                    size: 22,
                                   ),
                                 ),
                                 const SizedBox(height: AppSizes.sm),

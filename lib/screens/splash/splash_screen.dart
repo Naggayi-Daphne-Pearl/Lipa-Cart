@@ -78,12 +78,9 @@ class _SplashScreenState extends State<SplashScreen>
         default:
           context.replace('/customer/home');
       }
-    } else if (authProvider.isFirstLaunch) {
-      // First time user - show onboarding
-      context.replace('/onboarding');
     } else {
-      // Guest mode - go to customer home
-      context.replace('/customer/home');
+      // Not authenticated - go to login
+      context.replace('/login');
     }
   }
 

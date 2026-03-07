@@ -308,7 +308,7 @@ class _MainShellState extends State<MainShell> {
             _buildSideNavItem(
               icon: Iconsax.clipboard_text,
               activeIcon: Iconsax.clipboard_text,
-              label: 'Shopping Lists',
+              label: 'My Lists',
               index: 2,
             ),
             _buildSideCartNavItem(cartItemCount),
@@ -325,6 +325,52 @@ class _MainShellState extends State<MainShell> {
               index: 5,
             ),
             const Spacer(),
+
+            // Help link
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSizes.md,
+                vertical: AppSizes.md,
+              ),
+              child: GestureDetector(
+                onTap: () {
+                  // TODO: Navigate to support/help screen
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Support coming soon!'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSizes.md,
+                    vertical: AppSizes.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.grey50,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Iconsax.message_question,
+                        size: 20,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: AppSizes.sm),
+                      Text(
+                        'Need help?',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSizes.sm),
           ],
         ),
       ),
@@ -337,118 +383,20 @@ class _MainShellState extends State<MainShell> {
     required String label,
     required int index,
   }) {
-    final isSelected = _selectedTab == index;
-
-    return GestureDetector(
+    return _SidebarNavItem(
+      icon: icon,
+      activeIcon: activeIcon,
+      label: label,
+      isSelected: _selectedTab == index,
       onTap: () => _onNavTap(index),
-      child: Container(
-        margin: const EdgeInsets.symmetric(
-          horizontal: AppSizes.md,
-          vertical: AppSizes.xs,
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSizes.md,
-          vertical: AppSizes.sm,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.accent.withValues(alpha: 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              isSelected ? activeIcon : icon,
-              color: isSelected ? AppColors.accent : AppColors.grey400,
-              size: 24,
-            ),
-            const SizedBox(width: AppSizes.md),
-            Text(
-              label,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: isSelected ? AppColors.accent : AppColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
   Widget _buildSideCartNavItem(int itemCount) {
-    return GestureDetector(
+    return _SidebarCartNavItem(
+      itemCount: itemCount,
+      isSelected: _showCartSidebar,
       onTap: () => _onNavTap(3),
-      child: Container(
-        margin: const EdgeInsets.symmetric(
-          horizontal: AppSizes.md,
-          vertical: AppSizes.xs,
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSizes.md,
-          vertical: AppSizes.sm,
-        ),
-        decoration: BoxDecoration(
-          color: _showCartSidebar
-              ? AppColors.primary.withValues(alpha: 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        ),
-        child: Row(
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  Iconsax.bag_2,
-                  color: _showCartSidebar
-                      ? AppColors.primary
-                      : AppColors.grey400,
-                  size: 24,
-                ),
-                if (itemCount > 0)
-                  Positioned(
-                    right: -8,
-                    top: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: AppColors.accent,
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 18,
-                        minHeight: 18,
-                      ),
-                      child: Text(
-                        itemCount > 9 ? '9+' : itemCount.toString(),
-                        style: AppTextStyles.caption.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 10,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: AppSizes.md),
-            Text(
-              'Cart',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: _showCartSidebar
-                    ? AppColors.primary
-                    : AppColors.textSecondary,
-                fontWeight: _showCartSidebar
-                    ? FontWeight.w600
-                    : FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -527,6 +475,31 @@ class _MainShellState extends State<MainShell> {
                             'Add items to get started',
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSizes.lg),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _selectedTab = 1;
+                                _showCartSidebar = false;
+                              });
+                            },
+                            icon: const Icon(Iconsax.search_normal, size: 18),
+                            label: const Text('Browse Products'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSizes.lg,
+                                vertical: AppSizes.sm,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusMd,
+                                ),
+                              ),
+                              elevation: 0,
                             ),
                           ),
                         ],
@@ -687,7 +660,29 @@ class _MainShellState extends State<MainShell> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppSizes.md),
+                    const SizedBox(height: AppSizes.sm),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
+                        onPressed: () {
+                          setState(() => _showCartSidebar = false);
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.textSecondary,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSizes.xs,
+                          ),
+                        ),
+                        child: Text(
+                          'Continue Shopping',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSizes.xs),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -722,6 +717,186 @@ class _MainShellState extends State<MainShell> {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A sidebar navigation item with hover support.
+class _SidebarNavItem extends StatefulWidget {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _SidebarNavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_SidebarNavItem> createState() => _SidebarNavItemState();
+}
+
+class _SidebarNavItemState extends State<_SidebarNavItem> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          margin: const EdgeInsets.symmetric(
+            horizontal: AppSizes.md,
+            vertical: AppSizes.xs,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSizes.md,
+            vertical: AppSizes.sm,
+          ),
+          decoration: BoxDecoration(
+            color: widget.isSelected
+                ? AppColors.accent.withValues(alpha: 0.1)
+                : _isHovered
+                    ? AppColors.grey50
+                    : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                widget.isSelected ? widget.activeIcon : widget.icon,
+                color: widget.isSelected ? AppColors.accent : AppColors.grey400,
+                size: 24,
+              ),
+              const SizedBox(width: AppSizes.md),
+              Text(
+                widget.label,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: widget.isSelected
+                      ? AppColors.accent
+                      : AppColors.textSecondary,
+                  fontWeight:
+                      widget.isSelected ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A sidebar cart navigation item with hover support and badge.
+class _SidebarCartNavItem extends StatefulWidget {
+  final int itemCount;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _SidebarCartNavItem({
+    required this.itemCount,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_SidebarCartNavItem> createState() => _SidebarCartNavItemState();
+}
+
+class _SidebarCartNavItemState extends State<_SidebarCartNavItem> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          margin: const EdgeInsets.symmetric(
+            horizontal: AppSizes.md,
+            vertical: AppSizes.xs,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSizes.md,
+            vertical: AppSizes.sm,
+          ),
+          decoration: BoxDecoration(
+            color: widget.isSelected
+                ? AppColors.primary.withValues(alpha: 0.1)
+                : _isHovered
+                    ? AppColors.grey50
+                    : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+          ),
+          child: Row(
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    Iconsax.bag_2,
+                    color: widget.isSelected
+                        ? AppColors.primary
+                        : AppColors.grey400,
+                    size: 24,
+                  ),
+                  if (widget.itemCount > 0)
+                    Positioned(
+                      right: -8,
+                      top: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: AppColors.accent,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        child: Text(
+                          widget.itemCount > 9
+                              ? '9+'
+                              : widget.itemCount.toString(),
+                          style: AppTextStyles.caption.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 10,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: AppSizes.md),
+              Text(
+                'Cart',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: widget.isSelected
+                      ? AppColors.primary
+                      : AppColors.textSecondary,
+                  fontWeight:
+                      widget.isSelected ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

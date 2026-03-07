@@ -33,6 +33,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
+  String _getInitials(String? name) {
+    if (name == null || name.isEmpty) return 'U';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  }
+
   Future<void> _loadProfileData() async {
     if (_isLoadingProfile) return;
 
@@ -102,26 +111,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       desktop: 24.0,
                     ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Text(
-                        'Welcome ${user?.name?.split(' ')[0] ?? 'User'}!',
-                        style: AppTextStyles.h3.copyWith(
-                          fontWeight: FontWeight.w800,
-                          fontSize: context.responsive<double>(
-                            mobile: 26.0,
-                            tablet: 30.0,
-                            desktop: 34.0,
-                          ),
+                      // Avatar with initials
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: AppColors.primarySoft,
+                          shape: BoxShape.circle,
                         ),
+                        child: user?.profileImage != null && user!.profileImage!.isNotEmpty
+                            ? ClipOval(
+                                child: Image.network(
+                                  user.profileImage!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Center(
+                                      child: Text(
+                                        _getInitials(user.name),
+                                        style: AppTextStyles.h4.copyWith(
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              )
+                            : Center(
+                                child: Text(
+                                  _getInitials(user?.name),
+                                  style: AppTextStyles.h4.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        user?.email ?? user?.phoneNumber ?? 'No email',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.w500,
+                      const SizedBox(width: AppSizes.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Welcome ${user?.name?.split(' ')[0] ?? 'User'}!',
+                              style: AppTextStyles.h3.copyWith(
+                                fontWeight: FontWeight.w800,
+                                fontSize: context.responsive<double>(
+                                  mobile: 26.0,
+                                  tablet: 30.0,
+                                  desktop: 34.0,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              user?.email ?? user?.phoneNumber ?? 'No email',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.accent,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -214,95 +266,100 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: EdgeInsets.symmetric(
                     horizontal: context.horizontalPadding,
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            // TODO: Open live chat
-                          },
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: context.responsive<double>(
-                                mobile: AppSizes.md,
-                                tablet: AppSizes.lg,
-                                desktop: AppSizes.lg,
-                              ),
-                              vertical: AppSizes.md,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.accent,
-                              borderRadius: BorderRadius.circular(
-                                AppSizes.radiusLg,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Iconsax.message,
-                                  color: Colors.white,
-                                  size: 20,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: context.isDesktop ? 400 : double.infinity,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              // TODO: Open live chat
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: context.responsive<double>(
+                                  mobile: AppSizes.md,
+                                  tablet: AppSizes.lg,
+                                  desktop: AppSizes.lg,
                                 ),
-                                const SizedBox(width: AppSizes.sm),
-                                Text(
-                                  'Live Chat',
-                                  style: AppTextStyles.labelMedium.copyWith(
+                                vertical: AppSizes.md,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.accent,
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusLg,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Iconsax.message,
                                     color: Colors.white,
-                                    fontWeight: FontWeight.w600,
+                                    size: 20,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: AppSizes.sm),
+                                  Text(
+                                    'Live Chat',
+                                    style: AppTextStyles.labelMedium.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: AppSizes.md),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            // TODO: Open WhatsApp
-                          },
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: context.responsive<double>(
-                                mobile: AppSizes.md,
-                                tablet: AppSizes.lg,
-                                desktop: AppSizes.lg,
+                        const SizedBox(width: AppSizes.md),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              // TODO: Open WhatsApp
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: context.responsive<double>(
+                                  mobile: AppSizes.md,
+                                  tablet: AppSizes.lg,
+                                  desktop: AppSizes.lg,
+                                ),
+                                vertical: AppSizes.md,
                               ),
-                              vertical: AppSizes.md,
-                            ),
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: const Color(0xFF25D366),
-                                width: 1.5,
-                              ),
-                              borderRadius: BorderRadius.circular(
-                                AppSizes.radiusLg,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Iconsax.send_2,
+                              decoration: BoxDecoration(
+                                border: Border.all(
                                   color: const Color(0xFF25D366),
-                                  size: 20,
+                                  width: 1.5,
                                 ),
-                                const SizedBox(width: AppSizes.sm),
-                                Text(
-                                  'WhatsApp',
-                                  style: AppTextStyles.labelMedium.copyWith(
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusLg,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Iconsax.send_2,
                                     color: const Color(0xFF25D366),
-                                    fontWeight: FontWeight.w600,
+                                    size: 20,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: AppSizes.sm),
+                                  Text(
+                                    'WhatsApp',
+                                    style: AppTextStyles.labelMedium.copyWith(
+                                      color: const Color(0xFF25D366),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
 
@@ -336,54 +393,163 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
 
-                // My Account Section
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.horizontalPadding,
+                // My Lipa Cart & My Settings Sections
+                if (context.isDesktop)
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.horizontalPadding,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildMenuSection(context, 'My Lipa Cart', [
+                            _MenuItem(
+                              icon: Iconsax.receipt,
+                              title: 'Orders',
+                              onTap: () => context.go('/customer/orders'),
+                            ),
+                            _MenuItem(
+                              icon: Iconsax.message,
+                              title: 'Inbox',
+                              onTap: () {},
+                            ),
+                            _MenuItem(
+                              icon: Iconsax.star,
+                              title: 'Ratings & Reviews',
+                              onTap: () {},
+                            ),
+                            _MenuItem(
+                              icon: Iconsax.ticket_discount,
+                              title: 'Vouchers',
+                              onTap: () {},
+                            ),
+                            _MenuItem(
+                              icon: Iconsax.heart,
+                              title: 'Wishlist',
+                              onTap: () {},
+                            ),
+                            _MenuItem(
+                              icon: Iconsax.shop,
+                              title: 'Followed Sellers',
+                              onTap: () {},
+                            ),
+                            _MenuItem(
+                              icon: Iconsax.eye,
+                              title: 'Recently Viewed',
+                              onTap: () {},
+                            ),
+                            _MenuItem(
+                              icon: Iconsax.search_normal,
+                              title: 'Recently Searched',
+                              onTap: () {},
+                            ),
+                          ]),
+                        ),
+                        const SizedBox(width: AppSizes.lg),
+                        Expanded(
+                          child: _buildMenuSection(context, 'My Settings', [
+                            _MenuItem(
+                              icon: Iconsax.location,
+                              title: 'Addresses',
+                              onTap: () => context.go('/customer/addresses'),
+                            ),
+                            _MenuItem(
+                              icon: Iconsax.notification,
+                              title: 'Notifications',
+                              onTap: () {},
+                            ),
+                            _MenuItem(
+                              icon: Iconsax.setting_2,
+                              title: 'Settings',
+                              onTap: () {},
+                            ),
+                          ]),
+                        ),
+                      ],
+                    ),
+                  )
+                else ...[
+                  // Mobile: vertical layout
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.horizontalPadding,
+                    ),
+                    child: _buildMenuSection(context, 'My Lipa Cart', [
+                      _MenuItem(
+                        icon: Iconsax.receipt,
+                        title: 'Orders',
+                        onTap: () => context.go('/customer/orders'),
+                      ),
+                      _MenuItem(
+                        icon: Iconsax.message,
+                        title: 'Inbox',
+                        onTap: () {},
+                      ),
+                      _MenuItem(
+                        icon: Iconsax.star,
+                        title: 'Ratings & Reviews',
+                        onTap: () {},
+                      ),
+                      _MenuItem(
+                        icon: Iconsax.ticket_discount,
+                        title: 'Vouchers',
+                        onTap: () {},
+                      ),
+                      _MenuItem(
+                        icon: Iconsax.heart,
+                        title: 'Wishlist',
+                        onTap: () {},
+                      ),
+                      _MenuItem(
+                        icon: Iconsax.shop,
+                        title: 'Followed Sellers',
+                        onTap: () {},
+                      ),
+                      _MenuItem(
+                        icon: Iconsax.eye,
+                        title: 'Recently Viewed',
+                        onTap: () {},
+                      ),
+                      _MenuItem(
+                        icon: Iconsax.search_normal,
+                        title: 'Recently Searched',
+                        onTap: () {},
+                      ),
+                    ]),
                   ),
-                  child: _buildMenuSection(context, 'My Lipa Cart', [
-                    _MenuItem(
-                      icon: Iconsax.receipt,
-                      title: 'Orders',
-                      onTap: () => context.go('/customer/orders'),
+
+                  SizedBox(
+                    height: context.responsive<double>(
+                      mobile: AppSizes.lg,
+                      tablet: AppSizes.xl,
+                      desktop: AppSizes.xl,
                     ),
-                    _MenuItem(
-                      icon: Iconsax.message,
-                      title: 'Inbox',
-                      onTap: () {},
+                  ),
+
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.horizontalPadding,
                     ),
-                    _MenuItem(
-                      icon: Iconsax.star,
-                      title: 'Ratings & Reviews',
-                      onTap: () {},
-                    ),
-                    _MenuItem(
-                      icon: Iconsax.ticket_discount,
-                      title: 'Vouchers',
-                      onTap: () {},
-                    ),
-                    _MenuItem(
-                      icon: Iconsax.heart,
-                      title: 'Wishlist',
-                      onTap: () {},
-                    ),
-                    _MenuItem(
-                      icon: Iconsax.shop,
-                      title: 'Followed Sellers',
-                      onTap: () {},
-                    ),
-                    _MenuItem(
-                      icon: Iconsax.eye,
-                      title: 'Recently Viewed',
-                      onTap: () {},
-                    ),
-                    _MenuItem(
-                      icon: Iconsax.search_normal,
-                      title: 'Recently Searched',
-                      onTap: () {},
-                    ),
-                  ]),
-                ),
+                    child: _buildMenuSection(context, 'My Settings', [
+                      _MenuItem(
+                        icon: Iconsax.location,
+                        title: 'Addresses',
+                        onTap: () => context.go('/customer/addresses'),
+                      ),
+                      _MenuItem(
+                        icon: Iconsax.notification,
+                        title: 'Notifications',
+                        onTap: () {},
+                      ),
+                      _MenuItem(
+                        icon: Iconsax.setting_2,
+                        title: 'Settings',
+                        onTap: () {},
+                      ),
+                    ]),
+                  ),
+                ],
 
                 SizedBox(
                   height: context.responsive<double>(
@@ -393,38 +559,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
 
-                // My Settings Section
+                // Logout Button
                 Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: context.horizontalPadding,
                   ),
-                  child: _buildMenuSection(context, 'My Settings', [
-                    _MenuItem(
-                      icon: Iconsax.location,
-                      title: 'Addresses',
-                      onTap: () => context.go('/customer/addresses'),
-                    ),
-                    _MenuItem(
-                      icon: Iconsax.notification,
-                      title: 'Notifications',
-                      onTap: () {},
-                    ),
-                    _MenuItem(
-                      icon: Iconsax.setting_2,
-                      title: 'Settings',
-                      onTap: () {},
-                    ),
-                    _MenuItem(
-                      icon: Iconsax.logout,
-                      title: 'Logout',
-                      onTap: () async {
+                  child: Center(
+                    child: TextButton(
+                      onPressed: () async {
                         await LogoutHelper.logoutAndClear(context);
                         if (context.mounted) {
                           GoRouter.of(context).go('/login');
                         }
                       },
+                      child: Text(
+                        'Logout',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-                  ]),
+                  ),
                 ),
 
                 const SizedBox(height: 100),

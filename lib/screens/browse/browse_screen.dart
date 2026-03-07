@@ -24,6 +24,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
   String? _selectedCategoryId;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String _sortBy = 'name'; // name, price_low, price_high
 
   @override
   void dispose() {
@@ -52,6 +53,18 @@ class _BrowseScreenState extends State<BrowseScreen> {
                 ),
           )
           .toList();
+    }
+
+    // Sort
+    switch (_sortBy) {
+      case 'price_low':
+        products.sort((a, b) => a.price.compareTo(b.price));
+        break;
+      case 'price_high':
+        products.sort((a, b) => b.price.compareTo(a.price));
+        break;
+      default:
+        products.sort((a, b) => a.name.compareTo(b.name));
     }
 
     return products;
@@ -243,22 +256,84 @@ class _BrowseScreenState extends State<BrowseScreen> {
                 ),
               ),
 
-              // Results count
+              // Results count and sort
               Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: context.horizontalPadding,
                 ),
-                child: Text(
-                  '${filteredProducts.length} ${filteredProducts.length == 1 ? 'item' : 'items'} available',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w500,
-                    fontSize: context.responsive<double>(
-                      mobile: 13.0,
-                      tablet: 14.0,
-                      desktop: 15.0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${filteredProducts.length} ${filteredProducts.length == 1 ? 'item' : 'items'} available',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                        fontSize: context.responsive<double>(
+                          mobile: 13.0,
+                          tablet: 14.0,
+                          desktop: 15.0,
+                        ),
+                      ),
                     ),
-                  ),
+                    PopupMenuButton<String>(
+                      onSelected: (value) => setState(() => _sortBy = value),
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'name',
+                          child: Row(
+                            children: [
+                              Icon(Iconsax.text, size: 16, color: _sortBy == 'name' ? AppColors.primary : AppColors.textSecondary),
+                              const SizedBox(width: 8),
+                              Text('Name', style: TextStyle(color: _sortBy == 'name' ? AppColors.primary : AppColors.textPrimary)),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'price_low',
+                          child: Row(
+                            children: [
+                              Icon(Iconsax.arrow_down, size: 16, color: _sortBy == 'price_low' ? AppColors.primary : AppColors.textSecondary),
+                              const SizedBox(width: 8),
+                              Text('Price: Low to High', style: TextStyle(color: _sortBy == 'price_low' ? AppColors.primary : AppColors.textPrimary)),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'price_high',
+                          child: Row(
+                            children: [
+                              Icon(Iconsax.arrow_up_1, size: 16, color: _sortBy == 'price_high' ? AppColors.primary : AppColors.textSecondary),
+                              const SizedBox(width: 8),
+                              Text('Price: High to Low', style: TextStyle(color: _sortBy == 'price_high' ? AppColors.primary : AppColors.textPrimary)),
+                            ],
+                          ),
+                        ),
+                      ],
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          border: Border.all(color: AppColors.grey200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Iconsax.sort, size: 16, color: AppColors.textSecondary),
+                            const SizedBox(width: 6),
+                            Text(
+                              _sortBy == 'name' ? 'Name' : _sortBy == 'price_low' ? 'Price ↑' : 'Price ↓',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: AppSizes.sm),
@@ -280,8 +355,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
                           crossAxisCount: context.responsive<int>(
                             mobile: 2,
                             tablet: 3,
-                            desktop: 4,
-                            largeDesktop: 5,
+                            desktop: 5,
+                            largeDesktop: 6,
                           ),
                           mainAxisSpacing: context.responsive<double>(
                             mobile: AppSizes.md,
