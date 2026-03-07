@@ -84,7 +84,7 @@ class Recipe {
 
   factory Recipe.fromStrapi(Map<String, dynamic> json, {String? baseUrl}) {
     final attributes = (json['attributes'] as Map<String, dynamic>?) ?? json;
-    String imageUrl = _resolveMediaUrl(attributes['image'], baseUrl);
+    String imageUrl = _resolveImageUrl(attributes['image'], baseUrl);
 
     // Parse ingredients component
     final ingredientsData = attributes['ingredients'] as List<dynamic>? ?? [];
@@ -168,20 +168,23 @@ class Recipe {
     );
   }
 
-  static String _resolveMediaUrl(dynamic media, String? baseUrl) {
-    if (media == null) return '';
+  static String _resolveImageUrl(dynamic image, String? baseUrl) {
+    if (image == null) return '';
 
-    Map<String, dynamic>? data;
-    if (media is Map<String, dynamic>) {
-      data = (media['data'] as Map<String, dynamic>?) ?? media;
+    if (image is String) {
+      if (image.isEmpty) return '';
+      return image.startsWith('http') ? image : '${baseUrl ?? ""}$image';
     }
-    if (data == null) return '';
 
-    final attrs = (data['attributes'] as Map<String, dynamic>?) ?? data;
-    final url = attrs['url'] as String? ?? '';
-    if (url.isEmpty) return '';
+    if (image is Map<String, dynamic>) {
+      final data = (image['data'] as Map<String, dynamic>?) ?? image;
+      final attrs = (data['attributes'] as Map<String, dynamic>?) ?? data;
+      final url = attrs['url'] as String? ?? '';
+      if (url.isEmpty) return '';
+      return url.startsWith('http') ? url : '${baseUrl ?? ""}$url';
+    }
 
-    return url.startsWith('http') ? url : '${baseUrl ?? ""}$url';
+    return '';
   }
 
   Recipe copyWith({
