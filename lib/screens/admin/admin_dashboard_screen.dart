@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:iconsax/iconsax.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/user.dart';
-import '../../core/utils/logout_helper.dart';
 import '../../services/admin_user_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -25,6 +26,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     'riderCount': 0,
   };
   bool _statsLoading = true;
+  bool _statsError = false;
 
   @override
   void initState() {
@@ -35,33 +37,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   void _validateRole() {
     final authProvider = context.read<AuthProvider>();
-
-    // Validate user role - only admins can access this screen
     if (authProvider.user?.role != UserRole.admin) {
       Future.microtask(() {
         GoRouter.of(context).go(
           authProvider.user?.role == UserRole.shopper
               ? '/shopper/home'
               : authProvider.user?.role == UserRole.rider
-              ? '/rider/home'
-              : '/customer/home',
+                  ? '/rider/home'
+                  : '/customer/home',
         );
       });
     }
   }
 
-  int _getGridColumns(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    if (width > 1200) {
-      return 4; // Desktop: 4 columns
-    } else if (width > 800) {
-      return 3; // Tablet: 3 columns
-    } else {
-      return 2; // Mobile: 2 columns
-    }
-  }
-
   Future<void> _loadStats() async {
+    setState(() {
+      _statsLoading = true;
+      _statsError = false;
+    });
+
     try {
       final authProvider = context.read<AuthProvider>();
       final token = authProvider.token;
@@ -82,9 +76,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _statsLoading = false);
+        setState(() {
+          _statsLoading = false;
+          _statsError = true;
+        });
       }
     }
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  String _getDisplayName() {
+    final user = context.read<AuthProvider>().user;
+    final name = user?.name;
+    if (name == null || name.isEmpty) return 'Admin';
+    // Return first name only
+    return name.split(' ').first;
   }
 
   void _showAddStaffDialog(String userType) {
@@ -116,7 +128,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Header
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -131,8 +142,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-
-                // Full Name
                 Text('Full Name', style: AppTextStyles.labelSmall),
                 const SizedBox(height: 8),
                 TextField(
@@ -145,8 +154,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Phone Number
                 Text('Phone Number', style: AppTextStyles.labelSmall),
                 const SizedBox(height: 8),
                 TextField(
@@ -161,8 +168,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 16),
-
-                // Password
                 Text('Password', style: AppTextStyles.labelSmall),
                 const SizedBox(height: 8),
                 TextField(
@@ -174,16 +179,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     suffixIcon: IconButton(
-                      onPressed: () => setState(() => obscurePassword = !obscurePassword),
+                      onPressed: () =>
+                          setState(() => obscurePassword = !obscurePassword),
                       icon: Icon(
-                        obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // Email (optional)
                 Text('Email (Optional)', style: AppTextStyles.labelSmall),
                 const SizedBox(height: 8),
                 TextField(
@@ -197,21 +203,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 24),
-
-                // Submit Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: isSubmitting
                         ? null
                         : () async {
-                            // Validate
                             if (nameController.text.isEmpty ||
                                 phoneController.text.isEmpty ||
                                 passwordController.text.isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Please fill in all required fields'),
+                                  content: Text(
+                                      'Please fill in all required fields'),
                                 ),
                               );
                               return;
@@ -229,19 +233,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             if (passwordController.text.length < 6) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Password must be at least 6 characters'),
+                                  content: Text(
+                                      'Password must be at least 6 characters'),
                                 ),
                               );
                               return;
                             }
 
-                            // Validate email format if provided
                             if (emailController.text.isNotEmpty) {
-                              final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+                              final emailRegex =
+                                  RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
                               if (!emailRegex.hasMatch(emailController.text)) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Please enter a valid email address (e.g., test@example.com)'),
+                                    content: Text(
+                                        'Please enter a valid email address'),
                                   ),
                                 );
                                 return;
@@ -251,20 +257,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             setState(() => isSubmitting = true);
 
                             try {
-                              final authProvider = context.read<AuthProvider>();
+                              final authProvider =
+                                  context.read<AuthProvider>();
                               final token = authProvider.token;
-                              if (token == null) throw Exception('No auth token');
+                              if (token == null) {
+                                throw Exception('No auth token');
+                              }
 
-                              final success = await AdminUserService.createStaff(
+                              final success =
+                                  await AdminUserService.createStaff(
                                 phone: '+256${phoneController.text}',
                                 password: passwordController.text,
                                 name: nameController.text,
                                 userType: userType,
-                                email: emailController.text.isEmpty ? null : emailController.text,
+                                email: emailController.text.isEmpty
+                                    ? null
+                                    : emailController.text,
                                 token: token,
                               );
 
-                              if (mounted) {
+                              if (context.mounted) {
                                 Navigator.pop(context);
                                 if (success) {
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -280,7 +292,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               }
                             } catch (e) {
                               setState(() => isSubmitting = false);
-                              if (mounted) {
+                              if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text('Error: $e'),
@@ -307,379 +319,287 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isWide = width > 1200;
+    final isMedium = width > 800;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Admin Dashboard'),
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        actions: [
-          IconButton(
-            onPressed: () => _showLogoutDialog(context),
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
+      backgroundColor: AppColors.background,
+      body: RefreshIndicator(
+        onRefresh: _loadStats,
+        color: AppColors.primary,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.all(isWide ? 32 : 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ─── Compact greeting header ─────────────────
+              _buildGreetingHeader(),
+              const SizedBox(height: 28),
+
+              // ─── Stats grid (merged - no more duplication) ──
+              _buildSectionHeader('Overview', Iconsax.chart_2),
+              const SizedBox(height: 16),
+              _buildStatsGrid(isWide: isWide, isMedium: isMedium),
+              const SizedBox(height: 32),
+
+              // ─── Quick Actions ───────────────────────────
+              _buildSectionHeader('Quick Actions', Iconsax.flash_1),
+              const SizedBox(height: 16),
+              _buildQuickActions(isWide: isWide, isMedium: isMedium),
+              const SizedBox(height: 32),
+            ],
           ),
-        ],
-      ),
-      backgroundColor: const Color(0xFFFAFAFA),
-      body: Consumer<AuthProvider>(
-        builder: (context, authProvider, _) {
-          final user = authProvider.user;
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Admin Header - Modern Light Theme
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome, ${user?.name ?? 'Admin'}',
-                        style: AppTextStyles.h4.copyWith(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.email_outlined,
-                            size: 16,
-                            color: Colors.grey[600],
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            user?.email ?? 'admin@lipacart.com',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Quick Stats - Orange/Green Theme
-                Text(
-                  'Quick Stats',
-                  style: AppTextStyles.h5.copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                GridView.count(
-                  crossAxisCount: _getGridColumns(context),
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 20,
-                  crossAxisSpacing: 20,
-                  childAspectRatio: 1.15,
-                  children: [
-                    _StatCard(
-                      title: 'Total Users',
-                      value: _statsLoading ? '...' : '${_stats['totalUsers']}',
-                      icon: Icons.people_outline,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFFFF9500).withValues(alpha: 0.15),
-                          const Color(0xFFFF9500).withValues(alpha: 0.05),
-                        ],
-                      ),
-                      accentColor: const Color(0xFFFF9500),
-                    ),
-                    _StatCard(
-                      title: 'Total Orders',
-                      value: _statsLoading ? '...' : '${_stats['totalOrders']}',
-                      icon: Icons.shopping_bag_outlined,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF10B981).withValues(alpha: 0.15),
-                          const Color(0xFF10B981).withValues(alpha: 0.05),
-                        ],
-                      ),
-                      accentColor: const Color(0xFF10B981),
-                    ),
-                    _StatCard(
-                      title: 'Total Products',
-                      value: _statsLoading ? '...' : '${_stats['totalProducts']}',
-                      icon: Icons.inventory_2_outlined,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFFFF9500).withValues(alpha: 0.15),
-                          const Color(0xFFFF9500).withValues(alpha: 0.05),
-                        ],
-                      ),
-                      accentColor: const Color(0xFFFF9500),
-                    ),
-                    _StatCard(
-                      title: 'Total Shoppers',
-                      value: _statsLoading ? '...' : '${_stats['shopperCount']}',
-                      icon: Icons.storefront_outlined,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF10B981).withValues(alpha: 0.15),
-                          const Color(0xFF10B981).withValues(alpha: 0.05),
-                        ],
-                      ),
-                      accentColor: const Color(0xFF10B981),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-
-                // Management Sections
-                Text(
-                  'Management',
-                  style: AppTextStyles.h5.copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                GridView.count(
-                  crossAxisCount: _getGridColumns(context),
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 20,
-                  crossAxisSpacing: 20,
-                  childAspectRatio: 1.25,
-                  children: [
-                    _ManagementCard(
-                      icon: Icons.inventory_2_outlined,
-                      title: 'Products',
-                      count: _statsLoading ? '...' : '${_stats['totalProducts']}',
-                      accentColor: const Color(0xFFFF9500),
-                      onTap: () => context.go('/admin/products'),
-                    ),
-                    _ManagementCard(
-                      icon: Icons.receipt_long_outlined,
-                      title: 'Orders',
-                      count: _statsLoading ? '...' : '${_stats['totalOrders']}',
-                      accentColor: const Color(0xFF10B981),
-                      onTap: () => context.go('/admin/orders'),
-                    ),
-                    _ManagementCard(
-                      icon: Icons.storefront_outlined,
-                      title: 'Shoppers',
-                      count: _statsLoading ? '...' : '${_stats['shopperCount']}',
-                      accentColor: const Color(0xFFFF9500),
-                      onTap: () => context.go('/admin/users'),
-                    ),
-                    _ManagementCard(
-                      icon: Icons.two_wheeler_outlined,
-                      title: 'Riders',
-                      count: _statsLoading ? '...' : '${_stats['riderCount']}',
-                      accentColor: const Color(0xFF10B981),
-                      onTap: () => context.go('/admin/riders'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-
-                // Quick Actions - Modern Buttons
-                Text(
-                  'Quick Actions',
-                  style: AppTextStyles.h5.copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  spacing: 16,
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _showAddStaffDialog('shopper'),
-                        icon: const Icon(Icons.person_add_outlined),
-                        label: const Text('Add Shopper'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF9500),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _showAddStaffDialog('rider'),
-                        icon: const Icon(Icons.two_wheeler_outlined),
-                        label: const Text('Add Rider'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-              ],
-            ),
-          );
-        },
+        ),
       ),
     );
   }
 
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
+  Widget _buildGreetingHeader() {
+    final now = DateTime.now();
+    final dateStr = DateFormat('EEEE, MMMM d, yyyy').format(now);
+
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${_getGreeting()}, ${_getDisplayName()}',
+                style: AppTextStyles.h3.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                dateStr,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textTertiary,
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              await LogoutHelper.logoutAndClear(context);
-              if (!mounted) return;
-              Navigator.of(dialogContext).pop();
-              GoRouter.of(context).go('/login');
-            },
-            child: const Text('Logout'),
+        ),
+        // Refresh button
+        IconButton(
+          onPressed: _statsLoading ? null : _loadStats,
+          icon: _statsLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Iconsax.refresh),
+          tooltip: 'Refresh stats',
+          style: IconButton.styleFrom(
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(color: AppColors.grey200),
+            ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: AppColors.primary),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: AppTextStyles.h5.copyWith(
+            color: AppColors.textPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsGrid({required bool isWide, required bool isMedium}) {
+    final columns = isWide ? 5 : (isMedium ? 3 : 2);
+
+    final statItems = [
+      _StatData(
+        title: 'Total Users',
+        value: _stats['totalUsers'] ?? 0,
+        icon: Iconsax.people,
+        color: const Color(0xFF6366F1), // Indigo
+        route: '/admin/users',
       ),
+      _StatData(
+        title: 'Orders',
+        value: _stats['totalOrders'] ?? 0,
+        icon: Iconsax.bag_2,
+        color: const Color(0xFF10B981), // Green
+        route: '/admin/orders',
+      ),
+      _StatData(
+        title: 'Products',
+        value: _stats['totalProducts'] ?? 0,
+        icon: Iconsax.box,
+        color: const Color(0xFFEA7702), // Orange
+        route: '/admin/products',
+      ),
+      _StatData(
+        title: 'Shoppers',
+        value: _stats['shopperCount'] ?? 0,
+        icon: Iconsax.shop,
+        color: const Color(0xFF0EA5E9), // Sky blue
+        route: '/admin/users',
+      ),
+      _StatData(
+        title: 'Riders',
+        value: _stats['riderCount'] ?? 0,
+        icon: Iconsax.truck_fast,
+        color: const Color(0xFFEF4444), // Red
+        route: '/admin/riders',
+      ),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        mainAxisSpacing: 16,
+        crossAxisSpacing: 16,
+        childAspectRatio: isWide ? 1.4 : 1.25,
+      ),
+      itemCount: statItems.length,
+      itemBuilder: (context, index) {
+        final stat = statItems[index];
+        return _StatCard(
+          title: stat.title,
+          value: _statsLoading ? null : stat.value,
+          icon: stat.icon,
+          color: stat.color,
+          isError: _statsError,
+          onTap: () => context.go(stat.route),
+        );
+      },
+    );
+  }
+
+  Widget _buildQuickActions({required bool isWide, required bool isMedium}) {
+    final actions = [
+      _QuickAction(
+        icon: Iconsax.user_add,
+        label: 'Add Shopper',
+        color: const Color(0xFF0EA5E9),
+        onTap: () => _showAddStaffDialog('shopper'),
+      ),
+      _QuickAction(
+        icon: Iconsax.truck_fast,
+        label: 'Add Rider',
+        color: const Color(0xFFEF4444),
+        onTap: () => _showAddStaffDialog('rider'),
+      ),
+      _QuickAction(
+        icon: Iconsax.add_square,
+        label: 'Add Product',
+        color: const Color(0xFFEA7702),
+        onTap: () => context.go('/admin/products'),
+      ),
+      _QuickAction(
+        icon: Iconsax.receipt_2,
+        label: 'View Orders',
+        color: const Color(0xFF10B981),
+        onTap: () => context.go('/admin/orders'),
+      ),
+      _QuickAction(
+        icon: Iconsax.chart_2,
+        label: 'Analytics',
+        color: const Color(0xFF6366F1),
+        onTap: () => context.go('/admin/analytics'),
+      ),
+    ];
+
+    final columns = isWide ? 5 : (isMedium ? 4 : 3);
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: isWide ? 1.8 : 1.5,
+      ),
+      itemCount: actions.length,
+      itemBuilder: (context, index) {
+        final action = actions[index];
+        return _QuickActionCard(
+          icon: action.icon,
+          label: action.label,
+          color: action.color,
+          onTap: action.onTap,
+        );
+      },
     );
   }
 }
 
-class _StatCard extends StatelessWidget {
+// ─── Data classes ──────────────────────────────────────────────
+
+class _StatData {
   final String title;
-  final String value;
+  final int value;
   final IconData icon;
-  final LinearGradient gradient;
-  final Color accentColor;
+  final Color color;
+  final String route;
+
+  const _StatData({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+    required this.route,
+  });
+}
+
+class _QuickAction {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+}
+
+// ─── Stat Card (tappable, with loading & error states) ────────
+
+class _StatCard extends StatefulWidget {
+  final String title;
+  final int? value; // null = loading
+  final IconData icon;
+  final Color color;
+  final bool isError;
+  final VoidCallback onTap;
 
   const _StatCard({
     required this.title,
     required this.value,
     required this.icon,
-    required this.gradient,
-    required this.accentColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: accentColor.withValues(alpha: 0.2),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: accentColor, size: 28),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: AppTextStyles.h4.copyWith(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: accentColor,
-                ),
-              ),
-              Text(
-                title,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: Colors.grey[700],
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ManagementCard extends StatefulWidget {
-  final IconData icon;
-  final String title;
-  final String count;
-  final Color accentColor;
-  final VoidCallback onTap;
-
-  const _ManagementCard({
-    required this.icon,
-    required this.title,
-    required this.count,
-    required this.accentColor,
+    required this.color,
+    required this.isError,
     required this.onTap,
   });
 
   @override
-  State<_ManagementCard> createState() => _ManagementCardState();
+  State<_StatCard> createState() => _StatCardState();
 }
 
-class _ManagementCardState extends State<_ManagementCard> {
+class _StatCardState extends State<_StatCard> {
   bool _isHovered = false;
 
   @override
@@ -687,69 +607,156 @@ class _ManagementCardState extends State<_ManagementCard> {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: Material(
-        child: InkWell(
-          onTap: widget.onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: _isHovered
-                    ? widget.accentColor.withValues(alpha: 0.3)
-                    : Colors.grey[200]!,
-                width: _isHovered ? 1.5 : 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: _isHovered
-                      ? widget.accentColor.withValues(alpha: 0.1)
-                      : Colors.grey.withValues(alpha: 0.05),
-                  blurRadius: _isHovered ? 12 : 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: _isHovered
+                  ? widget.color.withValues(alpha: 0.4)
+                  : AppColors.grey200,
+              width: _isHovered ? 1.5 : 1,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: widget.accentColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    widget.icon,
-                    color: widget.accentColor,
-                    size: 28,
-                  ),
+            boxShadow: [
+              BoxShadow(
+                color: _isHovered
+                    ? widget.color.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.03),
+                blurRadius: _isHovered ? 16 : 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Icon
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: widget.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                child: Icon(widget.icon, color: widget.color, size: 22),
+              ),
+              // Value + Title
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (widget.value == null)
+                    // Loading skeleton
+                    Container(
+                      width: 40,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: AppColors.grey200,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    )
+                  else if (widget.isError)
+                    Icon(Iconsax.warning_2,
+                        color: AppColors.textTertiary, size: 24)
+                  else
                     Text(
-                      widget.count,
-                      style: AppTextStyles.h4.copyWith(
-                        color: widget.accentColor,
-                        fontSize: 22,
+                      NumberFormat.compact().format(widget.value),
+                      style: AppTextStyles.h3.copyWith(
+                        color: widget.color,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.title,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: Colors.grey[700],
-                      ),
+                  const SizedBox(height: 2),
+                  Text(
+                    widget.title,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
                     ),
-                  ],
-                ),
-              ],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Quick Action Card ────────────────────────────────────────
+
+class _QuickActionCard extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickActionCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  State<_QuickActionCard> createState() => _QuickActionCardState();
+}
+
+class _QuickActionCardState extends State<_QuickActionCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? widget.color.withValues(alpha: 0.08)
+                : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _isHovered
+                  ? widget.color.withValues(alpha: 0.3)
+                  : AppColors.grey200,
             ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: widget.color.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(widget.icon, color: widget.color, size: 20),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.label,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight:
+                      _isHovered ? FontWeight.w600 : FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ),

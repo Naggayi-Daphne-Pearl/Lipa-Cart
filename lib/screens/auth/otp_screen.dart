@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:provider/provider.dart';
@@ -29,6 +30,9 @@ class _OtpScreenState extends State<OtpScreen> {
   bool _isLoading = false;
   int _resendSeconds = 60;
   Timer? _timer;
+
+  static const double _desktopBreakpoint = 800;
+  static const double _formMaxWidth = 440;
 
   @override
   void initState() {
@@ -78,13 +82,10 @@ class _OtpScreenState extends State<OtpScreen> {
 
     if (success) {
       if (!mounted) return;
-      // Check if user profile is complete (has name and email)
       final user = authProvider.user;
       if (user?.name == null || user?.name?.isEmpty == true) {
-        // Profile incomplete - go to completion screen
         context.push('/profile-completion', extra: widget.phoneNumber);
       } else {
-        // Profile complete - navigate to role-appropriate home
         await _handlePostLogin(authProvider);
       }
     } else if (authProvider.errorMessage != null) {
@@ -117,51 +118,307 @@ class _OtpScreenState extends State<OtpScreen> {
     }
   }
 
+  bool _isDesktop(BuildContext context) {
+    return MediaQuery.of(context).size.width >= _desktopBreakpoint;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDesktop = _isDesktop(context);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        leading: IconButton(
-          icon: const Icon(Iconsax.arrow_left),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/login');
-            }
-          },
+      body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
+    );
+  }
+
+  // ─── Desktop: Two-column split layout ───────────────────────────
+  Widget _buildDesktopLayout() {
+    return Row(
+      children: [
+        Expanded(
+          flex: 5,
+          child: _buildBrandPanel(),
+        ),
+        Expanded(
+          flex: 5,
+          child: _buildDesktopFormPanel(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBrandPanel() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0D6B3A),
+            AppColors.primary,
+            AppColors.primaryLight,
+          ],
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSizes.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: AppSizes.lg),
-              Text('Verify Your Number', style: AppTextStyles.h3),
-              const SizedBox(height: AppSizes.sm),
-              Text.rich(
-                TextSpan(
-                  text: 'We\'ve sent a 6-digit code to ',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textMedium,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: CustomPaint(painter: _CirclePatternPainter()),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(48),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SvgPicture.asset(
+                  'assets/images/logos/logo-on-green-1.svg',
+                  height: 32,
+                ),
+                const Spacer(),
+                const Text(
+                  'Almost there!\nVerify your number.',
+                  style: TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    height: 1.15,
+                    letterSpacing: -0.5,
                   ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'We sent a verification code to your phone.\nEnter it below to continue.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white.withValues(alpha: 0.8),
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                Row(
                   children: [
-                    TextSpan(
-                      text: Formatters.formatPhoneNumber(widget.phoneNumber),
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textDark,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    _buildTrustBadge(
+                        Iconsax.shield_tick, 'Secure', 'Verification'),
+                    const SizedBox(width: 32),
+                    _buildTrustBadge(Iconsax.timer_1, '60s', 'Auto-resend'),
+                    const SizedBox(width: 32),
+                    _buildTrustBadge(Iconsax.sms, 'SMS', 'Delivery'),
                   ],
                 ),
+                const Spacer(flex: 1),
+                Text(
+                  '${DateTime.now().year} LipaCart. All rights reserved.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrustBadge(IconData icon, String value, String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 16),
+            const SizedBox(width: 6),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
               ),
-              const SizedBox(height: AppSizes.xxl),
-              // OTP Input
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white.withValues(alpha: 0.6),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopFormPanel() {
+    return Container(
+      color: AppColors.background,
+      child: Column(
+        children: [
+          // Top nav bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+            child: Row(
+              children: [
+                TextButton.icon(
+                  onPressed: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/login');
+                    }
+                  },
+                  icon: const Icon(Iconsax.arrow_left, size: 18),
+                  label: Text(
+                    'Back',
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  'Need help?',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () => context.go('/login'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: const BorderSide(color: AppColors.primary),
+                    ),
+                  ),
+                  child: Text(
+                    'Sign In',
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Centered form
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _formMaxWidth),
+                  child: _buildFormContent(isDesktop: true),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Mobile: Original layout ───────────────────────────────────
+  Widget _buildMobileLayout() {
+    return Container(
+      color: AppColors.background,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // App bar
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSizes.sm,
+                vertical: AppSizes.xs,
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Iconsax.arrow_left),
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/login');
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSizes.lg),
+                child: _buildFormContent(isDesktop: false),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Shared form content ────────────────────────────────────────
+  Widget _buildFormContent({required bool isDesktop}) {
+    return Column(
+      crossAxisAlignment:
+          isDesktop ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
+      children: [
+        if (!isDesktop) const SizedBox(height: AppSizes.lg),
+        Text(
+          'Verify Your Number',
+          style: (isDesktop ? AppTextStyles.h1 : AppTextStyles.h3).copyWith(
+            color: AppColors.primaryDark,
+          ),
+          textAlign: isDesktop ? TextAlign.left : null,
+        ),
+        const SizedBox(height: AppSizes.sm),
+        Text.rich(
+          TextSpan(
+            text: 'We\'ve sent a 6-digit code to ',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textMedium,
+            ),
+            children: [
+              TextSpan(
+                text: Formatters.formatPhoneNumber(widget.phoneNumber),
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textDark,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSizes.xxl),
+        // OTP Input card
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSizes.lg),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(
+                isDesktop ? AppSizes.radiusMd : AppSizes.radiusLg),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.06),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
               PinCodeTextField(
                 appContext: context,
                 controller: _otpController,
@@ -172,8 +429,8 @@ class _OtpScreenState extends State<OtpScreen> {
                 pinTheme: PinTheme(
                   shape: PinCodeFieldShape.box,
                   borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  fieldHeight: 56,
-                  fieldWidth: 50,
+                  fieldHeight: isDesktop ? 50 : 56,
+                  fieldWidth: isDesktop ? 44 : 50,
                   activeFillColor: AppColors.lightGrey,
                   inactiveFillColor: AppColors.lightGrey,
                   selectedFillColor: AppColors.lightGrey,
@@ -187,63 +444,65 @@ class _OtpScreenState extends State<OtpScreen> {
               ),
               const SizedBox(height: AppSizes.lg),
               // Resend timer
-              Center(
-                child: _resendSeconds > 0
-                    ? Text(
-                        'Resend code in ${_resendSeconds}s',
+              _resendSeconds > 0
+                  ? Text(
+                      'Resend code in ${_resendSeconds}s',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textMedium,
+                      ),
+                    )
+                  : TextButton(
+                      onPressed: _resendOtp,
+                      child: Text(
+                        'Resend Code',
                         style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textMedium,
-                        ),
-                      )
-                    : TextButton(
-                        onPressed: _resendOtp,
-                        child: Text(
-                          'Resend Code',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.primaryOrange,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          color: AppColors.primaryOrange,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-              ),
-              const SizedBox(height: AppSizes.xxl),
+                    ),
+              const SizedBox(height: AppSizes.xl),
               // Verify button
               CustomButton(
                 text: 'Verify',
                 isLoading: _isLoading,
                 onPressed: _verifyOtp,
+                height: isDesktop
+                    ? AppSizes.buttonHeightMd
+                    : AppSizes.buttonHeightLg,
               ),
-              const SizedBox(height: AppSizes.lg),
-              // Demo hint
-              Container(
-                padding: const EdgeInsets.all(AppSizes.md),
-                decoration: BoxDecoration(
-                  color: AppColors.info.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Iconsax.info_circle,
-                      color: AppColors.info,
-                      size: 20,
-                    ),
-                    const SizedBox(width: AppSizes.sm),
-                    Expanded(
-                      child: Text(
-                        'Dev: Check backend console for OTP',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.info,
-                        ),
-                      ),
-                    ),
-                  ],
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSizes.lg),
+        // Demo hint
+        Container(
+          padding: const EdgeInsets.all(AppSizes.md),
+          decoration: BoxDecoration(
+            color: AppColors.info.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Iconsax.info_circle,
+                color: AppColors.info,
+                size: 20,
+              ),
+              const SizedBox(width: AppSizes.sm),
+              Expanded(
+                child: Text(
+                  'Dev: Check backend console for OTP',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.info,
+                  ),
                 ),
               ),
             ],
           ),
         ),
-      ),
+        const SizedBox(height: AppSizes.lg),
+      ],
     );
   }
 
@@ -253,7 +512,6 @@ class _OtpScreenState extends State<OtpScreen> {
     final user = authProvider.user;
     final role = user?.role ?? UserRole.customer;
 
-    // KYC gate for shoppers
     if (role == UserRole.shopper) {
       final kycStatus = user?.kycStatus ?? 'not_submitted';
       if (kycStatus == 'approved') {
@@ -268,13 +526,11 @@ class _OtpScreenState extends State<OtpScreen> {
       return;
     }
 
-    // Admin goes to dashboard
     if (role == UserRole.admin) {
       context.go('/admin/dashboard');
       return;
     }
 
-    // Other non-customer roles (rider) go to their home screen
     if (role != UserRole.customer) {
       context.go('/${role.name}/home');
       return;
@@ -291,12 +547,14 @@ class _OtpScreenState extends State<OtpScreen> {
       if (token != null && user != null && user.addresses.isEmpty) {
         final addressService = context.read<AddressService>();
         final customerId = user.customerId ?? user.id;
-        final success = await addressService.fetchAddresses(token, customerId);
+        final success =
+            await addressService.fetchAddresses(token, customerId);
         if (success) {
           await authProvider.setAddresses(addressService.userAddresses);
         }
       }
 
+      if (!mounted) return;
       final hasAddress = authProvider.user?.addresses.isNotEmpty == true;
       if (!hasAddress) {
         final encoded = Uri.encodeComponent(returnRoute);
@@ -305,6 +563,36 @@ class _OtpScreenState extends State<OtpScreen> {
       }
     }
 
+    if (!mounted) return;
     context.go(returnRoute);
   }
+}
+
+/// Paints subtle decorative circles on the brand panel background
+class _CirclePatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.04)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(
+      Offset(size.width * 0.85, size.height * 0.15),
+      size.width * 0.3,
+      paint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.1, size.height * 0.75),
+      size.width * 0.25,
+      paint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.7, size.height * 0.85),
+      size.width * 0.15,
+      paint..color = Colors.white.withValues(alpha: 0.03),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:iconsax/iconsax.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/product_service.dart';
 import '../../models/product.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_text_styles.dart';
 import '../../widgets/app_loading_indicator.dart';
 
 class AdminProductsDesktopScreen extends StatefulWidget {
@@ -14,12 +18,14 @@ class AdminProductsDesktopScreen extends StatefulWidget {
       _AdminProductsDesktopScreenState();
 }
 
-class _AdminProductsDesktopScreenState extends State<AdminProductsDesktopScreen> {
+class _AdminProductsDesktopScreenState
+    extends State<AdminProductsDesktopScreen> {
   late List<Product> _products = [];
   bool _isLoading = true;
   String? _error;
   final _searchController = TextEditingController();
   List<String> _categories = [];
+  String _selectedCategory = 'All';
 
   @override
   void initState() {
@@ -58,7 +64,9 @@ class _AdminProductsDesktopScreenState extends State<AdminProductsDesktopScreen>
 
       final products = await ProductService.getProducts(
         token: token,
-        search: _searchController.text.isNotEmpty ? _searchController.text : null,
+        search: _searchController.text.isNotEmpty
+            ? _searchController.text
+            : null,
       );
 
       if (mounted) {
@@ -75,6 +83,17 @@ class _AdminProductsDesktopScreenState extends State<AdminProductsDesktopScreen>
         });
       }
     }
+  }
+
+  List<Product> get _filteredProducts {
+    if (_selectedCategory == 'All') return _products;
+    return _products
+        .where((p) => p.categoryName == _selectedCategory)
+        .toList();
+  }
+
+  String _formatPrice(double price) {
+    return 'UGX ${NumberFormat('#,###').format(price.toInt())}';
   }
 
   void _showProductDialog({Product? product}) {
@@ -94,6 +113,7 @@ class _AdminProductsDesktopScreenState extends State<AdminProductsDesktopScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Delete Product'),
         content: Text('Are you sure you want to delete "${product.name}"?'),
         actions: [
@@ -116,7 +136,7 @@ class _AdminProductsDesktopScreenState extends State<AdminProductsDesktopScreen>
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Product deleted successfully'),
-                      backgroundColor: Colors.green,
+                      backgroundColor: AppColors.success,
                     ),
                   );
                   _loadProducts();
@@ -132,7 +152,8 @@ class _AdminProductsDesktopScreenState extends State<AdminProductsDesktopScreen>
                 }
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -142,132 +163,387 @@ class _AdminProductsDesktopScreenState extends State<AdminProductsDesktopScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Products Management'),
-        elevation: 0,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: ElevatedButton.icon(
-              onPressed: () => _showProductDialog(),
-              icon: const Icon(Icons.add),
-              label: const Text('Add Product'),
+      backgroundColor: AppColors.background,
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header row
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Products',
+                        style: AppTextStyles.h3
+                            .copyWith(color: AppColors.textPrimary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_filteredProducts.length} products${_selectedCategory != 'All' ? ' in $_selectedCategory' : ''}',
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: AppColors.textTertiary),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => _showProductDialog(),
+                  icon: const Icon(Iconsax.add, size: 18),
+                  label: const Text('Add Product'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Filters
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              spacing: 12,
+            const SizedBox(height: 20),
+
+            // Filters row
+            Row(
               children: [
                 // Search
                 SizedBox(
-                  width: 250,
+                  width: 280,
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Search products...',
-                      prefixIcon: const Icon(Icons.search),
+                      hintStyle: AppTextStyles.bodySmall
+                          .copyWith(color: AppColors.textTertiary),
+                      prefixIcon: const Icon(Iconsax.search_normal,
+                          size: 20, color: AppColors.textTertiary),
+                      filled: true,
+                      fillColor: Colors.white,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: AppColors.grey200),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: AppColors.grey200),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
                     ),
+                    style: AppTextStyles.bodySmall,
                     onChanged: (_) => _loadProducts(),
                   ),
                 ),
-                // Refresh
+                const SizedBox(width: 16),
+                // Category filter pills
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildCategoryPill('All'),
+                        ..._categories.map((cat) => _buildCategoryPill(cat)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 IconButton(
                   onPressed: _loadProducts,
-                  icon: const Icon(Icons.refresh),
+                  icon: const Icon(Iconsax.refresh, size: 20),
                   tooltip: 'Refresh',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: BorderSide(color: AppColors.grey200),
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 20),
 
-          // Products Table
-          Expanded(
-            child: _isLoading
-                ? const AppLoadingPage()
-                : _error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text('Error: $_error'),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _loadProducts,
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : _products.isEmpty
-                        ? const Center(child: Text('No products found'))
-                        : SingleChildScrollView(
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: DataTable(
-                                columns: const [
-                                  DataColumn(label: Text('Name')),
-                                  DataColumn(label: Text('Category')),
-                                  const DataColumn(label: Text('Price (UGX)'), numeric: true),
-                                  DataColumn(label: Text('Unit')),
-                                  DataColumn(label: Text('Available')),
-                                  DataColumn(label: Text('Actions')),
-                                ],
-                                rows: _products.map((product) {
-                                  return DataRow(
-                                    cells: [
-                                      DataCell(Text(product.name)),
-                                      DataCell(Text(product.categoryName)),
-                                      DataCell(Text(product.price.toStringAsFixed(2))),
-                                      DataCell(Text(product.unit)),
-                                      DataCell(
-                                        Chip(
-                                          label: Text(product.isAvailable ? 'Yes' : 'No'),
-                                          backgroundColor: product.isAvailable
-                                              ? Colors.green.withValues(alpha: 0.3)
-                                              : Colors.red.withValues(alpha: 0.3),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        SizedBox(
-                                          width: 100,
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            spacing: 8,
-                                            children: [
-                                              IconButton(
-                                                icon: const Icon(Icons.edit, size: 18),
-                                                onPressed: () =>
-                                                    _showProductDialog(product: product),
-                                                tooltip: 'Edit',
-                                              ),
-                                              IconButton(
-                                                icon: const Icon(Icons.delete, size: 18),
-                                                onPressed: () => _deleteProduct(product),
-                                                tooltip: 'Delete',
-                                                color: Colors.red,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ),
+            // Products table
+            Expanded(
+              child: _isLoading
+                  ? const AppLoadingPage()
+                  : _error != null
+                      ? _buildErrorState()
+                      : _filteredProducts.isEmpty
+                          ? _buildEmptyState()
+                          : _buildProductsTable(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryPill(String category) {
+    final isSelected = _selectedCategory == category;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedCategory = category),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? AppColors.primary : AppColors.grey300,
+            ),
+          ),
+          child: Text(
+            category,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: isSelected ? Colors.white : AppColors.textSecondary,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Iconsax.warning_2, size: 48, color: AppColors.grey300),
+          const SizedBox(height: 16),
+          Text(
+            'Failed to load products',
+            style: AppTextStyles.h5.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$_error',
+            style: AppTextStyles.bodySmall
+                .copyWith(color: AppColors.textTertiary),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: _loadProducts,
+            icon: const Icon(Iconsax.refresh, size: 18),
+            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Iconsax.box, size: 56, color: AppColors.grey300),
+          const SizedBox(height: 16),
+          Text(
+            'No products found',
+            style: AppTextStyles.h5.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _searchController.text.isNotEmpty
+                ? 'Try a different search term'
+                : 'Add your first product to get started',
+            style: AppTextStyles.bodySmall
+                .copyWith(color: AppColors.textTertiary),
+          ),
+          if (_searchController.text.isEmpty) ...[
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => _showProductDialog(),
+              icon: const Icon(Iconsax.add, size: 18),
+              label: const Text('Add Product'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductsTable() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.grey200),
+      ),
+      child: SingleChildScrollView(
+        child: SizedBox(
+          width: double.infinity,
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(AppColors.grey50),
+            headingTextStyle: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+            dataRowMinHeight: 60,
+            dataRowMaxHeight: 68,
+            columnSpacing: 24,
+            columns: const [
+              DataColumn(label: Text('Product')),
+              DataColumn(label: Text('Category')),
+              DataColumn(label: Text('Price'), numeric: true),
+              DataColumn(label: Text('Unit')),
+              DataColumn(label: Text('Available')),
+              DataColumn(label: Text('Actions')),
+            ],
+            rows: _filteredProducts.map((product) {
+              return DataRow(
+                cells: [
+                  // Product with image thumbnail
+                  DataCell(
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: product.image.isNotEmpty
+                                ? CachedNetworkImage(
+                                    imageUrl: product.image,
+                                    fit: BoxFit.cover,
+                                    placeholder: (_, __) => Container(
+                                      color: AppColors.grey100,
+                                      child: const Icon(Iconsax.image,
+                                          size: 18,
+                                          color: AppColors.textTertiary),
+                                    ),
+                                    errorWidget: (_, __, ___) => Container(
+                                      color: AppColors.grey100,
+                                      child: const Icon(Iconsax.image,
+                                          size: 18,
+                                          color: AppColors.textTertiary),
+                                    ),
+                                  )
+                                : Container(
+                                    color: AppColors.grey100,
+                                    child: const Icon(Iconsax.image,
+                                        size: 18,
+                                        color: AppColors.textTertiary),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Text(
+                            product.name,
+                            style: AppTextStyles.labelMedium.copyWith(
+                              color: AppColors.textPrimary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Category badge
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.grey100,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        product.categoryName,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Price
+                  DataCell(
+                    Text(
+                      _formatPrice(product.price),
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  // Unit
+                  DataCell(
+                    Text(
+                      product.unit,
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: AppColors.textSecondary),
+                    ),
+                  ),
+                  // Availability toggle
+                  DataCell(
+                    Switch(
+                      value: product.isAvailable,
+                      onChanged: (value) {
+                        // TODO: Toggle availability via API
+                      },
+                      activeTrackColor: AppColors.primary,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  // Actions
+                  DataCell(
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Iconsax.edit_2, size: 18),
+                          onPressed: () =>
+                              _showProductDialog(product: product),
+                          tooltip: 'Edit',
+                          color: AppColors.textSecondary,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        IconButton(
+                          icon: const Icon(Iconsax.trash, size: 18),
+                          onPressed: () => _deleteProduct(product),
+                          tooltip: 'Delete',
+                          color: AppColors.error,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
       ),
     );
   }
@@ -337,14 +613,11 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
 
       if (token == null) throw Exception('No auth token');
 
-      // Map frontend field names to backend schema field names
       final productData = {
         'name': _nameController.text,
         'description': _descriptionController.text,
         'estimated_price': double.parse(_priceController.text),
         'common_units': _unitController.text,
-        // Note: minQuantity and maxQuantity don't exist in backend schema
-        // categoryName is just for display, actual category relation is handled separately
       };
 
       late Product result;
@@ -354,7 +627,7 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Product created successfully'),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.success,
             ),
           );
         }
@@ -368,7 +641,7 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Product updated successfully'),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.success,
             ),
           );
         }
@@ -397,31 +670,35 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(widget.product == null ? 'Add Product' : 'Edit Product'),
       content: SingleChildScrollView(
         child: SizedBox(
           width: 500,
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            spacing: 16,
             children: [
+              const SizedBox(height: 8),
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
                   labelText: 'Product Name *',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: _descriptionController,
                 decoration: InputDecoration(
                   labelText: 'Description',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 maxLines: 3,
               ),
+              const SizedBox(height: 16),
               Row(
-                spacing: 16,
                 children: [
                   Expanded(
                     child: TextField(
@@ -429,25 +706,26 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
                       decoration: InputDecoration(
                         labelText: 'Price (UGX) *',
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                       keyboardType: TextInputType.number,
                     ),
                   ),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: TextField(
                       controller: _unitController,
                       decoration: InputDecoration(
                         labelText: 'Unit *',
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
               Row(
-                spacing: 16,
                 children: [
                   Expanded(
                     child: TextField(
@@ -455,34 +733,38 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
                       decoration: InputDecoration(
                         labelText: 'Min Qty',
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                       keyboardType: TextInputType.number,
                     ),
                   ),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: TextField(
                       controller: _maxQtyController,
                       decoration: InputDecoration(
                         labelText: 'Max Qty',
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                       keyboardType: TextInputType.number,
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
               DropdownButtonFormField<String?>(
                 initialValue: _selectedCategory,
                 decoration: InputDecoration(
                   labelText: 'Category',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
                 items: widget.categories.map((cat) {
                   return DropdownMenuItem(value: cat, child: Text(cat));
                 }).toList(),
-                onChanged: (value) => setState(() => _selectedCategory = value),
+                onChanged: (value) =>
+                    setState(() => _selectedCategory = value),
               ),
             ],
           ),
@@ -495,6 +777,14 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
         ),
         ElevatedButton(
           onPressed: _isLoading ? null : _submitForm,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            elevation: 0,
+          ),
           child: _isLoading
               ? const AppLoadingIndicator.small()
               : Text(widget.product == null ? 'Create' : 'Update'),
