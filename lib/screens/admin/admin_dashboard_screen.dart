@@ -7,6 +7,7 @@ import '../../core/utils/logout_helper.dart';
 import '../../services/admin_user_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -290,13 +291,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             }
                           },
                     child: isSubmitting
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
-                          )
+                        ? const AppLoadingIndicator.small()
                         : Text(
                             'Add ${userType == 'shopper' ? 'Shopper' : 'Rider'}',
                           ),

@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/product_service.dart';
 import '../../models/product.dart';
 import '../../core/theme/app_colors.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class AdminProductsDesktopScreen extends StatefulWidget {
   const AdminProductsDesktopScreen({super.key});
@@ -192,7 +193,7 @@ class _AdminProductsDesktopScreenState extends State<AdminProductsDesktopScreen>
           // Products Table
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const AppLoadingPage()
                 : _error != null
                     ? Center(
                         child: Column(
@@ -495,11 +496,7 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
         ElevatedButton(
           onPressed: _isLoading ? null : _submitForm,
           child: _isLoading
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
+              ? const AppLoadingIndicator.small()
               : Text(widget.product == null ? 'Create' : 'Update'),
         ),
       ],

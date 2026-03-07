@@ -11,6 +11,7 @@ import '../../models/cart_item.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -338,11 +339,8 @@ class CartScreen extends StatelessWidget {
               child: CachedNetworkImage(
                 imageUrl: item.product.image,
                 fit: BoxFit.contain,
-                placeholder: (context, url) => Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppColors.primary.withValues(alpha: 0.5),
-                  ),
+                placeholder: (context, url) => const Center(
+                  child: AppLoadingIndicator.small(),
                 ),
                 errorWidget: (context, url, error) =>
                     Icon(Iconsax.image, color: AppColors.grey400),

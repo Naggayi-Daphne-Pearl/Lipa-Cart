@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/rider_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class AdminRidersDesktopScreen extends StatefulWidget {
   const AdminRidersDesktopScreen({super.key});
@@ -146,6 +147,138 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
     }
   }
 
+  void _showEditDialog(Map<String, dynamic> rider) {
+    final nameController = TextEditingController(text: rider['name'] ?? '');
+    final phoneController = TextEditingController(text: rider['phone'] ?? '');
+    final emailController = TextEditingController(text: rider['email'] ?? '');
+    final vehicleTypeController = TextEditingController(text: rider['vehicle_type'] ?? '');
+    final vehiclePlateController = TextEditingController(text: rider['vehicle_plate'] ?? '');
+    final licenseNumberController = TextEditingController(text: rider['license_number'] ?? '');
+    final authProvider = context.read<AuthProvider>();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Edit Rider Profile'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 16,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Full Name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                TextField(
+                  controller: vehicleTypeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Vehicle Type (e.g., Motorcycle, Car)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                TextField(
+                  controller: vehiclePlateController,
+                  decoration: const InputDecoration(
+                    labelText: 'Vehicle Plate Number',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                TextField(
+                  controller: licenseNumberController,
+                  decoration: const InputDecoration(
+                    labelText: 'License Number',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      setState(() => isSubmitting = true);
+
+                      try {
+                        final token = authProvider.token;
+
+                        if (token == null) throw Exception('No auth token');
+
+                        final riderId = rider['id'] ?? rider['documentId'];
+                        if (riderId == null) throw Exception('Rider ID not found');
+
+                        final updateData = {
+                          'name': nameController.text,
+                          'phone': phoneController.text,
+                          'email': emailController.text,
+                          'vehicle_type': vehicleTypeController.text,
+                          'vehicle_plate': vehiclePlateController.text,
+                          'license_number': licenseNumberController.text,
+                        };
+
+                        await RiderService.updateRider(
+                          riderId,
+                          updateData,
+                          token: token,
+                        );
+
+                        if (mounted) {
+                          Navigator.pop(dialogContext);
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Rider profile updated successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          _loadRiders();
+                        }
+                      } catch (e) {
+                        setState(() => isSubmitting = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: isSubmitting
+                  ? const AppLoadingIndicator.small()
+                  : const Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredRiders = _getFilteredRiders();
@@ -242,7 +375,7 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
                 // Riders list
                 Expanded(
                   child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
+                      ? const AppLoadingPage()
                       : _error != null
                           ? Center(
                               child: Column(
@@ -274,7 +407,7 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
                                           : null,
                                       child: ListTile(
                                         leading: CircleAvatar(
-                                          backgroundColor: rider['is_online']
+                                          backgroundColor: (rider['is_online'] ?? false)
                                               ? Colors.green
                                               : Colors.grey,
                                           child: Text(
@@ -333,6 +466,7 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
                     rider: _selectedRider!,
                     onVerify: _verifyRider,
                     onUnverify: _unverifyRider,
+                    onEdit: _showEditDialog,
                   ),
           ),
         ],
@@ -351,11 +485,13 @@ class _RiderDetailsView extends StatelessWidget {
   final Map<String, dynamic> rider;
   final Function(String) onVerify;
   final Function(String) onUnverify;
+  final Function(Map<String, dynamic>) onEdit;
 
   const _RiderDetailsView({
     required this.rider,
     required this.onVerify,
     required this.onUnverify,
+    required this.onEdit,
   });
 
   @override
@@ -458,32 +594,46 @@ class _RiderDetailsView extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Actions
-            Row(
-              spacing: 12,
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => (rider['is_verified'] ?? false)
-                        ? onUnverify(rider['id'] ?? '')
-                        : onVerify(rider['id'] ?? ''),
-                    icon: Icon(
-                      (rider['is_verified'] ?? false)
-                          ? Icons.block
-                          : Icons.verified,
-                    ),
-                    label: Text(
-                      (rider['is_verified'] ?? false)
-                          ? 'Unverify'
-                          : 'Verify',
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: (rider['is_verified'] ?? false)
-                          ? Colors.orange
-                          : Colors.green,
+            SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => onEdit(rider),
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Edit Profile'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => (rider['is_verified'] ?? false)
+                          ? onUnverify(rider['id'] ?? '')
+                          : onVerify(rider['id'] ?? ''),
+                      icon: Icon(
+                        (rider['is_verified'] ?? false)
+                            ? Icons.block
+                            : Icons.verified,
+                      ),
+                      label: Text(
+                        (rider['is_verified'] ?? false)
+                            ? 'Unverify'
+                            : 'Verify',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: (rider['is_verified'] ?? false)
+                            ? Colors.orange
+                            : Colors.green,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

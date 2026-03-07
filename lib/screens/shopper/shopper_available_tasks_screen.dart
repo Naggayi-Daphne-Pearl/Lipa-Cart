@@ -6,6 +6,7 @@ import '../../providers/shopper_provider.dart';
 import '../../models/order.dart';
 import '../../models/user.dart';
 import '../../core/utils/formatters.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class ShopperAvailableTasksScreen extends StatefulWidget {
   const ShopperAvailableTasksScreen({super.key});
@@ -69,7 +70,7 @@ class _ShopperAvailableTasksScreenState
       body: Consumer2<AuthProvider, ShopperProvider>(
         builder: (context, authProvider, shopperProvider, _) {
           if (shopperProvider.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const AppLoadingPage();
           }
 
           if (shopperProvider.error != null) {

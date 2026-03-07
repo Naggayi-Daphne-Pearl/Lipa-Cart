@@ -11,6 +11,7 @@ import '../../core/utils/responsive.dart';
 import '../../models/product.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class BrowseScreen extends StatefulWidget {
   const BrowseScreen({super.key});
@@ -505,11 +506,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Container(
                           color: AppColors.grey100,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: AppColors.primary.withValues(alpha: 0.4),
-                            ),
+                          child: const Center(
+                            child: AppLoadingIndicator.small(),
                           ),
                         ),
                         errorWidget: (context, url, error) => Container(

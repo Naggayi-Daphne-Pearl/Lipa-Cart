@@ -13,6 +13,7 @@ import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class ShoppingListDetailScreen extends StatefulWidget {
   final String listId;
@@ -1598,7 +1599,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                   context: context,
                   barrierDismissible: false,
                   builder: (_) =>
-                      const Center(child: CircularProgressIndicator()),
+                      const AppLoadingPage(),
                 );
 
                 try {

@@ -189,6 +189,60 @@ class AuthService {
     }
   }
 
+  /// Request password reset OTP
+  /// Verifies user exists and sends OTP to their phone
+  static Future<void> forgotPassword(String phoneNumber) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$_apiUrl/auth/forgot-password'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'phone': phoneNumber}),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(
+          body['error']?['message'] ?? 'No account found with this number',
+        );
+      }
+    } catch (e) {
+      throw Exception('$e');
+    }
+  }
+
+  /// Reset password with OTP verification
+  /// Takes phone, OTP code, and new password
+  static Future<void> resetPassword({
+    required String phoneNumber,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$_apiUrl/auth/reset-password'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'phone': phoneNumber,
+              'otp': otp,
+              'newPassword': newPassword,
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(
+          body['error']?['message'] ?? body['error'] ?? 'Failed to reset password',
+        );
+      }
+    } catch (e) {
+      throw Exception('$e');
+    }
+  }
+
   /// Update user profile (name, email)
   /// Requires JWT token authentication
   static Future<Map<String, dynamic>> updateUserProfile(

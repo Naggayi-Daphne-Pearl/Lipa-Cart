@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/shopper_provider.dart';
+import '../../models/order.dart';
 import '../../models/user.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/formatters.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class ShopperCompletedTasksScreen extends StatefulWidget {
   const ShopperCompletedTasksScreen({super.key});
@@ -17,44 +22,60 @@ class _ShopperCompletedTasksScreenState
   @override
   void initState() {
     super.initState();
-    _validateRole();
+    _validateRoleAndLoad();
   }
 
-  void _validateRole() {
+  void _validateRoleAndLoad() {
     final authProvider = context.read<AuthProvider>();
 
-    // Validate user role - only shoppers can access this screen
     if (authProvider.user?.role != UserRole.shopper) {
       Future.microtask(() {
         GoRouter.of(context).go(
           authProvider.user?.role == UserRole.admin
               ? '/admin/dashboard'
               : authProvider.user?.role == UserRole.rider
-              ? '/rider/home'
-              : '/customer/home',
+                  ? '/rider/home'
+                  : '/customer/home',
         );
       });
+      return;
+    }
+
+    final shopperProvider = context.read<ShopperProvider>();
+    final token = authProvider.token;
+    final shopperId = authProvider.user?.shopperId;
+    if (token != null && shopperId != null) {
+      shopperProvider.fetchCompletedTasks(token, shopperId);
     }
   }
 
-  final List<Map<String, dynamic>> completedTasks = [
-    // Mock data - will be replaced with API calls
-  ];
+  Future<void> _refresh() async {
+    final auth = context.read<AuthProvider>();
+    final shopper = context.read<ShopperProvider>();
+    final token = auth.token;
+    final shopperId = auth.user?.shopperId;
+    if (token != null && shopperId != null) {
+      await shopper.fetchCompletedTasks(token, shopperId);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Completed Tasks')),
-      body: completedTasks.isEmpty
-          ? Center(
+      body: Consumer<ShopperProvider>(
+        builder: (context, shopper, _) {
+          if (shopper.isLoading) {
+            return const AppLoadingPage();
+          }
+
+          if (shopper.completedTasks.isEmpty) {
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    size: 64,
-                    color: Colors.grey[300],
-                  ),
+                  Icon(Icons.check_circle_outline,
+                      size: 64, color: Colors.grey[300]),
                   const SizedBox(height: 16),
                   Text(
                     'No completed tasks yet',
@@ -63,32 +84,117 @@ class _ShopperCompletedTasksScreenState
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () => context.go('/shopper/available-tasks'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
                     child: const Text('Browse Available Tasks'),
                   ),
                 ],
               ),
-            )
-          : ListView.builder(
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: completedTasks.length,
+              itemCount: shopper.completedTasks.length,
               itemBuilder: (context, index) {
-                final task = completedTasks[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    title: Text(task['id']),
-                    subtitle: Text(task['customer']),
-                    trailing: Text(
-                      task['reward'],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                  ),
-                );
+                return _buildCompletedCard(shopper.completedTasks[index]);
               },
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCompletedCard(Order order) {
+    final isDelivered = order.status == OrderStatus.delivered;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isDelivered
+                    ? AppColors.primarySoft
+                    : Colors.red.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isDelivered ? Icons.check_circle : Icons.cancel,
+                color: isDelivered ? AppColors.primary : Colors.red,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '#${order.orderNumber}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${order.items.length} items',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  ),
+                  Text(
+                    Formatters.formatDate(order.createdAt),
+                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  Formatters.formatCurrency(order.total),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDelivered
+                        ? AppColors.primarySoft
+                        : Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    isDelivered ? 'Delivered' : 'Cancelled',
+                    style: TextStyle(
+                      color: isDelivered ? AppColors.primary : Colors.red,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

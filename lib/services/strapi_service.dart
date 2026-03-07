@@ -345,31 +345,96 @@ class StrapiService {
     }
   }
 
-  /// Assign order to shopper
-  static Future<bool> assignOrderToShopper(
-    String orderId,
-    String shopperId,
+  /// Shopper claims an available order
+  static Future<Map<String, dynamic>?> claimOrder(
+    String orderDocumentId,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$_apiUrl/orders/$orderDocumentId/claim'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['data'] as Map<String, dynamic>?;
+      }
+      print('ERROR: claimOrder - ${response.statusCode}: ${response.body}');
+      return null;
+    } catch (e) {
+      print('ERROR: claimOrder - $e');
+      return null;
+    }
+  }
+
+  /// Shopper updates order status (shopping, ready_for_pickup)
+  static Future<Map<String, dynamic>?> updateShopperOrderStatus(
+    String orderDocumentId,
+    String status,
     String token,
   ) async {
     try {
       final response = await http
           .patch(
-            Uri.parse('$_apiUrl/orders/$orderId'),
+            Uri.parse('$_apiUrl/orders/$orderDocumentId/shopper-status'),
             headers: {
               'Authorization': 'Bearer $token',
               'Content-Type': 'application/json',
             },
-            body: json.encode({
-              'data': {'shopper': shopperId, 'status': 'shopper_assigned'},
-            }),
+            body: json.encode({'status': status}),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['data'] as Map<String, dynamic>?;
+      }
+      print('ERROR: updateShopperOrderStatus - ${response.statusCode}: ${response.body}');
+      return null;
+    } catch (e) {
+      print('ERROR: updateShopperOrderStatus - $e');
+      return null;
+    }
+  }
+
+  /// Shopper batch-updates order items (mark found, set actual price)
+  static Future<bool> batchUpdateOrderItems(
+    List<Map<String, dynamic>> items,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .patch(
+            Uri.parse('$_apiUrl/order-items/batch-update'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: json.encode({'items': items}),
           )
           .timeout(AppConstants.apiTimeout);
 
       return response.statusCode == 200;
     } catch (e) {
-      print('ERROR: assignOrderToShopper - $e');
+      print('ERROR: batchUpdateOrderItems - $e');
       return false;
     }
+  }
+
+  /// Legacy: Assign order to shopper (kept for backward compat)
+  static Future<bool> assignOrderToShopper(
+    String orderId,
+    String shopperId,
+    String token,
+  ) async {
+    final result = await claimOrder(orderId, token);
+    return result != null;
   }
 
   /// Toggle shopper online/offline status
@@ -428,7 +493,6 @@ class StrapiService {
 
   /// Submit KYC documents for shopper verification
   static Future<bool> submitShopperKyc({
-    required String shopperId,
     required String idNumber,
     required String idPhotoUrl,
     required String facePhotoUrl,

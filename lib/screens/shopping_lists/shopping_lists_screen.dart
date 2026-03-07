@@ -10,6 +10,7 @@ import '../../providers/shopping_list_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class ShoppingListsScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -105,11 +106,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                 child: !authProvider.isAuthenticated
                     ? _buildUnauthenticatedState()
                     : provider.isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                      )
+                    ? const AppLoadingPage()
                     : provider.lists.isEmpty
                     ? _buildEmptyState()
                     : ListView.builder(

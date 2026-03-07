@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/imgbb_upload_provider.dart';
+import 'app_loading_indicator.dart';
 
 class ImgBBUploadWidget extends StatefulWidget {
   /// Callback when single image is uploaded - receives the ImgBB URL
@@ -223,7 +224,7 @@ class _ImgBBUploadWidgetState extends State<ImgBBUploadWidget> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Column(
                   children: [
-                    const CircularProgressIndicator(),
+                    const AppLoadingIndicator(),
                     const SizedBox(height: 12),
                     const Text('Uploading to ImgBB...'),
                   ],

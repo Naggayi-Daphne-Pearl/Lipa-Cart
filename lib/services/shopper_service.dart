@@ -51,7 +51,21 @@ class ShopperService {
       final body = jsonDecode(response.body);
       final List<dynamic> data = body is List ? body : body['data'] ?? [];
 
-      return List<Map<String, dynamic>>.from(data);
+      // Flatten nested attributes structure if present
+      return data.map((item) {
+        if (item is Map<String, dynamic>) {
+          final attributes = item['attributes'] as Map<String, dynamic>?;
+          if (attributes != null) {
+            return {
+              'id': item['id'],
+              'documentId': item['documentId'],
+              ...attributes,
+            };
+          }
+          return item;
+        }
+        return item;
+      }).cast<Map<String, dynamic>>().toList();
     } catch (e) {
       throw Exception('Error loading shoppers: $e');
     }
@@ -85,7 +99,16 @@ class ShopperService {
         throw Exception('Shopper not found');
       }
 
-      return Map<String, dynamic>.from(data.first);
+      final item = data.first as Map<String, dynamic>;
+      final attributes = item['attributes'] as Map<String, dynamic>?;
+      if (attributes != null) {
+        return {
+          'id': item['id'],
+          'documentId': item['documentId'],
+          ...attributes,
+        };
+      }
+      return item;
     } catch (e) {
       throw Exception('Error loading shopper: $e');
     }

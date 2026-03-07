@@ -6,6 +6,7 @@ import '../core/theme/app_text_styles.dart';
 import '../core/constants/app_sizes.dart';
 import '../core/utils/formatters.dart';
 import '../models/product.dart';
+import 'app_loading_indicator.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
@@ -75,11 +76,8 @@ class ProductCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Container(
                           color: AppColors.grey100,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: AppColors.primary.withValues(alpha: 0.4),
-                            ),
+                          child: const Center(
+                            child: AppLoadingIndicator.small(),
                           ),
                         ),
                         errorWidget: (context, url, error) => Container(

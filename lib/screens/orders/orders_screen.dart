@@ -12,6 +12,7 @@ import '../../providers/order_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class OrdersScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -118,9 +119,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
+                        const AppLoadingIndicator(),
                         const SizedBox(height: AppSizes.md),
                         Text(
                           'Loading orders...',

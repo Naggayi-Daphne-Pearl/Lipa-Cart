@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final String orderId;
@@ -38,7 +39,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       body: Consumer2<AuthProvider, OrderService>(
         builder: (context, auth, orderService, _) {
           if (orderService.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const AppLoadingPage();
           }
 
           final order = orderService.currentOrder;

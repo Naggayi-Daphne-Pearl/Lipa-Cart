@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -74,6 +75,47 @@ class ImgBBService {
       rethrow;
     } catch (e) {
       print('❌ Error: $e');
+      rethrow;
+    }
+  }
+
+  /// Upload image from bytes (web-compatible)
+  /// Returns the image URL from the API response
+  static Future<String?> uploadImageBytes(Uint8List bytes, String fileName) async {
+    try {
+      print('📤 Uploading image bytes to ImgBB: $fileName');
+
+      final String base64Image = base64Encode(bytes);
+
+      int fileSizeInMB = bytes.length ~/ (1024 * 1024);
+      if (fileSizeInMB > 5) {
+        throw Exception('Image too large: ${fileSizeInMB}MB (max 5MB)');
+      }
+
+      var request = http.MultipartRequest('POST', Uri.parse(baseUrl));
+      request.fields['key'] = apiKey;
+      request.fields['image'] = base64Image;
+
+      var streamedResponse = await request.send().timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => throw Exception('Upload timeout after 30 seconds'),
+          );
+
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        var json = jsonDecode(response.body);
+        if (json['success'] == true) {
+          return json['data']['url'];
+        } else {
+          String error = json['error']['message'] ?? 'Unknown error';
+          throw Exception('ImgBB error: $error');
+        }
+      } else {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('❌ Error uploading bytes: $e');
       rethrow;
     }
   }

@@ -6,6 +6,7 @@ import '../core/theme/app_text_styles.dart';
 import '../core/constants/app_sizes.dart';
 import '../core/utils/formatters.dart';
 import '../models/cart_item.dart';
+import 'app_loading_indicator.dart';
 
 class CartItemCard extends StatelessWidget {
   final CartItem item;
@@ -55,10 +56,7 @@ class CartItemCard extends StatelessWidget {
                   height: 80,
                   color: AppColors.grey50,
                   child: const Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.primary,
-                    ),
+                    child: AppLoadingIndicator.small(),
                   ),
                 ),
                 errorWidget: (context, url, error) => Container(

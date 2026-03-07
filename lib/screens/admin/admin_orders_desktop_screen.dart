@@ -5,6 +5,7 @@ import '../../services/order_service.dart';
 import '../../models/order.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class AdminOrdersDesktopScreen extends StatefulWidget {
   const AdminOrdersDesktopScreen({super.key});
@@ -184,8 +185,7 @@ class _AdminOrdersDesktopScreenState extends State<AdminOrdersDesktopScreen> {
                     // Orders list
                     Expanded(
                       child: _isLoading
-                          ? const Center(
-                              child: CircularProgressIndicator())
+                          ? const AppLoadingPage()
                           : _error != null
                               ? Center(
                                   child: Column(

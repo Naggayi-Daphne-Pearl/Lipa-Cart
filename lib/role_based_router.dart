@@ -13,6 +13,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/auth/otp_screen.dart';
 import 'screens/auth/profile_completion_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
 import 'screens/profile/profile_screen.dart';
 
 // Customer screens
@@ -57,6 +58,7 @@ import 'screens/shopper/shopper_earnings_screen.dart';
 import 'screens/shopper/shopper_completed_tasks_screen.dart';
 import 'screens/shopper/shopper_kyc_screen.dart';
 import 'screens/shopper/shopper_pending_approval_screen.dart';
+import 'screens/shopper/shopping_checklist_screen.dart';
 
 /// Helper to get home route based on user role
 String _homeForRole(UserRole? role) {
@@ -106,7 +108,8 @@ class RoleBasedRouter {
             state.matchedLocation == '/login' ||
             state.matchedLocation == '/signup' ||
             state.matchedLocation.startsWith('/otp') ||
-            state.matchedLocation == '/profile-completion';
+            state.matchedLocation == '/profile-completion' ||
+            state.matchedLocation == '/forgot-password';
 
         final isCustomerProtectedRoute =
             state.matchedLocation.startsWith('/customer/checkout') ||
@@ -197,6 +200,10 @@ class RoleBasedRouter {
             final phoneNumber = state.extra as String? ?? '';
             return OtpScreen(phoneNumber: phoneNumber);
           },
+        ),
+        GoRoute(
+          path: '/forgot-password',
+          builder: (context, state) => const ForgotPasswordScreen(),
         ),
         GoRoute(
           path: '/profile-completion',
@@ -439,6 +446,24 @@ class RoleBasedRouter {
         GoRoute(
           path: '/shopper/completed-tasks',
           builder: (context, state) => const ShopperCompletedTasksScreen(),
+        ),
+        GoRoute(
+          path: '/shopper/shopping-checklist',
+          builder: (context, state) {
+            final orderData = state.extra;
+            final Order? order;
+
+            if (orderData is Map<String, dynamic>) {
+              order = Order.fromJson(orderData);
+            } else if (orderData is Order) {
+              order = orderData;
+            } else {
+              order = null;
+            }
+
+            if (order == null) return const ShopperActiveTasksScreen();
+            return ShoppingChecklistScreen(order: order);
+          },
         ),
         GoRoute(
           path: '/shopper/earnings',

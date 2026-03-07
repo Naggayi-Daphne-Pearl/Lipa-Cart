@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/shopper_provider.dart';
+import '../../models/order.dart';
 import '../../models/user.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/formatters.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class ShopperActiveTasksScreen extends StatefulWidget {
   const ShopperActiveTasksScreen({super.key});
@@ -16,61 +21,67 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
   @override
   void initState() {
     super.initState();
-    _validateRole();
+    _validateRoleAndLoad();
   }
 
-  void _validateRole() {
+  void _validateRoleAndLoad() {
     final authProvider = context.read<AuthProvider>();
 
-    // Validate user role - only shoppers can access this screen
     if (authProvider.user?.role != UserRole.shopper) {
       Future.microtask(() {
         GoRouter.of(context).go(
           authProvider.user?.role == UserRole.admin
               ? '/admin/dashboard'
               : authProvider.user?.role == UserRole.rider
-              ? '/rider/home'
-              : '/customer/home',
+                  ? '/rider/home'
+                  : '/customer/home',
         );
       });
+      return;
+    }
+
+    // Load active tasks
+    final shopperProvider = context.read<ShopperProvider>();
+    final token = authProvider.token;
+    final shopperId = authProvider.user?.shopperId;
+    if (token != null && shopperId != null) {
+      shopperProvider.fetchActiveTasks(token, shopperId);
     }
   }
 
-  final List<Map<String, dynamic>> tasks = [
-    {
-      'id': 'TASK101',
-      'customer': 'Alice Kipchoge',
-      'items': 'Electronics from Jamburi',
-      'checkedItems': 8,
-      'totalItems': 12,
-      'status': 'shopping',
-      'startTime': '2:30 PM',
-    },
-  ];
+  Future<void> _refresh() async {
+    final auth = context.read<AuthProvider>();
+    final shopper = context.read<ShopperProvider>();
+    final token = auth.token;
+    final shopperId = auth.user?.shopperId;
+    if (token != null && shopperId != null) {
+      await shopper.fetchActiveTasks(token, shopperId);
+    }
+  }
 
-  Color _getStatusColor(String status) {
+  Color _getStatusColor(OrderStatus status) {
     switch (status) {
-      case 'shopping':
+      case OrderStatus.shopping:
         return Colors.blue;
-      case 'delivering':
-        return Colors.orange;
-      case 'complete':
-        return Colors.green;
+      case OrderStatus.readyForDelivery:
+        return AppColors.primary;
+      case OrderStatus.confirmed:
+        return AppColors.accent;
       default:
         return Colors.grey;
     }
   }
 
-  String _getStatusText(String status) {
+  String _getStatusText(OrderStatus status) {
     switch (status) {
-      case 'shopping':
+      case OrderStatus.confirmed:
+        return 'Assigned';
+      case OrderStatus.shopping:
         return 'Shopping';
-      case 'delivering':
-        return 'Delivering';
-      case 'complete':
-        return 'Complete';
+      case OrderStatus.readyForDelivery:
+        return 'Ready';
       default:
-        return 'Unknown';
+        return status.displayName;
     }
   }
 
@@ -78,119 +89,176 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Active Tasks')),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: tasks.length,
-        itemBuilder: (context, index) {
-          final task = tasks[index];
-          final progress = task['checkedItems'] / task['totalItems'];
+      body: Consumer<ShopperProvider>(
+        builder: (context, shopper, _) {
+          if (shopper.isLoading) {
+            return const AppLoadingPage();
+          }
 
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
+          if (shopper.activeTasks.isEmpty) {
+            return Center(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            task['id'],
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Text(
-                            task['customer'],
-                            style: TextStyle(color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _getStatusColor(
-                            task['status'],
-                          ).withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _getStatusText(task['status']),
-                          style: TextStyle(
-                            color: _getStatusColor(task['status']),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
+                  Icon(Icons.assignment_outlined,
+                      size: 64, color: Colors.grey[300]),
+                  const SizedBox(height: 16),
                   Text(
-                    task['items'],
-                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    'No active tasks',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Items: ${task['checkedItems']}/${task['totalItems']}',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                      Text(
-                        '${(progress * 100).toStringAsFixed(0)}%',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                  Text(
+                    'Accept a task from available orders',
+                    style: TextStyle(color: Colors.grey[400], fontSize: 14),
                   ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 8,
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () => context.go('/shopper/available-tasks'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.shopping_cart),
-                          label: const Text('Continue Shopping'),
-                          onPressed: () {},
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.check),
-                          label: const Text('Complete'),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Task marked as complete!'),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                    child: const Text('Browse Available Tasks'),
                   ),
                 ],
               ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: shopper.activeTasks.length,
+              itemBuilder: (context, index) {
+                return _buildTaskCard(shopper.activeTasks[index]);
+              },
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildTaskCard(Order order) {
+    final itemCount = order.items.length;
+    final statusColor = _getStatusColor(order.status);
+    final statusText = _getStatusText(order.status);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => context.go('/shopper/shopping-checklist', extra: order),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '#${order.orderNumber}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Delivery address
+              Row(
+                children: [
+                  Icon(Icons.location_on_outlined,
+                      size: 16, color: Colors.grey[500]),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      order.deliveryAddress.fullAddress,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Items summary
+              Row(
+                children: [
+                  Icon(Icons.shopping_bag_outlined,
+                      size: 16, color: Colors.grey[500]),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$itemCount items',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  ),
+                  const Spacer(),
+                  Text(
+                    Formatters.formatCurrency(order.total),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Action button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: Icon(
+                    order.status == OrderStatus.shopping
+                        ? Icons.checklist
+                        : Icons.shopping_cart,
+                  ),
+                  label: Text(
+                    order.status == OrderStatus.shopping
+                        ? 'Continue Shopping'
+                        : 'Start Shopping',
+                  ),
+                  onPressed: () => context.go(
+                    '/shopper/shopping-checklist',
+                    extra: order,
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: order.status == OrderStatus.shopping
+                        ? Colors.blue
+                        : AppColors.accent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

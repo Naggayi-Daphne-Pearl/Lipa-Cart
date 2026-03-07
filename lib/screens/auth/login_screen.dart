@@ -27,8 +27,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
-  bool _usePassword = true; // true = password login, false = OTP login
+  bool _usePassword = true;
   bool _obscurePassword = true;
+
+  static const double _desktopBreakpoint = 800;
+  static const double _formMaxWidth = 440;
 
   @override
   void dispose() {
@@ -42,13 +45,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    // Format phone number with +256 prefix
     final phoneNumber = '+256${_phoneController.text}';
-
     final authProvider = context.read<AuthProvider>();
 
     if (_usePassword) {
-      // Login with password
       final success = await authProvider.login(
         phoneNumber: phoneNumber,
         password: _passwordController.text,
@@ -69,7 +69,6 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } else {
-      // Send OTP
       await authProvider.sendOtp(phoneNumber);
 
       setState(() => _isLoading = false);
@@ -95,63 +94,293 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  bool _isDesktop(BuildContext context) {
+    return MediaQuery.of(context).size.width >= _desktopBreakpoint;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDesktop = _isDesktop(context);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSizes.lg),
-          child: Form(
-            key: _formKey,
+      body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
+    );
+  }
+
+  // ─── Desktop: Two-column split layout ───────────────────────────
+  Widget _buildDesktopLayout() {
+    return Row(
+      children: [
+        // Left brand panel
+        Expanded(
+          flex: 5,
+          child: _buildBrandPanel(),
+        ),
+        // Right form panel
+        Expanded(
+          flex: 5,
+          child: _buildDesktopFormPanel(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBrandPanel() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0D6B3A),
+            AppColors.primary,
+            AppColors.primaryLight,
+          ],
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Subtle circle pattern overlay
+          Positioned.fill(
+            child: CustomPaint(painter: _CirclePatternPainter()),
+          ),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(48),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: AppSizes.xxl),
                 // Logo
-                Center(
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF1B7F4E), Color(0xFF15874B)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: SvgPicture.asset(
-                        'assets/images/logos/logo-on-green-1.svg',
-                        fit: BoxFit.contain,
-                      ),
-                    ),
+                SvgPicture.asset(
+                  'assets/images/logos/logo-on-green-1.svg',
+                  height: 32,
+                ),
+                const Spacer(),
+                // Headline
+                const Text(
+                  'Fresh groceries,\ndelivered fast.',
+                  style: TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    height: 1.15,
+                    letterSpacing: -0.5,
                   ),
                 ),
-                const SizedBox(height: AppSizes.xxl),
-                // Welcome text
-                Text('Welcome to LipaCart', style: AppTextStyles.h3),
-                const SizedBox(height: AppSizes.sm),
+                const SizedBox(height: 16),
                 Text(
-                  _usePassword
-                      ? 'Enter your phone number and password to login.'
-                      : 'Enter your phone number. We\'ll send you a verification code.',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textMedium,
+                  'Get quality produce from local markets\ndelivered right to your doorstep in Kampala.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white.withValues(alpha: 0.8),
+                    height: 1.6,
                   ),
                 ),
-                const SizedBox(height: AppSizes.xl),
+                const SizedBox(height: 40),
+                // Trust signals
+                Row(
+                  children: [
+                    _buildTrustBadge(
+                        Iconsax.people, '10,000+', 'Happy customers'),
+                    const SizedBox(width: 32),
+                    _buildTrustBadge(Iconsax.star_1, '4.8', 'App rating'),
+                    const SizedBox(width: 32),
+                    _buildTrustBadge(
+                        Iconsax.timer_1, '30 min', 'Avg delivery'),
+                  ],
+                ),
+                const Spacer(flex: 1),
+                // Footer
+                Text(
+                  '${DateTime.now().year} LipaCart. All rights reserved.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrustBadge(IconData icon, String value, String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 16),
+            const SizedBox(width: 6),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white.withValues(alpha: 0.6),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopFormPanel() {
+    return Container(
+      color: AppColors.background,
+      child: Column(
+        children: [
+          // Top nav bar with Sign Up link
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  'Don\'t have an account?',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () => context.push('/signup'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: const BorderSide(color: AppColors.primary),
+                    ),
+                  ),
+                  child: Text(
+                    'Sign Up',
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Centered form
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _formMaxWidth),
+                  child: _buildFormContent(isDesktop: true),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Mobile: Original single-column layout ─────────────────────
+  Widget _buildMobileLayout() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFE8F5E9),
+            Color(0xFFF1F8E9),
+            Color(0xFFFAFAFA),
+          ],
+          stops: [0.0, 0.4, 1.0],
+        ),
+      ),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
+          child: _buildFormContent(isDesktop: false),
+        ),
+      ),
+    );
+  }
+
+  // ─── Shared form content ────────────────────────────────────────
+  Widget _buildFormContent({required bool isDesktop}) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment:
+            isDesktop ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
+        children: [
+          if (!isDesktop) ...[
+            const SizedBox(height: AppSizes.xxl),
+            SvgPicture.asset(
+              'assets/images/logos/logo-on-white.svg',
+              height: 36,
+            ),
+            const SizedBox(height: AppSizes.xl),
+          ],
+          // Welcome text
+          Text(
+            'Welcome back',
+            style: (isDesktop ? AppTextStyles.h1 : AppTextStyles.h2).copyWith(
+              color: AppColors.primaryDark,
+            ),
+            textAlign: isDesktop ? TextAlign.left : TextAlign.center,
+          ),
+          const SizedBox(height: AppSizes.xs),
+          Text(
+            _usePassword
+                ? 'Sign in to get fresh groceries delivered'
+                : 'We\'ll send a verification code to your phone',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            textAlign: isDesktop ? TextAlign.left : TextAlign.center,
+          ),
+          const SizedBox(height: AppSizes.xl),
+
+          // Form card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSizes.lg),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(
+                  isDesktop ? AppSizes.radiusMd : AppSizes.radiusLg),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.06),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 // Phone input
-                Text('Phone Number', style: AppTextStyles.labelMedium),
+                Text(
+                  'Phone Number',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: isDesktop ? 13 : null,
+                  ),
+                  semanticsLabel: 'Phone number input field',
+                ),
                 const SizedBox(height: AppSizes.sm),
                 TextFormField(
                   controller: _phoneController,
@@ -161,9 +390,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     LengthLimitingTextInputFormatter(12),
                   ],
                   validator: Validators.validatePhoneNumber,
-                  style: AppTextStyles.bodyLarge,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  style: isDesktop
+                      ? AppTextStyles.bodyMedium
+                      : AppTextStyles.bodyLarge,
                   decoration: InputDecoration(
                     hintText: '7XX XXX XXX',
+                    helperText: 'Uganda mobile number',
+                    helperStyle: AppTextStyles.caption,
+                    contentPadding: isDesktop
+                        ? const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12)
+                        : null,
                     prefixIcon: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSizes.md,
@@ -173,52 +411,76 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           const Icon(
                             Iconsax.call,
-                            color: AppColors.textLight,
-                            size: 22,
+                            color: AppColors.primary,
+                            size: 20,
                           ),
                           const SizedBox(width: 8),
                           Text(
                             '+256',
-                            style: AppTextStyles.bodyLarge.copyWith(
-                              color: AppColors.textDark,
+                            style: (isDesktop
+                                    ? AppTextStyles.bodyMedium
+                                    : AppTextStyles.bodyLarge)
+                                .copyWith(
+                              color: AppColors.primaryDark,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
                           Container(
-                            width: 1,
+                            width: 1.5,
                             height: 24,
-                            color: AppColors.mediumGrey,
+                            decoration: BoxDecoration(
+                              color:
+                                  AppColors.primary.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(1),
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
                 ),
-                // Password field (conditional)
+                // Password field
                 if (_usePassword) ...[
                   const SizedBox(height: AppSizes.lg),
-                  Text('Password', style: AppTextStyles.labelMedium),
+                  Text(
+                    'Password',
+                    style: AppTextStyles.labelLarge.copyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: isDesktop ? 13 : null,
+                    ),
+                    semanticsLabel: 'Password input field',
+                  ),
                   const SizedBox(height: AppSizes.sm),
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     validator: (value) {
-                      if (_usePassword && (value == null || value.isEmpty)) {
+                      if (_usePassword &&
+                          (value == null || value.isEmpty)) {
                         return 'Password is required';
                       }
                       return null;
                     },
-                    style: AppTextStyles.bodyLarge,
+                    style: isDesktop
+                        ? AppTextStyles.bodyMedium
+                        : AppTextStyles.bodyLarge,
                     decoration: InputDecoration(
                       hintText: 'Enter your password',
+                      contentPadding: isDesktop
+                          ? const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12)
+                          : null,
                       prefixIcon: const Icon(
                         Iconsax.lock,
-                        color: AppColors.textLight,
-                        size: 22,
+                        color: AppColors.primary,
+                        size: 20,
                       ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                           color: AppColors.textLight,
                           size: 22,
                         ),
@@ -230,91 +492,149 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => context.push('/forgot-password'),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSizes.xs,
+                        ),
+                        minimumSize: const Size(
+                          AppSizes.touchTargetMin,
+                          36,
+                        ),
+                      ),
+                      child: Text(
+                        'Forgot password?',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
-                const SizedBox(height: AppSizes.xl),
-                // Login/Continue button
+                SizedBox(
+                  height: _usePassword ? AppSizes.md : AppSizes.lg,
+                ),
+                // Login button
                 CustomButton(
-                  text: _usePassword ? 'Login' : 'Continue',
+                  text: _usePassword ? 'Sign In' : 'Send Code',
                   isLoading: _isLoading,
                   onPressed: _login,
-                ),
-                const SizedBox(height: AppSizes.md),
-                // Toggle login method
-                Center(
-                  child: TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _usePassword = !_usePassword;
-                        _passwordController.clear();
-                      });
-                    },
-                    child: Text(
-                      _usePassword
-                          ? 'Login with OTP instead'
-                          : 'Login with password instead',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSizes.md),
-                // Sign up link
-                Center(
-                  child: TextButton(
-                    onPressed: () {
-                      context.push('/signup');
-                    },
-                    child: Text.rich(
-                      TextSpan(
-                        text: 'Don\'t have an account? ',
-                        style: AppTextStyles.bodyMedium,
-                        children: [
-                          TextSpan(
-                            text: 'Sign Up',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSizes.lg),
-                // Terms text
-                Center(
-                  child: Text.rich(
-                    TextSpan(
-                      text: 'By continuing, you agree to our ',
-                      style: AppTextStyles.caption,
-                      children: [
-                        TextSpan(
-                          text: 'Terms of Service',
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const TextSpan(text: ' and '),
-                        TextSpan(
-                          text: 'Privacy Policy',
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                  height: isDesktop
+                      ? AppSizes.buttonHeightMd
+                      : AppSizes.buttonHeightLg,
                 ),
               ],
             ),
           ),
-        ),
+          const SizedBox(height: AppSizes.md),
+
+          // OTP toggle - text link on desktop, outlined button on mobile
+          if (isDesktop)
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  setState(() {
+                    _usePassword = !_usePassword;
+                    _passwordController.clear();
+                  });
+                },
+                child: Text(
+                  _usePassword
+                      ? 'Sign in with OTP instead'
+                      : 'Sign in with password instead',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            )
+          else
+            CustomButton(
+              text: _usePassword
+                  ? 'Sign in with OTP instead'
+                  : 'Sign in with password instead',
+              isOutlined: true,
+              height: AppSizes.buttonHeightMd,
+              onPressed: () {
+                setState(() {
+                  _usePassword = !_usePassword;
+                  _passwordController.clear();
+                });
+              },
+            ),
+
+          if (!isDesktop) ...[
+            const SizedBox(height: AppSizes.xl),
+            // Sign up link (mobile only - desktop has it in top nav)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Don\'t have an account?',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => context.push('/signup'),
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(
+                      AppSizes.touchTargetMin,
+                      AppSizes.touchTargetMin,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSizes.sm,
+                    ),
+                  ),
+                  child: Text(
+                    'Sign Up',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: AppSizes.sm),
+          // Terms text
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isDesktop ? 0 : AppSizes.lg,
+            ),
+            child: Text.rich(
+              TextSpan(
+                text: 'By continuing, you agree to our ',
+                style: AppTextStyles.caption,
+                children: [
+                  TextSpan(
+                    text: 'Terms of Service',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const TextSpan(text: ' and '),
+                  TextSpan(
+                    text: 'Privacy Policy',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: AppSizes.lg),
+        ],
       ),
     );
   }
@@ -325,7 +645,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final user = authProvider.user;
     final role = user?.role ?? UserRole.customer;
 
-    // KYC gate for shoppers
     if (role == UserRole.shopper) {
       final kycStatus = user?.kycStatus ?? 'not_submitted';
       if (kycStatus == 'approved') {
@@ -340,13 +659,11 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // Admin goes to dashboard
     if (role == UserRole.admin) {
       context.go('/admin/dashboard');
       return;
     }
 
-    // Other non-customer roles (rider) go to their home screen
     if (role != UserRole.customer) {
       context.go('/${role.name}/home');
       return;
@@ -363,7 +680,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (token != null && user != null && user.addresses.isEmpty) {
         final addressService = context.read<AddressService>();
         final customerId = user.customerId ?? user.id;
-        final success = await addressService.fetchAddresses(token, customerId);
+        final success =
+            await addressService.fetchAddresses(token, customerId);
         if (success) {
           await authProvider.setAddresses(addressService.userAddresses);
         }
@@ -379,4 +697,33 @@ class _LoginScreenState extends State<LoginScreen> {
 
     context.go(returnRoute);
   }
+}
+
+/// Paints subtle decorative circles on the brand panel background
+class _CirclePatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.04)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(
+      Offset(size.width * 0.85, size.height * 0.15),
+      size.width * 0.3,
+      paint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.1, size.height * 0.75),
+      size.width * 0.25,
+      paint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.7, size.height * 0.85),
+      size.width * 0.15,
+      paint..color = Colors.white.withValues(alpha: 0.03),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

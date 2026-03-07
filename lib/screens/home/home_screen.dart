@@ -17,6 +17,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/recipe_provider.dart';
 import '../../widgets/adaptive_product_section.dart';
 import '../../widgets/adaptive_category_section.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -589,12 +590,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   placeholder: (context, url) => Container(
                                     width: 160,
                                     color: Colors.transparent,
-                                    child: Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppColors.accent.withValues(
-                                          alpha: 0.5,
-                                        ),
+                                    child: const Center(
+                                      child: AppLoadingIndicator.small(
                                       ),
                                     ),
                                   ),
@@ -913,10 +910,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Padding(
                     padding: EdgeInsets.all(AppSizes.xl),
                     child: Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.accent,
-                        strokeWidth: 2,
-                      ),
+                      child: AppLoadingIndicator.small(),
                     ),
                   )
                 else
@@ -1128,11 +1122,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: CachedNetworkImage(
                     imageUrl: product.image,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.primary.withValues(alpha: 0.5),
-                      ),
+                    placeholder: (context, url) => const Center(
+                      child: AppLoadingIndicator.small(),
                     ),
                     errorWidget: (context, url, error) => const Padding(
                       padding: EdgeInsets.all(8.0),
@@ -1309,10 +1300,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       placeholder: (context, url) => Container(
                         color: AppColors.grey100,
                         child: const Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.accent,
-                          ),
+                          child: AppLoadingIndicator.small(),
                         ),
                       ),
                       errorWidget: (context, url, error) => Container(

@@ -10,6 +10,7 @@ import '../../models/product.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -107,11 +108,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               child: CachedNetworkImage(
                                 imageUrl: widget.product.image,
                                 fit: BoxFit.contain,
-                                placeholder: (context, url) => Center(
-                                  child: CircularProgressIndicator(
-                                    color: AppColors.accent,
-                                    strokeWidth: 2,
-                                  ),
+                                placeholder: (context, url) => const Center(
+                                  child: AppLoadingIndicator.small(),
                                 ),
                                 errorWidget: (context, url, error) => Icon(
                                   Iconsax.image,

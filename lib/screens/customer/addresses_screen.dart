@@ -11,6 +11,7 @@ import '../../services/address_service.dart';
 import '../../models/address.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class AddressesScreen extends StatefulWidget {
   final String? returnRoute;
@@ -71,9 +72,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
             child: Consumer2<AuthProvider, AddressService>(
               builder: (context, auth, addressService, _) {
                 if (addressService.isLoading) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  );
+                  return const AppLoadingPage();
                 }
 
                 return RefreshIndicator(

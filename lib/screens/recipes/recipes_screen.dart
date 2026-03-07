@@ -10,6 +10,7 @@ import '../../core/utils/responsive.dart';
 import '../../models/recipe.dart';
 import '../../providers/recipe_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class RecipesScreen extends StatefulWidget {
   const RecipesScreen({super.key});
@@ -251,11 +252,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
                 // Recipes list/grid
                 Expanded(
                   child: provider.isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.accent,
-                          ),
-                        )
+                      ? const AppLoadingPage()
                       : filteredRecipes.isEmpty
                       ? _buildEmptyState()
                       : _buildRecipesGrid(filteredRecipes),
@@ -413,10 +410,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
                       height: imageHeight,
                       color: AppColors.grey100,
                       child: const Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.accent,
-                        ),
+                        child: AppLoadingIndicator.small(),
                       ),
                     ),
                     errorWidget: (context, url, error) => Container(

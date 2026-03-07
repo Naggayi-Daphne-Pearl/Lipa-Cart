@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/responsive.dart';
 import '../models/category.dart';
+import 'app_loading_indicator.dart';
 
 class CategoryCard extends StatelessWidget {
   final Category category;
@@ -88,15 +89,8 @@ class CategoryCard extends StatelessWidget {
                       child: CachedNetworkImage(
                         imageUrl: category.image,
                         fit: BoxFit.cover,
-                        placeholder: (context, url) => Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: categoryColor.withValues(alpha: 0.5),
-                            ),
-                          ),
+                        placeholder: (context, url) => const Center(
+                          child: AppLoadingIndicator.small(),
                         ),
                         errorWidget: (context, url, error) => Icon(
                           Icons.category_outlined,
@@ -170,11 +164,8 @@ class CategoryCard extends StatelessWidget {
                   child: CachedNetworkImage(
                     imageUrl: category.image,
                     fit: BoxFit.contain,
-                    placeholder: (context, url) => Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: categoryColor.withValues(alpha: 0.5),
-                      ),
+                    placeholder: (context, url) => const Center(
+                      child: AppLoadingIndicator.small(),
                     ),
                     errorWidget: (context, url, error) => Container(
                       color: categoryBgColor,

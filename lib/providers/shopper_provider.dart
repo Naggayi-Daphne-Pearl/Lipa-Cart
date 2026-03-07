@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import '../models/order.dart';
-import '../models/user.dart';
 import '../services/strapi_service.dart';
 
 class ShopperProvider extends ChangeNotifier {
@@ -182,49 +181,71 @@ class ShopperProvider extends ChangeNotifier {
     }
   }
 
-  /// Mark order as ready for pickup
+  /// Start shopping an order (transition: shopper_assigned -> shopping)
+  Future<bool> startShopping(String token, String orderId) async {
+    try {
+      final result = await StrapiService.updateShopperOrderStatus(
+        orderId,
+        'shopping',
+        token,
+      );
+      if (result != null) {
+        // Update the local order status
+        final idx = _activeTasks.indexWhere(
+          (o) => o.documentId == orderId || o.id == orderId,
+        );
+        if (idx >= 0) {
+          _activeTasks[idx] = _activeTasks[idx].copyWith(
+            status: OrderStatus.shopping,
+          );
+        }
+        notifyListeners();
+        return true;
+      }
+      _error = 'Failed to start shopping';
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = 'Error starting shopping: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Mark order as ready for pickup (transition: shopping -> ready_for_pickup)
   Future<bool> markOrderReady(String token, String orderId) async {
     try {
-      final success = await StrapiService.updateOrderStatus(
+      final result = await StrapiService.updateShopperOrderStatus(
         orderId,
         'ready_for_pickup',
         token,
       );
-
-      if (success) {
-        // Move from active to completed
-        final order = _activeTasks.firstWhere(
-          (o) => o.id == orderId,
-          orElse: () => Order(
-            id: '',
-            orderNumber: '',
-            items: [],
-            status: OrderStatus.pending,
-            subtotal: 0,
-            serviceFee: 0,
-            deliveryFee: 0,
-            total: 0,
-            createdAt: DateTime.now(),
-            deliveryAddress: Address(
-              id: '',
-              label: '',
-              fullAddress: '',
-              latitude: 0,
-              longitude: 0,
-            ),
-            paymentMethod: PaymentMethod.mobileMoney,
-          ),
+      if (result != null) {
+        _activeTasks.removeWhere(
+          (o) => o.documentId == orderId || o.id == orderId,
         );
-
-        if (order.id.isNotEmpty) {
-          _activeTasks.remove(order);
-          notifyListeners();
-        }
+        notifyListeners();
         return true;
       }
+      _error = 'Failed to mark order ready';
+      notifyListeners();
       return false;
     } catch (e) {
       _error = 'Error marking order ready: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Batch update order items (mark found, set actual prices)
+  Future<bool> updateOrderItems(
+    String token,
+    List<Map<String, dynamic>> itemUpdates,
+  ) async {
+    try {
+      return await StrapiService.batchUpdateOrderItems(itemUpdates, token);
+    } catch (e) {
+      _error = 'Error updating items: $e';
       notifyListeners();
       return false;
     }

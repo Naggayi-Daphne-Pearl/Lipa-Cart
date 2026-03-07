@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
 import '../../models/order.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -39,7 +40,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       body: Consumer<OrderService>(
         builder: (context, orderService, _) {
           if (orderService.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const AppLoadingPage();
           }
 
           if (orderService.orders.isEmpty) {

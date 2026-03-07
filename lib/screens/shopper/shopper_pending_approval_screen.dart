@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class ShopperPendingApprovalScreen extends StatefulWidget {
   const ShopperPendingApprovalScreen({super.key});
@@ -143,13 +144,7 @@ class _ShopperPendingApprovalScreenState
                 child: ElevatedButton(
                   onPressed: _isChecking ? null : _checkStatus,
                   child: _isChecking
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                          ),
-                        )
+                      ? const AppLoadingIndicator.small()
                       : const Text('Check Status'),
                 ),
               ),

@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/shopper_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 class AdminShoppersDesktopScreen extends StatefulWidget {
   const AdminShoppersDesktopScreen({super.key});
@@ -68,6 +69,120 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
         });
       }
     }
+  }
+
+  void _showEditDialog(Map<String, dynamic> shopper) {
+    final nameController = TextEditingController(text: shopper['name'] ?? '');
+    final phoneController = TextEditingController(text: shopper['phone'] ?? '');
+    final emailController = TextEditingController(text: shopper['email'] ?? '');
+    final businessNameController = TextEditingController(text: shopper['business_name'] ?? '');
+    final authProvider = context.read<AuthProvider>();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Edit Shopper Profile'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 16,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Full Name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                TextField(
+                  controller: businessNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Business Name (Optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      setState(() => isSubmitting = true);
+
+                      try {
+                        final token = authProvider.token;
+
+                        if (token == null) throw Exception('No auth token');
+
+                        final shopperId = shopper['id'] ?? shopper['documentId'];
+                        if (shopperId == null) throw Exception('Shopper ID not found');
+
+                        final updateData = {
+                          'name': nameController.text,
+                          'phone': phoneController.text,
+                          'email': emailController.text,
+                          'business_name': businessNameController.text,
+                        };
+
+                        await ShopperService.updateShopper(
+                          shopperId,
+                          updateData,
+                          token: token,
+                        );
+
+                        if (mounted) {
+                          Navigator.pop(dialogContext);
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Shopper profile updated successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          _loadShoppers();
+                        }
+                      } catch (e) {
+                        setState(() => isSubmitting = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: isSubmitting
+                  ? const AppLoadingIndicator.small()
+                  : const Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showRejectKycDialog(Map<String, dynamic> shopper) {
@@ -151,11 +266,7 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                       }
                     },
               child: isSubmitting
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                  ? const AppLoadingIndicator.small()
                   : const Text('Reject'),
             ),
           ],
@@ -303,8 +414,7 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                 // Shoppers list
                 Expanded(
                   child: _isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator())
+                      ? const AppLoadingPage()
                       : _error != null
                           ? Center(
                               child: Column(
@@ -423,6 +533,7 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                     onRejectKyc: () =>
                         _showRejectKycDialog(_selectedShopper!),
                     onRefresh: _loadShoppers,
+                    onEdit: _showEditDialog,
                   ),
           ),
         ],
@@ -442,12 +553,14 @@ class _ShopperDetailsView extends StatelessWidget {
   final VoidCallback onApproveKyc;
   final VoidCallback onRejectKyc;
   final VoidCallback onRefresh;
+  final Function(Map<String, dynamic>) onEdit;
 
   const _ShopperDetailsView({
     required this.shopper,
     required this.onApproveKyc,
     required this.onRejectKyc,
     required this.onRefresh,
+    required this.onEdit,
   });
 
   Color _getKycStatusColor(String status) {
@@ -583,6 +696,20 @@ class _ShopperDetailsView extends StatelessWidget {
                   CurrencyFormatter.format(shopper['total_earnings'] ?? 0),
                 ),
               ],
+            ),
+            const SizedBox(height: 24),
+
+            // Edit Profile Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => onEdit(shopper),
+                icon: const Icon(Icons.edit),
+                label: const Text('Edit Profile'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                ),
+              ),
             ),
             const SizedBox(height: 24),
 

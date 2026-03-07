@@ -6,6 +6,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/admin_user_service.dart';
+import '../../widgets/app_loading_indicator.dart';
 
 /// Admin User Management Screen
 /// Allows admins to view, search, and manage user roles
@@ -265,7 +266,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen>
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppLoadingPage()
           : TabBarView(
               controller: _tabController,
               children: List.generate(5, (index) => _buildUserList()),

@@ -311,6 +311,52 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Request forgot password OTP (verifies user exists first)
+  Future<bool> forgotPassword(String phoneNumber) async {
+    _status = AuthStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await AuthService.forgotPassword(phoneNumber);
+      _status = AuthStatus.otpSent;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Reset password with OTP + new password (no auth needed)
+  Future<bool> resetPassword({
+    required String phoneNumber,
+    required String otp,
+    required String newPassword,
+  }) async {
+    _status = AuthStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await AuthService.resetPassword(
+        phoneNumber: phoneNumber,
+        otp: otp,
+        newPassword: newPassword,
+      );
+      _status = AuthStatus.unauthenticated;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Mark onboarding as complete and persist to SharedPreferences
   Future<void> setFirstLaunchComplete() async {
     _isFirstLaunch = false;
