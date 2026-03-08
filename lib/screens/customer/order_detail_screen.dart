@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
@@ -51,7 +52,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   const Text('Order not found'),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/customer/home');
+                      }
+                    },
                     child: const Text('Go Back'),
                   ),
                 ],

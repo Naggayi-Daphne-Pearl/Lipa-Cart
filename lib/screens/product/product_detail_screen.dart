@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
@@ -124,7 +125,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             top: AppSizes.sm,
                             left: AppSizes.md,
                             child: GestureDetector(
-                              onTap: () => Navigator.pop(context),
+                              onTap: () {
+                                if (context.canPop()) {
+                                  context.pop();
+                                } else {
+                                  context.go('/customer/home');
+                                }
+                              },
                               child: Container(
                                 width: 44,
                                 height: 44,

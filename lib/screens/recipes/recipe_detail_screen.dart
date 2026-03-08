@@ -72,7 +72,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
             pinned: true,
             backgroundColor: AppColors.surface,
             leading: GestureDetector(
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/customer/home');
+                }
+              },
               child: Container(
                 margin: const EdgeInsets.all(8),
                 decoration: BoxDecoration(

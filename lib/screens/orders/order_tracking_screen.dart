@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -23,7 +24,13 @@ class OrderTrackingScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Iconsax.arrow_left),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/customer/home');
+            }
+          },
         ),
         title: const Text('Order Details & Tracking'),
       ),

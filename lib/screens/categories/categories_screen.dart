@@ -25,7 +25,13 @@ class CategoriesScreen extends StatelessWidget {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Iconsax.arrow_left),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/customer/home');
+            }
+          },
         ),
         title: const Text('Categories'),
       ),
@@ -92,7 +98,13 @@ class CategoryProductsScreen extends StatelessWidget {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Iconsax.arrow_left),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/customer/categories');
+            }
+          },
         ),
         title: Text(categoryName),
         actions: [
