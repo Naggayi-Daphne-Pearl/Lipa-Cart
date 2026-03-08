@@ -37,6 +37,7 @@ class User {
   final UserRole role;
   final String? customerId;
   final String? shopperId;
+  final String? riderId;
   final String? kycStatus;
   final List<Address> addresses;
   final DateTime createdAt;
@@ -52,6 +53,7 @@ class User {
     this.role = UserRole.customer,
     this.customerId,
     this.shopperId,
+    this.riderId,
     this.kycStatus,
     this.addresses = const [],
     required this.createdAt,
@@ -68,6 +70,7 @@ class User {
     UserRole? role,
     String? customerId,
     String? shopperId,
+    String? riderId,
     String? kycStatus,
     List<Address>? addresses,
     DateTime? createdAt,
@@ -83,6 +86,7 @@ class User {
       role: role ?? this.role,
       customerId: customerId ?? this.customerId,
       shopperId: shopperId ?? this.shopperId,
+      riderId: riderId ?? this.riderId,
       kycStatus: kycStatus ?? this.kycStatus,
       addresses: addresses ?? this.addresses,
       createdAt: createdAt ?? this.createdAt,
@@ -101,6 +105,7 @@ class User {
       'role': role.name,
       'customerId': customerId,
       'shopperId': shopperId,
+      'riderId': riderId,
       'kycStatus': kycStatus,
       'addresses': addresses.map((a) => a.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
@@ -132,6 +137,7 @@ class User {
       ),
       customerId: (json['customerId'] ?? json['customer_id'])?.toString(),
       shopperId: (json['shopperId'] ?? json['shopper_id'])?.toString(),
+      riderId: (json['riderId'] ?? json['rider_id'])?.toString(),
       kycStatus: (json['kycStatus'] ?? json['kyc_status']) as String?,
       addresses:
           (json['addresses'] as List<dynamic>?)

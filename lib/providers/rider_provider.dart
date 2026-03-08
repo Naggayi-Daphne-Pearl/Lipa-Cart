@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/order.dart';
+import '../services/strapi_service.dart';
 
 class RiderProvider extends ChangeNotifier {
   // Rider data
@@ -34,7 +35,14 @@ class RiderProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // TODO: Implement rider profile API call
+      final response = await StrapiService.getRiderProfile(riderId, token);
+      if (response != null) {
+        _riderProfile = response;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+      // Fallback defaults if API returns null
       _riderProfile = {
         'total_ratings': 0,
         'rating': 0.0,
@@ -42,9 +50,10 @@ class RiderProvider extends ChangeNotifier {
         'total_earnings': 0.0,
         'is_online': false,
       };
+      _error = 'Failed to load profile';
       _isLoading = false;
       notifyListeners();
-      return true;
+      return false;
     } catch (e) {
       _error = 'Error: $e';
       _isLoading = false;

@@ -89,7 +89,7 @@ class _SignupScreenState extends State<SignupScreen> {
         context.go('/shopper/kyc');
         break;
       case UserRole.rider:
-        context.go('/rider/home');
+        context.go('/rider/kyc');
         break;
       case UserRole.admin:
         context.go('/admin/dashboard');

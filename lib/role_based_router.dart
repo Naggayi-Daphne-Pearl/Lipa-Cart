@@ -50,6 +50,9 @@ import 'screens/rider/rider_available_deliveries_screen.dart';
 import 'screens/rider/rider_active_deliveries_screen.dart';
 import 'screens/rider/rider_earnings_screen.dart';
 import 'screens/rider/rider_ratings_screen.dart';
+import 'screens/rider/rider_kyc_screen.dart';
+import 'screens/rider/rider_pending_approval_screen.dart';
+import 'screens/rider/rider_profile_screen.dart';
 
 // Shopper screens
 import 'screens/shopper/shopper_home_screen.dart';
@@ -68,6 +71,14 @@ String _homeForRole(UserRole? role, {String? kycStatus}) {
     case UserRole.admin:
       return '/admin/dashboard';
     case UserRole.rider:
+      // Route based on KYC status
+      if (kycStatus == null || kycStatus == 'not_submitted') {
+        return '/rider/kyc';
+      } else if (kycStatus == 'pending_review') {
+        return '/rider/pending-approval';
+      } else if (kycStatus == 'rejected') {
+        return '/rider/kyc?rejected=true';
+      }
       return '/rider/home';
     case UserRole.shopper:
       // Route based on KYC status
@@ -180,6 +191,31 @@ class RoleBasedRouter {
         if (state.matchedLocation.startsWith('/rider/')) {
           if (isAuthenticated && userRole != UserRole.rider) {
             return _homeForRole(userRole, kycStatus: authProvider.user?.kycStatus);
+          }
+
+          // KYC enforcement for riders
+          if (isAuthenticated && userRole == UserRole.rider) {
+            final kycStatus = authProvider.user?.kycStatus;
+            final isKycRoute =
+                state.matchedLocation == '/rider/kyc' ||
+                state.matchedLocation == '/rider/pending-approval';
+
+            if (!isKycRoute) {
+              // Block access to home/other routes if KYC not approved
+              if (kycStatus == null || kycStatus == 'not_submitted') {
+                return '/rider/kyc';
+              } else if (kycStatus == 'pending_review') {
+                return '/rider/pending-approval';
+              } else if (kycStatus == 'rejected') {
+                return '/rider/kyc?rejected=true';
+              }
+              // kycStatus == 'approved' → allow access
+            } else {
+              // On KYC/pending pages but already approved → go to home
+              if (kycStatus == 'approved') {
+                return '/rider/home';
+              }
+            }
           }
         }
 
@@ -474,6 +510,21 @@ class RoleBasedRouter {
         GoRoute(
           path: '/rider/ratings',
           builder: (context, state) => const RiderRatingsScreen(),
+        ),
+        GoRoute(
+          path: '/rider/kyc',
+          builder: (context, state) {
+            final isRejected = state.uri.queryParameters['rejected'] == 'true';
+            return RiderKycScreen(isRejected: isRejected);
+          },
+        ),
+        GoRoute(
+          path: '/rider/pending-approval',
+          builder: (context, state) => const RiderPendingApprovalScreen(),
+        ),
+        GoRoute(
+          path: '/rider/profile',
+          builder: (context, state) => const RiderProfileScreen(),
         ),
 
         // Shopper Routes

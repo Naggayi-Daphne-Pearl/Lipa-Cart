@@ -10,6 +10,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/rider_button.dart';
 
 class RiderActiveDeliveriesScreen extends StatefulWidget {
   const RiderActiveDeliveriesScreen({super.key});
@@ -135,21 +136,13 @@ class _RiderActiveDeliveriesScreenState
                     ),
                   ),
                   const SizedBox(height: AppSizes.lg),
-                  ElevatedButton.icon(
+                  RiderButton.primary(
+                    text: 'Browse Available Deliveries',
+                    icon: Iconsax.truck_fast,
+                    width: 280,
+                    height: 44,
                     onPressed: () =>
                         context.go('/rider/available-deliveries'),
-                    icon: const Icon(Iconsax.truck_fast, size: 18),
-                    label: const Text('Browse Available Deliveries'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _brandColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSizes.radiusSm),
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -271,18 +264,11 @@ class _RiderActiveDeliveriesScreenState
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Iconsax.routing_2, size: 18),
-                    label: const Text('Navigate'),
+                  child: RiderButton.primary(
+                    text: 'Navigate',
+                    icon: Iconsax.routing_2,
+                    height: 40,
                     onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _brandColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSizes.radiusSm),
-                      ),
-                    ),
                   ),
                 ),
                 const SizedBox(width: AppSizes.sm),

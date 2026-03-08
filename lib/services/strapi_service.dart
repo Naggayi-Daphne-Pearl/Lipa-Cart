@@ -596,6 +596,68 @@ class StrapiService {
     }
   }
 
+  /// Submit rider KYC with all documents and details
+  static Future<bool> submitRiderKycFull({
+    required String idNumber,
+    required String idPhotoUrl,
+    required String facePhotoUrl,
+    required String vehicleType,
+    required String licenseNumber,
+    String? vehicleMake,
+    String? vehiclePlate,
+    String? licensePhotoUrl,
+    String? mobileMoneyProvider,
+    String? mobileMoneyNumber,
+    String? bankName,
+    String? bankAccountName,
+    String? bankAccountNumber,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    required String token,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'id_number': idNumber,
+        'id_photo_url': idPhotoUrl,
+        'face_photo_url': facePhotoUrl,
+        'vehicle_type': vehicleType,
+        'license_number': licenseNumber,
+      };
+      if (vehicleMake != null) body['vehicle_make'] = vehicleMake;
+      if (vehiclePlate != null) body['vehicle_plate'] = vehiclePlate;
+      if (licensePhotoUrl != null) body['license_photo_url'] = licensePhotoUrl;
+      if (mobileMoneyProvider != null) body['mobile_money_provider'] = mobileMoneyProvider;
+      if (mobileMoneyNumber != null) body['mobile_money_number'] = mobileMoneyNumber;
+      if (bankName != null) body['bank_name'] = bankName;
+      if (bankAccountName != null) body['bank_account_name'] = bankAccountName;
+      if (bankAccountNumber != null) body['bank_account_number'] = bankAccountNumber;
+      if (emergencyContactName != null) body['emergency_contact_name'] = emergencyContactName;
+      if (emergencyContactPhone != null) body['emergency_contact_phone'] = emergencyContactPhone;
+
+      final response = await http
+          .post(
+            Uri.parse('$_apiUrl/riders/kyc/submit'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: json.encode(body),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        print('Rider KYC submission successful');
+        return true;
+      } else {
+        print('ERROR: Rider KYC submission failed - ${response.statusCode}: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('ERROR: submitRiderKycFull - $e');
+      return false;
+    }
+  }
+
   /// Update shopper profile fields
   static Future<bool> updateShopperProfile(
     String shopperId,
@@ -617,6 +679,59 @@ class StrapiService {
       return response.statusCode == 200;
     } catch (e) {
       print('ERROR: updateShopperProfile - $e');
+      return false;
+    }
+  }
+
+  /// Get rider profile with stats
+  static Future<Map<String, dynamic>?> getRiderProfile(
+    String riderId,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$_apiUrl/riders/$riderId?populate=*'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final riderData = data['data'];
+        if (riderData is Map<String, dynamic>) {
+          return riderData['attributes'] as Map<String, dynamic>? ?? riderData;
+        }
+        return null;
+      }
+      return null;
+    } catch (e) {
+      print('ERROR: getRiderProfile - $e');
+      return null;
+    }
+  }
+
+  /// Update rider profile fields
+  static Future<bool> updateRiderProfile(
+    String riderId,
+    Map<String, dynamic> data,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .put(
+            Uri.parse('$_apiUrl/riders/$riderId'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: json.encode({'data': data}),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('ERROR: updateRiderProfile - $e');
       return false;
     }
   }

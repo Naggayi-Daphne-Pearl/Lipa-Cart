@@ -10,6 +10,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/rider_button.dart';
 
 class RiderAvailableDeliveriesScreen extends StatefulWidget {
   const RiderAvailableDeliveriesScreen({super.key});
@@ -92,17 +93,11 @@ class _RiderAvailableDeliveriesScreenState
                     style: const TextStyle(color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: AppSizes.md),
-                  ElevatedButton(
+                  RiderButton.primary(
+                    text: 'Retry',
                     onPressed: _refreshDeliveries,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _brandColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSizes.radiusSm),
-                      ),
-                    ),
-                    child: const Text('Retry'),
+                    width: 120,
+                    height: 44,
                   ),
                 ],
               ),
@@ -146,20 +141,12 @@ class _RiderAvailableDeliveriesScreenState
                     ),
                   ),
                   const SizedBox(height: AppSizes.lg),
-                  ElevatedButton.icon(
+                  RiderButton.primary(
+                    text: 'Refresh',
+                    icon: Iconsax.refresh,
                     onPressed: _refreshDeliveries,
-                    icon: const Icon(Iconsax.refresh, size: 18),
-                    label: const Text('Refresh'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _brandColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSizes.radiusSm),
-                      ),
-                    ),
+                    width: 160,
+                    height: 44,
                   ),
                 ],
               ),
@@ -293,72 +280,56 @@ class _RiderAvailableDeliveriesScreenState
             const SizedBox(height: AppSizes.md),
 
             // Accept button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () async {
-                  showDialog(
-                    context: context,
-                    builder: (dialogContext) => AlertDialog(
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSizes.radiusMd),
-                      ),
-                      title: const Text('Accept Delivery?'),
-                      content: Text(
-                        'Accept this delivery of ${delivery.items.length} items? You\'ll earn ${Formatters.formatCurrency(delivery.deliveryFee)}.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(dialogContext),
-                          child: const Text('Cancel'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () async {
-                            Navigator.pop(dialogContext);
-                            final success =
-                                await riderProvider.acceptDelivery(
-                              token,
-                              delivery.id,
-                              riderId,
-                            );
-                            if (success && mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text(
-                                    'Delivery accepted! Start your route.',
-                                  ),
-                                  backgroundColor: _brandColor,
-                                ),
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _brandColor,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('Accept'),
-                        ),
-                      ],
+            RiderButton.primary(
+              text: 'Accept Delivery',
+              height: 48,
+              onPressed: () async {
+                showDialog(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppSizes.radiusMd),
                     ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _brandColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                    title: const Text('Accept Delivery?'),
+                    content: Text(
+                      'Accept this delivery of ${delivery.items.length} items? You\'ll earn ${Formatters.formatCurrency(delivery.deliveryFee)}.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(dialogContext);
+                          final success =
+                              await riderProvider.acceptDelivery(
+                            token,
+                            delivery.id,
+                            riderId,
+                          );
+                          if (success && mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  'Delivery accepted! Start your route.',
+                                ),
+                                backgroundColor: _brandColor,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _brandColor,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Accept'),
+                      ),
+                    ],
                   ),
-                ),
-                child: const Text(
-                  'Accept Delivery',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+                );
+              },
             ),
           ],
         ),

@@ -8,7 +8,7 @@ import '../../providers/rider_provider.dart';
 import '../../models/user.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
-import '../../core/utils/logout_helper.dart';
+
 
 class RiderHomeScreen extends StatefulWidget {
   const RiderHomeScreen({super.key});
@@ -117,7 +117,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         setState(() => _currentNavIndex = 0);
         break;
       case 3:
-        _showProfileMenu();
+        context.push('/rider/profile');
         setState(() => _currentNavIndex = 0);
         break;
     }
@@ -859,189 +859,4 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     );
   }
 
-  void _showProfileMenu() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppSizes.radiusLg)),
-      ),
-      builder: (ctx) {
-        final user = context.read<AuthProvider>().user;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSizes.md),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Handle
-                Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: AppSizes.md),
-                  decoration: BoxDecoration(
-                    color: AppColors.grey300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                // Profile header
-                Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: const BoxDecoration(
-                        color: AppColors.accentSoft,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          _getInitials(user?.name),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.accent,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSizes.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _getDisplayName(user?.name),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          const Text(
-                            'Rider',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textTertiary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSizes.md),
-                const Divider(height: 1, color: AppColors.grey200),
-                const SizedBox(height: AppSizes.sm),
-                _buildProfileMenuItem(
-                  icon: Iconsax.star_1,
-                  label: 'My Ratings',
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    context.push('/rider/ratings');
-                  },
-                ),
-                _buildProfileMenuItem(
-                  icon: Iconsax.chart_2,
-                  label: 'Earnings',
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    context.push('/rider/earnings');
-                  },
-                ),
-                _buildProfileMenuItem(
-                  icon: Iconsax.logout,
-                  label: 'Logout',
-                  color: AppColors.error,
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _showLogoutDialog(context);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildProfileMenuItem({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    Color? color,
-    Widget? trailing,
-  }) {
-    final itemColor = color ?? AppColors.textPrimary;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            vertical: AppSizes.sm, horizontal: AppSizes.xs),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: (color ?? AppColors.grey500).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppSizes.radiusXs),
-              ),
-              child: Icon(icon, size: 20, color: itemColor),
-            ),
-            const SizedBox(width: AppSizes.sm),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: itemColor,
-                ),
-              ),
-            ),
-            if (trailing != null) trailing,
-            if (trailing == null)
-              Icon(Icons.arrow_forward_ios,
-                  size: 14, color: AppColors.grey400),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        ),
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              await LogoutHelper.logoutAndClear(context);
-              if (!mounted) return;
-              Navigator.of(dialogContext).pop();
-              GoRouter.of(context).go('/login');
-            },
-            child: const Text(
-              'Logout',
-              style: TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
