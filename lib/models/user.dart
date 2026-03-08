@@ -28,6 +28,7 @@ extension UserRoleExtension on UserRole {
 
 class User {
   final String id;
+  final String? documentId;
   final String phoneNumber;
   final String? name;
   final String? email;
@@ -42,6 +43,7 @@ class User {
 
   User({
     required this.id,
+    this.documentId,
     required this.phoneNumber,
     this.name,
     this.email,
@@ -57,6 +59,7 @@ class User {
 
   User copyWith({
     String? id,
+    String? documentId,
     String? phoneNumber,
     String? name,
     String? email,
@@ -71,6 +74,7 @@ class User {
   }) {
     return User(
       id: id ?? this.id,
+      documentId: documentId ?? this.documentId,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       name: name ?? this.name,
       email: email ?? this.email,
@@ -88,6 +92,7 @@ class User {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'documentId': documentId,
       'phoneNumber': phoneNumber,
       'name': name,
       'email': email,
@@ -115,6 +120,7 @@ class User {
 
     return User(
       id: (json['id'] ?? '').toString(),
+      documentId: (json['documentId'] ?? json['document_id'])?.toString(),
       phoneNumber: (json['phoneNumber'] ?? json['phone'] ?? '').toString(),
       name: json['name'] as String?,
       email: json['email'] as String?,

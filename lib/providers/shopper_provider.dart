@@ -124,14 +124,14 @@ class ShopperProvider extends ChangeNotifier {
   Future<bool> acceptTask(
     String token,
     String orderId,
-    String shopperId,
+    String userDocumentId,
   ) async {
     try {
-      print('DEBUG: Accepting order $orderId for shopper $shopperId');
+      print('DEBUG: Accepting order $orderId');
 
       final success = await StrapiService.assignOrderToShopper(
         orderId,
-        shopperId,
+        userDocumentId,
         token,
       );
 
@@ -140,7 +140,7 @@ class ShopperProvider extends ChangeNotifier {
         _availableTasks.removeWhere((o) => o.id == orderId);
 
         // Refresh active tasks
-        await fetchActiveTasks(token, shopperId);
+        await fetchActiveTasks(token, userDocumentId);
 
         notifyListeners();
         return true;

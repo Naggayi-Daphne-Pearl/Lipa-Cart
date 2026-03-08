@@ -250,7 +250,12 @@ class StrapiService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return data['data']['attributes'] as Map<String, dynamic>?;
+        // Strapi v5: fields are directly on data, not nested in attributes
+        final shopperData = data['data'];
+        if (shopperData is Map<String, dynamic>) {
+          return shopperData['attributes'] as Map<String, dynamic>? ?? shopperData;
+        }
+        return null;
       }
       return null;
     } catch (e) {
@@ -288,14 +293,14 @@ class StrapiService {
   /// Get active orders for shopper (shopper_assigned OR shopping status)
   static Future<List<Order>> getActiveOrdersForShopper(
     String token,
-    String shopperId,
+    String userDocumentId,
   ) async {
     try {
-      // Strapi v5 syntax: filter by relation ID directly
+      // Strapi v5: filter by relation's documentId
       final response = await http
           .get(
             Uri.parse(
-              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=shopper_assigned&filters[\$or][1][status][\$eq]=shopping&filters[shopper][\$eq]=$shopperId&populate[order_items][populate][0]=product',
+              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=shopper_assigned&filters[\$or][1][status][\$eq]=shopping&filters[shopper][documentId][\$eq]=$userDocumentId&populate[order_items][populate][0]=product',
             ),
             headers: {'Authorization': 'Bearer $token'},
           )
@@ -318,14 +323,14 @@ class StrapiService {
   /// Get completed orders for shopper (delivered OR cancelled)
   static Future<List<Order>> getCompletedOrdersForShopper(
     String token,
-    String shopperId,
+    String userDocumentId,
   ) async {
     try {
-      // Strapi v5 syntax: filter by relation ID directly
+      // Strapi v5: filter by relation's documentId
       final response = await http
           .get(
             Uri.parse(
-              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=delivered&filters[\$or][1][status][\$eq]=cancelled&filters[shopper][\$eq]=$shopperId&populate[order_items][populate][0]=product',
+              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=delivered&filters[\$or][1][status][\$eq]=cancelled&filters[shopper][documentId][\$eq]=$userDocumentId&populate[order_items][populate][0]=product',
             ),
             headers: {'Authorization': 'Bearer $token'},
           )
@@ -445,7 +450,7 @@ class StrapiService {
   ) async {
     try {
       final response = await http
-          .patch(
+          .put(
             Uri.parse('$_apiUrl/shoppers/$shopperId'),
             headers: {
               'Authorization': 'Bearer $token',
@@ -523,6 +528,120 @@ class StrapiService {
       }
     } catch (e) {
       print('ERROR: submitShopperKyc - $e');
+      return false;
+    }
+  }
+
+  /// Submit full KYC with payment & contact info
+  static Future<bool> submitShopperKycFull({
+    required String idNumber,
+    required String idPhotoUrl,
+    required String facePhotoUrl,
+    String? mobileMoneyProvider,
+    String? mobileMoneyNumber,
+    String? bankName,
+    String? bankAccountName,
+    String? bankAccountNumber,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    required String token,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'id_number': idNumber,
+        'id_photo_url': idPhotoUrl,
+        'face_photo_url': facePhotoUrl,
+      };
+      if (mobileMoneyProvider != null) {
+        body['mobile_money_provider'] = mobileMoneyProvider;
+      }
+      if (mobileMoneyNumber != null) {
+        body['mobile_money_number'] = mobileMoneyNumber;
+      }
+      if (bankName != null) body['bank_name'] = bankName;
+      if (bankAccountName != null) {
+        body['bank_account_name'] = bankAccountName;
+      }
+      if (bankAccountNumber != null) {
+        body['bank_account_number'] = bankAccountNumber;
+      }
+      if (emergencyContactName != null) {
+        body['emergency_contact_name'] = emergencyContactName;
+      }
+      if (emergencyContactPhone != null) {
+        body['emergency_contact_phone'] = emergencyContactPhone;
+      }
+
+      final response = await http
+          .post(
+            Uri.parse('$_apiUrl/shoppers/kyc/submit'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: json.encode(body),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        print('Full KYC submission successful');
+        return true;
+      } else {
+        print('ERROR: Full KYC submission failed - ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('ERROR: submitShopperKycFull - $e');
+      return false;
+    }
+  }
+
+  /// Update shopper profile fields
+  static Future<bool> updateShopperProfile(
+    String shopperId,
+    Map<String, dynamic> data,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .put(
+            Uri.parse('$_apiUrl/shoppers/$shopperId'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: json.encode({'data': data}),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('ERROR: updateShopperProfile - $e');
+      return false;
+    }
+  }
+
+  /// Update user profile (name, email)
+  static Future<bool> updateUserProfile(
+    String userId,
+    Map<String, dynamic> data,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .patch(
+            Uri.parse('$_apiUrl/users/$userId'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: json.encode({'data': data}),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('ERROR: updateUserProfile - $e');
       return false;
     }
   }

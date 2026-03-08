@@ -7,6 +7,8 @@ import '../../models/order.dart';
 import '../../models/user.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/shopper_button.dart';
+import '../../core/theme/app_colors.dart';
 
 class ShopperAvailableTasksScreen extends StatefulWidget {
   const ShopperAvailableTasksScreen({super.key});
@@ -80,9 +82,11 @@ class _ShopperAvailableTasksScreenState
                 children: [
                   Text(shopperProvider.error!),
                   const SizedBox(height: 16),
-                  ElevatedButton(
+                  ShopperButton.secondary(
+                    text: 'Retry',
+                    icon: Icons.refresh_rounded,
+                    width: 200,
                     onPressed: _refreshTasks,
-                    child: const Text('Retry'),
                   ),
                 ],
               ),
@@ -114,9 +118,13 @@ class _ShopperAvailableTasksScreenState
                     ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                   ),
                   const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _refreshTasks,
-                    child: const Text('Refresh'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 60),
+                    child: ShopperButton.primary(
+                      text: 'Refresh',
+                      icon: Icons.refresh_rounded,
+                      onPressed: _refreshTasks,
+                    ),
                   ),
                 ],
               ),
@@ -134,7 +142,7 @@ class _ShopperAvailableTasksScreenState
                   context,
                   task,
                   authProvider.token!,
-                  authProvider.user!.id,
+                  authProvider.user!.documentId ?? authProvider.user!.id,
                   shopperProvider,
                 );
               },

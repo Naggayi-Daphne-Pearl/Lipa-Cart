@@ -9,6 +9,7 @@ import '../../models/user.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/logout_helper.dart';
+import '../../widgets/shopper_button.dart';
 
 class ShopperHomeScreen extends StatefulWidget {
   const ShopperHomeScreen({super.key});
@@ -49,16 +50,16 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
     final authProvider = context.read<AuthProvider>();
     final shopperProvider = context.read<ShopperProvider>();
 
-    if (authProvider.token != null && authProvider.user?.id != null) {
-      shopperProvider.loadShopperProfile(
-        authProvider.token!,
-        authProvider.user!.id,
-      );
-      shopperProvider.fetchAvailableTasks(authProvider.token!);
-      shopperProvider.fetchActiveTasks(
-        authProvider.token!,
-        authProvider.user!.id,
-      );
+    final token = authProvider.token;
+    final user = authProvider.user;
+    if (token != null && user != null) {
+      if (user.shopperId != null) {
+        shopperProvider.loadShopperProfile(token, user.shopperId!);
+      }
+      shopperProvider.fetchAvailableTasks(token);
+      if (user.documentId != null) {
+        shopperProvider.fetchActiveTasks(token, user.documentId!);
+      }
     }
   }
 
@@ -112,7 +113,7 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
         setState(() => _currentNavIndex = 0);
         break;
       case 3:
-        _showProfileMenu();
+        context.push('/shopper/profile');
         setState(() => _currentNavIndex = 0);
         break;
     }
@@ -164,11 +165,11 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                       margin: const EdgeInsets.only(right: 8),
                       child: GestureDetector(
                         onTap: () {
-                          if (authProvider.token != null &&
-                              user?.id != null) {
+                          final sid = user?.shopperId;
+                          if (authProvider.token != null && sid != null) {
                             shopperProvider.toggleOnlineStatus(
                               authProvider.token!,
-                              user!.id,
+                              sid,
                               !isOnline,
                             );
                           }
@@ -1215,45 +1216,34 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                 const SizedBox(height: AppSizes.md),
 
                 // Check status button
-                SizedBox(
-                  width: double.infinity,
-                  height: AppSizes.buttonHeightMd,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      Navigator.of(ctx).pop();
-                      final authProvider = context.read<AuthProvider>();
-                      await authProvider.refreshProfile();
-                      if (!mounted) return;
-                      final newStatus = authProvider.user?.kycStatus;
-                      if (newStatus == 'approved') {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Your account has been verified!'),
-                            backgroundColor: AppColors.success,
-                          ),
-                        );
-                      } else if (newStatus == 'rejected') {
-                        context.push('/shopper/kyc?rejected=true');
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                                'Still under review. Please check back later.'),
-                          ),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSizes.radiusSm),
-                      ),
-                    ),
-                    child: const Text('Check Status',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                  ),
+                ShopperButton.primary(
+                  text: 'Check Status',
+                  icon: Icons.refresh_rounded,
+                  onPressed: () async {
+                    Navigator.of(ctx).pop();
+                    final authProvider = context.read<AuthProvider>();
+                    await authProvider.refreshProfile();
+                    if (!mounted) return;
+                    final newStatus = authProvider.user?.kycStatus;
+                    if (newStatus == 'approved') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Your account has been verified!'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                      context.go('/shopper/home');
+                    } else if (newStatus == 'rejected') {
+                      context.push('/shopper/kyc?rejected=true');
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'Still under review. Please check back later.'),
+                        ),
+                      );
+                    }
+                  },
                 ),
               ],
             ),

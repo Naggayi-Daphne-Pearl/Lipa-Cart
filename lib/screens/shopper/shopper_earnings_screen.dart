@@ -42,9 +42,12 @@ class _ShopperEarningsScreenState extends State<ShopperEarningsScreen> {
     final shopperProvider = context.read<ShopperProvider>();
     final token = authProvider.token;
     final shopperId = authProvider.user?.shopperId;
+    final userDocId = authProvider.user?.documentId;
     if (token != null && shopperId != null) {
       shopperProvider.loadShopperProfile(token, shopperId);
-      shopperProvider.fetchCompletedTasks(token, shopperId);
+    }
+    if (token != null && userDocId != null) {
+      shopperProvider.fetchCompletedTasks(token, userDocId);
     }
   }
 

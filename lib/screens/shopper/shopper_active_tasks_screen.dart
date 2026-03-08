@@ -8,6 +8,7 @@ import '../../models/user.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/shopper_button.dart';
 
 class ShopperActiveTasksScreen extends StatefulWidget {
   const ShopperActiveTasksScreen({super.key});
@@ -43,9 +44,9 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
     // Load active tasks
     final shopperProvider = context.read<ShopperProvider>();
     final token = authProvider.token;
-    final shopperId = authProvider.user?.shopperId;
-    if (token != null && shopperId != null) {
-      shopperProvider.fetchActiveTasks(token, shopperId);
+    final userDocId = authProvider.user?.documentId;
+    if (token != null && userDocId != null) {
+      shopperProvider.fetchActiveTasks(token, userDocId);
     }
   }
 
@@ -53,9 +54,9 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
     final auth = context.read<AuthProvider>();
     final shopper = context.read<ShopperProvider>();
     final token = auth.token;
-    final shopperId = auth.user?.shopperId;
-    if (token != null && shopperId != null) {
-      await shopper.fetchActiveTasks(token, shopperId);
+    final userDocId = auth.user?.documentId;
+    if (token != null && userDocId != null) {
+      await shopper.fetchActiveTasks(token, userDocId);
     }
   }
 
@@ -113,13 +114,13 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
                     style: TextStyle(color: Colors.grey[400], fontSize: 14),
                   ),
                   const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () => context.go('/shopper/available-tasks'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: ShopperButton.primary(
+                      text: 'Browse Available Tasks',
+                      icon: Icons.search_rounded,
+                      onPressed: () => context.go('/shopper/available-tasks'),
                     ),
-                    child: const Text('Browse Available Tasks'),
                   ),
                 ],
               ),

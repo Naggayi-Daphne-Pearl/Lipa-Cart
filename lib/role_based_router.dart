@@ -60,6 +60,7 @@ import 'screens/shopper/shopper_completed_tasks_screen.dart';
 import 'screens/shopper/shopper_kyc_screen.dart';
 import 'screens/shopper/shopper_pending_approval_screen.dart';
 import 'screens/shopper/shopping_checklist_screen.dart';
+import 'screens/shopper/shopper_profile_screen.dart';
 
 /// Helper to get home route based on user role
 String _homeForRole(UserRole? role) {
@@ -480,6 +481,10 @@ class RoleBasedRouter {
         GoRoute(
           path: '/shopper/earnings',
           builder: (context, state) => const ShopperEarningsScreen(),
+        ),
+        GoRoute(
+          path: '/shopper/profile',
+          builder: (context, state) => const ShopperProfileScreen(),
         ),
         GoRoute(
           path: '/shopper/kyc',
