@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'models/category.dart';
 import 'models/order.dart';
 import 'models/product.dart';
 import 'models/user.dart';
@@ -225,6 +226,17 @@ class RoleBasedRouter {
         GoRoute(
           path: '/customer/categories',
           builder: (context, state) => const CategoriesScreen(),
+        ),
+        GoRoute(
+          path: '/customer/category',
+          builder: (context, state) {
+            final category = state.extra as Category?;
+            if (category == null) return const CategoriesScreen();
+            return CategoryProductsScreen(
+              categoryId: category.id,
+              categoryName: category.name,
+            );
+          },
         ),
         GoRoute(
           path: '/customer/product',
