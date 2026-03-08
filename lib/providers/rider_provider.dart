@@ -62,15 +62,14 @@ class RiderProvider extends ChangeNotifier {
     }
   }
 
-  /// Fetch available deliveries (orders ready for delivery)
+  /// Fetch available deliveries (orders ready for pickup)
   Future<bool> fetchAvailableDeliveries(String token) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      // TODO: Implement available deliveries API call
-      _availableDeliveries = [];
+      _availableDeliveries = await StrapiService.getAvailableDeliveries(token);
       _isLoading = false;
       notifyListeners();
       return true;
@@ -89,8 +88,7 @@ class RiderProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // TODO: Implement active deliveries API call
-      _activeDeliveries = [];
+      _activeDeliveries = await StrapiService.getActiveDeliveries(token, riderId);
       _isLoading = false;
       notifyListeners();
       return true;
@@ -109,8 +107,7 @@ class RiderProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // TODO: Implement completed deliveries API call
-      _completedDeliveries = [];
+      _completedDeliveries = await StrapiService.getCompletedDeliveries(token, riderId);
       _isLoading = false;
       notifyListeners();
       return true;
@@ -129,10 +126,16 @@ class RiderProvider extends ChangeNotifier {
     String riderId,
   ) async {
     try {
-      // TODO: Implement accept delivery API call
-      await fetchAvailableDeliveries(token);
-      await fetchActiveDeliveries(token, riderId);
-      return true;
+      final result = await StrapiService.claimDelivery(orderId, token);
+      if (result != null) {
+        _availableDeliveries.removeWhere((o) => o.id == orderId || o.documentId == orderId);
+        await fetchActiveDeliveries(token, riderId);
+        notifyListeners();
+        return true;
+      }
+      _error = 'Failed to accept delivery';
+      notifyListeners();
+      return false;
     } catch (e) {
       _error = 'Error: $e';
       notifyListeners();
@@ -147,9 +150,15 @@ class RiderProvider extends ChangeNotifier {
     String riderId,
   ) async {
     try {
-      // TODO: Implement complete delivery API call
-      await fetchActiveDeliveries(token, riderId);
-      return true;
+      final result = await StrapiService.updateRiderOrderStatus(orderId, 'delivered', token);
+      if (result != null) {
+        await fetchActiveDeliveries(token, riderId);
+        notifyListeners();
+        return true;
+      }
+      _error = 'Failed to complete delivery';
+      notifyListeners();
+      return false;
     } catch (e) {
       _error = 'Error: $e';
       notifyListeners();

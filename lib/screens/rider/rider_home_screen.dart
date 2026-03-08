@@ -63,7 +63,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
       riderProvider.fetchAvailableDeliveries(authProvider.token!);
       riderProvider.fetchActiveDeliveries(
         authProvider.token!,
-        authProvider.user!.id,
+        authProvider.user!.documentId ?? authProvider.user!.id,
       );
     }
   }

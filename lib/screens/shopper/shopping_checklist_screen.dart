@@ -15,6 +15,7 @@ class _ChecklistItem {
   bool found;
   double? actualPrice;
   final TextEditingController priceController;
+  final TextEditingController notesController;
 
   _ChecklistItem({
     required this.cartItem,
@@ -22,9 +23,13 @@ class _ChecklistItem {
   })  : found = false,
         priceController = TextEditingController(
           text: actualPrice?.toStringAsFixed(0) ?? '',
-        );
+        ),
+        notesController = TextEditingController();
 
-  void dispose() => priceController.dispose();
+  void dispose() {
+    priceController.dispose();
+    notesController.dispose();
+  }
 }
 
 class ShoppingChecklistScreen extends StatefulWidget {
@@ -49,8 +54,9 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
       actualPrice: item.product.price,
     )).toList();
 
-    // Check if order is already in shopping status
-    _hasStartedShopping = widget.order.status == OrderStatus.shopping;
+    // Check if order is already in shopping or completed status
+    _hasStartedShopping = widget.order.status == OrderStatus.shopping ||
+        widget.order.status == OrderStatus.readyForDelivery;
   }
 
   @override
@@ -137,10 +143,12 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
     // 1. Batch update all items with found status and actual prices
     final itemUpdates = _items.map((item) {
       final price = double.tryParse(item.priceController.text);
+      final notes = item.notesController.text.trim();
       return {
         'documentId': item.cartItem.id,
         'found': item.found,
         if (price != null) 'actual_price': price,
+        if (notes.isNotEmpty) 'shopper_notes': notes,
       };
     }).toList();
 
@@ -274,93 +282,131 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Checkbox
-            GestureDetector(
-              onTap: () => setState(() => item.found = !item.found),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: item.found ? AppColors.primary : Colors.transparent,
-                  border: Border.all(
-                    color: item.found ? AppColors.primary : AppColors.grey300,
-                    width: 2,
-                  ),
-                ),
-                child: item.found
-                    ? const Icon(Icons.check, color: Colors.white, size: 20)
-                    : null,
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Item details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                      decoration: item.found ? null : null,
-                      color: item.found ? AppColors.black : AppColors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${item.cartItem.quantity} ${product.unit}  ~  ${Formatters.formatCurrency(estimatedLineTotal)}',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                  ),
-                  if (item.cartItem.specialInstructions != null &&
-                      item.cartItem.specialInstructions!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        'Note: ${item.cartItem.specialInstructions}',
-                        style: TextStyle(
-                          color: AppColors.accent,
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                        ),
+            Row(
+              children: [
+                // Checkbox
+                GestureDetector(
+                  onTap: () => setState(() => item.found = !item.found),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: item.found ? AppColors.primary : Colors.transparent,
+                      border: Border.all(
+                        color: item.found ? AppColors.primary : AppColors.grey300,
+                        width: 2,
                       ),
                     ),
-                ],
-              ),
-            ),
-            // Actual price input (shown when found)
-            if (item.found)
-              SizedBox(
-                width: 90,
-                child: TextField(
-                  controller: item.priceController,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                  decoration: InputDecoration(
-                    labelText: 'Price',
-                    labelStyle: const TextStyle(fontSize: 11),
-                    prefixText: 'UGX ',
-                    prefixStyle: const TextStyle(fontSize: 10),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 8,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    child: item.found
+                        ? const Icon(Icons.check, color: Colors.white, size: 20)
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Item details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          decoration: item.found ? null : null,
+                          color: item.found ? AppColors.black : AppColors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${item.cartItem.quantity} ${product.unit}  ~  ${Formatters.formatCurrency(estimatedLineTotal)}',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      ),
+                      if (item.cartItem.specialInstructions != null &&
+                          item.cartItem.specialInstructions!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'Note: ${item.cartItem.specialInstructions}',
+                            style: TextStyle(
+                              color: AppColors.accent,
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // Actual price input (shown when found)
+                if (item.found)
+                  SizedBox(
+                    width: 90,
+                    child: TextField(
+                      controller: item.priceController,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      decoration: InputDecoration(
+                        labelText: 'Price',
+                        labelStyle: const TextStyle(fontSize: 11),
+                        prefixText: 'UGX ',
+                        prefixStyle: const TextStyle(fontSize: 10),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 8,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onChanged: (val) {
+                        setState(() {
+                          item.actualPrice = double.tryParse(val);
+                        });
+                      },
                     ),
                   ),
-                  onChanged: (val) {
-                    setState(() {
-                      item.actualPrice = double.tryParse(val);
-                    });
-                  },
-                ),
+              ],
+            ),
+            // Shopper notes field
+            Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: TextField(
+            controller: item.notesController,
+            maxLines: 1,
+            style: const TextStyle(fontSize: 13),
+            decoration: InputDecoration(
+              hintText: item.found
+                  ? 'Add note (e.g. different brand)'
+                  : 'Why not found? (e.g. out of stock)',
+              hintStyle: TextStyle(fontSize: 12, color: Colors.grey[400]),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
               ),
+              prefixIcon: Icon(
+                Icons.note_alt_outlined,
+                size: 18,
+                color: Colors.grey[400],
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: AppColors.grey200),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: AppColors.grey200),
+              ),
+            ),
+          ),
+        ),
           ],
         ),
       ),
@@ -381,7 +427,26 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
         ],
       ),
       child: SafeArea(
-        child: _hasStartedShopping
+        child: widget.order.status == OrderStatus.readyForDelivery
+            ? SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: null,
+                  icon: const Icon(Icons.check_circle),
+                  label: const Text('Shopping Complete — Awaiting Pickup'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    disabledBackgroundColor: Colors.green.withValues(alpha: 0.3),
+                    disabledForegroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              )
+            : _hasStartedShopping
             ? SizedBox(
                 width: double.infinity,
                 height: 50,

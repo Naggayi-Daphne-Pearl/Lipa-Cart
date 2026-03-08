@@ -498,12 +498,18 @@ class OrderService extends ChangeNotifier {
     required double deliveryFee,
     required double total,
     String? specialInstructions,
+    String? paymentMethod,
   }) async {
     try {
       final orderNumber =
           'LC${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
 
-      print('DEBUG: Creating order with number: $orderNumber');
+      // TODO: Once payment integration is set up, use this logic instead:
+      // final status = paymentMethod == 'cashOnDelivery' ? 'payment_confirmed' : 'pending';
+      // For now, all orders default to payment_confirmed so shoppers can see them
+      final status = 'payment_confirmed';
+
+      print('DEBUG: Creating order with number: $orderNumber, payment: $paymentMethod, status: $status');
       print('DEBUG: Customer ID: $customerId, Address ID: $addressId');
 
       final response = await http.post(
@@ -521,7 +527,8 @@ class OrderService extends ChangeNotifier {
             'service_fee': serviceFee,
             'delivery_fee': deliveryFee,
             'total': total,
-            'status': 'pending',
+            'status': status,
+            'payment_method': paymentMethod,
             'special_instructions': specialInstructions,
           },
         }),
@@ -701,6 +708,7 @@ class OrderService extends ChangeNotifier {
     required double deliveryFee,
     required double total,
     String? specialInstructions,
+    String? paymentMethod,
   }) async {
     final orderCreated = await createOrder(
       token: token,
@@ -711,6 +719,7 @@ class OrderService extends ChangeNotifier {
       deliveryFee: deliveryFee,
       total: total,
       specialInstructions: specialInstructions,
+      paymentMethod: paymentMethod,
     );
 
     if (!orderCreated || _currentOrder == null) return null;

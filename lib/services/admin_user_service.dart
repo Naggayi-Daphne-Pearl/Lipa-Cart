@@ -141,6 +141,66 @@ class AdminUserService {
     }
   }
 
+  /// Confirm payment for a pending order (admin only)
+  /// Transitions order from 'pending' to 'payment_confirmed'
+  static Future<bool> confirmOrderPayment(
+    String orderDocumentId,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .patch(
+            Uri.parse('$_apiUrl/orders/$orderDocumentId/confirm-payment'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) return true;
+
+      if (response.statusCode == 401) {
+        throw Exception('Unauthorized - Admin access required');
+      }
+      if (response.statusCode == 403) {
+        throw Exception('Forbidden - Admin access required');
+      }
+
+      final body = jsonDecode(response.body);
+      throw Exception(body['error']?['message'] ?? 'Failed to confirm payment');
+    } catch (e) {
+      throw Exception('Error confirming payment: $e');
+    }
+  }
+
+  /// Get pending orders awaiting payment confirmation (admin only)
+  static Future<List<Map<String, dynamic>>> getPendingOrders(
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse(
+              '$_apiUrl/orders?filters[status][\$eq]=pending&sort=createdAt:desc',
+            ),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return List<Map<String, dynamic>>.from(data['data'] ?? []);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
   /// Create staff account (shopper or rider) - admin only
   /// Requires phone, password, name, and userType
   static Future<bool> createStaff({

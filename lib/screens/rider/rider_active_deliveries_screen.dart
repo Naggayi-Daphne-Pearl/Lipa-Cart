@@ -48,9 +48,9 @@ class _RiderActiveDeliveriesScreenState
 
     final riderProvider = context.read<RiderProvider>();
     final token = authProvider.token;
-    final userId = authProvider.user?.id;
-    if (token != null && userId != null) {
-      riderProvider.fetchActiveDeliveries(token, userId);
+    final userDocId = authProvider.user?.documentId ?? authProvider.user?.id;
+    if (token != null && userDocId != null) {
+      riderProvider.fetchActiveDeliveries(token, userDocId);
     }
   }
 
@@ -58,9 +58,9 @@ class _RiderActiveDeliveriesScreenState
     final auth = context.read<AuthProvider>();
     final rider = context.read<RiderProvider>();
     final token = auth.token;
-    final userId = auth.user?.id;
-    if (token != null && userId != null) {
-      await rider.fetchActiveDeliveries(token, userId);
+    final userDocId = auth.user?.documentId ?? auth.user?.id;
+    if (token != null && userDocId != null) {
+      await rider.fetchActiveDeliveries(token, userDocId);
     }
   }
 
@@ -281,8 +281,8 @@ class _RiderActiveDeliveriesScreenState
                       final rider = context.read<RiderProvider>();
                       final success = await rider.completeDelivery(
                         auth.token!,
-                        order.id,
-                        auth.user!.id,
+                        order.documentId ?? order.id,
+                        auth.user!.documentId ?? auth.user!.id,
                       );
                       if (success && mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(

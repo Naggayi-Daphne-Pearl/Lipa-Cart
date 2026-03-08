@@ -28,11 +28,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _statsLoading = true;
   bool _statsError = false;
 
+  List<Map<String, dynamic>> _pendingOrders = [];
+  bool _pendingLoading = false;
+
   @override
   void initState() {
     super.initState();
     _validateRole();
     _loadStats();
+    _loadPendingOrders();
   }
 
   void _validateRole() {
@@ -80,6 +84,53 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _statsLoading = false;
           _statsError = true;
         });
+      }
+    }
+  }
+
+  Future<void> _loadPendingOrders() async {
+    setState(() => _pendingLoading = true);
+
+    try {
+      final token = context.read<AuthProvider>().token;
+      if (token == null) return;
+
+      final orders = await AdminUserService.getPendingOrders(token);
+      if (mounted) {
+        setState(() {
+          _pendingOrders = orders;
+          _pendingLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _pendingLoading = false);
+    }
+  }
+
+  Future<void> _confirmPayment(String orderDocumentId) async {
+    try {
+      final token = context.read<AuthProvider>().token;
+      if (token == null) return;
+
+      await AdminUserService.confirmOrderPayment(orderDocumentId, token);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Payment confirmed! Order is now available for shoppers.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        _loadPendingOrders();
+        _loadStats();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     }
   }
@@ -326,7 +377,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: RefreshIndicator(
-        onRefresh: _loadStats,
+        onRefresh: () async {
+          await Future.wait([_loadStats(), _loadPendingOrders()]);
+        },
         color: AppColors.primary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -343,6 +396,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               const SizedBox(height: 16),
               _buildStatsGrid(isWide: isWide, isMedium: isMedium),
               const SizedBox(height: 32),
+
+              // ─── Pending Orders (awaiting payment confirmation) ──
+              if (_pendingOrders.isNotEmpty || _pendingLoading)
+                ...[
+                  _buildSectionHeader('Pending Payment Confirmation', Iconsax.timer_1),
+                  const SizedBox(height: 16),
+                  _buildPendingOrders(),
+                  const SizedBox(height: 32),
+                ],
 
               // ─── Quick Actions ───────────────────────────
               _buildSectionHeader('Quick Actions', Iconsax.flash_1),
@@ -482,6 +544,114 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           onTap: () => context.go(stat.route),
         );
       },
+    );
+  }
+
+  Widget _buildPendingOrders() {
+    if (_pendingLoading) {
+      return const Center(child: AppLoadingIndicator.small());
+    }
+
+    if (_pendingOrders.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      children: _pendingOrders.map((order) {
+        final attrs = order['attributes'] ?? order;
+        final orderNumber = attrs['order_number'] ?? 'N/A';
+        final total = (attrs['total'] ?? 0).toDouble();
+        final paymentMethod = attrs['payment_method'] ?? 'unknown';
+        final createdAt = attrs['createdAt'] ?? '';
+        final documentId = order['documentId'] ?? attrs['documentId'] ?? '';
+        final customerData = attrs['customer'];
+        final customerName = customerData is Map
+            ? (customerData['name'] ?? customerData['phone'] ?? 'Unknown')
+            : 'Unknown';
+
+        String timeAgo = '';
+        if (createdAt.isNotEmpty) {
+          try {
+            final dt = DateTime.parse(createdAt);
+            final diff = DateTime.now().difference(dt);
+            if (diff.inMinutes < 60) {
+              timeAgo = '${diff.inMinutes}m ago';
+            } else if (diff.inHours < 24) {
+              timeAgo = '${diff.inHours}h ago';
+            } else {
+              timeAgo = '${diff.inDays}d ago';
+            }
+          } catch (_) {}
+        }
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.grey200),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Iconsax.timer_1, color: Color(0xFFEA7702), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '#$orderNumber',
+                          style: AppTextStyles.labelSmall.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          timeAgo,
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$customerName • ${paymentMethod == 'mobileMoney' ? 'Mobile Money' : paymentMethod == 'card' ? 'Card' : paymentMethod} • UGX ${NumberFormat('#,###').format(total.toInt())}',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => _confirmPayment(documentId),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text('Confirm', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 

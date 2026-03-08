@@ -291,6 +291,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               serviceFee: cartProvider.serviceFee,
               deliveryFee: cartProvider.deliveryFee,
               total: cartProvider.total,
+              paymentMethod: _selectedPayment.name,
             );
 
             setState(() => _isLoading = false);
@@ -393,6 +394,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           serviceFee: cartProvider.serviceFee,
           deliveryFee: cartProvider.deliveryFee,
           total: cartProvider.total,
+          paymentMethod: _selectedPayment.name,
         );
 
         setState(() => _isLoading = false);

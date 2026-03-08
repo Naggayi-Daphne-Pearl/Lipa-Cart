@@ -137,7 +137,7 @@ class ShopperProvider extends ChangeNotifier {
 
       if (success) {
         // Remove from available, add to active
-        _availableTasks.removeWhere((o) => o.id == orderId);
+        _availableTasks.removeWhere((o) => o.id == orderId || o.documentId == orderId);
 
         // Refresh active tasks
         await fetchActiveTasks(token, userDocumentId);

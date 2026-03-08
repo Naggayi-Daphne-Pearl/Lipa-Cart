@@ -65,7 +65,7 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
       case OrderStatus.shopping:
         return Colors.blue;
       case OrderStatus.readyForDelivery:
-        return AppColors.primary;
+        return Colors.green;
       case OrderStatus.confirmed:
         return AppColors.accent;
       default:
@@ -80,7 +80,7 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
       case OrderStatus.shopping:
         return 'Shopping';
       case OrderStatus.readyForDelivery:
-        return 'Ready';
+        return 'Ready for Pickup';
       default:
         return status.displayName;
     }
@@ -231,31 +231,46 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
               // Action button
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: Icon(
-                    order.status == OrderStatus.shopping
-                        ? Icons.checklist
-                        : Icons.shopping_cart,
-                  ),
-                  label: Text(
-                    order.status == OrderStatus.shopping
-                        ? 'Continue Shopping'
-                        : 'Start Shopping',
-                  ),
-                  onPressed: () => context.go(
-                    '/shopper/shopping-checklist',
-                    extra: order,
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: order.status == OrderStatus.shopping
-                        ? Colors.blue
-                        : AppColors.accent,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
+                child: order.status == OrderStatus.readyForDelivery
+                    ? ElevatedButton.icon(
+                        icon: const Icon(Icons.check_circle_outline),
+                        label: const Text('Awaiting Rider Pickup'),
+                        onPressed: null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          disabledBackgroundColor: Colors.green.withValues(alpha: 0.3),
+                          disabledForegroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      )
+                    : ElevatedButton.icon(
+                        icon: Icon(
+                          order.status == OrderStatus.shopping
+                              ? Icons.checklist
+                              : Icons.shopping_cart,
+                        ),
+                        label: Text(
+                          order.status == OrderStatus.shopping
+                              ? 'Continue Shopping'
+                              : 'Start Shopping',
+                        ),
+                        onPressed: () => context.go(
+                          '/shopper/shopping-checklist',
+                          extra: order,
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: order.status == OrderStatus.shopping
+                              ? Colors.blue
+                              : AppColors.accent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
               ),
             ],
           ),

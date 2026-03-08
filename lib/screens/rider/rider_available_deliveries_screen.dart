@@ -165,7 +165,7 @@ class _RiderAvailableDeliveriesScreenState
                   context,
                   delivery,
                   authProvider.token!,
-                  authProvider.user!.id,
+                  authProvider.user!.documentId ?? authProvider.user!.id,
                   riderProvider,
                 );
               },
@@ -306,7 +306,7 @@ class _RiderAvailableDeliveriesScreenState
                           final success =
                               await riderProvider.acceptDelivery(
                             token,
-                            delivery.id,
+                            delivery.documentId ?? delivery.id,
                             riderId,
                           );
                           if (success && mounted) {

@@ -6,6 +6,8 @@ import '../models/product.dart';
 import '../models/recipe.dart';
 import '../models/shopping_list.dart';
 import '../models/order.dart';
+import '../models/cart_item.dart';
+import '../models/user.dart' show Address;
 
 class StrapiService {
   static String get _apiUrl => AppConstants.apiUrl;
@@ -264,25 +266,178 @@ class StrapiService {
     }
   }
 
+  /// Parse a Strapi v5 order response into an Order model
+  /// Handles both flat (v5) and wrapped (v4 attributes) formats
+  static Order _parseOrderFromStrapi(Map<String, dynamic> data) {
+    final attrs = (data['attributes'] as Map<String, dynamic>?) ?? data;
+    final rawId = data['id'] ?? data['documentId'];
+    final documentId = data['documentId'] as String?;
+
+    // Parse order items
+    final orderItemsRaw = attrs['order_items'];
+    List<CartItem> items = [];
+    if (orderItemsRaw is List) {
+      items = orderItemsRaw.map<CartItem>((item) {
+        final itemAttrs = (item is Map<String, dynamic>)
+            ? ((item['attributes'] as Map<String, dynamic>?) ?? item)
+            : <String, dynamic>{};
+        final productName = itemAttrs['product_name'] as String? ?? 'Item';
+        final quantity = (itemAttrs['quantity'] as num?)?.toDouble() ?? 1;
+        final unit = itemAttrs['unit'] as String? ?? 'unit';
+        final estimatedPrice =
+            (itemAttrs['estimated_price'] as num?)?.toDouble() ?? 0;
+
+        final productData = itemAttrs['product'];
+        final productId = productData is Map
+            ? (productData['documentId'] ?? productData['id']).toString()
+            : '';
+
+        return CartItem(
+          id: (item['id'] ?? '').toString(),
+          product: Product(
+            id: productId.isEmpty ? 'unknown' : productId,
+            name: productName,
+            description: '',
+            image: '',
+            price: estimatedPrice,
+            unit: unit,
+            categoryId: '',
+            categoryName: '',
+            isAvailable: true,
+          ),
+          quantity: quantity,
+          specialInstructions: itemAttrs['special_instructions'] as String?,
+        );
+      }).toList();
+    } else if (orderItemsRaw is Map && orderItemsRaw['data'] is List) {
+      // Strapi v4 wrapped format
+      items = (orderItemsRaw['data'] as List).map<CartItem>((item) {
+        final itemAttrs = (item['attributes'] as Map<String, dynamic>?) ?? item;
+        final productName = itemAttrs['product_name'] as String? ?? 'Item';
+        final quantity = (itemAttrs['quantity'] as num?)?.toDouble() ?? 1;
+        final estimatedPrice =
+            (itemAttrs['estimated_price'] as num?)?.toDouble() ?? 0;
+
+        return CartItem(
+          id: (item['id'] ?? '').toString(),
+          product: Product(
+            id: 'unknown',
+            name: productName,
+            description: '',
+            image: '',
+            price: estimatedPrice,
+            unit: itemAttrs['unit'] as String? ?? 'unit',
+            categoryId: '',
+            categoryName: '',
+            isAvailable: true,
+          ),
+          quantity: quantity,
+        );
+      }).toList();
+    }
+
+    // Parse delivery address
+    final addressRaw = attrs['delivery_address'];
+    Address deliveryAddress;
+    if (addressRaw is Map<String, dynamic>) {
+      final addrData = (addressRaw.containsKey('data') &&
+              addressRaw['data'] is Map<String, dynamic>)
+          ? addressRaw['data'] as Map<String, dynamic>
+          : addressRaw;
+      final addrAttrs =
+          (addrData['attributes'] as Map<String, dynamic>?) ?? addrData;
+      final addressLine = addrAttrs['address_line'] as String? ?? '';
+      final city = addrAttrs['city'] as String? ?? '';
+      final landmark = addrAttrs['landmark'] as String?;
+      deliveryAddress = Address(
+        id: (addrData['id'] ?? addrData['documentId'] ?? '0').toString(),
+        label: addrAttrs['label'] as String? ?? 'Delivery Address',
+        fullAddress:
+            '$addressLine${city.isNotEmpty ? ', $city' : ''}${landmark != null && landmark.isNotEmpty ? ', $landmark' : ''}',
+        landmark: landmark,
+        latitude: (addrAttrs['gps_lat'] as num?)?.toDouble() ?? 0.0,
+        longitude: (addrAttrs['gps_lng'] as num?)?.toDouble() ?? 0.0,
+        isDefault: addrAttrs['is_default'] as bool? ?? false,
+      );
+    } else {
+      deliveryAddress = Address(
+        id: '0',
+        label: 'Delivery Address',
+        fullAddress: 'No address provided',
+        latitude: 0.0,
+        longitude: 0.0,
+      );
+    }
+
+    // Map Strapi status string to OrderStatus enum
+    final statusStr = attrs['status'] as String? ?? 'pending';
+    const statusMap = {
+      'pending': OrderStatus.pending,
+      'payment_processing': OrderStatus.pending,
+      'payment_confirmed': OrderStatus.confirmed,
+      'shopper_assigned': OrderStatus.confirmed,
+      'shopping': OrderStatus.shopping,
+      'ready_for_pickup': OrderStatus.readyForDelivery,
+      'rider_assigned': OrderStatus.readyForDelivery,
+      'in_transit': OrderStatus.inTransit,
+      'delivered': OrderStatus.delivered,
+      'cancelled': OrderStatus.cancelled,
+      'refunded': OrderStatus.cancelled,
+    };
+    final status = statusMap[statusStr] ?? OrderStatus.pending;
+
+    return Order(
+      id: rawId?.toString() ?? '',
+      documentId: documentId,
+      orderNumber: (attrs['order_number'] ?? '').toString(),
+      items: items,
+      deliveryAddress: deliveryAddress,
+      subtotal: (attrs['subtotal'] as num?)?.toDouble() ?? 0,
+      serviceFee: (attrs['service_fee'] as num?)?.toDouble() ?? 0,
+      deliveryFee: (attrs['delivery_fee'] as num?)?.toDouble() ?? 0,
+      total: (attrs['total'] as num?)?.toDouble() ?? 0,
+      status: status,
+      createdAt:
+          DateTime.tryParse(attrs['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+      estimatedDelivery: DateTime.tryParse(
+        attrs['estimated_delivery'] as String? ?? '',
+      ),
+      deliveredAt: DateTime.tryParse(
+        attrs['delivered_at'] as String? ?? '',
+      ),
+      cancellationReason: attrs['cancellation_reason'] as String?,
+      paymentMethod: PaymentMethod.values.firstWhere(
+        (p) => p.name == (attrs['payment_method'] as String? ?? ''),
+        orElse: () => PaymentMethod.mobileMoney,
+      ),
+      isPaid: attrs['is_paid'] as bool? ?? false,
+    );
+  }
+
   /// Get available orders (status = payment_confirmed)
   static Future<List<Order>> getAvailableOrdersForShopper(String token) async {
     try {
       final response = await http
           .get(
             Uri.parse(
-              '$_apiUrl/orders?filters[status][\$eq]=payment_confirmed&populate[order_items][populate][0]=product',
+              '$_apiUrl/orders?filters[status][\$eq]=payment_confirmed',
             ),
             headers: {'Authorization': 'Bearer $token'},
           )
           .timeout(AppConstants.apiTimeout);
+
+      print('DEBUG: getAvailableOrdersForShopper - status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final list =
             (data['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
             [];
-        return list.map((o) => Order.fromJson(o['attributes'])).toList();
+        print('DEBUG: getAvailableOrdersForShopper - found ${list.length} orders');
+        return list.map((o) => _parseOrderFromStrapi(o)).toList();
       }
+      print('DEBUG: getAvailableOrdersForShopper - response: ${response.body}');
       return [];
     } catch (e) {
       print('ERROR: getAvailableOrdersForShopper - $e');
@@ -290,17 +445,16 @@ class StrapiService {
     }
   }
 
-  /// Get active orders for shopper (shopper_assigned OR shopping status)
+  /// Get active orders for shopper (shopper_assigned, shopping, or ready_for_pickup)
   static Future<List<Order>> getActiveOrdersForShopper(
     String token,
     String userDocumentId,
   ) async {
     try {
-      // Strapi v5: filter by relation's documentId
       final response = await http
           .get(
             Uri.parse(
-              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=shopper_assigned&filters[\$or][1][status][\$eq]=shopping&filters[shopper][documentId][\$eq]=$userDocumentId&populate[order_items][populate][0]=product',
+              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=shopper_assigned&filters[\$or][1][status][\$eq]=shopping&filters[\$or][2][status][\$eq]=ready_for_pickup&filters[shopper][documentId][\$eq]=$userDocumentId',
             ),
             headers: {'Authorization': 'Bearer $token'},
           )
@@ -311,7 +465,7 @@ class StrapiService {
         final list =
             (data['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
             [];
-        return list.map((o) => Order.fromJson(o['attributes'])).toList();
+        return list.map((o) => _parseOrderFromStrapi(o)).toList();
       }
       return [];
     } catch (e) {
@@ -326,11 +480,10 @@ class StrapiService {
     String userDocumentId,
   ) async {
     try {
-      // Strapi v5: filter by relation's documentId
       final response = await http
           .get(
             Uri.parse(
-              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=delivered&filters[\$or][1][status][\$eq]=cancelled&filters[shopper][documentId][\$eq]=$userDocumentId&populate[order_items][populate][0]=product',
+              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=delivered&filters[\$or][1][status][\$eq]=cancelled&filters[shopper][documentId][\$eq]=$userDocumentId',
             ),
             headers: {'Authorization': 'Bearer $token'},
           )
@@ -341,7 +494,7 @@ class StrapiService {
         final list =
             (data['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
             [];
-        return list.map((o) => Order.fromJson(o['attributes'])).toList();
+        return list.map((o) => _parseOrderFromStrapi(o)).toList();
       }
       return [];
     } catch (e) {
@@ -593,6 +746,151 @@ class StrapiService {
     } catch (e) {
       print('ERROR: submitShopperKycFull - $e');
       return false;
+    }
+  }
+
+  // ─── Rider Order Methods ───────────────────────────────────
+
+  /// Get available deliveries (orders ready for pickup, no rider assigned)
+  static Future<List<Order>> getAvailableDeliveries(String token) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse(
+              '$_apiUrl/orders?filters[status][\$eq]=ready_for_pickup',
+            ),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final list =
+            (data['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
+            [];
+        return list.map((o) => _parseOrderFromStrapi(o)).toList();
+      }
+      print('ERROR: getAvailableDeliveries - ${response.statusCode}: ${response.body}');
+      return [];
+    } catch (e) {
+      print('ERROR: getAvailableDeliveries - $e');
+      return [];
+    }
+  }
+
+  /// Get active deliveries for rider (rider_assigned or in_transit)
+  static Future<List<Order>> getActiveDeliveries(
+    String token,
+    String riderDocumentId,
+  ) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse(
+              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=rider_assigned&filters[\$or][1][status][\$eq]=in_transit&filters[rider][documentId][\$eq]=$riderDocumentId',
+            ),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final list =
+            (data['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
+            [];
+        return list.map((o) => _parseOrderFromStrapi(o)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('ERROR: getActiveDeliveries - $e');
+      return [];
+    }
+  }
+
+  /// Get completed deliveries for rider
+  static Future<List<Order>> getCompletedDeliveries(
+    String token,
+    String riderDocumentId,
+  ) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse(
+              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=delivered&filters[\$or][1][status][\$eq]=cancelled&filters[rider][documentId][\$eq]=$riderDocumentId',
+            ),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final list =
+            (data['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
+            [];
+        return list.map((o) => _parseOrderFromStrapi(o)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('ERROR: getCompletedDeliveries - $e');
+      return [];
+    }
+  }
+
+  /// Rider claims a delivery
+  static Future<Map<String, dynamic>?> claimDelivery(
+    String orderDocumentId,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$_apiUrl/orders/$orderDocumentId/claim-delivery'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['data'] as Map<String, dynamic>?;
+      }
+      print('ERROR: claimDelivery - ${response.statusCode}: ${response.body}');
+      return null;
+    } catch (e) {
+      print('ERROR: claimDelivery - $e');
+      return null;
+    }
+  }
+
+  /// Rider updates delivery status (in_transit, delivered)
+  static Future<Map<String, dynamic>?> updateRiderOrderStatus(
+    String orderDocumentId,
+    String status,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .patch(
+            Uri.parse('$_apiUrl/orders/$orderDocumentId/rider-status'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: json.encode({'status': status}),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['data'] as Map<String, dynamic>?;
+      }
+      print('ERROR: updateRiderOrderStatus - ${response.statusCode}: ${response.body}');
+      return null;
+    } catch (e) {
+      print('ERROR: updateRiderOrderStatus - $e');
+      return null;
     }
   }
 

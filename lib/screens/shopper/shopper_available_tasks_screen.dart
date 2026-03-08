@@ -281,7 +281,7 @@ class _ShopperAvailableTasksScreenState
                             Navigator.pop(dialogContext);
                             final success = await shopperProvider.acceptTask(
                               token,
-                              task.id,
+                              task.documentId ?? task.id,
                               shopperId,
                             );
                             if (success && mounted) {
