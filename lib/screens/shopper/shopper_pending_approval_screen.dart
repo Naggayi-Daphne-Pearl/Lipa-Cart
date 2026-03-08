@@ -28,10 +28,14 @@ class _ShopperPendingApprovalScreenState
 
       if (mounted) {
         final kycStatus = authProvider.user?.kycStatus;
+        debugPrint('Check Status - kycStatus: $kycStatus, shopperId: ${authProvider.user?.shopperId}');
         if (kycStatus == 'approved') {
           context.go('/shopper/home');
         } else if (kycStatus == 'rejected') {
           context.go('/shopper/kyc?rejected=true');
+        } else if (kycStatus == null || kycStatus == 'not_submitted') {
+          // KYC was never completed — send them back to fill it out
+          context.go('/shopper/kyc');
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -144,6 +148,14 @@ class _ShopperPendingApprovalScreenState
                 icon: Icons.refresh_rounded,
                 isLoading: _isChecking,
                 onPressed: _isChecking ? null : _checkStatus,
+              ),
+              const SizedBox(height: 12),
+
+              // Update Documents button
+              ShopperButton.secondary(
+                text: 'Update Documents',
+                icon: Icons.edit_document,
+                onPressed: () => context.go('/shopper/kyc'),
               ),
               const SizedBox(height: 12),
 

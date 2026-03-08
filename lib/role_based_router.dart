@@ -63,13 +63,21 @@ import 'screens/shopper/shopping_checklist_screen.dart';
 import 'screens/shopper/shopper_profile_screen.dart';
 
 /// Helper to get home route based on user role
-String _homeForRole(UserRole? role) {
+String _homeForRole(UserRole? role, {String? kycStatus}) {
   switch (role) {
     case UserRole.admin:
       return '/admin/dashboard';
     case UserRole.rider:
       return '/rider/home';
     case UserRole.shopper:
+      // Route based on KYC status
+      if (kycStatus == null || kycStatus == 'not_submitted') {
+        return '/shopper/kyc';
+      } else if (kycStatus == 'pending_review') {
+        return '/shopper/pending-approval';
+      } else if (kycStatus == 'rejected') {
+        return '/shopper/kyc?rejected=true';
+      }
       return '/shopper/home';
     case UserRole.customer:
     default:
@@ -130,7 +138,7 @@ class RoleBasedRouter {
 
         // Already authenticated, trying to access auth routes → go to role home
         if (isAuthenticated && isAuthRoute) {
-          return _homeForRole(authProvider.user?.role);
+          return _homeForRole(authProvider.user?.role, kycStatus: authProvider.user?.kycStatus);
         }
 
         // === ROLE-BASED ACCESS CONTROL ===
@@ -139,28 +147,53 @@ class RoleBasedRouter {
         // Shopper routes - only accessible by shoppers
         if (state.matchedLocation.startsWith('/shopper/')) {
           if (isAuthenticated && userRole != UserRole.shopper) {
-            return _homeForRole(userRole);
+            return _homeForRole(userRole, kycStatus: authProvider.user?.kycStatus);
+          }
+
+          // KYC enforcement for shoppers
+          if (isAuthenticated && userRole == UserRole.shopper) {
+            final kycStatus = authProvider.user?.kycStatus;
+            final isKycRoute =
+                state.matchedLocation == '/shopper/kyc' ||
+                state.matchedLocation == '/shopper/pending-approval';
+
+            if (!isKycRoute) {
+              // Block access to dashboard/other routes if KYC not approved
+              if (kycStatus == null || kycStatus == 'not_submitted') {
+                return '/shopper/kyc';
+              } else if (kycStatus == 'pending_review') {
+                return '/shopper/pending-approval';
+              } else if (kycStatus == 'rejected') {
+                return '/shopper/kyc?rejected=true';
+              }
+              // kycStatus == 'approved' → allow access
+            } else {
+              // On KYC/pending pages but already approved → go to home
+              if (kycStatus == 'approved') {
+                return '/shopper/home';
+              }
+            }
           }
         }
 
         // Rider routes - only accessible by riders
         if (state.matchedLocation.startsWith('/rider/')) {
           if (isAuthenticated && userRole != UserRole.rider) {
-            return _homeForRole(userRole);
+            return _homeForRole(userRole, kycStatus: authProvider.user?.kycStatus);
           }
         }
 
         // Admin routes - only accessible by admins
         if (state.matchedLocation.startsWith('/admin/')) {
           if (isAuthenticated && userRole != UserRole.admin) {
-            return _homeForRole(userRole);
+            return _homeForRole(userRole, kycStatus: authProvider.user?.kycStatus);
           }
         }
 
         // Customer-specific protected routes - only for customers
         if (isCustomerProtectedRoute) {
           if (isAuthenticated && userRole != UserRole.customer) {
-            return _homeForRole(userRole);
+            return _homeForRole(userRole, kycStatus: authProvider.user?.kycStatus);
           }
         }
 
