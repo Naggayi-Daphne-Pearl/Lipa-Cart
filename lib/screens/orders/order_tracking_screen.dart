@@ -300,6 +300,56 @@ class OrderTrackingScreen extends StatelessWidget {
                                               ),
                                             ),
                                           ),
+                                        // Shopper feedback (found status + notes)
+                                        if (item.found != null) ...[
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 4),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  item.found! ? Icons.check_circle : Icons.cancel,
+                                                  size: 14,
+                                                  color: item.found! ? Colors.green : Colors.red,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  item.found! ? 'Found' : 'Not found',
+                                                  style: AppTextStyles.caption.copyWith(
+                                                    color: item.found! ? Colors.green : Colors.red,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                                if (item.actualPrice != null && item.actualPrice != item.product.price) ...[
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    'Actual: ${Formatters.formatCurrency(item.actualPrice!)}',
+                                                    style: AppTextStyles.caption.copyWith(
+                                                      color: AppColors.textSecondary,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                        if (item.shopperNotes != null && item.shopperNotes!.isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 4),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.blue.withValues(alpha: 0.05),
+                                                borderRadius: BorderRadius.circular(AppSizes.radiusXs),
+                                              ),
+                                              child: Text(
+                                                'Shopper: ${item.shopperNotes}',
+                                                style: AppTextStyles.caption.copyWith(
+                                                  color: Colors.blue[700],
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
                                       ],
                                     ),
                                   ),

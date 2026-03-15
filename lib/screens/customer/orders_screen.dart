@@ -158,33 +158,48 @@ class OrderCard extends StatelessWidget {
   Widget _buildStatusBadge(String status) {
     Color bgColor;
     Color textColor;
+    String displayText;
 
     switch (status) {
       case 'pending':
-      case 'payment_confirmed':
         bgColor = Colors.yellow[100]!;
         textColor = Colors.orange;
+        displayText = 'Pending';
+        break;
+      case 'confirmed':
+        bgColor = Colors.yellow[100]!;
+        textColor = Colors.orange;
+        displayText = 'Confirmed';
         break;
       case 'shopping':
-      case 'ready_for_pickup':
         bgColor = Colors.blue[100]!;
         textColor = Colors.blue;
+        displayText = 'Shopping';
         break;
-      case 'in_transit':
+      case 'readyForDelivery':
+        bgColor = Colors.blue[100]!;
+        textColor = Colors.blue;
+        displayText = 'Ready for Pickup';
+        break;
+      case 'inTransit':
         bgColor = Colors.purple[100]!;
         textColor = Colors.purple;
+        displayText = 'In Transit';
         break;
       case 'delivered':
         bgColor = Colors.green[100]!;
         textColor = Colors.green;
+        displayText = 'Delivered';
         break;
       case 'cancelled':
         bgColor = Colors.red[100]!;
         textColor = Colors.red;
+        displayText = 'Cancelled';
         break;
       default:
         bgColor = Colors.grey[100]!;
         textColor = Colors.grey;
+        displayText = status;
     }
 
     return Container(
@@ -194,7 +209,7 @@ class OrderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        _getStatusLabel(status),
+        displayText,
         style: TextStyle(
           color: textColor,
           fontWeight: FontWeight.w500,
@@ -204,24 +219,4 @@ class OrderCard extends StatelessWidget {
     );
   }
 
-  String _getStatusLabel(String status) {
-    switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'payment_confirmed':
-        return 'Confirmed';
-      case 'shopping':
-        return 'Shopping';
-      case 'ready_for_pickup':
-        return 'Ready';
-      case 'in_transit':
-        return 'In Transit';
-      case 'delivered':
-        return 'Delivered';
-      case 'cancelled':
-        return 'Cancelled';
-      default:
-        return status;
-    }
-  }
 }

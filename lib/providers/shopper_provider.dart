@@ -120,6 +120,26 @@ class ShopperProvider extends ChangeNotifier {
     }
   }
 
+  /// Unclaim/cancel an active task
+  Future<bool> unclaimTask(String token, String orderId, String userDocId) async {
+    try {
+      final success = await StrapiService.unclaimOrder(orderId, token);
+      if (success) {
+        _activeTasks.removeWhere((o) => o.id == orderId || o.documentId == orderId);
+        await fetchAvailableTasks(token);
+        notifyListeners();
+        return true;
+      }
+      _error = 'Failed to cancel task';
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = 'Error cancelling task: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Accept an available task
   Future<bool> acceptTask(
     String token,

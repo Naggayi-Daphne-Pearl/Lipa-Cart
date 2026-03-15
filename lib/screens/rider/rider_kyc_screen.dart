@@ -62,6 +62,7 @@ class _RiderKycScreenState extends State<RiderKycScreen> {
   final _emergencyPhoneController = TextEditingController();
 
   bool _isLoading = false;
+  String? _loadingMessage;
 
   @override
   void dispose() {
@@ -154,7 +155,7 @@ class _RiderKycScreenState extends State<RiderKycScreen> {
   Future<void> _submitKyc() async {
     if (!_contactFormKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    setState(() { _isLoading = true; _loadingMessage = 'Uploading ID photo...'; });
 
     try {
       final authProvider = context.read<AuthProvider>();
@@ -171,16 +172,19 @@ class _RiderKycScreenState extends State<RiderKycScreen> {
 
       if (kIsWeb) {
         final idBytes = await _idPhotoXFile!.readAsBytes();
-        final selfieBytes = await _selfiePhotoXFile!.readAsBytes();
         idPhotoUrl = await ImgBBService.uploadImageBytes(
           idBytes,
           _idPhotoXFile!.name,
         );
+
+        if (mounted) setState(() { _loadingMessage = 'Uploading selfie...'; });
+        final selfieBytes = await _selfiePhotoXFile!.readAsBytes();
         selfiePhotoUrl = await ImgBBService.uploadImageBytes(
           selfieBytes,
           _selfiePhotoXFile!.name,
         );
         if (_licensePhotoXFile != null) {
+          if (mounted) setState(() { _loadingMessage = 'Uploading license photo...'; });
           final licenseBytes = await _licensePhotoXFile!.readAsBytes();
           licensePhotoUrl = await ImgBBService.uploadImageBytes(
             licenseBytes,
@@ -189,8 +193,10 @@ class _RiderKycScreenState extends State<RiderKycScreen> {
         }
       } else {
         idPhotoUrl = await ImgBBService.uploadImage(_idPhotoFile!);
+        if (mounted) setState(() { _loadingMessage = 'Uploading selfie...'; });
         selfiePhotoUrl = await ImgBBService.uploadImage(_selfiePhotoFile!);
         if (_licensePhotoFile != null) {
+          if (mounted) setState(() { _loadingMessage = 'Uploading license photo...'; });
           licensePhotoUrl = await ImgBBService.uploadImage(_licensePhotoFile!);
         }
       }
@@ -198,6 +204,8 @@ class _RiderKycScreenState extends State<RiderKycScreen> {
       if (idPhotoUrl == null || selfiePhotoUrl == null) {
         throw Exception('Failed to upload photos');
       }
+
+      if (mounted) setState(() { _loadingMessage = 'Submitting verification...'; });
 
       // Submit KYC
       final success = await StrapiService.submitRiderKycFull(
@@ -254,7 +262,7 @@ class _RiderKycScreenState extends State<RiderKycScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() { _isLoading = false; _loadingMessage = null; });
       }
     }
   }
@@ -305,7 +313,9 @@ class _RiderKycScreenState extends State<RiderKycScreen> {
     ];
 
     return Scaffold(
-      body: Container(
+      body: Stack(
+        children: [
+          Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -367,43 +377,46 @@ class _RiderKycScreenState extends State<RiderKycScreen> {
 
                       // Rejection banner
                       if (widget.isRejected && _currentStep == 0) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(AppSizes.md),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            border: Border.all(color: Colors.red.shade200),
-                            borderRadius:
-                                BorderRadius.circular(AppSizes.radiusSm),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Iconsax.warning_2,
-                                  color: Colors.red.shade600, size: 20),
-                              const SizedBox(width: AppSizes.sm),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Application Rejected',
-                                      style: AppTextStyles.labelLarge.copyWith(
-                                        color: Colors.red.shade700,
+                        Builder(builder: (context) {
+                          final rejectionReason = context.read<AuthProvider>().user?.kycRejectionReason;
+                          return Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(AppSizes.md),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              border: Border.all(color: Colors.red.shade200),
+                              borderRadius:
+                                  BorderRadius.circular(AppSizes.radiusSm),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Iconsax.warning_2,
+                                    color: Colors.red.shade600, size: 20),
+                                const SizedBox(width: AppSizes.sm),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Application Rejected',
+                                        style: AppTextStyles.labelLarge.copyWith(
+                                          color: Colors.red.shade700,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Please review your documents and try again.',
-                                      style: AppTextStyles.bodySmall.copyWith(
-                                        color: Colors.red.shade600,
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        rejectionReason ?? 'Please review your documents and try again.',
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          color: Colors.red.shade600,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
+                              ],
+                            ),
+                          );
+                        }),
                         const SizedBox(height: AppSizes.lg),
                       ],
 
@@ -468,6 +481,28 @@ class _RiderKycScreenState extends State<RiderKycScreen> {
             ],
           ),
         ),
+      ),
+          if (_isLoading)
+            Container(
+              color: Colors.black54,
+              child: Center(
+                child: Card(
+                  margin: const EdgeInsets.all(32),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        Text(_loadingMessage ?? 'Processing...', style: const TextStyle(fontSize: 16)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

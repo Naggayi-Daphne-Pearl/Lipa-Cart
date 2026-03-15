@@ -111,6 +111,39 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
     final shopper = context.read<ShopperProvider>();
     final orderId = widget.order.documentId ?? widget.order.id;
 
+    // Validate prices
+    for (final item in _items) {
+      if (item.found) {
+        final price = double.tryParse(item.priceController.text);
+        if (price == null || price <= 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Please enter a valid price for ${item.cartItem.product.name}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+        if (price > item.cartItem.product.price * 5) {
+          if (!mounted) return;
+          final priceConfirm = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Price Warning'),
+              content: Text(
+                '${item.cartItem.product.name} price (${Formatters.formatCurrency(price)}) is much higher than estimated (${Formatters.formatCurrency(item.cartItem.product.price)}). Continue?',
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Review')),
+                ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Continue')),
+              ],
+            ),
+          );
+          if (priceConfirm != true) return;
+        }
+      }
+    }
+
     // Confirm with the shopper
     final confirm = await showDialog<bool>(
       context: context,
@@ -230,6 +263,29 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
       color: AppColors.primarySoft,
       child: Column(
         children: [
+          // Customer info
+          if (widget.order.customer != null) ...[
+            Row(
+              children: [
+                Icon(Icons.person_outline, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 6),
+                Text(
+                  widget.order.customer!.name ?? 'Unknown',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                if (widget.order.customer!.phoneNumber.isNotEmpty) ...[
+                  const SizedBox(width: 12),
+                  Icon(Icons.phone_outlined, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    widget.order.customer!.phoneNumber,
+                    style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 10),
+          ],
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

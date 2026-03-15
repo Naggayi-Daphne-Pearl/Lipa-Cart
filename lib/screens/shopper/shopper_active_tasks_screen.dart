@@ -278,10 +278,77 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
                         ),
                       ),
               ),
+              // Cancel Task button for confirmed (assigned but not yet shopping) orders
+              if (order.status == OrderStatus.confirmed) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    icon: const Icon(Icons.cancel_outlined, size: 18),
+                    label: const Text('Cancel Task'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
+                    onPressed: () => _showCancelDialog(order),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _showCancelDialog(Order order) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Task?'),
+        content: const Text(
+          'Are you sure you want to cancel this task? It will be returned to the available tasks pool.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep Task'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Cancel Task'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    final auth = context.read<AuthProvider>();
+    final shopper = context.read<ShopperProvider>();
+    final token = auth.token;
+    final userDocId = auth.user?.documentId ?? auth.user?.id ?? '';
+
+    if (token == null) return;
+
+    final success = await shopper.unclaimTask(
+      token,
+      order.documentId ?? order.id,
+      userDocId,
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success ? 'Task cancelled successfully' : (shopper.error ?? 'Failed to cancel task'),
+          ),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    }
   }
 }

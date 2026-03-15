@@ -534,6 +534,20 @@ class StrapiService {
     }
   }
 
+  /// Shopper unclaims an order (removes assignment)
+  static Future<bool> unclaimOrder(String orderDocumentId, String token) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$_apiUrl/orders/$orderDocumentId/claim'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(AppConstants.apiTimeout);
+      return response.statusCode == 200;
+    } catch (e) {
+      print('ERROR: unclaimOrder - $e');
+      return false;
+    }
+  }
+
   /// Shopper updates order status (shopping, ready_for_pickup)
   static Future<Map<String, dynamic>?> updateShopperOrderStatus(
     String orderDocumentId,

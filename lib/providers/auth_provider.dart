@@ -186,6 +186,7 @@ class AuthProvider extends ChangeNotifier {
         shopperId: userData['shopper_id']?.toString(),
         riderId: userData['rider_id']?.toString(),
         kycStatus: userData['kyc_status'] as String?,
+        kycRejectionReason: userData['kyc_rejection_reason'] as String?,
         createdAt: DateTime.now(),
       );
 
@@ -243,6 +244,7 @@ class AuthProvider extends ChangeNotifier {
         shopperId: userData['shopper_id']?.toString(),
         riderId: userData['rider_id']?.toString(),
         kycStatus: userData['kyc_status'] as String?,
+        kycRejectionReason: userData['kyc_rejection_reason'] as String?,
         createdAt: DateTime.now(),
       );
 
@@ -309,6 +311,7 @@ class AuthProvider extends ChangeNotifier {
         shopperId: userData['shopper_id']?.toString(),
         riderId: userData['rider_id']?.toString(),
         kycStatus: userData['kyc_status'] as String?,
+        kycRejectionReason: userData['kyc_rejection_reason'] as String?,
         createdAt: DateTime.now(),
       );
 
@@ -451,6 +454,7 @@ class AuthProvider extends ChangeNotifier {
           shopperId: response['shopper_id']?.toString(),
           riderId: response['rider_id']?.toString(),
           kycStatus: response['kyc_status'] as String?,
+          kycRejectionReason: response['kyc_rejection_reason'] as String?,
           createdAt: DateTime.now(),
         );
       } else {
@@ -473,6 +477,7 @@ class AuthProvider extends ChangeNotifier {
           shopperId: response['shopper_id']?.toString() ?? _user!.shopperId,
           riderId: response['rider_id']?.toString() ?? _user!.riderId,
           kycStatus: (response['kyc_status'] as String?) ?? _user!.kycStatus,
+          kycRejectionReason: (response['kyc_rejection_reason'] as String?) ?? _user!.kycRejectionReason,
         );
       }
 

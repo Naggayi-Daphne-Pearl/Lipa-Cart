@@ -39,6 +39,7 @@ class User {
   final String? shopperId;
   final String? riderId;
   final String? kycStatus;
+  final String? kycRejectionReason;
   final List<Address> addresses;
   final DateTime createdAt;
 
@@ -55,6 +56,7 @@ class User {
     this.shopperId,
     this.riderId,
     this.kycStatus,
+    this.kycRejectionReason,
     this.addresses = const [],
     required this.createdAt,
   });
@@ -72,6 +74,7 @@ class User {
     String? shopperId,
     String? riderId,
     String? kycStatus,
+    String? kycRejectionReason,
     List<Address>? addresses,
     DateTime? createdAt,
   }) {
@@ -88,6 +91,7 @@ class User {
       shopperId: shopperId ?? this.shopperId,
       riderId: riderId ?? this.riderId,
       kycStatus: kycStatus ?? this.kycStatus,
+      kycRejectionReason: kycRejectionReason ?? this.kycRejectionReason,
       addresses: addresses ?? this.addresses,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -107,6 +111,7 @@ class User {
       'shopperId': shopperId,
       'riderId': riderId,
       'kycStatus': kycStatus,
+      'kycRejectionReason': kycRejectionReason,
       'addresses': addresses.map((a) => a.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
     };
@@ -139,6 +144,7 @@ class User {
       shopperId: (json['shopperId'] ?? json['shopper_id'])?.toString(),
       riderId: (json['riderId'] ?? json['rider_id'])?.toString(),
       kycStatus: (json['kycStatus'] ?? json['kyc_status']) as String?,
+      kycRejectionReason: (json['kycRejectionReason'] ?? json['kyc_rejection_reason']) as String?,
       addresses:
           (json['addresses'] as List<dynamic>?)
               ?.map((a) => Address.fromJson(a as Map<String, dynamic>))

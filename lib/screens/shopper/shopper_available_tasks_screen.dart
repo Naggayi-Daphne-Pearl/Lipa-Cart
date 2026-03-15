@@ -224,6 +224,14 @@ class _ShopperAvailableTasksScreenState
                 value: task.customer!.name ?? 'Unknown',
               ),
               const SizedBox(height: 8),
+              if (task.customer!.phoneNumber.isNotEmpty) ...[
+                _buildInfoRow(
+                  icon: Icons.phone_outlined,
+                  label: 'Phone',
+                  value: task.customer!.phoneNumber,
+                ),
+                const SizedBox(height: 8),
+              ],
             ],
 
             // Items count
