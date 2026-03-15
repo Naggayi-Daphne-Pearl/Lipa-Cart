@@ -8,8 +8,11 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/product.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/shopping_list_provider.dart';
+import '../../models/shopping_list.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
 
@@ -45,6 +48,80 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     if (_quantity > widget.product.minQuantity) {
       setState(() => _quantity--);
     }
+  }
+
+  void _addToList(Product product) {
+    final listProvider = context.read<ShoppingListProvider>();
+    final authToken = context.read<AuthProvider>().token;
+    final lists = listProvider.lists;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Add to Shopping List', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              if (lists.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Text('No lists yet', style: TextStyle(color: Colors.grey[500])),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          context.go('/customer/shopping-lists');
+                        },
+                        child: const Text('Create a list'),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ...lists.map((list) => ListTile(
+                  leading: Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: Color(int.parse('FF${list.color.replaceAll('#', '')}', radix: 16)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(child: Text(list.emoji ?? '🛒', style: const TextStyle(fontSize: 18))),
+                  ),
+                  title: Text(list.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text('${list.totalItems} items'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    final item = ShoppingListItem(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      name: product.name,
+                      quantity: 1,
+                      unit: product.unit,
+                      unitPrice: product.price,
+                      linkedProduct: product,
+                    );
+                    listProvider.addItemToList(list.id, item, authToken: authToken);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${product.name} added to ${list.name}'),
+                        backgroundColor: Colors.green,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                )),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _addToCart() {
@@ -435,37 +512,48 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ],
                     ),
                   ),
-                  // Add to Cart Button
-                  GestureDetector(
-                    onTap: _addToCart,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSizes.xl,
-                        vertical: AppSizes.md,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius:
-                            BorderRadius.circular(AppSizes.radiusFull),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isInCart ? Iconsax.tick_circle5 : Iconsax.bag_2,
-                            color: Colors.white,
-                            size: 20,
+                  // Add to Cart Button & Add to List
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: _addToCart,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSizes.xl,
+                            vertical: AppSizes.md,
                           ),
-                          const SizedBox(width: AppSizes.sm),
-                          Text(
-                            isInCart ? 'Update Cart' : 'Add to Cart',
-                            style: AppTextStyles.labelMedium.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius:
+                                BorderRadius.circular(AppSizes.radiusFull),
                           ),
-                        ],
+                          child: Row(
+                            children: [
+                              Icon(
+                                isInCart ? Iconsax.tick_circle5 : Iconsax.bag_2,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              const SizedBox(width: AppSizes.sm),
+                              Text(
+                                isInCart ? 'Update Cart' : 'Add to Cart',
+                                style: AppTextStyles.labelMedium.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                      TextButton.icon(
+                        onPressed: () => _addToList(widget.product),
+                        icon: const Icon(Iconsax.clipboard_text, size: 16),
+                        label: const Text('Add to List'),
+                        style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                      ),
+                    ],
                   ),
                 ],
               ),

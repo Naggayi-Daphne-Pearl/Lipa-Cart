@@ -15,6 +15,7 @@ import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/recipe_provider.dart';
+import '../../providers/shopping_list_provider.dart';
 import '../../widgets/adaptive_product_section.dart';
 import '../../widgets/adaptive_category_section.dart';
 import '../../widgets/app_loading_indicator.dart';
@@ -833,6 +834,130 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
+
+                // Your Shopping Lists
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Your Lists', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                      GestureDetector(
+                        onTap: () => context.go('/customer/shopping-lists'),
+                        child: Text('See All', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 14)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Consumer<ShoppingListProvider>(
+                  builder: (context, listProvider, _) {
+                    final lists = listProvider.lists;
+                    if (lists.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: GestureDetector(
+                          onTap: () => context.go('/customer/shopping-lists'),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44, height: 44,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Iconsax.clipboard_text, color: AppColors.primary, size: 22),
+                                ),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Start your grocery list', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                                      Text('Plan your shopping and order in one tap', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    return SizedBox(
+                      height: 100,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: lists.length,
+                        itemBuilder: (context, index) {
+                          final list = lists[index];
+                          final color = Color(int.parse('FF${list.color.replaceAll('#', '')}', radix: 16));
+                          return GestureDetector(
+                            onTap: () => context.push('/customer/shopping-list-detail', extra: list.id),
+                            child: Container(
+                              width: 180,
+                              margin: const EdgeInsets.only(right: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: color.withValues(alpha: 0.2)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(list.emoji ?? '🛒', style: const TextStyle(fontSize: 22)),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          list.name,
+                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const Spacer(),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        '${list.totalItems} items',
+                                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: color,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Text('Shop', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
 
                 // Fresh Picks Today section
                 SizedBox(

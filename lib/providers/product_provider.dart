@@ -78,9 +78,6 @@ class ProductProvider extends ChangeNotifier {
       ]);
       _products = results[0] as List<Product>;
       _categories = results[1] as List<Category>;
-      debugPrint(
-        '✓ Products loaded successfully: ${_products.length} products',
-      );
     } catch (e) {
       // CRITICAL: Using sample data means order creation will fail!
       // Products from sample data have hardcoded IDs ('13', '15', etc.)

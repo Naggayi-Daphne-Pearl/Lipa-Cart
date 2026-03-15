@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order.dart';
+import '../../models/shopping_list.dart';
 import '../../models/user.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/shopping_list_provider.dart';
 import '../../widgets/custom_button.dart';
 
 class OrderSuccessScreen extends StatefulWidget {
@@ -185,6 +189,52 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                         order.paymentMethod.displayName,
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Save as shopping list
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      final listProvider = context.read<ShoppingListProvider>();
+                      final authToken = context.read<AuthProvider>().token;
+                      // Create a new list from order items
+                      listProvider.createList(
+                        name: 'Order #${order.orderNumber}',
+                        emoji: '🛒',
+                        color: '#15874B',
+                        authToken: authToken,
+                      );
+                      // Get the newly created list
+                      final newList = listProvider.lists.last;
+                      for (final item in order.items) {
+                        final listItem = ShoppingListItem(
+                          id: '${DateTime.now().millisecondsSinceEpoch}_${item.product.name}',
+                          name: item.product.name,
+                          quantity: item.quantity.toInt(),
+                          unit: item.product.unit,
+                          unitPrice: item.product.price,
+                          linkedProduct: item.product,
+                        );
+                        listProvider.addItemToList(newList.id, listItem, authToken: authToken);
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Saved as shopping list for easy reordering!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Iconsax.clipboard_text, size: 18),
+                    label: const Text('Save as Shopping List'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: BorderSide(color: AppColors.primary),
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
                 ),
 
