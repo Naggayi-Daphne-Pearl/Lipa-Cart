@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/rider_provider.dart';
 import '../../models/order.dart';
@@ -322,7 +323,111 @@ class _RiderActiveDeliveriesScreenState
                   ),
                 ),
               ),
+            // Call buttons row
+            if ((order.customer != null && order.customer!.phoneNumber.isNotEmpty) ||
+                (order.shopperName != null && order.shopperPhone != null)) ...[
+              const SizedBox(height: AppSizes.sm),
+              Row(
+                children: [
+                  // Call Shopper
+                  if (order.shopperName != null && order.shopperPhone != null && order.shopperPhone!.isNotEmpty)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showCallDialog(
+                          'Shopper',
+                          order.shopperName!,
+                          order.shopperPhone!,
+                        ),
+                        icon: const Icon(Iconsax.shopping_bag, size: 16),
+                        label: const Text('Shopper', overflow: TextOverflow.ellipsis),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.info,
+                          side: BorderSide(color: AppColors.info),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (order.shopperName != null && order.customer != null)
+                    const SizedBox(width: AppSizes.xs),
+                  // Call Customer
+                  if (order.customer != null && order.customer!.phoneNumber.isNotEmpty)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showCallDialog(
+                          'Customer',
+                          order.customer!.name ?? 'Customer',
+                          order.customer!.phoneNumber,
+                        ),
+                        icon: const Icon(Iconsax.call, size: 16),
+                        label: const Text('Customer', overflow: TextOverflow.ellipsis),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.accent,
+                          side: BorderSide(color: AppColors.accent),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showCallDialog(String role, String name, String phone) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.person, color: AppColors.accent, size: 24),
+              ),
+              const SizedBox(height: 12),
+              Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(role, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    launchUrl(Uri(scheme: 'tel', path: phone));
+                  },
+                  icon: const Icon(Icons.call, size: 18),
+                  label: Text('Call $role'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
         ),
       ),
     );

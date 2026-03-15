@@ -7,7 +7,7 @@ import '../models/recipe.dart';
 import '../models/shopping_list.dart';
 import '../models/order.dart';
 import '../models/cart_item.dart';
-import '../models/user.dart' show Address;
+import '../models/user.dart' show Address, User;
 
 class StrapiService {
   static String get _apiUrl => AppConstants.apiUrl;
@@ -389,6 +389,39 @@ class StrapiService {
     };
     final status = statusMap[statusStr] ?? OrderStatus.pending;
 
+    // Parse customer info
+    User? customer;
+    final customerData = attrs['customer'];
+    if (customerData is Map<String, dynamic>) {
+      final cAttrs = customerData['attributes'] as Map<String, dynamic>? ?? customerData;
+      customer = User(
+        id: (customerData['documentId'] ?? customerData['id'] ?? '').toString(),
+        phoneNumber: (cAttrs['phone'] ?? '').toString(),
+        name: cAttrs['name'] as String?,
+        createdAt: DateTime.now(),
+      );
+    }
+
+    // Parse shopper info
+    String? shopperName;
+    String? shopperPhone;
+    final shopperData = attrs['shopper'];
+    if (shopperData is Map<String, dynamic>) {
+      final sAttrs = shopperData['attributes'] as Map<String, dynamic>? ?? shopperData;
+      shopperName = sAttrs['name'] as String?;
+      shopperPhone = sAttrs['phone'] as String?;
+    }
+
+    // Parse rider info
+    String? riderName;
+    String? riderPhone;
+    final riderData = attrs['rider'];
+    if (riderData is Map<String, dynamic>) {
+      final rAttrs = riderData['attributes'] as Map<String, dynamic>? ?? riderData;
+      riderName = rAttrs['name'] as String?;
+      riderPhone = rAttrs['phone'] as String?;
+    }
+
     return Order(
       id: rawId?.toString() ?? '',
       documentId: documentId,
@@ -400,6 +433,11 @@ class StrapiService {
       deliveryFee: (attrs['delivery_fee'] as num?)?.toDouble() ?? 0,
       total: (attrs['total'] as num?)?.toDouble() ?? 0,
       status: status,
+      customer: customer,
+      shopperName: shopperName,
+      shopperPhone: shopperPhone,
+      riderName: riderName,
+      riderPhone: riderPhone,
       createdAt:
           DateTime.tryParse(attrs['createdAt'] as String? ?? '') ??
           DateTime.now(),

@@ -463,7 +463,10 @@ class OrderTrackingScreen extends StatelessWidget {
                       // Show adjusted total if items have been shopped
                       Builder(builder: (context) {
                         final hasShoppedItems = order.items.any((i) => i.found != null);
+                        final hasUnfoundItems = order.items.any((i) => i.found == false);
+
                         if (!hasShoppedItems) {
+                          // Not yet shopped — show simple total
                           return Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -474,57 +477,57 @@ class OrderTrackingScreen extends StatelessWidget {
                           );
                         }
 
-                        // Calculate actual subtotal from found items only
-                        double actualSubtotal = 0;
-                        for (final item in order.items) {
-                          if (item.found == true) {
-                            actualSubtotal += (item.actualPrice ?? item.product.price) * item.quantity;
+                        if (hasUnfoundItems) {
+                          // Some items not found — show original estimate struck through + adjusted total
+                          // Calculate original estimated total from ALL items
+                          double originalSubtotal = 0;
+                          for (final item in order.items) {
+                            originalSubtotal += item.product.price * item.quantity;
                           }
-                        }
-                        final actualServiceFee = actualSubtotal * 0.05;
-                        final actualTotal = actualSubtotal + actualServiceFee + order.deliveryFee;
-                        final hasDifference = (actualTotal - order.total).abs() > 1;
+                          final originalServiceFee = originalSubtotal * 0.05;
+                          final originalTotal = originalSubtotal + originalServiceFee + order.deliveryFee;
 
-                        return Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('Estimated Total', style: AppTextStyles.bodyMedium.copyWith(
-                                  decoration: hasDifference ? TextDecoration.lineThrough : null,
-                                  color: hasDifference ? AppColors.textSecondary : AppColors.textDark,
-                                )),
-                                Text(Formatters.formatCurrency(order.total),
-                                  style: AppTextStyles.labelMedium.copyWith(
-                                    decoration: hasDifference ? TextDecoration.lineThrough : null,
-                                    color: hasDifference ? AppColors.textSecondary : AppColors.textDark,
+                          return Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Original Total', style: AppTextStyles.bodyMedium.copyWith(
+                                    decoration: TextDecoration.lineThrough,
+                                    color: AppColors.textSecondary,
                                   )),
-                              ],
-                            ),
-                            if (hasDifference) ...[
+                                  Text(Formatters.formatCurrency(originalTotal),
+                                    style: AppTextStyles.labelMedium.copyWith(
+                                      decoration: TextDecoration.lineThrough,
+                                      color: AppColors.textSecondary,
+                                    )),
+                                ],
+                              ),
                               const SizedBox(height: 8),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text('Adjusted Total', style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700)),
-                                  Text(Formatters.formatCurrency(actualTotal),
+                                  Text(Formatters.formatCurrency(order.total),
                                     style: AppTextStyles.h4.copyWith(color: AppColors.primaryGreen, fontWeight: FontWeight.w700)),
                                 ],
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Adjusted based on item availability',
+                                '${order.items.where((i) => i.found == false).length} item(s) not available — total adjusted',
                                 style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
                               ),
-                            ] else
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Total', style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700)),
-                                  Text(Formatters.formatCurrency(order.total),
-                                    style: AppTextStyles.h4.copyWith(color: AppColors.primaryGreen, fontWeight: FontWeight.w700)),
-                                ],
-                              ),
+                            ],
+                          );
+                        }
+
+                        // All items found — show normal total
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Total', style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700)),
+                            Text(Formatters.formatCurrency(order.total),
+                              style: AppTextStyles.h4.copyWith(color: AppColors.primaryGreen, fontWeight: FontWeight.w700)),
                           ],
                         );
                       }),
