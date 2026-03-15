@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/order.dart';
 import '../../models/cart_item.dart';
 import '../../providers/auth_provider.dart';
@@ -228,6 +229,67 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
     }
   }
 
+  void _showCallDialog(String role, String name, String phone) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.person, color: AppColors.primary, size: 28),
+              ),
+              const SizedBox(height: 12),
+              Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(role, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+              const SizedBox(height: 4),
+              Text(phone, style: TextStyle(color: Colors.grey[500], fontSize: 14)),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    try {
+                      launchUrl(Uri(scheme: 'tel', path: phone));
+                    } catch (_) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('$phone copied — open your phone app to call')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.call, size: 18),
+                  label: Text('Call $role'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -263,25 +325,48 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
       color: AppColors.primarySoft,
       child: Column(
         children: [
-          // Customer info
+          // Customer info with call button
           if (widget.order.customer != null) ...[
             Row(
               children: [
                 Icon(Icons.person_outline, size: 16, color: Colors.grey[600]),
                 const SizedBox(width: 6),
-                Text(
-                  widget.order.customer!.name ?? 'Unknown',
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-                if (widget.order.customer!.phoneNumber.isNotEmpty) ...[
-                  const SizedBox(width: 12),
-                  Icon(Icons.phone_outlined, size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 4),
-                  Text(
-                    widget.order.customer!.phoneNumber,
-                    style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                Expanded(
+                  child: Text(
+                    widget.order.customer!.name ?? 'Unknown',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
-                ],
+                ),
+                if (widget.order.customer!.phoneNumber.isNotEmpty)
+                  GestureDetector(
+                    onTap: () => _showCallDialog(
+                      'Customer',
+                      widget.order.customer!.name ?? 'Customer',
+                      widget.order.customer!.phoneNumber,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.call, size: 14, color: AppColors.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Call',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 10),

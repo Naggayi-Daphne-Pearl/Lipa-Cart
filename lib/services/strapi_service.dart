@@ -378,10 +378,10 @@ class StrapiService {
       'pending': OrderStatus.pending,
       'payment_processing': OrderStatus.pending,
       'payment_confirmed': OrderStatus.confirmed,
-      'shopper_assigned': OrderStatus.confirmed,
+      'shopper_assigned': OrderStatus.shopperAssigned,
       'shopping': OrderStatus.shopping,
       'ready_for_pickup': OrderStatus.readyForDelivery,
-      'rider_assigned': OrderStatus.readyForDelivery,
+      'rider_assigned': OrderStatus.riderAssigned,
       'in_transit': OrderStatus.inTransit,
       'delivered': OrderStatus.delivered,
       'cancelled': OrderStatus.cancelled,
@@ -448,7 +448,7 @@ class StrapiService {
     }
   }
 
-  /// Get active orders for shopper (shopper_assigned, shopping, or ready_for_pickup)
+  /// Get active orders for shopper (shopper_assigned or shopping — shopper still working)
   static Future<List<Order>> getActiveOrdersForShopper(
     String token,
     String userDocumentId,
@@ -457,7 +457,7 @@ class StrapiService {
       final response = await http
           .get(
             Uri.parse(
-              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=shopper_assigned&filters[\$or][1][status][\$eq]=shopping&filters[\$or][2][status][\$eq]=ready_for_pickup&filters[shopper][documentId][\$eq]=$userDocumentId',
+              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=shopper_assigned&filters[\$or][1][status][\$eq]=shopping&filters[shopper][documentId][\$eq]=$userDocumentId',
             ),
             headers: {'Authorization': 'Bearer $token'},
           )
@@ -477,7 +477,7 @@ class StrapiService {
     }
   }
 
-  /// Get completed orders for shopper (delivered OR cancelled)
+  /// Get completed orders for shopper (shopping done: ready_for_pickup, rider_assigned, in_transit, delivered, cancelled)
   static Future<List<Order>> getCompletedOrdersForShopper(
     String token,
     String userDocumentId,
@@ -486,7 +486,7 @@ class StrapiService {
       final response = await http
           .get(
             Uri.parse(
-              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=delivered&filters[\$or][1][status][\$eq]=cancelled&filters[shopper][documentId][\$eq]=$userDocumentId',
+              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=ready_for_pickup&filters[\$or][1][status][\$eq]=rider_assigned&filters[\$or][2][status][\$eq]=in_transit&filters[\$or][3][status][\$eq]=delivered&filters[\$or][4][status][\$eq]=cancelled&filters[shopper][documentId][\$eq]=$userDocumentId',
             ),
             headers: {'Authorization': 'Bearer $token'},
           )

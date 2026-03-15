@@ -143,7 +143,30 @@ class RiderProvider extends ChangeNotifier {
     }
   }
 
-  /// Mark delivery as complete
+  /// Mark delivery as in transit (picked up from shopper)
+  Future<bool> markInTransit(
+    String token,
+    String orderId,
+    String riderId,
+  ) async {
+    try {
+      final result = await StrapiService.updateRiderOrderStatus(orderId, 'in_transit', token);
+      if (result != null) {
+        await fetchActiveDeliveries(token, riderId);
+        notifyListeners();
+        return true;
+      }
+      _error = 'Failed to update status';
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = 'Error: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Mark delivery as complete (delivered to customer)
   Future<bool> completeDelivery(
     String token,
     String orderId,

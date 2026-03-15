@@ -472,10 +472,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
         return (const Color(0xFFFFF4E6), const Color(0xFFFF9800), 'Processing');
       case OrderStatus.confirmed:
         return (const Color(0xFFE3F2FD), const Color(0xFF1976D2), 'Confirmed');
+      case OrderStatus.shopperAssigned:
+        return (const Color(0xFFE0F2F1), const Color(0xFF00897B), 'Shopper Assigned');
       case OrderStatus.shopping:
         return (const Color(0xFFE3F2FD), const Color(0xFF1976D2), 'Shopping');
       case OrderStatus.readyForDelivery:
         return (const Color(0xFFE3F2FD), const Color(0xFF1976D2), 'Ready');
+      case OrderStatus.riderAssigned:
+        return (Colors.deepPurple[100]!, Colors.deepPurple, 'Rider Assigned');
       case OrderStatus.inTransit:
         return (const Color(0xFFFFF4E6), const Color(0xFFFF9800), 'On the way');
       case OrderStatus.delivered:

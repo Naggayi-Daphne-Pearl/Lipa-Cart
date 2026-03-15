@@ -67,6 +67,7 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
       case OrderStatus.readyForDelivery:
         return Colors.green;
       case OrderStatus.confirmed:
+      case OrderStatus.shopperAssigned:
         return AppColors.accent;
       default:
         return Colors.grey;
@@ -76,6 +77,7 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
   String _getStatusText(OrderStatus status) {
     switch (status) {
       case OrderStatus.confirmed:
+      case OrderStatus.shopperAssigned:
         return 'Assigned';
       case OrderStatus.shopping:
         return 'Shopping';
@@ -278,8 +280,8 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
                         ),
                       ),
               ),
-              // Cancel Task button for confirmed (assigned but not yet shopping) orders
-              if (order.status == OrderStatus.confirmed) ...[
+              // Cancel Task button for assigned (not yet shopping) orders
+              if (order.status == OrderStatus.confirmed || order.status == OrderStatus.shopperAssigned) ...[
                 const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,

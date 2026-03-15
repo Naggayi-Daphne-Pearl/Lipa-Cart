@@ -59,6 +59,7 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
       shopperProvider.fetchAvailableTasks(token);
       if (user.documentId != null) {
         shopperProvider.fetchActiveTasks(token, user.documentId!);
+        shopperProvider.fetchCompletedTasks(token, user.documentId!);
       }
     }
   }
@@ -377,7 +378,9 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
   Widget _buildStatsGrid(ShopperProvider shopperProvider) {
     final availableCount = shopperProvider.availableTasks.length;
     final activeCount = shopperProvider.activeTasks.length;
-    final completedCount = shopperProvider.completedOrders;
+    final completedCount = shopperProvider.completedTasks.isNotEmpty
+        ? shopperProvider.completedTasks.length
+        : shopperProvider.completedOrders;
     final earnings = shopperProvider.totalEarnings;
 
     // Show empty state CTA if all values are zero

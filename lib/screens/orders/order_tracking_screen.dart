@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -174,7 +176,7 @@ class OrderTrackingScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: AppSizes.md),
-                      _buildTrackingTimeline(),
+                      _buildTrackingTimeline(context),
                     ],
                   ),
                 ),
@@ -458,24 +460,74 @@ class OrderTrackingScreen extends StatelessWidget {
                         height: 1,
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Total',
-                            style: AppTextStyles.h5.copyWith(
-                              fontWeight: FontWeight.w700,
+                      // Show adjusted total if items have been shopped
+                      Builder(builder: (context) {
+                        final hasShoppedItems = order.items.any((i) => i.found != null);
+                        if (!hasShoppedItems) {
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Total', style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700)),
+                              Text(Formatters.formatCurrency(order.total),
+                                style: AppTextStyles.h4.copyWith(color: AppColors.primaryGreen, fontWeight: FontWeight.w700)),
+                            ],
+                          );
+                        }
+
+                        // Calculate actual subtotal from found items only
+                        double actualSubtotal = 0;
+                        for (final item in order.items) {
+                          if (item.found == true) {
+                            actualSubtotal += (item.actualPrice ?? item.product.price) * item.quantity;
+                          }
+                        }
+                        final actualServiceFee = actualSubtotal * 0.05;
+                        final actualTotal = actualSubtotal + actualServiceFee + order.deliveryFee;
+                        final hasDifference = (actualTotal - order.total).abs() > 1;
+
+                        return Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Estimated Total', style: AppTextStyles.bodyMedium.copyWith(
+                                  decoration: hasDifference ? TextDecoration.lineThrough : null,
+                                  color: hasDifference ? AppColors.textSecondary : AppColors.textDark,
+                                )),
+                                Text(Formatters.formatCurrency(order.total),
+                                  style: AppTextStyles.labelMedium.copyWith(
+                                    decoration: hasDifference ? TextDecoration.lineThrough : null,
+                                    color: hasDifference ? AppColors.textSecondary : AppColors.textDark,
+                                  )),
+                              ],
                             ),
-                          ),
-                          Text(
-                            Formatters.formatCurrency(order.total),
-                            style: AppTextStyles.h4.copyWith(
-                              color: AppColors.primaryGreen,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
+                            if (hasDifference) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Adjusted Total', style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700)),
+                                  Text(Formatters.formatCurrency(actualTotal),
+                                    style: AppTextStyles.h4.copyWith(color: AppColors.primaryGreen, fontWeight: FontWeight.w700)),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Adjusted based on item availability',
+                                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                              ),
+                            ] else
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Total', style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700)),
+                                  Text(Formatters.formatCurrency(order.total),
+                                    style: AppTextStyles.h4.copyWith(color: AppColors.primaryGreen, fontWeight: FontWeight.w700)),
+                                ],
+                              ),
+                          ],
+                        );
+                      }),
                       const SizedBox(height: AppSizes.md),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -604,24 +656,52 @@ class OrderTrackingScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSizes.lg),
 
-                // Shopper info (if assigned)
-                if (order.shopperName != null) ...[
-                  _buildPersonCard(
-                    title: 'Your Shopper',
-                    name: order.shopperName!,
-                    phone: order.shopperPhone,
-                    icon: Iconsax.shopping_bag,
-                  ),
-                  const SizedBox(height: AppSizes.lg),
-                ],
-
-                // Rider info (if assigned)
-                if (order.riderName != null) ...[
-                  _buildPersonCard(
-                    title: 'Delivery Rider',
-                    name: order.riderName!,
-                    phone: order.riderPhone,
-                    icon: Iconsax.truck_fast,
+                // Shopper & Rider info
+                if (order.shopperName != null || order.riderName != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(AppSizes.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Iconsax.people, color: AppColors.primaryOrange, size: 20),
+                            const SizedBox(width: AppSizes.sm),
+                            Text('Your Team', style: AppTextStyles.h5),
+                          ],
+                        ),
+                        const SizedBox(height: AppSizes.md),
+                        if (order.shopperName != null)
+                          _buildPersonRow(
+                            context: context,
+                            icon: Iconsax.shopping_bag,
+                            role: 'Shopper',
+                            name: order.shopperName!,
+                            phone: order.shopperPhone,
+                          ),
+                        if (order.shopperName != null && order.riderName != null)
+                          const Divider(height: AppSizes.lg),
+                        if (order.riderName != null)
+                          _buildPersonRow(
+                            context: context,
+                            icon: Iconsax.truck_fast,
+                            role: 'Rider',
+                            name: order.riderName!,
+                            phone: order.riderPhone,
+                          ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: AppSizes.lg),
                 ],
@@ -657,12 +737,102 @@ class OrderTrackingScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTrackingTimeline() {
+  void _showCallDialog(BuildContext context, String role, String name, String phone) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Avatar
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  role == 'Rider' ? Iconsax.truck_fast : Iconsax.shopping_bag,
+                  color: AppColors.primaryGreen,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(name, style: AppTextStyles.h5),
+              const SizedBox(height: 4),
+              Text(role, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+              const SizedBox(height: 4),
+              Text(phone, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+              const SizedBox(height: 20),
+              // Call button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    try {
+                      launchUrl(Uri(scheme: 'tel', path: phone));
+                    } catch (_) {
+                      Clipboard.setData(ClipboardData(text: phone));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('$phone copied — open your phone app to call')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.call, size: 18),
+                  label: Text('Call $role'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Copy button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Clipboard.setData(ClipboardData(text: phone));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('$phone copied to clipboard')),
+                    );
+                  },
+                  icon: const Icon(Icons.copy, size: 16),
+                  label: const Text('Copy Number'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrackingTimeline(BuildContext context) {
     final steps = [
       OrderStatus.pending,
       OrderStatus.confirmed,
+      OrderStatus.shopperAssigned,
       OrderStatus.shopping,
       OrderStatus.readyForDelivery,
+      OrderStatus.riderAssigned,
       OrderStatus.inTransit,
       OrderStatus.delivered,
     ];
@@ -721,7 +891,57 @@ class OrderTrackingScreen extends StatelessWidget {
                             : AppColors.textLight,
                       ),
                     ),
-                    Text(status.description, style: AppTextStyles.caption),
+                    // Show person name + call button on relevant steps
+                    if (status == OrderStatus.shopperAssigned && order.shopperName != null && isCompleted)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${order.shopperName} is your shopper',
+                              style: AppTextStyles.caption,
+                            ),
+                          ),
+                          if (order.shopperPhone != null)
+                            GestureDetector(
+                              onTap: () => _showCallDialog(context, 'Shopper', order.shopperName!, order.shopperPhone!),
+                              child: const Icon(Iconsax.call, size: 16, color: AppColors.primaryGreen),
+                            ),
+                        ],
+                      )
+                    else if (status == OrderStatus.riderAssigned && order.riderName != null && isCompleted)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${order.riderName} is your rider',
+                              style: AppTextStyles.caption,
+                            ),
+                          ),
+                          if (order.riderPhone != null)
+                            GestureDetector(
+                              onTap: () => _showCallDialog(context, 'Rider', order.riderName!, order.riderPhone!),
+                              child: const Icon(Iconsax.call, size: 16, color: AppColors.primaryGreen),
+                            ),
+                        ],
+                      )
+                    else if (status == OrderStatus.inTransit && order.riderName != null && isCompleted)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${order.riderName} is delivering',
+                              style: AppTextStyles.caption,
+                            ),
+                          ),
+                          if (order.riderPhone != null)
+                            GestureDetector(
+                              onTap: () => _showCallDialog(context, 'Rider', order.riderName!, order.riderPhone!),
+                              child: const Icon(Iconsax.call, size: 16, color: AppColors.primaryGreen),
+                            ),
+                        ],
+                      )
+                    else
+                      Text(status.description, style: AppTextStyles.caption),
                   ],
                 ),
               ),
@@ -732,50 +952,41 @@ class OrderTrackingScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPersonCard({
-    required String title,
+  Widget _buildPersonRow({
+    required BuildContext context,
+    required IconData icon,
+    required String role,
     required String name,
     String? phone,
-    required IconData icon,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(AppSizes.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.primaryOrange.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-            ),
-            child: Icon(icon, color: AppColors.primaryOrange),
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.primaryOrange.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
           ),
-          const SizedBox(width: AppSizes.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AppTextStyles.caption),
-                Text(name, style: AppTextStyles.labelMedium),
-              ],
-            ),
+          child: Icon(icon, color: AppColors.primaryOrange, size: 20),
+        ),
+        const SizedBox(width: AppSizes.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(role, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+              Text(name, style: AppTextStyles.labelMedium),
+            ],
           ),
-          if (phone != null)
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Iconsax.call, color: AppColors.primaryGreen),
-            ),
+        ),
+        if (phone != null && phone.isNotEmpty)
           IconButton(
-            onPressed: () {},
-            icon: const Icon(Iconsax.message, color: AppColors.primaryOrange),
+            onPressed: () => _showCallDialog(context, role, name, phone),
+            icon: const Icon(Iconsax.call, color: AppColors.primaryGreen, size: 20),
+            tooltip: 'Call $role',
           ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -784,8 +995,10 @@ class OrderTrackingScreen extends StatelessWidget {
       case OrderStatus.pending:
         return AppColors.warning;
       case OrderStatus.confirmed:
+      case OrderStatus.shopperAssigned:
       case OrderStatus.shopping:
       case OrderStatus.readyForDelivery:
+      case OrderStatus.riderAssigned:
       case OrderStatus.inTransit:
         return AppColors.info;
       case OrderStatus.delivered:

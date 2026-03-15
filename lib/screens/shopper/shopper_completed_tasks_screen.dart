@@ -112,7 +112,35 @@ class _ShopperCompletedTasksScreenState
   }
 
   Widget _buildCompletedCard(Order order) {
+    final isCancelled = order.status == OrderStatus.cancelled;
     final isDelivered = order.status == OrderStatus.delivered;
+
+    // Determine badge text, color, and icon based on actual status
+    final String badgeText;
+    final Color badgeColor;
+    final IconData badgeIcon;
+
+    if (isCancelled) {
+      badgeText = 'Cancelled';
+      badgeColor = Colors.red;
+      badgeIcon = Icons.cancel;
+    } else if (isDelivered) {
+      badgeText = 'Delivered';
+      badgeColor = AppColors.primary;
+      badgeIcon = Icons.check_circle;
+    } else if (order.status == OrderStatus.inTransit) {
+      badgeText = 'In Transit';
+      badgeColor = Colors.purple;
+      badgeIcon = Icons.local_shipping;
+    } else if (order.status == OrderStatus.readyForDelivery) {
+      badgeText = 'Awaiting Rider';
+      badgeColor = Colors.orange;
+      badgeIcon = Icons.timer;
+    } else {
+      badgeText = order.status.displayName;
+      badgeColor = Colors.blue;
+      badgeIcon = Icons.info;
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -125,15 +153,10 @@ class _ShopperCompletedTasksScreenState
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: isDelivered
-                    ? AppColors.primarySoft
-                    : Colors.red.shade50,
+                color: badgeColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                isDelivered ? Icons.check_circle : Icons.cancel,
-                color: isDelivered ? AppColors.primary : Colors.red,
-              ),
+              child: Icon(badgeIcon, color: badgeColor),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -177,15 +200,13 @@ class _ShopperCompletedTasksScreenState
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: isDelivered
-                        ? AppColors.primarySoft
-                        : Colors.red.shade50,
+                    color: badgeColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    isDelivered ? 'Delivered' : 'Cancelled',
+                    badgeText,
                     style: TextStyle(
-                      color: isDelivered ? AppColors.primary : Colors.red,
+                      color: badgeColor,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),

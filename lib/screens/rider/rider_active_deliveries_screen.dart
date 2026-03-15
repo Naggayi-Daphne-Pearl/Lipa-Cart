@@ -260,52 +260,68 @@ class _RiderActiveDeliveriesScreenState
               ],
             ),
             const SizedBox(height: AppSizes.sm),
-            // Action buttons
-            Row(
-              children: [
-                Expanded(
-                  child: RiderButton.primary(
-                    text: 'Navigate',
-                    icon: Iconsax.routing_2,
-                    height: 40,
-                    onPressed: () {},
-                  ),
-                ),
-                const SizedBox(width: AppSizes.sm),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Iconsax.tick_circle, size: 18),
-                    label: const Text('Delivered'),
-                    onPressed: () async {
-                      final auth = context.read<AuthProvider>();
-                      final rider = context.read<RiderProvider>();
-                      final success = await rider.completeDelivery(
-                        auth.token!,
-                        order.documentId ?? order.id,
-                        auth.user!.documentId ?? auth.user!.id,
+            // Action buttons based on status
+            if (order.status == OrderStatus.readyForDelivery ||
+                order.status == OrderStatus.riderAssigned)
+              // Rider has claimed but not yet picked up
+              SizedBox(
+                width: double.infinity,
+                child: RiderButton.primary(
+                  text: 'Picked Up — Start Delivery',
+                  icon: Iconsax.truck_fast,
+                  height: 44,
+                  onPressed: () async {
+                    final auth = context.read<AuthProvider>();
+                    final rider = context.read<RiderProvider>();
+                    final success = await rider.markInTransit(
+                      auth.token!,
+                      order.documentId ?? order.id,
+                      auth.user!.documentId ?? auth.user!.id,
+                    );
+                    if (success && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Order picked up — delivering now!'),
+                          backgroundColor: AppColors.info,
+                        ),
                       );
-                      if (success && mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content:
-                                const Text('Delivery marked as complete!'),
-                            backgroundColor: AppColors.success,
-                          ),
-                        );
-                      }
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.success,
-                      side: const BorderSide(color: AppColors.success),
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSizes.radiusSm),
-                      ),
+                    }
+                  },
+                ),
+              )
+            else if (order.status == OrderStatus.inTransit)
+              // Rider is delivering
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Iconsax.tick_circle, size: 18),
+                  label: const Text('Mark as Delivered'),
+                  onPressed: () async {
+                    final auth = context.read<AuthProvider>();
+                    final rider = context.read<RiderProvider>();
+                    final success = await rider.completeDelivery(
+                      auth.token!,
+                      order.documentId ?? order.id,
+                      auth.user!.documentId ?? auth.user!.id,
+                    );
+                    if (success && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Delivery marked as complete!'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
           ],
         ),
       ),

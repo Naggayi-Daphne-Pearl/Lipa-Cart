@@ -5,8 +5,10 @@ import 'rating.dart';
 enum OrderStatus {
   pending,
   confirmed,
+  shopperAssigned,
   shopping,
   readyForDelivery,
+  riderAssigned,
   inTransit,
   delivered,
   cancelled,
@@ -18,11 +20,15 @@ extension OrderStatusExtension on OrderStatus {
       case OrderStatus.pending:
         return 'Order Placed';
       case OrderStatus.confirmed:
-        return 'Order Confirmed';
+        return 'Payment Confirmed';
+      case OrderStatus.shopperAssigned:
+        return 'Shopper Assigned';
       case OrderStatus.shopping:
         return 'Shopping in Progress';
       case OrderStatus.readyForDelivery:
         return 'Ready for Delivery';
+      case OrderStatus.riderAssigned:
+        return 'Rider Assigned';
       case OrderStatus.inTransit:
         return 'On the Way';
       case OrderStatus.delivered:
@@ -37,11 +43,15 @@ extension OrderStatusExtension on OrderStatus {
       case OrderStatus.pending:
         return 'Your order has been received';
       case OrderStatus.confirmed:
-        return 'A shopper will start shopping soon';
+        return 'Payment confirmed, awaiting shopper';
+      case OrderStatus.shopperAssigned:
+        return 'A shopper has been assigned to your order';
       case OrderStatus.shopping:
         return 'Your shopper is picking items';
       case OrderStatus.readyForDelivery:
         return 'Your order is ready for pickup';
+      case OrderStatus.riderAssigned:
+        return 'A rider has been assigned for delivery';
       case OrderStatus.inTransit:
         return 'Your order is on the way';
       case OrderStatus.delivered:
@@ -57,14 +67,18 @@ extension OrderStatusExtension on OrderStatus {
         return 0;
       case OrderStatus.confirmed:
         return 1;
-      case OrderStatus.shopping:
+      case OrderStatus.shopperAssigned:
         return 2;
-      case OrderStatus.readyForDelivery:
+      case OrderStatus.shopping:
         return 3;
-      case OrderStatus.inTransit:
+      case OrderStatus.readyForDelivery:
         return 4;
-      case OrderStatus.delivered:
+      case OrderStatus.riderAssigned:
         return 5;
+      case OrderStatus.inTransit:
+        return 6;
+      case OrderStatus.delivered:
+        return 7;
       case OrderStatus.cancelled:
         return -1;
     }

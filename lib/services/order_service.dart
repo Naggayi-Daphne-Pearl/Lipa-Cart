@@ -32,10 +32,13 @@ class OrderService extends ChangeNotifier {
   OrderStatus _mapStatus(String? status) {
     switch (status) {
       case 'payment_confirmed':
-      case 'shopper_assigned':
         return OrderStatus.confirmed;
+      case 'shopper_assigned':
+        return OrderStatus.shopperAssigned;
       case 'ready_for_pickup':
         return OrderStatus.readyForDelivery;
+      case 'rider_assigned':
+        return OrderStatus.riderAssigned;
       case 'in_transit':
         return OrderStatus.inTransit;
       case 'delivered':
@@ -273,6 +276,26 @@ class OrderService extends ChangeNotifier {
         }
       }
 
+      // Parse shopper info
+      final shopperData = attributes['shopper'];
+      String? shopperName;
+      String? shopperPhone;
+      if (shopperData is Map<String, dynamic>) {
+        final sAttrs = shopperData['attributes'] as Map<String, dynamic>? ?? shopperData;
+        shopperName = sAttrs['name'] as String?;
+        shopperPhone = sAttrs['phone'] as String?;
+      }
+
+      // Parse rider info
+      final riderData = attributes['rider'];
+      String? riderName;
+      String? riderPhone;
+      if (riderData is Map<String, dynamic>) {
+        final rAttrs = riderData['attributes'] as Map<String, dynamic>? ?? riderData;
+        riderName = rAttrs['name'] as String?;
+        riderPhone = rAttrs['phone'] as String?;
+      }
+
       return Order(
         id: rawId?.toString() ?? '',
         documentId: documentId,
@@ -286,6 +309,10 @@ class OrderService extends ChangeNotifier {
         status: _mapStatus(attributes['status'] as String?),
         customerId: (attributes['customer_id'] ?? customer?.id) as String?,
         customer: customer,
+        shopperName: shopperName,
+        shopperPhone: shopperPhone,
+        riderName: riderName,
+        riderPhone: riderPhone,
         createdAt:
             DateTime.tryParse(attributes['createdAt'] as String? ?? '') ??
             DateTime.now(),

@@ -237,8 +237,10 @@ class OrderCard extends StatelessWidget {
       case OrderStatus.pending:
         return AppColors.warning;
       case OrderStatus.confirmed:
+      case OrderStatus.shopperAssigned:
       case OrderStatus.shopping:
       case OrderStatus.readyForDelivery:
+      case OrderStatus.riderAssigned:
       case OrderStatus.inTransit:
         return AppColors.info;
       case OrderStatus.delivered:

@@ -56,15 +56,16 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     final riderProvider = context.read<RiderProvider>();
 
     if (authProvider.token != null && authProvider.user?.id != null) {
-      riderProvider.loadRiderProfile(
-        authProvider.token!,
-        authProvider.user!.id,
-      );
+      if (authProvider.user!.riderId != null) {
+        riderProvider.loadRiderProfile(
+          authProvider.token!,
+          authProvider.user!.riderId!,
+        );
+      }
       riderProvider.fetchAvailableDeliveries(authProvider.token!);
-      riderProvider.fetchActiveDeliveries(
-        authProvider.token!,
-        authProvider.user!.documentId ?? authProvider.user!.id,
-      );
+      final userDocId = authProvider.user!.documentId ?? authProvider.user!.id;
+      riderProvider.fetchActiveDeliveries(authProvider.token!, userDocId);
+      riderProvider.fetchCompletedDeliveries(authProvider.token!, userDocId);
     }
   }
 
@@ -380,7 +381,9 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
   Widget _buildStatsGrid(RiderProvider riderProvider) {
     final availableCount = riderProvider.availableDeliveries.length;
     final activeCount = riderProvider.activeDeliveries.length;
-    final completedCount = riderProvider.completedOrders;
+    final completedCount = riderProvider.completedDeliveries.isNotEmpty
+        ? riderProvider.completedDeliveries.length
+        : riderProvider.completedOrders;
     final earnings = riderProvider.totalEarnings;
 
     final allZero =

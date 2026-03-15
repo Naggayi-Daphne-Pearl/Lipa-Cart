@@ -96,10 +96,14 @@ class _AdminOrdersDesktopScreenState extends State<AdminOrdersDesktopScreen> {
         return Colors.orange;
       case OrderStatus.confirmed:
         return Colors.blue;
+      case OrderStatus.shopperAssigned:
+        return Colors.teal;
       case OrderStatus.shopping:
         return Colors.cyan;
       case OrderStatus.readyForDelivery:
         return Colors.purple;
+      case OrderStatus.riderAssigned:
+        return Colors.deepPurple;
       case OrderStatus.inTransit:
         return Colors.indigo;
       case OrderStatus.delivered:
@@ -286,10 +290,14 @@ class _OrderDetailsView extends StatelessWidget {
         return Colors.orange;
       case OrderStatus.confirmed:
         return Colors.blue;
+      case OrderStatus.shopperAssigned:
+        return Colors.teal;
       case OrderStatus.shopping:
         return Colors.cyan;
       case OrderStatus.readyForDelivery:
         return Colors.purple;
+      case OrderStatus.riderAssigned:
+        return Colors.deepPurple;
       case OrderStatus.inTransit:
         return Colors.indigo;
       case OrderStatus.delivered:

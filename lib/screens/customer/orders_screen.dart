@@ -171,6 +171,11 @@ class OrderCard extends StatelessWidget {
         textColor = Colors.orange;
         displayText = 'Confirmed';
         break;
+      case 'shopperAssigned':
+        bgColor = Colors.teal[100]!;
+        textColor = Colors.teal;
+        displayText = 'Shopper Assigned';
+        break;
       case 'shopping':
         bgColor = Colors.blue[100]!;
         textColor = Colors.blue;
