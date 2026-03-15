@@ -13,7 +13,6 @@ import '../providers/cart_provider.dart';
 import 'home/home_screen.dart';
 import 'browse/browse_screen.dart';
 import 'shopping_lists/shopping_lists_screen.dart';
-import 'orders/orders_screen.dart';
 import 'profile/profile_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -24,7 +23,7 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  // Tab indices: 0=Home, 1=Browse, 2=Lists, 3=Cart(external on mobile, sidebar on web), 4=Orders, 5=Profile
+  // Tab indices: 0=Home, 1=Browse, 2=Lists, 3=Cart(external on mobile, sidebar on web), 4=Profile
   int _selectedTab = 0;
   bool _showCartSidebar = false;
 
@@ -33,14 +32,13 @@ class _MainShellState extends State<MainShell> {
     HomeScreen(), // stack index 0
     BrowseScreen(), // stack index 1
     ShoppingListsScreen(showBottomNav: false), // stack index 2
-    OrdersScreen(showBottomNav: false), // stack index 3
-    ProfileScreen(showBottomNav: false), // stack index 4
+    ProfileScreen(showBottomNav: false), // stack index 3
   ];
 
   // Maps tab index to stack index
   int _getStackIndex() {
     if (_selectedTab <= 2) return _selectedTab; // Home=0, Browse=1, Lists=2
-    if (_selectedTab >= 4) return _selectedTab - 1; // Orders=3, Profile=4
+    if (_selectedTab >= 4) return _selectedTab - 1; // Profile=3
     return 0; // Fallback (Cart tab shouldn't reach here)
   }
 
@@ -157,16 +155,10 @@ class _MainShellState extends State<MainShell> {
                         ),
                         _buildCartNavItem(cartProvider.itemCount),
                         _buildNavItem(
-                          icon: Iconsax.receipt_item,
-                          activeIcon: Iconsax.receipt_item,
-                          label: 'Orders',
-                          index: 4,
-                        ),
-                        _buildNavItem(
                           icon: Iconsax.user,
                           activeIcon: Iconsax.user,
                           label: 'Profile',
-                          index: 5,
+                          index: 4,
                         ),
                       ],
                     ),
@@ -313,16 +305,10 @@ class _MainShellState extends State<MainShell> {
             ),
             _buildSideCartNavItem(cartItemCount),
             _buildSideNavItem(
-              icon: Iconsax.receipt_item,
-              activeIcon: Iconsax.receipt_item,
-              label: 'Orders',
-              index: 4,
-            ),
-            _buildSideNavItem(
               icon: Iconsax.user,
               activeIcon: Iconsax.user,
               label: 'Profile',
-              index: 5,
+              index: 4,
             ),
             const Spacer(),
 

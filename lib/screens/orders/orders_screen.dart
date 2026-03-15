@@ -129,16 +129,27 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'My Orders',
-                                style: AppTextStyles.h3.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: context.responsive<double>(
-                                    mobile: 26.0,
-                                    tablet: 30.0,
-                                    desktop: 34.0,
+                              Row(
+                                children: [
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (Navigator.of(context).canPop()) {
+                                        Navigator.pop(context);
+                                      } else {
+                                        GoRouter.of(context).go('/customer/home');
+                                      }
+                                    },
+                                    child: const Icon(Iconsax.arrow_left, size: 24),
                                   ),
-                                ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'My Orders',
+                                    style: AppTextStyles.h3.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 22,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -367,13 +378,32 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
                     // Rate badge for unrated delivered orders
                     if (order.status == OrderStatus.delivered && !order.hasBeenRated) ...[
-                      const SizedBox(height: AppSizes.xs),
-                      Row(
-                        children: [
-                          Icon(Icons.star_outline_rounded, size: 14, color: AppColors.primaryOrange),
-                          const SizedBox(width: 4),
-                          Text('Tap to rate', style: TextStyle(color: AppColors.primaryOrange, fontSize: 12)),
-                        ],
+                      const SizedBox(height: AppSizes.sm),
+                      GestureDetector(
+                        onTap: () {
+                          // Stop event from bubbling to card tap
+                          context.push('/customer/order-rating', extra: order);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryOrange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.primaryOrange.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.star_rounded, size: 16, color: AppColors.primaryOrange),
+                              const SizedBox(width: 6),
+                              Text('Rate this order', style: TextStyle(
+                                color: AppColors.primaryOrange,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              )),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ],
