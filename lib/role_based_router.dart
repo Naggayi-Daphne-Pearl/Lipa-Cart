@@ -33,6 +33,7 @@ import 'screens/recipes/recipes_screen.dart';
 import 'screens/recipes/recipe_detail_screen.dart';
 import 'screens/customer/addresses_screen.dart';
 import 'screens/customer/order_rating_screen.dart';
+import 'screens/customer/ratings_reviews_screen.dart';
 
 // Admin screens
 import 'screens/admin/admin_shell.dart';
@@ -440,6 +441,10 @@ class RoleBasedRouter {
             if (recipeId == null) return const RecipesScreen();
             return RecipeDetailScreen(recipeId: recipeId);
           },
+        ),
+        GoRoute(
+          path: '/customer/ratings-reviews',
+          builder: (context, state) => const RatingsReviewsScreen(),
         ),
         GoRoute(
           path: '/customer/profile',
