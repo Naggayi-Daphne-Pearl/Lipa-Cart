@@ -9,10 +9,21 @@ class RecipeProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // Multi-tag filtering
+  final Set<String> _selectedTags = {};
+
+  // Quick filter shortcuts
+  bool _quickFilter = false;
+  bool _easyFilter = false;
+
   List<Recipe> get recipes => _recipes;
   List<Recipe> get favoriteRecipes => _favoriteRecipes;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  Set<String> get selectedTags => _selectedTags;
+  bool get quickFilter => _quickFilter;
+  bool get easyFilter => _easyFilter;
 
   List<Recipe> get popularRecipes =>
       _recipes.where((r) => r.rating >= 4.5).take(6).toList();
@@ -28,7 +39,55 @@ class RecipeProvider extends ChangeNotifier {
     return tags.toList()..sort();
   }
 
-  Future<void> loadRecipes() async {
+  /// Recipes filtered by selected tags, quick filter, and easy filter.
+  List<Recipe> get filteredRecipes {
+    List<Recipe> result = List.from(_recipes);
+
+    // Filter by selected tags (recipe must match ANY selected tag)
+    if (_selectedTags.isNotEmpty) {
+      result = result
+          .where((r) => r.tags.any((t) => _selectedTags.contains(t)))
+          .toList();
+    }
+
+    // Quick filter: totalTime < 30
+    if (_quickFilter) {
+      result = result.where((r) => r.totalTime < 30).toList();
+    }
+
+    // Easy filter: difficulty == 'Easy'
+    if (_easyFilter) {
+      result = result.where((r) => r.difficulty == 'Easy').toList();
+    }
+
+    return result;
+  }
+
+  void toggleTag(String tag) {
+    if (_selectedTags.contains(tag)) {
+      _selectedTags.remove(tag);
+    } else {
+      _selectedTags.add(tag);
+    }
+    notifyListeners();
+  }
+
+  void clearTags() {
+    _selectedTags.clear();
+    notifyListeners();
+  }
+
+  void toggleQuickFilter() {
+    _quickFilter = !_quickFilter;
+    notifyListeners();
+  }
+
+  void toggleEasyFilter() {
+    _easyFilter = !_easyFilter;
+    notifyListeners();
+  }
+
+  Future<void> loadRecipes({List<Product>? products}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -42,7 +101,42 @@ class RecipeProvider extends ChangeNotifier {
       _favoriteRecipes = _recipes.where((r) => r.isFavorite).toList();
     }
 
+    // Auto-link ingredients to products by name matching
+    if (products != null && products.isNotEmpty) {
+      linkIngredientsToProducts(products);
+    }
+
     _isLoading = false;
+    notifyListeners();
+  }
+
+  /// Match ingredient names to catalog products so they have prices and can be ordered
+  void linkIngredientsToProducts(List<Product> products) {
+    for (final recipe in _recipes) {
+      for (int i = 0; i < recipe.ingredients.length; i++) {
+        final ingredient = recipe.ingredients[i];
+        if (ingredient.linkedProduct != null) continue; // already linked
+
+        // Find matching product by name
+        final match = products.cast<Product?>().firstWhere(
+          (p) =>
+              p!.name.toLowerCase() == ingredient.name.toLowerCase() ||
+              p.name.toLowerCase().contains(ingredient.name.toLowerCase()) ||
+              ingredient.name.toLowerCase().contains(p.name.toLowerCase()),
+          orElse: () => null,
+        );
+
+        if (match != null) {
+          recipe.ingredients[i] = RecipeIngredient(
+            id: ingredient.id,
+            name: ingredient.name,
+            quantity: ingredient.quantity,
+            isOptional: ingredient.isOptional,
+            linkedProduct: match,
+          );
+        }
+      }
+    }
     notifyListeners();
   }
 

@@ -52,7 +52,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       extendBodyBehindAppBar: true,
-      bottomNavigationBar: const AppBottomNav(currentIndex: 5),
+      bottomNavigationBar: const AppBottomNav(currentIndex: 4),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

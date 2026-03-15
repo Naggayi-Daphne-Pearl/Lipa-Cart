@@ -94,7 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       bottomNavigationBar: widget.showBottomNav
-          ? const AppBottomNav(currentIndex: 5)
+          ? const AppBottomNav(currentIndex: 4)
           : null,
       body: ResponsiveContainer(
         child: SafeArea(
@@ -419,31 +419,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               title: 'Ratings & Reviews',
                               onTap: () {},
                             ),
-                            _MenuItem(
-                              icon: Iconsax.ticket_discount,
-                              title: 'Vouchers',
-                              onTap: () {},
-                            ),
+                            // _MenuItem(
+                            //   icon: Iconsax.ticket_discount,
+                            //   title: 'Vouchers',
+                            //   onTap: () {},
+                            // ),
                             _MenuItem(
                               icon: Iconsax.heart,
                               title: 'Wishlist',
                               onTap: () {},
                             ),
-                            _MenuItem(
-                              icon: Iconsax.shop,
-                              title: 'Followed Sellers',
-                              onTap: () {},
-                            ),
-                            _MenuItem(
-                              icon: Iconsax.eye,
-                              title: 'Recently Viewed',
-                              onTap: () {},
-                            ),
-                            _MenuItem(
-                              icon: Iconsax.search_normal,
-                              title: 'Recently Searched',
-                              onTap: () {},
-                            ),
+                            // _MenuItem(
+                            //   icon: Iconsax.shop,
+                            //   title: 'Followed Sellers',
+                            //   onTap: () {},
+                            // ),
+                            // _MenuItem(
+                            //   icon: Iconsax.eye,
+                            //   title: 'Recently Viewed',
+                            //   onTap: () {},
+                            // ),
+                            // _MenuItem(
+                            //   icon: Iconsax.search_normal,
+                            //   title: 'Recently Searched',
+                            //   onTap: () {},
+                            // ),
                           ]),
                         ),
                         const SizedBox(width: AppSizes.lg),
@@ -454,11 +454,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               title: 'Addresses',
                               onTap: () => context.go('/customer/addresses'),
                             ),
-                            _MenuItem(
-                              icon: Iconsax.notification,
-                              title: 'Notifications',
-                              onTap: () {},
-                            ),
+                            // _MenuItem(
+                            //   icon: Iconsax.notification,
+                            //   title: 'Notifications',
+                            //   onTap: () {},
+                            // ),
                             _MenuItem(
                               icon: Iconsax.setting_2,
                               title: 'Settings',

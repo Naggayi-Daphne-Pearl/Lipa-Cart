@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../models/product.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/cart_provider.dart';
+import '../../services/order_service.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -9,7 +14,6 @@ import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order.dart';
 import '../../widgets/custom_button.dart';
-import '../../widgets/app_bottom_nav.dart';
 
 class OrderTrackingScreen extends StatelessWidget {
   final Order order;
@@ -20,7 +24,6 @@ class OrderTrackingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: const AppBottomNav(currentIndex: 4),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -709,6 +712,79 @@ class OrderTrackingScreen extends StatelessWidget {
                   const SizedBox(height: AppSizes.lg),
                 ],
 
+                // Cancel order button (only for early statuses)
+                if (order.status == OrderStatus.pending ||
+                    order.status == OrderStatus.confirmed ||
+                    order.status == OrderStatus.shopperAssigned)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSizes.md),
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showCancelDialog(context),
+                      icon: const Icon(Iconsax.close_circle, size: 18),
+                      label: const Text('Cancel Order'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        side: const BorderSide(color: AppColors.error),
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Reorder button for delivered orders
+                if (order.status == OrderStatus.delivered) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        final cartProvider = Provider.of<CartProvider>(context, listen: false);
+                        int added = 0;
+                        for (final item in order.items) {
+                          final product = item.product.id == 'unknown'
+                              ? Product(
+                                  id: 'reorder_${item.product.name}_$added',
+                                  name: item.product.name,
+                                  description: item.product.description,
+                                  image: item.product.image,
+                                  price: item.actualPrice ?? item.product.price,
+                                  unit: item.product.unit,
+                                  categoryId: item.product.categoryId,
+                                  categoryName: item.product.categoryName,
+                                  isAvailable: true,
+                                )
+                              : item.product;
+                          cartProvider.addToCart(product, quantity: item.quantity);
+                          added++;
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('$added items added to cart'),
+                            backgroundColor: AppColors.success,
+                            action: SnackBarAction(
+                              label: 'Checkout',
+                              textColor: Colors.white,
+                              onPressed: () => GoRouter.of(context).go('/customer/checkout'),
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Iconsax.refresh_2, size: 18),
+                      label: const Text('Reorder'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                ],
+
                 // Help button
                 CustomButton(
                   text: 'Need Help?',
@@ -737,6 +813,98 @@ class OrderTrackingScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _showCancelDialog(BuildContext context) {
+    final reasonController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Cancel Order?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Are you sure you want to cancel this order?'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                labelText: 'Reason (optional)',
+                hintText: 'e.g. Changed my mind, ordered wrong items...',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Keep Order'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+
+              // Show loading overlay
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Cancelling order...'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+
+              final orderService = Provider.of<OrderService>(context, listen: false);
+              final authProvider = Provider.of<AuthProvider>(context, listen: false);
+              final token = authProvider.token;
+
+              if (token != null) {
+                final reason = reasonController.text.trim();
+                final success = await orderService.cancelOrder(token, order.documentId ?? order.id, reason: reason);
+
+                // Refresh orders list so it's updated immediately
+                await orderService.fetchOrders(token, authProvider.user!.id.toString());
+
+                // Dismiss loading
+                Navigator.of(context).pop();
+
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Order cancelled'), backgroundColor: Colors.red),
+                  );
+                  GoRouter.of(context).go('/customer/orders');
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(orderService.error ?? 'Failed to cancel order'), backgroundColor: Colors.red),
+                  );
+                }
+              } else {
+                Navigator.of(context).pop();
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Cancel Order'),
+          ),
+        ],
+      ),
     );
   }
 

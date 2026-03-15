@@ -9,6 +9,7 @@ import '../../core/constants/app_sizes.dart';
 import '../../core/utils/responsive.dart';
 import '../../models/recipe.dart';
 import '../../providers/recipe_provider.dart';
+import '../../providers/product_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
 
@@ -20,7 +21,6 @@ class RecipesScreen extends StatefulWidget {
 }
 
 class _RecipesScreenState extends State<RecipesScreen> {
-  String? _selectedTag;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -28,7 +28,8 @@ class _RecipesScreenState extends State<RecipesScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<RecipeProvider>().loadRecipes();
+      final products = context.read<ProductProvider>().products;
+      context.read<RecipeProvider>().loadRecipes(products: products);
     });
   }
 
@@ -39,16 +40,22 @@ class _RecipesScreenState extends State<RecipesScreen> {
   }
 
   List<Recipe> _getFilteredRecipes(RecipeProvider provider) {
-    List<Recipe> recipes = provider.recipes;
-
-    // Filter by tag
-    if (_selectedTag != null) {
-      recipes = recipes.where((r) => r.tags.contains(_selectedTag)).toList();
-    }
+    // Start from provider's filteredRecipes (which already applies tags + quick/easy filters)
+    List<Recipe> recipes = provider.filteredRecipes;
 
     // Filter by search
     if (_searchQuery.isNotEmpty) {
-      recipes = provider.searchRecipes(_searchQuery);
+      final lowercaseQuery = _searchQuery.toLowerCase();
+      recipes = recipes.where((recipe) {
+        return recipe.name.toLowerCase().contains(lowercaseQuery) ||
+            recipe.description.toLowerCase().contains(lowercaseQuery) ||
+            recipe.tags.any(
+              (tag) => tag.toLowerCase().contains(lowercaseQuery),
+            ) ||
+            recipe.ingredients.any(
+              (i) => i.name.toLowerCase().contains(lowercaseQuery),
+            );
+      }).toList();
     }
 
     return recipes;
@@ -196,7 +203,32 @@ class _RecipesScreenState extends State<RecipesScreen> {
                   ),
                 ),
 
-                // Tag filters
+                // Quick filter buttons
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.horizontalPadding,
+                  ),
+                  child: Row(
+                    children: [
+                      _buildQuickFilterButton(
+                        label: 'Quick (< 30 min)',
+                        icon: Iconsax.timer_1,
+                        isSelected: provider.quickFilter,
+                        onTap: () => provider.toggleQuickFilter(),
+                      ),
+                      const SizedBox(width: AppSizes.sm),
+                      _buildQuickFilterButton(
+                        label: 'Easy',
+                        icon: Iconsax.star,
+                        isSelected: provider.easyFilter,
+                        onTap: () => provider.toggleEasyFilter(),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSizes.sm),
+
+                // Tag filters — all tags, horizontally scrollable
                 SizedBox(
                   height: 44,
                   child: ListView(
@@ -205,25 +237,29 @@ class _RecipesScreenState extends State<RecipesScreen> {
                       horizontal: context.horizontalPadding,
                     ),
                     children: [
-                      _buildTagChip(
-                        label: 'All',
-                        icon: Iconsax.element_4,
-                        isSelected: _selectedTag == null,
-                        onTap: () => setState(() => _selectedTag = null),
-                      ),
-                      ...provider.allTags
-                          .take(8)
-                          .map(
-                            (tag) => Padding(
-                              padding: const EdgeInsets.only(left: AppSizes.sm),
-                              child: _buildTagChip(
-                                label: tag,
-                                icon: _getTagIcon(tag),
-                                isSelected: _selectedTag == tag,
-                                onTap: () => setState(() => _selectedTag = tag),
-                              ),
-                            ),
+                      // "Clear" chip — only shown when tags are selected
+                      if (provider.selectedTags.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(right: AppSizes.sm),
+                          child: _buildTagChip(
+                            label: 'Clear',
+                            icon: Iconsax.close_circle,
+                            isSelected: false,
+                            onTap: () => provider.clearTags(),
                           ),
+                        ),
+                      // All tag chips (no .take(8))
+                      ...provider.allTags.map(
+                        (tag) => Padding(
+                          padding: const EdgeInsets.only(right: AppSizes.sm),
+                          child: _buildTagChip(
+                            label: tag,
+                            icon: _getTagIcon(tag),
+                            isSelected: provider.selectedTags.contains(tag),
+                            onTap: () => provider.toggleTag(tag),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -260,6 +296,51 @@ class _RecipesScreenState extends State<RecipesScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickFilterButton({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSizes.md,
+          vertical: AppSizes.sm,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : AppColors.surface,
+          borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.grey200,
+            width: 1,
+          ),
+          boxShadow: isSelected ? null : AppColors.shadowSm,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? Colors.white : AppColors.textSecondary,
+            ),
+            const SizedBox(width: AppSizes.xs),
+            Text(
+              label,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -561,7 +642,13 @@ class _RecipesScreenState extends State<RecipesScreen> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: AppSizes.md),
+                  const SizedBox(height: AppSizes.sm),
+                  // Ingredient availability
+                  Text(
+                    '${recipe.purchasableIngredients.length}/${recipe.ingredients.length} ingredients available',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: AppSizes.sm),
                   // Bottom row
                   Row(
                     children: [

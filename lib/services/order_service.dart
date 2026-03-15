@@ -493,7 +493,7 @@ class OrderService extends ChangeNotifier {
   }
 
   /// Cancel order
-  Future<bool> cancelOrder(String token, String orderId) async {
+  Future<bool> cancelOrder(String token, String orderId, {String? reason}) async {
     try {
       final response = await http.put(
         Uri.parse('$baseUrl/api/orders/$orderId'),
@@ -505,6 +505,7 @@ class OrderService extends ChangeNotifier {
           'data': {
             'status': 'cancelled',
             'cancelled_at': DateTime.now().toIso8601String(),
+            if (reason != null && reason.isNotEmpty) 'cancellation_reason': reason,
           },
         }),
       );
@@ -534,19 +535,31 @@ class OrderService extends ChangeNotifier {
   Future<bool> submitRating({
     required String token,
     required String orderId,
-    required double stars,
-    required String? comment,
+    int? overallRating,
+    int? shopperRating,
+    int? riderRating,
+    String? comment,
+    String? customerId,
+    // Legacy support
+    double? stars,
   }) async {
     try {
+      final ratingData = <String, dynamic>{
+        'order': orderId,
+        'overall_rating': overallRating ?? stars?.toInt() ?? 5,
+        if (shopperRating != null) 'shopper_rating': shopperRating,
+        if (riderRating != null) 'rider_rating': riderRating,
+        if (comment != null) 'comment': comment,
+        if (customerId != null) 'customer': customerId,
+      };
+
       final response = await http.post(
         Uri.parse('$baseUrl/api/ratings'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'data': {'order': orderId, 'stars': stars, 'comment': comment},
-        }),
+        body: jsonEncode({'data': ratingData}),
       );
 
       if (response.statusCode == 201) {

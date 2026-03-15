@@ -3,16 +3,16 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uuid/uuid.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/recipe.dart';
-import '../../models/cart_item.dart';
+import '../../models/shopping_list.dart';
 import '../../providers/recipe_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/shopping_list_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
@@ -29,6 +29,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   late TabController _tabController;
   final Set<String> _selectedIngredients = {};
   bool _selectAll = true;
+  double _servingsMultiplier = 1.0;
 
   @override
   void initState() {
@@ -61,6 +62,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
         recipe.purchasableIngredients.map((i) => i.id),
       );
     }
+
+    final adjustedServings = (recipe.servings * _servingsMultiplier).round();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -114,26 +117,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                   ),
                 ),
               ),
-              GestureDetector(
-                onTap: () {
-                  // Share functionality
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: AppColors.shadowSm,
-                  ),
-                  child: const Icon(
-                    Iconsax.share,
-                    color: AppColors.textPrimary,
-                    size: 20,
-                  ),
-                ),
-              ),
+              const SizedBox(width: 8),
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
@@ -180,7 +164,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                         const SizedBox(width: AppSizes.sm),
                         _buildInfoBadge(
                           icon: Iconsax.people,
-                          label: '${recipe.servings} servings',
+                          label: '$adjustedServings servings',
                         ),
                         const SizedBox(width: AppSizes.sm),
                         _buildInfoBadge(
@@ -296,6 +280,83 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                         ),
                         const SizedBox(height: AppSizes.md),
 
+                        // Servings adjuster
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSizes.md,
+                            vertical: AppSizes.sm,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.grey50,
+                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                            border: Border.all(color: AppColors.grey200),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Servings:',
+                                style: AppTextStyles.labelMedium.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: AppSizes.sm),
+                              GestureDetector(
+                                onTap: () {
+                                  if (_servingsMultiplier > 0.5) {
+                                    setState(() {
+                                      _servingsMultiplier -= 0.5;
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.grey300),
+                                  ),
+                                  child: const Center(
+                                    child: Icon(Icons.remove, size: 18),
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSizes.md,
+                                ),
+                                child: Text(
+                                  '$adjustedServings',
+                                  style: AppTextStyles.h5.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _servingsMultiplier += 0.5;
+                                  });
+                                },
+                                child: Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.grey300),
+                                  ),
+                                  child: const Center(
+                                    child: Icon(Icons.add, size: 18),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: AppSizes.md),
+
                         // Author
                         if (recipe.authorName != null)
                           Row(
@@ -401,7 +462,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           ),
         ],
       ),
-      // Bottom bar with add to cart and order now
+      // Bottom bar with add to cart, add to list, and order now
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(AppSizes.lg),
         decoration: BoxDecoration(
@@ -434,7 +495,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                       ),
                     ),
                     Text(
-                      Formatters.formatCurrency(_calculateSelectedCost(recipe)),
+                      Formatters.formatCurrency(
+                        _calculateSelectedCost(recipe) * _servingsMultiplier,
+                      ),
                       style: AppTextStyles.h4.copyWith(
                         color: AppColors.accent,
                         fontWeight: FontWeight.w700,
@@ -444,7 +507,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                 ),
               ),
               const SizedBox(height: AppSizes.md),
-              // Two buttons: Add to Cart and Order Ingredients
+              // Three buttons: Add to Cart, Add to List, Order
               Row(
                 children: [
                   // Add to Cart (secondary)
@@ -474,7 +537,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                             const Icon(Iconsax.bag_2, size: 18),
                             const SizedBox(width: AppSizes.xs),
                             Text(
-                              'Add to Cart',
+                              'Cart',
                               style: AppTextStyles.labelMedium.copyWith(
                                 color: _selectedIngredients.isEmpty
                                     ? AppColors.textSecondary
@@ -486,13 +549,59 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppSizes.md),
+                  const SizedBox(width: AppSizes.sm),
+                  // Add to List
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: _selectedIngredients.isEmpty
+                          ? null
+                          : () => _addToShoppingList(recipe),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSizes.md,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _selectedIngredients.isEmpty
+                              ? AppColors.grey200
+                              : AppColors.accentSoft,
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          border: Border.all(
+                            color: _selectedIngredients.isEmpty
+                                ? AppColors.grey300
+                                : AppColors.accent.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Iconsax.note_2,
+                              size: 18,
+                              color: _selectedIngredients.isEmpty
+                                  ? AppColors.textSecondary
+                                  : AppColors.accent,
+                            ),
+                            const SizedBox(width: AppSizes.xs),
+                            Text(
+                              'List',
+                              style: AppTextStyles.labelMedium.copyWith(
+                                color: _selectedIngredients.isEmpty
+                                    ? AppColors.textSecondary
+                                    : AppColors.accent,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSizes.sm),
                   // Order Ingredients (primary)
                   Expanded(
                     child: GestureDetector(
                       onTap: _selectedIngredients.isEmpty
                           ? null
-                          : () => _orderIngredients(recipe, cartProvider),
+                          : () => _showOrderReview(recipe, cartProvider),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           vertical: AppSizes.md,
@@ -563,6 +672,21 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
         ],
       ),
     );
+  }
+
+  String _adjustQuantity(String quantityStr) {
+    if (_servingsMultiplier == 1.0) return quantityStr;
+
+    final match = RegExp(r'(\d+\.?\d*)').firstMatch(quantityStr);
+    if (match != null) {
+      final original = double.tryParse(match.group(1)!) ?? 1.0;
+      final adjusted = original * _servingsMultiplier;
+      final adjustedStr = adjusted == adjusted.roundToDouble()
+          ? adjusted.round().toString()
+          : adjusted.toStringAsFixed(1);
+      return quantityStr.replaceFirst(match.group(1)!, adjustedStr);
+    }
+    return quantityStr;
   }
 
   Widget _buildIngredientsTab(Recipe recipe) {
@@ -732,7 +856,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
               subtitle: Row(
                 children: [
                   Text(
-                    ingredient.quantity,
+                    _adjustQuantity(ingredient.quantity),
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -741,7 +865,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                     const Spacer(),
                     Text(
                       Formatters.formatCurrency(
-                        ingredient.linkedProduct!.price,
+                        ingredient.linkedProduct!.price * _servingsMultiplier,
                       ),
                       style: AppTextStyles.labelSmall.copyWith(
                         color: AppColors.primary,
@@ -756,17 +880,17 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                       borderRadius: BorderRadius.circular(8),
                       child: CachedNetworkImage(
                         imageUrl: ingredient.linkedProduct!.image,
-                        width: 48,
-                        height: 48,
+                        width: 64,
+                        height: 64,
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Container(
-                          width: 48,
-                          height: 48,
+                          width: 64,
+                          height: 64,
                           color: AppColors.grey100,
                         ),
                         errorWidget: (context, url, error) => Container(
-                          width: 48,
-                          height: 48,
+                          width: 64,
+                          height: 64,
                           color: AppColors.grey100,
                           child: const Icon(
                             Iconsax.image,
@@ -863,7 +987,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
       if (_selectedIngredients.contains(ingredient.id)) {
         if (ingredient.linkedProduct != null) {
           // Extract numeric quantity from ingredient quantity string
-          final quantity = _extractQuantityFromString(ingredient.quantity);
+          final quantity = _extractQuantityFromString(ingredient.quantity) *
+              _servingsMultiplier;
           cartProvider.addToCart(ingredient.linkedProduct!, quantity: quantity);
           addedCount++;
         } else {
@@ -904,6 +1029,239 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     }
   }
 
+  void _addToShoppingList(Recipe recipe) {
+    final listProvider = context.read<ShoppingListProvider>();
+    final lists = listProvider.lists;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Add to Shopping List',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 16),
+              if (lists.isEmpty)
+                Text(
+                  'No shopping lists yet. Create one first.',
+                  style: TextStyle(color: Colors.grey),
+                )
+              else
+                ...lists.map(
+                  (list) => ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Color(
+                          int.parse(
+                            'FF${list.color.replaceAll('#', '')}',
+                            radix: 16,
+                          ),
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          list.emoji ?? '\u{1F6D2}',
+                          style: TextStyle(fontSize: 20),
+                        ),
+                      ),
+                    ),
+                    title: Text(list.name),
+                    subtitle: Text('${list.totalItems} items'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _addIngredientsToList(recipe, list.id);
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _addIngredientsToList(Recipe recipe, String listId) {
+    final listProvider = context.read<ShoppingListProvider>();
+    final authToken = context.read<AuthProvider>().token;
+    int added = 0;
+
+    for (final ingredient in recipe.ingredients) {
+      if (_selectedIngredients.contains(ingredient.id)) {
+        final item = ShoppingListItem(
+          id: '${DateTime.now().millisecondsSinceEpoch}_$added',
+          name: ingredient.name,
+          quantity: 1,
+          unit: _adjustQuantity(ingredient.quantity),
+          linkedProduct: ingredient.linkedProduct,
+          unitPrice: ingredient.linkedProduct?.price,
+        );
+        listProvider.addItemToList(listId, item, authToken: authToken);
+        added++;
+      }
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$added ingredients added to list'),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        ),
+      ),
+    );
+  }
+
+  void _showOrderReview(Recipe recipe, CartProvider cartProvider) {
+    final selectedItems = recipe.ingredients
+        .where((i) =>
+            _selectedIngredients.contains(i.id) && i.linkedProduct != null)
+        .toList();
+
+    if (selectedItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('No items available to order'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final totalCost = selectedItems.fold<double>(
+      0,
+      (sum, i) => sum + (i.linkedProduct!.price * _servingsMultiplier),
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+        ),
+        title: Text(
+          'Order Summary',
+          style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${selectedItems.length} ingredient${selectedItems.length != 1 ? 's' : ''} will be added to cart:',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSizes.md),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 300),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: selectedItems.length,
+                  itemBuilder: (context, index) {
+                    final item = selectedItems[index];
+                    final qty = _extractQuantityFromString(item.quantity) *
+                        _servingsMultiplier;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: AppSizes.xs),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.name,
+                              style: AppTextStyles.bodySmall,
+                            ),
+                          ),
+                          Text(
+                            'x${qty == qty.roundToDouble() ? qty.round().toString() : qty.toStringAsFixed(1)}',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(width: AppSizes.sm),
+                          Text(
+                            Formatters.formatCurrency(
+                              item.linkedProduct!.price * _servingsMultiplier,
+                            ),
+                            style: AppTextStyles.labelSmall.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Total',
+                    style: AppTextStyles.labelMedium.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    Formatters.formatCurrency(totalCost),
+                    style: AppTextStyles.h5.copyWith(
+                      color: AppColors.accent,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _orderIngredients(recipe, cartProvider);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              ),
+            ),
+            child: const Text(
+              'Confirm & Checkout',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _orderIngredients(Recipe recipe, CartProvider cartProvider) {
     // Build cart items from selected ingredients
     int addedCount = 0;
@@ -911,7 +1269,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     for (final ingredient in recipe.ingredients) {
       if (_selectedIngredients.contains(ingredient.id)) {
         if (ingredient.linkedProduct != null) {
-          final quantity = _extractQuantityFromString(ingredient.quantity);
+          final quantity = _extractQuantityFromString(ingredient.quantity) *
+              _servingsMultiplier;
           cartProvider.addToCart(ingredient.linkedProduct!, quantity: quantity);
           addedCount++;
         }

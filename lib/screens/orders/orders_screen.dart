@@ -11,7 +11,6 @@ import '../../models/order.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
-import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
 
 class OrdersScreen extends StatefulWidget {
@@ -93,9 +92,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: widget.showBottomNav
-          ? const AppBottomNav(currentIndex: 4)
-          : null,
+      bottomNavigationBar: null,
       body: ResponsiveContainer(
         child: SafeArea(
           child: RefreshIndicator(
@@ -123,23 +120,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       children: [
                         // Header
                         Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            context.responsive<double>(
-                              mobile: AppSizes.lg,
-                              tablet: AppSizes.xl,
-                              desktop: 24.0,
-                            ),
-                            AppSizes.md,
-                            context.responsive<double>(
-                              mobile: AppSizes.lg,
-                              tablet: AppSizes.xl,
-                              desktop: 24.0,
-                            ),
-                            context.responsive<double>(
-                              mobile: AppSizes.lg,
-                              tablet: AppSizes.xl,
-                              desktop: 24.0,
-                            ),
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSizes.lg,
+                            AppSizes.sm,
+                            AppSizes.lg,
+                            AppSizes.sm,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,21 +163,27 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 Expanded(
                                   child: _buildTabButton(
                                     context,
-                                    'Active',
+                                    activeOrders.isNotEmpty
+                                        ? 'Active (${activeOrders.length})'
+                                        : 'Active',
                                     OrderTab.active,
                                   ),
                                 ),
                                 Expanded(
                                   child: _buildTabButton(
                                     context,
-                                    'Delivered',
+                                    deliveredOrders.isNotEmpty
+                                        ? 'Delivered (${deliveredOrders.length})'
+                                        : 'Delivered',
                                     OrderTab.delivered,
                                   ),
                                 ),
                                 Expanded(
                                   child: _buildTabButton(
                                     context,
-                                    'Cancelled',
+                                    cancelledOrders.isNotEmpty
+                                        ? 'Cancelled (${cancelledOrders.length})'
+                                        : 'Cancelled',
                                     OrderTab.cancelled,
                                   ),
                                 ),
@@ -373,6 +364,18 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
                       ],
                     ),
+
+                    // Rate badge for unrated delivered orders
+                    if (order.status == OrderStatus.delivered && !order.hasBeenRated) ...[
+                      const SizedBox(height: AppSizes.xs),
+                      Row(
+                        children: [
+                          Icon(Icons.star_outline_rounded, size: 14, color: AppColors.primaryOrange),
+                          const SizedBox(width: 4),
+                          Text('Tap to rate', style: TextStyle(color: AppColors.primaryOrange, fontSize: 12)),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

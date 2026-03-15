@@ -410,6 +410,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${item.name} removed'),
+              duration: const Duration(seconds: 2),
               action: SnackBarAction(label: 'Undo', onPressed: () {
                 context.read<ShoppingListProvider>().addItemToList(
                   list.id,

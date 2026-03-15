@@ -34,10 +34,6 @@ class AppBottomNav extends StatelessWidget {
         context.go('/customer/cart');
         break;
       case 4:
-        // Orders
-        context.go('/customer/orders');
-        break;
-      case 5:
         // Profile
         context.go('/customer/profile');
         break;
@@ -95,17 +91,10 @@ class AppBottomNav extends StatelessWidget {
               _buildCartNavItem(context, cartProvider.itemCount),
               _buildNavItem(
                 context: context,
-                icon: Iconsax.receipt_item,
-                activeIcon: Iconsax.receipt_item,
-                label: 'Orders',
-                index: 4,
-              ),
-              _buildNavItem(
-                context: context,
                 icon: Iconsax.user,
                 activeIcon: Iconsax.user,
                 label: 'Profile',
-                index: 5,
+                index: 4,
               ),
             ],
           ),

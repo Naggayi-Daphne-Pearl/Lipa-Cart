@@ -73,7 +73,13 @@ class CartScreen extends StatelessWidget {
                       child: Row(
                         children: [
                           GestureDetector(
-                            onTap: () => Navigator.pop(context),
+                            onTap: () {
+                              if (Navigator.of(context).canPop()) {
+                                Navigator.pop(context);
+                              } else {
+                                GoRouter.of(context).go('/customer/home');
+                              }
+                            },
                             child: Container(
                               width: 44,
                               height: 44,

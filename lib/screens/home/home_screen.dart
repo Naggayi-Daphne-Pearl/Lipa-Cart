@@ -30,9 +30,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProductProvider>().loadProducts();
-      context.read<RecipeProvider>().loadRecipes();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final productProvider = context.read<ProductProvider>();
+      await productProvider.loadProducts();
+      if (mounted) {
+        context.read<RecipeProvider>().loadRecipes(products: productProvider.products);
+      }
     });
   }
 
@@ -450,7 +453,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                     // Content
                                     Padding(
-                                      padding: const EdgeInsets.all(16),
+                                      padding: const EdgeInsets.all(12),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
