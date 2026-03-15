@@ -20,11 +20,13 @@ class _ChecklistItem {
   _ChecklistItem({
     required this.cartItem,
     this.actualPrice,
-  })  : found = false,
+  })  : found = cartItem.found ?? false,
         priceController = TextEditingController(
-          text: actualPrice?.toStringAsFixed(0) ?? '',
+          text: (cartItem.actualPrice ?? actualPrice)?.toStringAsFixed(0) ?? '',
         ),
-        notesController = TextEditingController();
+        notesController = TextEditingController(
+          text: cartItem.shopperNotes ?? '',
+        );
 
   void dispose() {
     priceController.dispose();
@@ -152,9 +154,23 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
       };
     }).toList();
 
-    await shopper.updateOrderItems(auth.token!, itemUpdates);
+    // 1. Save item updates — abort if this fails
+    final itemsUpdated = await shopper.updateOrderItems(auth.token!, itemUpdates);
 
-    // 2. Mark order as ready for pickup
+    if (!itemsUpdated) {
+      setState(() => _isSaving = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(shopper.error ?? 'Failed to save item updates. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // 2. Mark order as ready for pickup (only if items saved successfully)
     final success = await shopper.markOrderReady(auth.token!, orderId);
 
     setState(() => _isSaving = false);

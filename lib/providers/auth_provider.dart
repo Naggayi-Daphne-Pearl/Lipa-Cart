@@ -78,6 +78,15 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
   bool get isFirstLaunch => _isFirstLaunch;
+
+  /// Update KYC status locally without a backend call
+  void updateKycStatus(String kycStatus) {
+    if (_user != null) {
+      _user = _user!.copyWith(kycStatus: kycStatus);
+      notifyListeners();
+    }
+  }
+
   Future<void> _bootstrap() async {
     if (_didBootstrap) return;
     _didBootstrap = true;

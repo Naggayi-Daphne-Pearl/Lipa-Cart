@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'dart:io';
 
 import '../../providers/auth_provider.dart';
@@ -192,6 +192,7 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
       );
 
       if (success && mounted) {
+        authProvider.updateKycStatus('pending_review');
         context.go('/shopper/pending-approval');
       } else if (mounted) {
         throw Exception('Failed to submit KYC');
@@ -216,11 +217,19 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
     if (kIsWeb && xFile != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-        child: Image.network(
-          xFile.path,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: double.infinity,
+        child: FutureBuilder<Uint8List>(
+          future: xFile.readAsBytes(),
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              return Image.memory(
+                snapshot.data!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+              );
+            }
+            return const Center(child: CircularProgressIndicator());
+          },
         ),
       );
     } else if (file != null) {
@@ -606,8 +615,18 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                         right: method == 'Mobile Money' ? 8.0 : 0.0,
                       ),
                       child: GestureDetector(
-                        onTap: () =>
-                            setState(() => _selectedPaymentMethod = method),
+                        onTap: () {
+                          setState(() {
+                            _selectedPaymentMethod = method;
+                            if (method == 'Mobile Money') {
+                              _bankNameController.clear();
+                              _bankAccountNameController.clear();
+                              _bankAccountNumberController.clear();
+                            } else {
+                              _momoNumberController.clear();
+                            }
+                          });
+                        },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(vertical: 12),

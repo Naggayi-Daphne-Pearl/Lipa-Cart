@@ -293,7 +293,7 @@ class StrapiService {
             : '';
 
         return CartItem(
-          id: (item['id'] ?? '').toString(),
+          id: (item['documentId'] ?? item['id'] ?? '').toString(),
           product: Product(
             id: productId.isEmpty ? 'unknown' : productId,
             name: productName,
@@ -307,6 +307,9 @@ class StrapiService {
           ),
           quantity: quantity,
           specialInstructions: itemAttrs['special_instructions'] as String?,
+          found: itemAttrs['found'] as bool?,
+          actualPrice: (itemAttrs['actual_price'] as num?)?.toDouble(),
+          shopperNotes: itemAttrs['shopper_notes'] as String?,
         );
       }).toList();
     } else if (orderItemsRaw is Map && orderItemsRaw['data'] is List) {
@@ -319,7 +322,7 @@ class StrapiService {
             (itemAttrs['estimated_price'] as num?)?.toDouble() ?? 0;
 
         return CartItem(
-          id: (item['id'] ?? '').toString(),
+          id: (item['documentId'] ?? item['id'] ?? '').toString(),
           product: Product(
             id: 'unknown',
             name: productName,

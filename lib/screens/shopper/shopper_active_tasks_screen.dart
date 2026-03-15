@@ -89,7 +89,13 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Active Tasks')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/shopper/home'),
+        ),
+        title: const Text('Active Tasks'),
+      ),
       body: Consumer<ShopperProvider>(
         builder: (context, shopper, _) {
           if (shopper.isLoading) {

@@ -128,10 +128,13 @@ class OrderService extends ChangeNotifier {
       );
 
       return CartItem(
-        id: (item['id'] ?? '').toString(),
+        id: (item['documentId'] ?? item['id'] ?? '').toString(),
         product: product,
         quantity: quantity,
         specialInstructions: itemAttrs['special_instructions'] as String?,
+        found: itemAttrs['found'] as bool?,
+        actualPrice: (itemAttrs['actual_price'] as num?)?.toDouble(),
+        shopperNotes: itemAttrs['shopper_notes'] as String?,
       );
     }).toList();
 
