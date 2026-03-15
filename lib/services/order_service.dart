@@ -61,42 +61,18 @@ class OrderService extends ChangeNotifier {
         attributes['toc_items'] ??
         attributes['items'];
 
-    print(
-      'DEBUG: _parseOrderItems - Full attributes keys: ${attributes.keys.toList()}',
-    );
-
-    print(
-      'DEBUG: _parseOrderItems - orderItemsRaw type: ${orderItemsRaw.runtimeType}',
-    );
-    print(
-      'DEBUG: _parseOrderItems - orderItemsRaw is null: ${orderItemsRaw == null}',
-    );
-
     if (orderItemsRaw == null) {
-      print('DEBUG: _parseOrderItems - No order items found in any field');
-      print('DEBUG: _parseOrderItems - Attributes details:');
-      attributes.forEach((key, value) {
-        print('  $key: ${value.runtimeType}');
-      });
       return [];
     }
-
-    print(
-      'DEBUG: _parseOrderItems - orderItemsRaw keys: ${orderItemsRaw is Map ? orderItemsRaw.keys.toList() : "not a map"}',
-    );
 
     List<dynamic> orderItems = [];
     if (orderItemsRaw is List<dynamic>) {
       // Flat format: direct array
       orderItems = orderItemsRaw;
-      print('DEBUG: Parsed as direct array, count: ${orderItems.length}');
     } else if (orderItemsRaw is Map<String, dynamic> &&
         orderItemsRaw.containsKey('data')) {
       // Wrapped format: {data: [...]}
       orderItems = (orderItemsRaw['data'] as List<dynamic>?) ?? [];
-      print('DEBUG: Parsed as wrapped format, count: ${orderItems.length}');
-    } else {
-      print('DEBUG: No order_items found or invalid format');
     }
 
     final parsedItems = orderItems.map((item) {
@@ -106,10 +82,6 @@ class OrderService extends ChangeNotifier {
       final unit = itemAttrs['unit'] as String? ?? 'unit';
       final estimatedPrice =
           (itemAttrs['estimated_price'] as num?)?.toDouble() ?? 0;
-
-      print(
-        'DEBUG: Parsed order item - name: $productName, qty: $quantity, price: $estimatedPrice',
-      );
 
       final productData =
           (itemAttrs['product']?['data'] as Map<String, dynamic>?) ??
@@ -141,20 +113,12 @@ class OrderService extends ChangeNotifier {
       );
     }).toList();
 
-    print('DEBUG: Final parsed items count: ${parsedItems.length}');
     return parsedItems;
   }
 
   user_models.Address _parseDeliveryAddress(Map<String, dynamic> attributes) {
     // Handle both wrapped and flat formats
     final addressRaw = attributes['delivery_address'];
-
-    print(
-      'DEBUG: _parseDeliveryAddress - addressRaw type: ${addressRaw.runtimeType}',
-    );
-    print(
-      'DEBUG: _parseDeliveryAddress - addressRaw is null: ${addressRaw == null}',
-    );
 
     Map<String, dynamic>? addressData;
     if (addressRaw is Map<String, dynamic>) {
@@ -169,9 +133,6 @@ class OrderService extends ChangeNotifier {
     }
 
     if (addressData == null) {
-      print(
-        'DEBUG: _parseDeliveryAddress - No address data found, returning empty address',
-      );
       return user_models.Address(
         id: '0',
         label: 'Delivery Address',
@@ -206,45 +167,25 @@ class OrderService extends ChangeNotifier {
 
   Order _fromStrapi(Map<String, dynamic> data) {
     try {
-      print('DEBUG: _fromStrapi - data keys: ${data.keys.toList()}');
-
       final attributes = (data['attributes'] as Map<String, dynamic>?) ?? data;
 
       final rawId = data['id'] ?? data['documentId'];
       final documentId = data['documentId'] as String?;
-
-      print('DEBUG: _fromStrapi - rawId: $rawId, documentId: $documentId');
 
       final orderNumber =
           (attributes['order_number'] ?? attributes['orderNumber'])
               ?.toString() ??
           (data['id']?.toString() ?? 'UNKNOWN');
 
-      print('DEBUG: _fromStrapi - Order ID: $rawId, DocumentId: $documentId');
-      print('DEBUG: _fromStrapi - Order Number: $orderNumber');
-      print(
-        'DEBUG: _fromStrapi - Attributes keys: ${attributes.keys.toList()}',
-      );
-
       final items = _parseOrderItems(attributes);
-      print('DEBUG: _fromStrapi - Final order items count: ${items.length}');
 
-      print('DEBUG: _fromStrapi - Parsing delivery address...');
       final deliveryAddress = _parseDeliveryAddress(attributes);
-      print(
-        'DEBUG: _fromStrapi - Delivery address parsed: ${deliveryAddress?.fullAddress}',
-      );
 
       // Parse customer data if available
-      print('DEBUG: _fromStrapi - Parsing customer data...');
       user_models.User? customer;
       final customerData = attributes['customer'];
       if (customerData != null) {
         try {
-          print(
-            'DEBUG: _fromStrapi - Customer data type: ${customerData.runtimeType}',
-          );
-
           Map<String, dynamic> customerMap;
           if (customerData is Map<String, dynamic>) {
             // Check if it's wrapped in {data: {...}}
@@ -267,12 +208,9 @@ class OrderService extends ChangeNotifier {
               }
             }
             customer = user_models.User.fromJson(customerMap);
-            print(
-              'DEBUG: _fromStrapi - Customer parsed: ${customer.name ?? customer.phoneNumber}',
-            );
           }
-        } catch (e) {
-          print('DEBUG: _fromStrapi - Error parsing customer: $e');
+        } catch (_) {
+          // ignored
         }
       }
 
@@ -327,7 +265,6 @@ class OrderService extends ChangeNotifier {
         isPaid: false,
       );
     } catch (e) {
-      print('ERROR: _fromStrapi - ${e.toString()}');
       rethrow;
     }
   }
@@ -343,85 +280,28 @@ class OrderService extends ChangeNotifier {
       final url =
           '$baseUrl/api/orders?filters[customer][\$eq]=$userId&populate[order_items][populate][0]=product&populate[delivery_address][populate][0]=customer&sort[0]=createdAt:desc';
 
-      print('DEBUG: Fetching orders from $url');
-      print('DEBUG: Using userId=$userId');
-      print('DEBUG: Token length=${token.length}');
-
       final response = await http.get(
         Uri.parse(url),
         headers: {'Authorization': 'Bearer $token'},
       );
 
-      print('DEBUG: Orders response status=${response.statusCode}');
-      print('DEBUG: Orders response body length=${response.body.length}');
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('DEBUG: fetchOrders response data keys: ${(data as Map).keys}');
-        print(
-          'DEBUG: fetchOrders data["data"] type: ${data["data"].runtimeType}',
-        );
-        print(
-          'DEBUG: fetchOrders total orders in response: ${(data["data"] as List).length}',
-        );
-
-        // Check first order structure
-        if ((data["data"] as List).isNotEmpty) {
-          final firstOrder = (data["data"] as List)[0];
-          print(
-            'DEBUG: First order keys: ${(firstOrder as Map).keys.toList()}',
-          );
-          final attrs = firstOrder['attributes'];
-          if (attrs != null) {
-            print(
-              'DEBUG: First order attributes keys: ${(attrs as Map).keys.toList()}',
-            );
-            print(
-              'DEBUG: Has order_items? ${attrs.containsKey("order_items")}',
-            );
-            if (attrs.containsKey('order_items')) {
-              print(
-                'DEBUG: order_items type: ${attrs["order_items"].runtimeType}',
-              );
-              print('DEBUG: order_items: ${attrs["order_items"]}');
-            }
-          } else {
-            print(
-              'DEBUG: First order attributes is NULL - API structure issue',
-            );
-          }
-        }
 
         _orders = List<Order>.from(
           (data['data'] as List).map((order) {
-            print(
-              'DEBUG: Processing order in list - id: ${order["id"]}, has attributes: ${order.containsKey("attributes")}',
-            );
-            final parsed = _fromStrapi(order);
-            print(
-              'DEBUG: Parsed order - id: ${parsed.id}, items count: ${parsed.items.length}, itemCount: ${parsed.itemCount}',
-            );
-            return parsed;
+            return _fromStrapi(order);
           }),
         );
-        print('DEBUG: Orders parsed count=${_orders.length}');
-        for (var i = 0; i < _orders.length; i++) {
-          print(
-            'DEBUG: Order $i - items: ${_orders[i].items.length}, itemCount: ${_orders[i].itemCount}',
-          );
-        }
         _isLoading = false;
         notifyListeners();
         return true;
       }
-      print('DEBUG: Orders fetch failed with status ${response.statusCode}');
-      print('DEBUG: Response body: ${response.body}');
       _error = 'Failed to fetch orders (${response.statusCode})';
       _isLoading = false;
       notifyListeners();
       return false;
     } catch (e) {
-      print('DEBUG: Orders fetch exception: $e');
       _error = 'Error fetching orders: $e';
       _isLoading = false;
       notifyListeners();
@@ -440,44 +320,30 @@ class OrderService extends ChangeNotifier {
       final url =
           '$baseUrl/api/orders?populate[0]=order_items&populate[1]=customer&populate[2]=delivery_address&sort[0]=createdAt:desc';
 
-      print('DEBUG: Fetching all orders from $url');
-      print('DEBUG: Token length=${token.length}');
-
       final response = await http.get(
         Uri.parse(url),
         headers: {'Authorization': 'Bearer $token'},
       );
-
-      print('DEBUG: All orders response status=${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
         _orders = List<Order>.from(
           (data['data'] as List).map((item) {
-            try {
-              return _fromStrapi(item);
-            } catch (e) {
-              print('ERROR: Failed to parse order: $e');
-              rethrow;
-            }
+            return _fromStrapi(item);
           }),
         );
 
-        print('DEBUG: All orders parsed count=${_orders.length}');
         _isLoading = false;
         notifyListeners();
         return true;
       }
 
-      print('DEBUG: All orders fetch failed with status ${response.statusCode}');
-      print('DEBUG: Response body: ${response.body}');
       _error = 'Failed to fetch orders (${response.statusCode})';
       _isLoading = false;
       notifyListeners();
       return false;
     } catch (e) {
-      print('DEBUG: All orders fetch exception: $e');
       _error = 'Error fetching orders: $e';
       _isLoading = false;
       notifyListeners();
@@ -539,9 +405,6 @@ class OrderService extends ChangeNotifier {
       // For now, all orders default to payment_confirmed so shoppers can see them
       final status = 'payment_confirmed';
 
-      print('DEBUG: Creating order with number: $orderNumber, payment: $paymentMethod, status: $status');
-      print('DEBUG: Customer ID: $customerId, Address ID: $addressId');
-
       final response = await http.post(
         Uri.parse('$baseUrl/api/orders'),
         headers: {
@@ -564,26 +427,18 @@ class OrderService extends ChangeNotifier {
         }),
       );
 
-      print('DEBUG: Order creation response status: ${response.statusCode}');
-
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         _currentOrder = _fromStrapi(data['data']);
         _orders.insert(0, _currentOrder!);
-        print(
-          'DEBUG: Order created successfully with ID: ${_currentOrder!.id}',
-        );
         notifyListeners();
         return true;
       }
 
-      print('DEBUG: Order creation FAILED - status: ${response.statusCode}');
-      print('DEBUG: Response body: ${response.body}');
       _error = 'Failed to create order (${response.statusCode})';
       notifyListeners();
       return false;
     } catch (e) {
-      print('DEBUG: Order creation exception: $e');
       _error = 'Error creating order: $e';
       notifyListeners();
       return false;
@@ -758,21 +613,12 @@ class OrderService extends ChangeNotifier {
     final orderDocumentId =
         _currentOrder!.documentId ??
         orderId; // Use documentId for Strapi v5 relations
-    print(
-      'DEBUG: createOrderWithItems - Order created with ID: $orderId, DocumentId: $orderDocumentId',
-    );
-    print('DEBUG: createOrderWithItems - Creating ${items.length} order items');
 
     try {
       // Prepare all items for bulk creation
       final itemsData = items.asMap().entries.map((entry) {
-        final index = entry.key;
         final item = entry.value;
         final productId = item.product.id;
-
-        print(
-          'DEBUG: [Item $index] Creating order item - product: ${item.product.name}, quantity: ${item.quantity}, productId: $productId (strapiId: ${item.product.strapiId}), orderId: $orderDocumentId',
-        );
 
         return {
           'order': orderDocumentId, // Use documentId for Strapi v5 relations
@@ -787,9 +633,6 @@ class OrderService extends ChangeNotifier {
         };
       }).toList();
 
-      print('DEBUG: Bulk creating ${itemsData.length} order items');
-      print('DEBUG: Request body: ${jsonEncode({'items': itemsData})}');
-
       // Single bulk request to create all items
       final response = await http.post(
         Uri.parse('$baseUrl/api/order-items/bulk'),
@@ -800,12 +643,7 @@ class OrderService extends ChangeNotifier {
         body: jsonEncode({'items': itemsData}),
       );
 
-      print('DEBUG: Bulk create response status: ${response.statusCode}');
-      print('DEBUG: Bulk create response body: ${response.body}');
-
       if (response.statusCode != 201 && response.statusCode != 200) {
-        print('DEBUG: Bulk create FAILED - status: ${response.statusCode}');
-
         // Parse error for better diagnostics
         try {
           final errorData = jsonDecode(response.body);
@@ -830,26 +668,17 @@ class OrderService extends ChangeNotifier {
       final createdCount =
           responseData['meta']?['count'] ?? responseData['data']?.length ?? 0;
       final failedCount = responseData['meta']?['failed'] ?? 0;
-      print(
-        'DEBUG: Bulk create complete - ${createdCount} created, ${failedCount} failed',
-      );
 
       if (createdCount == 0 && failedCount > 0) {
-        print('DEBUG: WARNING - All items failed to create!');
         _error = 'All order items failed to create. Check backend logs.';
         notifyListeners();
         return _currentOrder;
       }
 
-      print('DEBUG: Fetching updated order...');
       await getOrder(token, orderId);
-      print(
-        'DEBUG: Order fetched after item creation - items count: ${_currentOrder?.items.length ?? 0}',
-      );
       return _currentOrder;
     } catch (e) {
       _error = 'Error creating order items: $e';
-      print('DEBUG: Error creating order items: $e');
       notifyListeners();
       return _currentOrder;
     }

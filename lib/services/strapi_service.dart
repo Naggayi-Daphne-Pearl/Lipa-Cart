@@ -62,8 +62,6 @@ class StrapiService {
     // Note: /me endpoint not needed since find() is already filtered by authenticated user
     final url = '$_apiUrl/shopping-lists?populate=*&publicationState=preview';
 
-    print('DEBUG StrapiService.getShoppingLists - URL: $url');
-
     final headers = <String, String>{
       if (authToken != null) 'Authorization': 'Bearer $authToken',
     };
@@ -213,8 +211,6 @@ class StrapiService {
     // Simplified populate query - use wildcard instead of complex nested fields
     final url = '$_apiUrl/recipes?populate=*';
 
-    print('DEBUG StrapiService.getRecipes - URL: $url');
-
     final response = await http
         .get(Uri.parse(url))
         .timeout(AppConstants.apiTimeout);
@@ -261,7 +257,6 @@ class StrapiService {
       }
       return null;
     } catch (e) {
-      print('ERROR: getShopperProfile - $e');
       return null;
     }
   }
@@ -468,20 +463,15 @@ class StrapiService {
           )
           .timeout(AppConstants.apiTimeout);
 
-      print('DEBUG: getAvailableOrdersForShopper - status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final list =
             (data['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
             [];
-        print('DEBUG: getAvailableOrdersForShopper - found ${list.length} orders');
         return list.map((o) => _parseOrderFromStrapi(o)).toList();
       }
-      print('DEBUG: getAvailableOrdersForShopper - response: ${response.body}');
       return [];
     } catch (e) {
-      print('ERROR: getAvailableOrdersForShopper - $e');
       return [];
     }
   }
@@ -510,7 +500,7 @@ class StrapiService {
       }
       return [];
     } catch (e) {
-      print('ERROR: getActiveOrdersForShopper - $e');
+      // ignored
       return [];
     }
   }
@@ -539,7 +529,7 @@ class StrapiService {
       }
       return [];
     } catch (e) {
-      print('ERROR: getCompletedOrdersForShopper - $e');
+      // ignored
       return [];
     }
   }
@@ -564,10 +554,9 @@ class StrapiService {
         final data = json.decode(response.body);
         return data['data'] as Map<String, dynamic>?;
       }
-      print('ERROR: claimOrder - ${response.statusCode}: ${response.body}');
       return null;
     } catch (e) {
-      print('ERROR: claimOrder - $e');
+      // ignored
       return null;
     }
   }
@@ -581,7 +570,7 @@ class StrapiService {
       ).timeout(AppConstants.apiTimeout);
       return response.statusCode == 200;
     } catch (e) {
-      print('ERROR: unclaimOrder - $e');
+      // ignored
       return false;
     }
   }
@@ -608,10 +597,9 @@ class StrapiService {
         final data = json.decode(response.body);
         return data['data'] as Map<String, dynamic>?;
       }
-      print('ERROR: updateShopperOrderStatus - ${response.statusCode}: ${response.body}');
       return null;
     } catch (e) {
-      print('ERROR: updateShopperOrderStatus - $e');
+      // ignored
       return null;
     }
   }
@@ -635,7 +623,7 @@ class StrapiService {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('ERROR: batchUpdateOrderItems - $e');
+      // ignored
       return false;
     }
   }
@@ -672,7 +660,7 @@ class StrapiService {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('ERROR: updateShopperStatus - $e');
+      // ignored
       return false;
     }
   }
@@ -699,7 +687,7 @@ class StrapiService {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('ERROR: updateOrderStatus - $e');
+      // ignored
       return false;
     }
   }
@@ -728,14 +716,12 @@ class StrapiService {
           .timeout(AppConstants.apiTimeout);
 
       if (response.statusCode == 200) {
-        print('KYC submission successful');
         return true;
       } else {
-        print('ERROR: KYC submission failed - ${response.statusCode}');
         return false;
       }
     } catch (e) {
-      print('ERROR: submitShopperKyc - $e');
+      // ignored
       return false;
     }
   }
@@ -792,14 +778,12 @@ class StrapiService {
           .timeout(AppConstants.apiTimeout);
 
       if (response.statusCode == 200) {
-        print('Full KYC submission successful');
         return true;
       } else {
-        print('ERROR: Full KYC submission failed - ${response.statusCode}');
         return false;
       }
     } catch (e) {
-      print('ERROR: submitShopperKycFull - $e');
+      // ignored
       return false;
     }
   }
@@ -825,10 +809,9 @@ class StrapiService {
             [];
         return list.map((o) => _parseOrderFromStrapi(o)).toList();
       }
-      print('ERROR: getAvailableDeliveries - ${response.statusCode}: ${response.body}');
       return [];
     } catch (e) {
-      print('ERROR: getAvailableDeliveries - $e');
+      // ignored
       return [];
     }
   }
@@ -857,7 +840,7 @@ class StrapiService {
       }
       return [];
     } catch (e) {
-      print('ERROR: getActiveDeliveries - $e');
+      // ignored
       return [];
     }
   }
@@ -886,7 +869,7 @@ class StrapiService {
       }
       return [];
     } catch (e) {
-      print('ERROR: getCompletedDeliveries - $e');
+      // ignored
       return [];
     }
   }
@@ -911,10 +894,9 @@ class StrapiService {
         final data = json.decode(response.body);
         return data['data'] as Map<String, dynamic>?;
       }
-      print('ERROR: claimDelivery - ${response.statusCode}: ${response.body}');
       return null;
     } catch (e) {
-      print('ERROR: claimDelivery - $e');
+      // ignored
       return null;
     }
   }
@@ -941,10 +923,9 @@ class StrapiService {
         final data = json.decode(response.body);
         return data['data'] as Map<String, dynamic>?;
       }
-      print('ERROR: updateRiderOrderStatus - ${response.statusCode}: ${response.body}');
       return null;
     } catch (e) {
-      print('ERROR: updateRiderOrderStatus - $e');
+      // ignored
       return null;
     }
   }
@@ -999,14 +980,12 @@ class StrapiService {
           .timeout(AppConstants.apiTimeout);
 
       if (response.statusCode == 200) {
-        print('Rider KYC submission successful');
         return true;
       } else {
-        print('ERROR: Rider KYC submission failed - ${response.statusCode}: ${response.body}');
         return false;
       }
     } catch (e) {
-      print('ERROR: submitRiderKycFull - $e');
+      // ignored
       return false;
     }
   }
@@ -1031,7 +1010,7 @@ class StrapiService {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('ERROR: updateShopperProfile - $e');
+      // ignored
       return false;
     }
   }
@@ -1059,7 +1038,7 @@ class StrapiService {
       }
       return null;
     } catch (e) {
-      print('ERROR: getRiderProfile - $e');
+      // ignored
       return null;
     }
   }
@@ -1084,7 +1063,7 @@ class StrapiService {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('ERROR: updateRiderProfile - $e');
+      // ignored
       return false;
     }
   }
@@ -1109,7 +1088,7 @@ class StrapiService {
 
       return response.statusCode == 200;
     } catch (e) {
-      print('ERROR: updateUserProfile - $e');
+      // ignored
       return false;
     }
   }

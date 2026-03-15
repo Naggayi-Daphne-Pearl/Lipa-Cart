@@ -73,15 +73,6 @@ class Product {
     final attributes = (json['attributes'] as Map<String, dynamic>?) ?? json;
     String imageUrl = _resolveImageUrl(attributes['image'], baseUrl);
 
-    // Debug logging to track product ID parsing
-    final docId = json['documentId'];
-    final numId = json['id'];
-    final attrId = attributes['id'];
-    print('DEBUG Product.fromStrapi: RAW json keys: ${json.keys.toList()}');
-    print(
-      'DEBUG Product.fromStrapi: documentId=$docId, json[id]=$numId, attributes[id]=$attrId, name=${attributes['name']}',
-    );
-
     final units = attributes['common_units'];
     String unit = 'piece';
     if (units is List && units.isNotEmpty) {

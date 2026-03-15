@@ -16,8 +16,6 @@ class ImgBBService {
   /// Returns the image URL from the API response
   static Future<String?> uploadImage(File imageFile) async {
     try {
-      print('📤 Uploading image to ImgBB: ${imageFile.path}');
-
       // Read image file and convert to base64
       final bytes = await imageFile.readAsBytes();
       final String base64Image = base64Encode(bytes);
@@ -41,9 +39,6 @@ class ImgBBService {
 
       var response = await http.Response.fromStream(streamedResponse);
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
-
       if (response.statusCode == 200) {
         var json = jsonDecode(response.body);
 
@@ -51,30 +46,20 @@ class ImgBBService {
         if (json['success'] == true) {
           // Use the URL from the response
           String imageUrl = json['data']['url'];
-          String deleteUrl = json['data']['delete_url'];
-
-          print('✅ Upload complete!');
-          print('📎 Image URL: $imageUrl');
-          print('🗑️  Delete URL: $deleteUrl');
 
           return imageUrl;
         } else {
           String error = json['error']['message'] ?? 'Unknown error';
-          print('❌ ImgBB error: $error');
           throw Exception('ImgBB error: $error');
         }
       } else {
-        print('❌ HTTP error: ${response.statusCode}');
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
-    } on SocketException catch (e) {
-      print('❌ Network error: $e');
+    } on SocketException {
       rethrow;
-    } on TimeoutException catch (e) {
-      print('❌ Timeout: $e');
+    } on TimeoutException {
       rethrow;
     } catch (e) {
-      print('❌ Error: $e');
       rethrow;
     }
   }
@@ -83,8 +68,6 @@ class ImgBBService {
   /// Returns the image URL from the API response
   static Future<String?> uploadImageBytes(Uint8List bytes, String fileName) async {
     try {
-      print('📤 Uploading image bytes to ImgBB: $fileName');
-
       final String base64Image = base64Encode(bytes);
 
       int fileSizeInMB = bytes.length ~/ (1024 * 1024);
@@ -115,7 +98,6 @@ class ImgBBService {
         throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      print('❌ Error uploading bytes: $e');
       rethrow;
     }
   }
@@ -128,7 +110,6 @@ class ImgBBService {
 
     for (int i = 0; i < imageFiles.length; i++) {
       try {
-        print('📤 Uploading image ${i + 1}/${imageFiles.length}...');
         String? url = await uploadImage(imageFiles[i]);
 
         if (url != null) {
@@ -138,12 +119,10 @@ class ImgBBService {
         // Small delay between uploads
         await Future.delayed(const Duration(milliseconds: 500));
       } catch (e) {
-        print('⚠️  Failed to upload image ${i + 1}: $e');
         continue;
       }
     }
 
-    print('✅ Batch upload complete: ${urls.length}/${imageFiles.length} succeeded');
     return urls;
   }
 }

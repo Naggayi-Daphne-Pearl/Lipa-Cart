@@ -894,12 +894,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final customerId = authProvider.user?.customerId;
       final token = authProvider.token;
 
-      // Debug logging
-      print('DEBUG: Attempting to save address');
-      print('DEBUG: customerId = $customerId');
-      print('DEBUG: token = ${token?.substring(0, 20)}...');
-      print('DEBUG: Full user object: ${authProvider.user?.toJson()}');
-
       if (customerId == null || token == null) {
         setState(() => _isLoading = false);
         if (mounted) {

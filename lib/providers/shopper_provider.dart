@@ -147,8 +147,6 @@ class ShopperProvider extends ChangeNotifier {
     String userDocumentId,
   ) async {
     try {
-      print('DEBUG: Accepting order $orderId');
-
       final success = await StrapiService.assignOrderToShopper(
         orderId,
         userDocumentId,

@@ -232,43 +232,20 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
               padding: const EdgeInsets.all(AppSizes.md),
               child: Row(
                 children: [
-                  // Progress indicator
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            Icon(
-                              list.isComplete
-                                  ? Iconsax.tick_circle5
-                                  : Iconsax.task_square,
-                              color: list.isComplete
-                                  ? AppColors.success
-                                  : color,
-                              size: 16,
-                            ),
-                            const SizedBox(width: AppSizes.xs),
-                            Text(
-                              '${list.checkedItems}/${list.totalItems} items',
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                        Icon(
+                          Iconsax.shopping_bag,
+                          color: color,
+                          size: 16,
                         ),
-                        const SizedBox(height: AppSizes.xs),
-                        // Progress bar
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: list.progress,
-                            backgroundColor: AppColors.grey100,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              list.isComplete ? AppColors.success : color,
-                            ),
-                            minHeight: 4,
+                        const SizedBox(width: AppSizes.xs),
+                        Text(
+                          '${list.totalItems} item${list.totalItems != 1 ? 's' : ''}',
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],

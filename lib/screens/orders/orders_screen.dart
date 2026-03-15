@@ -276,10 +276,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   Widget _buildCleanOrderCard(BuildContext context, Order order) {
-    // Get the first product image from the order
-    final firstProduct = order.items.isNotEmpty ? order.items.first : null;
-    final imageUrl = firstProduct?.product.image;
-
     return GestureDetector(
       onTap: () => context.push('/customer/order-tracking', extra: order),
       child: Container(
@@ -318,54 +314,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Product Image
-              Container(
-                width: context.responsive<double>(
-                  mobile: 70.0,
-                  tablet: 80.0,
-                  desktop: 90.0,
-                ),
-                height: context.responsive<double>(
-                  mobile: 70.0,
-                  tablet: 80.0,
-                  desktop: 90.0,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.grey100,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                ),
-                child: imageUrl != null && imageUrl.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                        child: Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Iconsax.image,
-                              color: AppColors.textTertiary,
-                              size: 32,
-                            );
-                          },
-                        ),
-                      )
-                    : Icon(
-                        Iconsax.image,
-                        color: AppColors.textTertiary,
-                        size: 32,
-                      ),
-              ),
-
-              const SizedBox(width: AppSizes.lg),
-
               // Order Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Product Name
+                    // Order Number
                     Text(
-                      firstProduct?.product.name ?? 'Order',
+                      'Order #${order.orderNumber}',
                       style: AppTextStyles.labelMedium.copyWith(
                         fontWeight: FontWeight.w600,
                         fontSize: context.responsive<double>(
@@ -380,16 +336,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
                     const SizedBox(height: AppSizes.xs),
 
-                    // Order Number
+                    // Date ordered
                     Text(
-                      'Order #${order.orderNumber}',
+                      Formatters.formatDate(order.createdAt),
                       style: AppTextStyles.caption.copyWith(
                         color: AppColors.textSecondary,
-                        fontSize: context.responsive<double>(
-                          mobile: 12.0,
-                          tablet: 12.0,
-                          desktop: 13.0,
-                        ),
                       ),
                     ),
 
