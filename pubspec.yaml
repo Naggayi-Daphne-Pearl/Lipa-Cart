@@ -33,7 +33,7 @@ dependencies:
   flutter_secure_storage: ^9.2.2
 
   # HTTP
-  http: ^1.2.0
+  http: ^1.6.0
 
   # Image Upload
   image_picker: ^1.0.4
@@ -46,6 +46,8 @@ dependencies:
   # Icons
   iconsax: ^0.0.8
   url_launcher: ^6.3.2
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.1
 
 dev_dependencies:
   flutter_test:

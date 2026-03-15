@@ -89,6 +89,8 @@ class AddressService extends ChangeNotifier {
     String? landmark,
     String? deliveryInstructions,
     bool isDefault = false,
+    double? gpsLat,
+    double? gpsLng,
   }) async {
     try {
       final response = await http.post(
@@ -106,6 +108,8 @@ class AddressService extends ChangeNotifier {
             'landmark': landmark,
             'delivery_instructions': deliveryInstructions,
             'is_default': isDefault,
+            if (gpsLat != null) 'gps_lat': gpsLat,
+            if (gpsLng != null) 'gps_lng': gpsLng,
           },
         }),
       );
@@ -139,6 +143,8 @@ class AddressService extends ChangeNotifier {
     String? landmark,
     String? deliveryInstructions,
     bool isDefault = false,
+    double? gpsLat,
+    double? gpsLng,
   }) async {
     try {
       final targetId = addressDocumentId.isNotEmpty
@@ -158,6 +164,8 @@ class AddressService extends ChangeNotifier {
             'landmark': landmark,
             'delivery_instructions': deliveryInstructions,
             'is_default': isDefault,
+            if (gpsLat != null) 'gps_lat': gpsLat,
+            if (gpsLng != null) 'gps_lng': gpsLng,
           },
         }),
       );

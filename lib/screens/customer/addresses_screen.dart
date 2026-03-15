@@ -12,6 +12,7 @@ import '../../models/address.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/map_location_picker.dart';
 
 class AddressesScreen extends StatefulWidget {
   final String? returnRoute;
@@ -224,6 +225,8 @@ class _AddressesScreenState extends State<AddressesScreen> {
               landmark,
               instructions,
               isDefault,
+              lat,
+              lng,
             ) async {
               if (address == null) {
                 await addressService.createAddress(
@@ -235,6 +238,8 @@ class _AddressesScreenState extends State<AddressesScreen> {
                   landmark: landmark,
                   deliveryInstructions: instructions,
                   isDefault: isDefault,
+                  gpsLat: lat,
+                  gpsLng: lng,
                 );
               } else {
                 await addressService.updateAddress(
@@ -247,6 +252,8 @@ class _AddressesScreenState extends State<AddressesScreen> {
                   landmark: landmark,
                   deliveryInstructions: instructions,
                   isDefault: isDefault,
+                  gpsLat: lat,
+                  gpsLng: lng,
                 );
               }
               await auth.setAddresses(addressService.userAddresses);
@@ -506,6 +513,8 @@ class AddressForm extends StatefulWidget {
     String? landmark,
     String? instructions,
     bool isDefault,
+    double? lat,
+    double? lng,
   )
   onSave;
 
@@ -528,6 +537,8 @@ class _AddressFormState extends State<AddressForm> {
   late TextEditingController landmarkController;
   late TextEditingController instructionsController;
   bool isDefault = false;
+  double? _selectedLat;
+  double? _selectedLng;
 
   @override
   void initState() {
@@ -574,7 +585,27 @@ class _AddressFormState extends State<AddressForm> {
               widget.address == null ? 'Add Address' : 'Edit Address',
               style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: AppSizes.lg),
+            const SizedBox(height: AppSizes.md),
+
+            // Map location picker
+            MapLocationPicker(
+              initialLat: widget.address?.gpsLat,
+              initialLng: widget.address?.gpsLng,
+              onLocationSelected: (result) {
+                setState(() {
+                  _selectedLat = result.latitude;
+                  _selectedLng = result.longitude;
+                  if (result.address != null && addressLineController.text.isEmpty) {
+                    addressLineController.text = result.address!;
+                  }
+                  if (result.city != null && cityController.text.isEmpty) {
+                    cityController.text = result.city!;
+                  }
+                });
+              },
+            ),
+            const SizedBox(height: AppSizes.md),
+
             _buildInputField(
               controller: labelController,
               label: 'Label',
@@ -642,6 +673,8 @@ class _AddressFormState extends State<AddressForm> {
                       ? null
                       : instructionsController.text,
                   isDefault,
+                  _selectedLat,
+                  _selectedLng,
                 );
               },
             ),
