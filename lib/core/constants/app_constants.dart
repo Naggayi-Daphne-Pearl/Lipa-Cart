@@ -7,8 +7,8 @@ class AppConstants {
 
   // API Endpoints
   // Use localhost for local development, Railway for production
-  // static const String baseUrl = 'https://lipa-cart-strapi-production.up.railway.app';
-  static const String baseUrl = 'http://localhost:1337';
+  static const String baseUrl = 'https://lipa-cart-strapi-production.up.railway.app';
+  // static const String baseUrl = 'http://localhost:1337';
   static const String apiUrl = '$baseUrl/api';
 
   // Storage Keys
