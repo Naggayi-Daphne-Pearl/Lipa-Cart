@@ -7,6 +7,7 @@ import '../models/cart_item.dart';
 import '../models/product.dart';
 import '../models/user.dart' as user_models;
 import '../core/constants/app_constants.dart';
+import 'session_service.dart';
 
 class OrderService extends ChangeNotifier {
   static String get baseUrl => AppConstants.baseUrl;
@@ -20,6 +21,13 @@ class OrderService extends ChangeNotifier {
   Order? get currentOrder => _currentOrder;
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  /// Check if an HTTP response indicates an auth error (401/403) on a
+  /// non-auth endpoint.
+  bool _isAuthError(http.Response response) {
+    return (response.statusCode == 401 || response.statusCode == 403) &&
+        !(response.request?.url.path.contains('/auth/') ?? false);
+  }
 
   Future<void> clearAll() async {
     _orders = [];
@@ -285,6 +293,14 @@ class OrderService extends ChangeNotifier {
         headers: {'Authorization': 'Bearer $token'},
       );
 
+      // Session expired — redirect to login
+      if (_isAuthError(response)) {
+        SessionService.handleSessionExpiry();
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
@@ -324,6 +340,14 @@ class OrderService extends ChangeNotifier {
         Uri.parse(url),
         headers: {'Authorization': 'Bearer $token'},
       );
+
+      // Session expired — redirect to login
+      if (_isAuthError(response)) {
+        SessionService.handleSessionExpiry();
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

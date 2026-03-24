@@ -45,10 +45,11 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
 
     final riderProvider = context.read<RiderProvider>();
     final token = authProvider.token;
-    final userId = authProvider.user?.id;
-    if (token != null && userId != null) {
-      riderProvider.loadRiderProfile(token, userId);
-      riderProvider.fetchCompletedDeliveries(token, userId);
+    final riderId = authProvider.user?.riderId;
+    final userDocId = authProvider.user?.documentId;
+    if (token != null && riderId != null) {
+      riderProvider.loadRiderProfile(token, riderId);
+      riderProvider.fetchCompletedDeliveries(token, userDocId ?? riderId);
     }
   }
 

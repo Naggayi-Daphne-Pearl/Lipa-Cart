@@ -23,7 +23,7 @@ class RiderProvider extends ChangeNotifier {
   // Summary stats
   int get totalReviews => _riderProfile?['total_ratings'] ?? 0;
   double get averageRating => (_riderProfile?['rating'] ?? 0).toDouble();
-  int get completedOrders => _riderProfile?['total_orders_completed'] ?? 0;
+  int get completedOrders => _riderProfile?['total_deliveries_completed'] ?? _riderProfile?['total_orders_completed'] ?? 0;
   double get totalEarnings =>
       (_riderProfile?['total_earnings'] ?? 0).toDouble();
   bool get isOnline => _riderProfile?['is_online'] ?? false;

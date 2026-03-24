@@ -286,6 +286,7 @@ class _ShopperAvailableTasksScreenState
                         ),
                         ElevatedButton(
                           onPressed: () async {
+                            final messenger = ScaffoldMessenger.of(context);
                             Navigator.pop(dialogContext);
                             final success = await shopperProvider.acceptTask(
                               token,
@@ -293,7 +294,7 @@ class _ShopperAvailableTasksScreenState
                               shopperId,
                             );
                             if (success && mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 const SnackBar(
                                   content: Text(
                                     'Task accepted! Start shopping.',

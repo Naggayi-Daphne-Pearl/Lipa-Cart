@@ -8,10 +8,23 @@ import '../models/shopping_list.dart';
 import '../models/order.dart';
 import '../models/cart_item.dart';
 import '../models/user.dart' show Address, User;
+import 'session_service.dart';
 
 class StrapiService {
   static String get _apiUrl => AppConstants.apiUrl;
   static String get _baseUrl => AppConstants.baseUrl;
+
+  /// Check if an HTTP response indicates an auth error (401/403) on a
+  /// non-auth endpoint. If so, trigger session expiry handling.
+  /// Returns true if the response was an auth error.
+  static bool _handleAuthError(http.Response response) {
+    if ((response.statusCode == 401 || response.statusCode == 403) &&
+        !(response.request?.url.path.contains('/auth/') ?? false)) {
+      SessionService.handleSessionExpiry();
+      return true;
+    }
+    return false;
+  }
 
   static Future<List<Category>> getCategories() async {
     final response = await http
@@ -463,6 +476,8 @@ class StrapiService {
           )
           .timeout(AppConstants.apiTimeout);
 
+      if (_handleAuthError(response)) return [];
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final list =
@@ -490,6 +505,8 @@ class StrapiService {
             headers: {'Authorization': 'Bearer $token'},
           )
           .timeout(AppConstants.apiTimeout);
+
+      if (_handleAuthError(response)) return [];
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -519,6 +536,8 @@ class StrapiService {
             headers: {'Authorization': 'Bearer $token'},
           )
           .timeout(AppConstants.apiTimeout);
+
+      if (_handleAuthError(response)) return [];
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -802,6 +821,8 @@ class StrapiService {
           )
           .timeout(AppConstants.apiTimeout);
 
+      if (_handleAuthError(response)) return [];
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final list =
@@ -831,6 +852,8 @@ class StrapiService {
           )
           .timeout(AppConstants.apiTimeout);
 
+      if (_handleAuthError(response)) return [];
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final list =
@@ -859,6 +882,8 @@ class StrapiService {
             headers: {'Authorization': 'Bearer $token'},
           )
           .timeout(AppConstants.apiTimeout);
+
+      if (_handleAuthError(response)) return [];
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

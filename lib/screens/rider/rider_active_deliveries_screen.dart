@@ -261,6 +261,43 @@ class _RiderActiveDeliveriesScreenState
               ],
             ),
             const SizedBox(height: AppSizes.sm),
+            // GPS Navigation buttons
+            Row(
+              children: [
+                // Navigate to Pickup (Shopper)
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openPickupNavigation(order),
+                    icon: const Icon(Icons.store, size: 16),
+                    label: const Text('Pickup Location', overflow: TextOverflow.ellipsis),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.deepPurple,
+                      side: const BorderSide(color: Colors.deepPurple),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Navigate to Delivery
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openNavigation(order),
+                    icon: const Icon(Iconsax.gps, size: 16),
+                    label: const Text('Delivery Location', overflow: TextOverflow.ellipsis),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.info,
+                      side: const BorderSide(color: AppColors.info),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSizes.sm),
             // Action buttons based on status
             if (order.status == OrderStatus.readyForDelivery ||
                 order.status == OrderStatus.riderAssigned)
@@ -378,6 +415,44 @@ class _RiderActiveDeliveriesScreenState
         ),
       ),
     );
+  }
+
+  /// Open the device's map app with directions to the shopper's pickup location.
+  void _openPickupNavigation(Order order) {
+    final shopperName = order.shopperName;
+    if (shopperName != null && shopperName.isNotEmpty) {
+      final query = Uri.encodeComponent('$shopperName market Kampala');
+      final url = 'https://www.google.com/maps/search/?api=1&query=$query';
+      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Shopper pickup location not available')),
+      );
+    }
+  }
+
+  /// Open the device's map app with directions to the delivery address.
+  void _openNavigation(Order order) {
+    final lat = order.deliveryAddress.latitude;
+    final lng = order.deliveryAddress.longitude;
+    final address = order.deliveryAddress.fullAddress;
+
+    if (lat != 0 && lng != 0) {
+      // Open Google Maps with coordinates
+      final url =
+          'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng';
+      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else if (address.isNotEmpty && address != 'No address provided') {
+      // Fallback: search by address name
+      final encodedAddress = Uri.encodeComponent(address);
+      final url =
+          'https://www.google.com/maps/search/?api=1&query=$encodedAddress';
+      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No delivery location available')),
+      );
+    }
   }
 
   void _showCallDialog(String role, String name, String phone) {

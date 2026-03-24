@@ -14,6 +14,7 @@ import 'providers/shopper_provider.dart';
 import 'providers/rider_provider.dart';
 import 'services/order_service.dart';
 import 'services/address_service.dart';
+import 'services/session_service.dart';
 import 'role_based_router.dart';
 
 void main() {
@@ -59,10 +60,15 @@ class LipaCartApp extends StatelessWidget {
       ],
       child: Builder(
         builder: (context) {
+          // Provide the router context to SessionService so it can
+          // navigate to /login on auth expiry from anywhere in the app.
+          SessionService.setRouterContext(context);
+
           return MaterialApp.router(
             title: 'LipaCart',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
+            scaffoldMessengerKey: SessionService.scaffoldMessengerKey,
             routerConfig: RoleBasedRouter.getRouter(context),
           );
         },

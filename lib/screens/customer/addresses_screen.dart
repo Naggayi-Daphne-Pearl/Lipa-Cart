@@ -13,6 +13,7 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/map_location_picker.dart';
+import 'package:geolocator/geolocator.dart';
 
 class AddressesScreen extends StatefulWidget {
   final String? returnRoute;
@@ -539,6 +540,7 @@ class _AddressFormState extends State<AddressForm> {
   bool isDefault = false;
   double? _selectedLat;
   double? _selectedLng;
+  bool _showMap = false; // Whether user chose to use map
 
   @override
   void initState() {
@@ -587,24 +589,148 @@ class _AddressFormState extends State<AddressForm> {
             ),
             const SizedBox(height: AppSizes.md),
 
-            // Map location picker
-            MapLocationPicker(
-              initialLat: widget.address?.gpsLat,
-              initialLng: widget.address?.gpsLng,
-              onLocationSelected: (result) {
-                setState(() {
-                  _selectedLat = result.latitude;
-                  _selectedLng = result.longitude;
-                  if (result.address != null && addressLineController.text.isEmpty) {
-                    addressLineController.text = result.address!;
+            // Location method choice
+            if (!_showMap) ...[
+              Text(
+                'How would you like to set your location?',
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: AppSizes.sm),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _showMap = true),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.map_outlined, color: AppColors.primary, size: 28),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Use Map',
+                              style: AppTextStyles.labelMedium.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Search or pin location',
+                              style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary, fontSize: 10),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSizes.sm),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        // Skip map, just fill in text fields manually
+                        // Focus the address field
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.grey100,
+                          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                          border: Border.all(color: AppColors.grey200),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.edit_outlined, color: AppColors.textSecondary, size: 28),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Type Address',
+                              style: AppTextStyles.labelMedium.copyWith(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Enter address manually',
+                              style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary, fontSize: 10),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSizes.md),
+            ] else ...[
+              // Map picker (shown after user chooses "Use Map")
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Pin your location', style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w600)),
+                  GestureDetector(
+                    onTap: () => setState(() => _showMap = false),
+                    child: Text('Type instead', style: AppTextStyles.caption.copyWith(color: AppColors.primary)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSizes.sm),
+              MapLocationPicker(
+                initialLat: widget.address?.gpsLat,
+                initialLng: widget.address?.gpsLng,
+                onLocationSelected: (result) async {
+                  setState(() {
+                    _selectedLat = result.latitude;
+                    _selectedLng = result.longitude;
+                    if (result.address != null && addressLineController.text.isEmpty) {
+                      addressLineController.text = result.address!;
+                    }
+                    if (result.city != null && cityController.text.isEmpty) {
+                      cityController.text = result.city!;
+                    }
+                  });
+
+                  // Check distance from current location
+                  try {
+                    final position = await Geolocator.getLastKnownPosition();
+                    if (position != null && mounted) {
+                      final distanceMeters = Geolocator.distanceBetween(
+                        position.latitude, position.longitude,
+                        result.latitude, result.longitude,
+                      );
+                      final distanceKm = distanceMeters / 1000;
+                      if (distanceKm > 10) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'This location is ${distanceKm.toStringAsFixed(1)} km from your current position. Are you sure?',
+                            ),
+                            backgroundColor: Colors.orange,
+                            duration: const Duration(seconds: 4),
+                            action: SnackBarAction(
+                              label: 'OK',
+                              textColor: Colors.white,
+                              onPressed: () {},
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  } catch (_) {
+                    // GPS not available — skip distance check
                   }
-                  if (result.city != null && cityController.text.isEmpty) {
-                    cityController.text = result.city!;
-                  }
-                });
-              },
-            ),
-            const SizedBox(height: AppSizes.md),
+                },
+              ),
+              const SizedBox(height: AppSizes.md),
+            ],
 
             _buildInputField(
               controller: labelController,

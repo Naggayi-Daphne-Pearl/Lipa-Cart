@@ -42,9 +42,9 @@ class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
 
     final riderProvider = context.read<RiderProvider>();
     final token = authProvider.token;
-    final userId = authProvider.user?.id;
-    if (token != null && userId != null) {
-      riderProvider.loadRiderProfile(token, userId);
+    final riderId = authProvider.user?.riderId;
+    if (token != null && riderId != null) {
+      riderProvider.loadRiderProfile(token, riderId);
     }
   }
 
