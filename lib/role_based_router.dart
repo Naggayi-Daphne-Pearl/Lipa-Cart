@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'models/category.dart';
 import 'models/order.dart';
 import 'models/product.dart';
@@ -101,6 +102,12 @@ String _homeForRole(UserRole? role, {String? kycStatus}) {
 class RoleBasedRouter {
   static GoRouter? _router;
 
+  /// Reset cached router (call on hot restart / app recreation)
+  static void reset() {
+    _router?.dispose();
+    _router = null;
+  }
+
   static GoRouter getRouter(BuildContext context) {
     if (_router != null) return _router!;
 
@@ -109,6 +116,7 @@ class RoleBasedRouter {
     _router = GoRouter(
       initialLocation: '/',
       refreshListenable: authProvider,
+      observers: [SentryNavigatorObserver()],
       redirect: (context, state) {
         final isAuthenticated = authProvider.isAuthenticated;
         final isInitial = authProvider.status == AuthStatus.initial;

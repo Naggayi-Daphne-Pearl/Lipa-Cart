@@ -24,7 +24,9 @@ class _ShopperProfileScreenState extends State<ShopperProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadProfile();
+    });
   }
 
   void _loadProfile() {

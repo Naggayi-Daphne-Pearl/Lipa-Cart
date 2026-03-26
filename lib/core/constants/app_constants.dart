@@ -1,3 +1,5 @@
+import '../config/app_config.dart';
+
 class AppConstants {
   AppConstants._();
 
@@ -5,11 +7,9 @@ class AppConstants {
   static const String appName = 'LipaCart';
   static const String appTagline = 'Fresh groceries delivered to your doorstep';
 
-  // API Endpoints
-  // Use localhost for local development, Railway for production
-  // static const String baseUrl = 'https://lipa-cart-strapi-production.up.railway.app';
-  static const String baseUrl = 'http://localhost:1337';
-  static const String apiUrl = '$baseUrl/api';
+  // API Endpoints — read from --dart-define, defaults to localhost
+  static const String baseUrl = AppConfig.apiBaseUrl;
+  static const String apiUrl = AppConfig.apiUrl;
 
   // Storage Keys
   static const String tokenKey = 'auth_token';

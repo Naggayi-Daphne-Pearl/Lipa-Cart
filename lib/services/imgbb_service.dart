@@ -4,11 +4,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import '../core/config/app_config.dart';
 
 class ImgBBService {
-  /// Replace with your ImgBB API Key from https://imgbb.com/dashboard
-  /// GET KEY: https://imgbb.com/dashboard → API button (top right)
-  static const String apiKey = '9b8b1e167f65f3825ae4e1716c8b9bf5';
+  static String get apiKey => AppConfig.imgbbApiKey;
 
   static const String baseUrl = 'https://api.imgbb.com/1/upload';
 

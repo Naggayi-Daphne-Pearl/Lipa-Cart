@@ -50,10 +50,39 @@ This flow allows users to explore products freely while ensuring secure, authent
    flutter pub get
    ```
 
-3. Run the app
+3. Configure environment variables
+
+   Copy the example file and fill in your values:
+   ```bash
+   cp .env.example .env
+   ```
+
+   | Variable | Description | Default |
+   |----------|-------------|---------|
+   | `API_BASE_URL` | Backend API base URL (no trailing slash) | `http://localhost:1337` |
+   | `SENTRY_DSN` | Sentry error tracking DSN | *(empty — Sentry disabled)* |
+   | `SENTRY_ENV` | Sentry environment tag | `development` |
+   | `IMGBB_API_KEY` | ImgBB API key for image uploads | *(empty)* |
+
+   Pass them via `--dart-define` when running:
+   ```bash
+   flutter run -d chrome \
+     --dart-define=API_BASE_URL=http://localhost:1337 \
+     --dart-define=SENTRY_DSN=https://your-key@sentry.io/123 \
+     --dart-define=IMGBB_API_KEY=your_key
+   ```
+
+   Or run with defaults (localhost, no Sentry):
    ```bash
    flutter run
    ```
+
+4. **CI/CD (GitHub Actions)** — Add these as repository secrets:
+   - `API_BASE_URL` — production backend URL
+   - `SENTRY_DSN` — Sentry DSN from your project settings
+   - `IMGBB_API_KEY` — ImgBB API key
+
+   These are automatically passed as `--dart-define` flags during the Vercel web build.
 
 ### Demo Login
 

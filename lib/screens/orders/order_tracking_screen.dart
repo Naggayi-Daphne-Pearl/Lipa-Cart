@@ -7,6 +7,7 @@ import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../services/order_service.dart';
+import '../../widgets/error_boundary.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -39,7 +40,8 @@ class OrderTrackingScreen extends StatelessWidget {
         ),
         title: const Text('Order Details & Tracking'),
       ),
-      body: Container(
+      body: ErrorBoundary(
+        child: Container(
         decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
         child: SafeArea(
           child: SingleChildScrollView(
@@ -797,6 +799,7 @@ class OrderTrackingScreen extends StatelessWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }

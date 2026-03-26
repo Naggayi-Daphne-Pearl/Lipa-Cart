@@ -21,7 +21,9 @@ class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
   @override
   void initState() {
     super.initState();
-    _validateRoleAndLoad();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _validateRoleAndLoad();
+    });
   }
 
   void _validateRoleAndLoad() {

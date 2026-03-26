@@ -12,6 +12,7 @@ import '../../providers/order_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/error_boundary.dart';
 
 class OrdersScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -93,7 +94,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       bottomNavigationBar: null,
-      body: ResponsiveContainer(
+      body: ErrorBoundary(
+        onRetry: () => setState(() {
+          _fetchOrders();
+        }),
+        child: ResponsiveContainer(
         child: SafeArea(
           child: RefreshIndicator(
             onRefresh: _fetchOrders,
@@ -225,6 +230,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
           ),
         ),
+      ),
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/rider_provider.dart';
 import '../../models/user.dart';
+import '../../widgets/error_boundary.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 
@@ -29,22 +30,22 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _validateRoleAndLoad();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _validateRoleAndLoad();
+    });
   }
 
   void _validateRoleAndLoad() {
     final authProvider = context.read<AuthProvider>();
 
     if (authProvider.user?.role != UserRole.rider) {
-      Future.microtask(() {
-        GoRouter.of(context).go(
-          authProvider.user?.role == UserRole.admin
-              ? '/admin/dashboard'
-              : authProvider.user?.role == UserRole.shopper
-                  ? '/shopper/home'
-                  : '/customer/home',
-        );
-      });
+      GoRouter.of(context).go(
+        authProvider.user?.role == UserRole.admin
+            ? '/admin/dashboard'
+            : authProvider.user?.role == UserRole.shopper
+                ? '/shopper/home'
+                : '/customer/home',
+      );
       return;
     }
 
@@ -133,7 +134,9 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           final user = authProvider.user;
           final isOnline = riderProvider.isOnline;
 
-          return RefreshIndicator(
+          return ErrorBoundary(
+            onRetry: () => setState(() {}),
+            child: RefreshIndicator(
             onRefresh: _onRefresh,
             color: _brandColor,
             child: CustomScrollView(
@@ -268,6 +271,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                 ),
               ],
             ),
+          ),
           );
         },
       ),

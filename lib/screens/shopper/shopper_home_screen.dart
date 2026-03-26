@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/shopper_provider.dart';
 import '../../models/user.dart';
+import '../../widgets/error_boundary.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/logout_helper.dart';
@@ -24,22 +25,22 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _validateRoleAndLoad();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _validateRoleAndLoad();
+    });
   }
 
   void _validateRoleAndLoad() {
     final authProvider = context.read<AuthProvider>();
 
     if (authProvider.user?.role != UserRole.shopper) {
-      Future.microtask(() {
-        GoRouter.of(context).go(
-          authProvider.user?.role == UserRole.admin
-              ? '/admin/dashboard'
-              : authProvider.user?.role == UserRole.rider
-                  ? '/rider/home'
-                  : '/customer/home',
-        );
-      });
+      GoRouter.of(context).go(
+        authProvider.user?.role == UserRole.admin
+            ? '/admin/dashboard'
+            : authProvider.user?.role == UserRole.rider
+                ? '/rider/home'
+                : '/customer/home',
+      );
       return;
     }
 
@@ -129,7 +130,9 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
           final user = authProvider.user;
           final isOnline = shopperProvider.isOnline;
 
-          return RefreshIndicator(
+          return ErrorBoundary(
+            onRetry: () => setState(() {}),
+            child: RefreshIndicator(
             onRefresh: _onRefresh,
             color: AppColors.primary,
             child: CustomScrollView(
@@ -264,6 +267,7 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                 ),
               ],
             ),
+          ),
           );
         },
       ),

@@ -284,9 +284,9 @@ class OrderService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Strapi v5 syntax: explicitly populate order_items with nested product details
+      // Strapi v5 syntax: populate order_items and delivery_address
       final url =
-          '$baseUrl/api/orders?filters[customer][\$eq]=$userId&populate[order_items][populate][0]=product&populate[delivery_address][populate][0]=customer&sort[0]=createdAt:desc';
+          '$baseUrl/api/orders?filters[customer][\$eq]=$userId&populate[0]=order_items&populate[1]=delivery_address&populate[2]=customer&sort[0]=createdAt:desc';
 
       final response = await http.get(
         Uri.parse(url),
@@ -384,7 +384,7 @@ class OrderService extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse(
-          '$baseUrl/api/orders/$orderId?populate[order_items][populate][0]=product&populate[delivery_address][populate][0]=customer',
+          '$baseUrl/api/orders/$orderId?populate[0]=order_items&populate[1]=delivery_address&populate[2]=customer',
         ),
         headers: {'Authorization': 'Bearer $token'},
       );

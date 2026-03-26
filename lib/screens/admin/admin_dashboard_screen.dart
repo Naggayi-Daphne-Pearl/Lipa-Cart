@@ -9,6 +9,7 @@ import '../../services/admin_user_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/error_boundary.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -376,7 +377,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: RefreshIndicator(
+      body: ErrorBoundary(
+        onRetry: () => setState(() {}),
+        child: RefreshIndicator(
         onRefresh: () async {
           await Future.wait([_loadStats(), _loadPendingOrders()]);
         },
@@ -414,6 +417,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

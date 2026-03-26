@@ -470,7 +470,7 @@ class StrapiService {
       final response = await http
           .get(
             Uri.parse(
-              '$_apiUrl/orders?filters[status][\$eq]=payment_confirmed',
+              '$_apiUrl/orders?filters[status][\$eq]=payment_confirmed&populate[0]=order_items&populate[1]=customer&populate[2]=delivery_address',
             ),
             headers: {'Authorization': 'Bearer $token'},
           )
@@ -500,7 +500,7 @@ class StrapiService {
       final response = await http
           .get(
             Uri.parse(
-              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=shopper_assigned&filters[\$or][1][status][\$eq]=shopping&filters[shopper][documentId][\$eq]=$userDocumentId',
+              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=shopper_assigned&filters[\$or][1][status][\$eq]=shopping&filters[shopper][documentId][\$eq]=$userDocumentId&populate[0]=order_items&populate[1]=customer&populate[2]=delivery_address',
             ),
             headers: {'Authorization': 'Bearer $token'},
           )
@@ -531,7 +531,7 @@ class StrapiService {
       final response = await http
           .get(
             Uri.parse(
-              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=ready_for_pickup&filters[\$or][1][status][\$eq]=rider_assigned&filters[\$or][2][status][\$eq]=in_transit&filters[\$or][3][status][\$eq]=delivered&filters[\$or][4][status][\$eq]=cancelled&filters[shopper][documentId][\$eq]=$userDocumentId',
+              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=ready_for_pickup&filters[\$or][1][status][\$eq]=rider_assigned&filters[\$or][2][status][\$eq]=in_transit&filters[\$or][3][status][\$eq]=delivered&filters[\$or][4][status][\$eq]=cancelled&filters[shopper][documentId][\$eq]=$userDocumentId&populate[0]=order_items&populate[1]=customer&populate[2]=delivery_address',
             ),
             headers: {'Authorization': 'Bearer $token'},
           )
@@ -815,7 +815,7 @@ class StrapiService {
       final response = await http
           .get(
             Uri.parse(
-              '$_apiUrl/orders?filters[status][\$eq]=ready_for_pickup',
+              '$_apiUrl/orders?filters[status][\$eq]=ready_for_pickup&populate[0]=order_items&populate[1]=customer&populate[2]=delivery_address&populate[3]=shopper',
             ),
             headers: {'Authorization': 'Bearer $token'},
           )
@@ -846,7 +846,7 @@ class StrapiService {
       final response = await http
           .get(
             Uri.parse(
-              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=rider_assigned&filters[\$or][1][status][\$eq]=in_transit&filters[rider][documentId][\$eq]=$riderDocumentId',
+              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=rider_assigned&filters[\$or][1][status][\$eq]=in_transit&filters[rider][documentId][\$eq]=$riderDocumentId&populate[0]=order_items&populate[1]=customer&populate[2]=delivery_address&populate[3]=shopper',
             ),
             headers: {'Authorization': 'Bearer $token'},
           )
@@ -877,7 +877,7 @@ class StrapiService {
       final response = await http
           .get(
             Uri.parse(
-              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=delivered&filters[\$or][1][status][\$eq]=cancelled&filters[rider][documentId][\$eq]=$riderDocumentId',
+              '$_apiUrl/orders?filters[\$or][0][status][\$eq]=delivered&filters[\$or][1][status][\$eq]=cancelled&filters[rider][documentId][\$eq]=$riderDocumentId&populate[0]=order_items&populate[1]=customer&populate[2]=delivery_address&populate[3]=shopper',
             ),
             headers: {'Authorization': 'Bearer $token'},
           )

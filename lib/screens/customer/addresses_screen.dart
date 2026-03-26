@@ -706,7 +706,7 @@ class _AddressFormState extends State<AddressForm> {
                         result.latitude, result.longitude,
                       );
                       final distanceKm = distanceMeters / 1000;
-                      if (distanceKm > 10) {
+                      if (distanceKm > 3) {
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
