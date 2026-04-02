@@ -35,6 +35,7 @@ import 'screens/recipes/recipe_detail_screen.dart';
 import 'screens/customer/addresses_screen.dart';
 import 'screens/customer/order_rating_screen.dart';
 import 'screens/customer/ratings_reviews_screen.dart';
+import 'screens/notifications/notification_inbox_screen.dart';
 
 // Admin screens
 import 'screens/admin/admin_shell.dart';
@@ -383,6 +384,10 @@ class RoleBasedRouter {
             }
             return const MainShell();
           },
+        ),
+        GoRoute(
+          path: '/customer/notifications',
+          builder: (context, state) => const NotificationInboxScreen(),
         ),
         GoRoute(
           path: '/customer/orders',

@@ -1,0 +1,195 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:http/http.dart' as http;
+import '../core/constants/app_constants.dart';
+import '../core/config/firebase_options.dart';
+
+/// Top-level handler for background FCM messages (must be a top-level function).
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // On Android, background messages are shown automatically by FCM.
+  // This handler is for any custom processing you need.
+  debugPrint('[notifications] Background message: ${message.messageId}');
+}
+
+/// Service that manages push notifications via Firebase Cloud Messaging.
+///
+/// Handles:
+/// - Requesting notification permission
+/// - Obtaining and registering the FCM device token
+/// - Displaying local notifications when the app is in the foreground
+/// - Routing notification taps to the correct screen
+class NotificationService {
+  static final NotificationService _instance = NotificationService._();
+  factory NotificationService() => _instance;
+  NotificationService._();
+
+  FirebaseMessaging? _messaging;
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+
+  /// Callback invoked when a notification is tapped.
+  /// The [data] map contains payload sent from the backend (e.g. orderId, type).
+  void Function(Map<String, dynamic> data)? onNotificationTap;
+
+  bool _initialized = false;
+
+  /// Android notification channel for order updates.
+  static const AndroidNotificationChannel _orderChannel =
+      AndroidNotificationChannel(
+    'lipacart_orders',
+    'Order Updates',
+    description: 'Notifications about your LipaCart orders',
+    importance: Importance.high,
+  );
+
+  /// Initialize the notification service. Call once after Firebase.initializeApp().
+  Future<void> init() async {
+    if (_initialized || !DefaultFirebaseOptions.isConfigured) return;
+
+    _messaging = FirebaseMessaging.instance;
+
+    // Register the background handler
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+    // Create the Android notification channel
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(_orderChannel);
+
+    // Initialize local notifications for foreground display
+    await _localNotifications.initialize(
+      const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        iOS: DarwinInitializationSettings(),
+      ),
+      onDidReceiveNotificationResponse: _onLocalNotificationTap,
+    );
+
+    // Listen for foreground messages
+    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+
+    // Handle notification taps that open the app from background/terminated
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
+
+    // Check if the app was opened from a terminated state via a notification
+    final initialMessage = await _messaging!.getInitialMessage();
+    if (initialMessage != null) {
+      _handleNotificationTap(initialMessage);
+    }
+
+    _initialized = true;
+  }
+
+  /// Request notification permission from the user.
+  /// Returns true if permission was granted.
+  Future<bool> requestPermission() async {
+    if (_messaging == null) return false;
+
+    final settings = await _messaging!.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    return settings.authorizationStatus == AuthorizationStatus.authorized ||
+        settings.authorizationStatus == AuthorizationStatus.provisional;
+  }
+
+  /// Get the current FCM device token.
+  Future<String?> getToken() async {
+    if (_messaging == null) return null;
+
+    try {
+      if (kIsWeb) {
+        // Web requires a VAPID key — get this from Firebase Console → Cloud Messaging → Web Push certificates
+        return await _messaging!.getToken(
+          vapidKey: const String.fromEnvironment('FIREBASE_VAPID_KEY', defaultValue: ''),
+        );
+      }
+      return await _messaging!.getToken();
+    } catch (e) {
+      debugPrint('[notifications] Failed to get FCM token: $e');
+      return null;
+    }
+  }
+
+  /// Register the device token with the backend.
+  Future<void> registerTokenWithBackend(String authToken) async {
+    final fcmToken = await getToken();
+    if (fcmToken == null) return;
+
+    try {
+      await http.post(
+        Uri.parse('${AppConstants.apiUrl}/user/register-device'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $authToken',
+        },
+        body: jsonEncode({'fcm_token': fcmToken}),
+      );
+    } catch (e) {
+      debugPrint('[notifications] Failed to register device token: $e');
+    }
+  }
+
+  /// Listen for token refresh and re-register with backend.
+  void listenForTokenRefresh(String authToken) {
+    _messaging?.onTokenRefresh.listen((newToken) async {
+      try {
+        await http.post(
+          Uri.parse('${AppConstants.apiUrl}/user/register-device'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $authToken',
+          },
+          body: jsonEncode({'fcm_token': newToken}),
+        );
+      } catch (e) {
+        debugPrint('[notifications] Failed to re-register refreshed token: $e');
+      }
+    });
+  }
+
+  /// Show a local notification when a FCM message arrives while app is in foreground.
+  void _handleForegroundMessage(RemoteMessage message) {
+    final notification = message.notification;
+    if (notification == null) return;
+
+    _localNotifications.show(
+      notification.hashCode,
+      notification.title,
+      notification.body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _orderChannel.id,
+          _orderChannel.name,
+          channelDescription: _orderChannel.description,
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        ),
+        iOS: const DarwinNotificationDetails(),
+      ),
+      payload: jsonEncode(message.data),
+    );
+  }
+
+  /// Handle notification tap from FCM (background/terminated).
+  void _handleNotificationTap(RemoteMessage message) {
+    onNotificationTap?.call(message.data);
+  }
+
+  /// Handle notification tap from local notification (foreground).
+  void _onLocalNotificationTap(NotificationResponse response) {
+    if (response.payload != null) {
+      try {
+        final data = jsonDecode(response.payload!) as Map<String, dynamic>;
+        onNotificationTap?.call(data);
+      } catch (_) {}
+    }
+  }
+}

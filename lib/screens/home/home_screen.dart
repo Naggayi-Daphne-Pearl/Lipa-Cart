@@ -135,47 +135,33 @@ class _HomeScreenState extends State<HomeScreen> {
                               const Spacer(),
 
                               // Notifications Bell (always on the right)
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: AppColors.surface,
-                                  borderRadius: BorderRadius.circular(
-                                    AppSizes.radiusMd,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.06,
-                                      ),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
+                              GestureDetector(
+                                onTap: () => context.push('/customer/notifications'),
+                                child: Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    borderRadius: BorderRadius.circular(
+                                      AppSizes.radiusMd,
                                     ),
-                                  ],
-                                ),
-                                child: Stack(
-                                  children: [
-                                    const Center(
-                                      child: Icon(
-                                        Iconsax.notification,
-                                        color: AppColors.textPrimary,
-                                        size: 22,
-                                      ),
-                                    ),
-                                    // Notification badge
-                                    Positioned(
-                                      right: 10,
-                                      top: 10,
-                                      child: Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.error,
-                                          shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.06,
                                         ),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
                                       ),
+                                    ],
+                                  ),
+                                  child: const Center(
+                                    child: Icon(
+                                      Iconsax.notification,
+                                      color: AppColors.textPrimary,
+                                      size: 22,
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ],

@@ -4,6 +4,12 @@
 ///   flutter run --dart-define=API_BASE_URL=https://your-api.com
 ///   flutter build web --dart-define=API_BASE_URL=https://your-api.com
 ///
+/// For Firebase push notifications also pass:
+///   --dart-define=FIREBASE_API_KEY=...
+///   --dart-define=FIREBASE_PROJECT_ID=...
+///   --dart-define=FIREBASE_MESSAGING_SENDER_ID=...
+///   --dart-define=FIREBASE_APP_ID=...
+///
 /// For local development the defaults point at localhost.
 class AppConfig {
   AppConfig._();
@@ -11,7 +17,7 @@ class AppConfig {
   /// Backend API base URL (no trailing slash)
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:1337',
+    defaultValue: 'https://lipa-cart-strapi-production.up.railway.app',
   );
 
   /// Full API path

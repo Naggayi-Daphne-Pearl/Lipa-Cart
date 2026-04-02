@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
 import '../core/constants/app_constants.dart';
 import '../services/web_cookie_storage_stub.dart'
     if (dart.library.html) '../services/web_cookie_storage.dart';
@@ -94,6 +95,21 @@ class AuthProvider extends ChangeNotifier {
     await tryAutoLogin();
   }
 
+  /// Register FCM device token with backend after successful authentication.
+  /// Runs in the background — failures are non-blocking.
+  Future<void> _registerPushToken() async {
+    if (_token == null) return;
+    try {
+      final notificationService = NotificationService();
+      final granted = await notificationService.requestPermission();
+      if (!granted) return;
+      await notificationService.registerTokenWithBackend(_token!);
+      notificationService.listenForTokenRefresh(_token!);
+    } catch (e) {
+      debugPrint('[auth] FCM token registration failed: $e');
+    }
+  }
+
   Future<void> _persistUser() async {
     if (_user == null) return;
     final prefs = await SharedPreferences.getInstance();
@@ -124,6 +140,7 @@ class AuthProvider extends ChangeNotifier {
 
       _status = AuthStatus.authenticated;
       notifyListeners();
+      _registerPushToken(); // non-blocking
       return true;
     } catch (e) {
       // Token invalid or session data corrupted
@@ -195,6 +212,7 @@ class AuthProvider extends ChangeNotifier {
 
       _status = AuthStatus.authenticated;
       notifyListeners();
+      _registerPushToken(); // non-blocking
       return true;
     } catch (e) {
       _status = AuthStatus.error;
@@ -253,6 +271,7 @@ class AuthProvider extends ChangeNotifier {
 
       _status = AuthStatus.authenticated;
       notifyListeners();
+      _registerPushToken(); // non-blocking
       return true;
     } catch (e) {
       _status = AuthStatus.error;
@@ -320,6 +339,7 @@ class AuthProvider extends ChangeNotifier {
 
       _status = AuthStatus.authenticated;
       notifyListeners();
+      _registerPushToken(); // non-blocking
       return true;
     } catch (e) {
       _status = AuthStatus.otpSent;

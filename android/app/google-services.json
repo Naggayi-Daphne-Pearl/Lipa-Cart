@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "461833863082",
+    "project_id": "lipa-cart",
+    "storage_bucket": "lipa-cart.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:461833863082:android:ba1bf3a16ef9925efbb5d3",
+        "android_client_info": {
+          "package_name": "com.lipacart.lipa_cart"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjmKZ3Y5BirUZTLqkYDB4nasPokTqacOc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -2,10 +2,13 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
+import 'services/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'core/config/app_config.dart';
+import 'core/config/firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
@@ -22,6 +25,16 @@ import 'services/session_service.dart';
 import 'role_based_router.dart';
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase if configured (skip gracefully in dev without config)
+  if (DefaultFirebaseOptions.isConfigured) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    await NotificationService().init();
+  }
+
   await SentryFlutter.init(
     (options) {
       options.dsn = AppConfig.sentryDsn;
@@ -82,6 +95,32 @@ class _LipaCartAppState extends State<LipaCartApp> {
     super.dispose();
   }
 
+  /// Route notification taps to the correct screen based on payload data.
+  void _handleNotificationTap(Map<String, dynamic> data) {
+    final router = _router;
+    if (router == null) return;
+
+    final type = data['type'] as String? ?? '';
+
+    switch (type) {
+      case 'order_status':
+        // Customer: go to orders screen (user taps into specific order from there)
+        router.go('/customer/orders');
+        break;
+      case 'new_task':
+        // Shopper: go to available tasks
+        router.go('/shopper/available-tasks');
+        break;
+      case 'new_delivery':
+        // Rider: go to available deliveries
+        router.go('/rider/available-deliveries');
+        break;
+      default:
+        // Fallback: go to home
+        router.go('/customer/home');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -102,6 +141,9 @@ class _LipaCartAppState extends State<LipaCartApp> {
         builder: (context) {
           // Create router once, reuse across rebuilds
           _router ??= RoleBasedRouter.getRouter(context);
+
+          // Wire notification tap routing
+          NotificationService().onNotificationTap = _handleNotificationTap;
 
           // Provide the router context to SessionService so it can
           // navigate to /login on auth expiry from anywhere in the app.
