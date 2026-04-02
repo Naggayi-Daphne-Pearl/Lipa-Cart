@@ -64,6 +64,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   double _tipAmount = 0;
   int _selectedTipIndex = -1; // -1 = no tip, 0-3 = preset amounts
 
+  // Guest checkout steps
+  int _guestStep = 1; // 1 = delivery info, 2 = account creation
+
   @override
   void initState() {
     super.initState();
@@ -581,9 +584,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       // Delivery address or guest form
                       if (widget.isGuest)
                         _buildSection(
-                          title: 'Sign Up & Delivery Details',
-                          icon: Iconsax.user_add,
-                          child: _buildGuestAddressForm(),
+                          title: _guestStep == 1 ? 'Step 1: Delivery Details' : 'Step 2: Create Account',
+                          icon: _guestStep == 1 ? Iconsax.location : Iconsax.user_add,
+                          child: _guestStep == 1
+                              ? _buildGuestDeliveryForm()
+                              : _buildGuestAccountForm(),
                         )
                       else
                         _buildSection(
@@ -1150,22 +1155,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  Widget _buildGuestAddressForm() {
+  // Step 1: Delivery info (Name, Phone, Address, City)
+  Widget _buildGuestDeliveryForm() {
     return Column(
       children: [
-        // Name field
         TextField(
           controller: _guestNameController,
           decoration: InputDecoration(
             hintText: 'Your full name',
             labelText: 'Name (required)',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-            ),
+            prefixIcon: const Icon(Iconsax.user, size: 20),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
           ),
         ),
         const SizedBox(height: AppSizes.md),
-        // Phone number field
         TextField(
           controller: _guestPhoneController,
           keyboardType: TextInputType.number,
@@ -1173,79 +1176,131 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             hintText: '701234567',
             labelText: 'Phone Number (9 digits)',
             prefixText: '+256 ',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-            ),
+            prefixIcon: const Icon(Iconsax.call, size: 20),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
           ),
         ),
         const SizedBox(height: AppSizes.md),
-        // Password field
+        TextField(
+          controller: _guestAddressController,
+          decoration: InputDecoration(
+            hintText: 'e.g., 123 Main St, Plot 45',
+            labelText: 'Delivery Address (required)',
+            prefixIcon: const Icon(Iconsax.location, size: 20),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
+          ),
+          maxLines: 2,
+        ),
+        const SizedBox(height: AppSizes.md),
+        TextField(
+          controller: _guestCityController,
+          decoration: InputDecoration(
+            hintText: 'e.g., Kampala',
+            labelText: 'City (optional)',
+            prefixIcon: const Icon(Iconsax.building, size: 20),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
+          ),
+        ),
+        const SizedBox(height: AppSizes.lg),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () {
+              if (_guestNameController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter your name'), backgroundColor: AppColors.error),
+                );
+                return;
+              }
+              if (_guestPhoneController.text.trim().length != 9) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Phone number must be 9 digits'), backgroundColor: AppColors.error),
+                );
+                return;
+              }
+              if (_guestAddressController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a delivery address'), backgroundColor: AppColors.error),
+                );
+                return;
+              }
+              setState(() => _guestStep = 2);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.radiusMd)),
+            ),
+            child: const Text('Continue to Account Setup'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Step 2: Account creation (Password, Confirm Password)
+  Widget _buildGuestAccountForm() {
+    return Column(
+      children: [
+        // Show summary of step 1
+        Container(
+          padding: const EdgeInsets.all(AppSizes.sm),
+          decoration: BoxDecoration(
+            color: AppColors.primarySoft,
+            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+          ),
+          child: Row(
+            children: [
+              const Icon(Iconsax.tick_circle5, color: AppColors.primary, size: 18),
+              const SizedBox(width: AppSizes.sm),
+              Expanded(
+                child: Text(
+                  '${_guestNameController.text} • +256${_guestPhoneController.text} • ${_guestAddressController.text}',
+                  style: AppTextStyles.caption.copyWith(color: AppColors.primary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => setState(() => _guestStep = 1),
+                child: Text('Edit', style: AppTextStyles.caption.copyWith(color: AppColors.accent, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSizes.lg),
+        Text(
+          'Create an account to track your order',
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: AppSizes.md),
         TextField(
           controller: _guestPasswordController,
           obscureText: _obscurePassword,
           decoration: InputDecoration(
             hintText: 'At least 6 characters',
             labelText: 'Password (required)',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-            ),
+            prefixIcon: const Icon(Iconsax.lock, size: 20),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
             suffixIcon: IconButton(
-              icon: Icon(
-                _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
-                color: AppColors.grey400,
-              ),
-              onPressed: () {
-                setState(() => _obscurePassword = !_obscurePassword);
-              },
+              icon: Icon(_obscurePassword ? Iconsax.eye_slash : Iconsax.eye, color: AppColors.grey400),
+              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
             ),
           ),
         ),
         const SizedBox(height: AppSizes.md),
-        // Confirm Password field
         TextField(
           controller: _guestConfirmPasswordController,
           obscureText: _obscureConfirmPassword,
           decoration: InputDecoration(
             hintText: 'Re-enter your password',
             labelText: 'Confirm Password (required)',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-            ),
+            prefixIcon: const Icon(Iconsax.lock, size: 20),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
             suffixIcon: IconButton(
-              icon: Icon(
-                _obscureConfirmPassword ? Iconsax.eye_slash : Iconsax.eye,
-                color: AppColors.grey400,
-              ),
-              onPressed: () {
-                setState(
-                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
-                );
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSizes.md),
-        // Delivery address field
-        TextField(
-          controller: _guestAddressController,
-          decoration: InputDecoration(
-            hintText: 'e.g., 123 Main St, Plot 45',
-            labelText: 'Delivery Address (required)',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-            ),
-          ),
-          maxLines: 2,
-        ),
-        const SizedBox(height: AppSizes.md),
-        // City field (optional)
-        TextField(
-          controller: _guestCityController,
-          decoration: InputDecoration(
-            hintText: 'e.g., Kampala',
-            labelText: 'City (optional)',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+              icon: Icon(_obscureConfirmPassword ? Iconsax.eye_slash : Iconsax.eye, color: AppColors.grey400),
+              onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
             ),
           ),
         ),

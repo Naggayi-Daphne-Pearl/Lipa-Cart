@@ -377,6 +377,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showQuickActionsMenu(context),
+        backgroundColor: AppColors.primary,
+        child: const Icon(Iconsax.flash_1, color: Colors.white),
+      ),
       body: ErrorBoundary(
         onRetry: () => setState(() {}),
         child: RefreshIndicator(
@@ -656,6 +661,48 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         );
       }).toList(),
+    );
+  }
+
+  void _showQuickActionsMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.grey300, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 20),
+            Text('Quick Actions', style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(10)), child: const Icon(Iconsax.box_add, color: AppColors.primary, size: 20)),
+              title: const Text('Add Product'),
+              onTap: () { Navigator.pop(ctx); context.go('/admin/products'); },
+            ),
+            ListTile(
+              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFFFF3E0), borderRadius: BorderRadius.circular(10)), child: const Icon(Iconsax.bag_2, color: AppColors.accent, size: 20)),
+              title: const Text('View Pending Orders'),
+              onTap: () { Navigator.pop(ctx); context.go('/admin/orders'); },
+            ),
+            ListTile(
+              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFE3F2FD), borderRadius: BorderRadius.circular(10)), child: const Icon(Iconsax.verify, color: AppColors.info, size: 20)),
+              title: const Text('Approve KYC'),
+              onTap: () { Navigator.pop(ctx); context.go('/admin/riders'); },
+            ),
+            ListTile(
+              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFF3E5F5), borderRadius: BorderRadius.circular(10)), child: const Icon(Iconsax.chart_2, color: Color(0xFF9B7BB8), size: 20)),
+              title: const Text('View Analytics'),
+              onTap: () { Navigator.pop(ctx); context.go('/admin/analytics'); },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 

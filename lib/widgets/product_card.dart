@@ -27,7 +27,10 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      label: '${product.name}, ${Formatters.formatCurrency(product.price)} per ${product.unit}${!product.isAvailable ? ', out of stock' : ''}${isInCart ? ', in cart' : ''}',
+      button: true,
+      child: GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
@@ -263,6 +266,7 @@ class ProductCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
