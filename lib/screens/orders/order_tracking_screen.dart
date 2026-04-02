@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -18,10 +19,54 @@ import '../../core/utils/formatters.dart';
 import '../../models/order.dart';
 import '../../widgets/custom_button.dart';
 
-class OrderTrackingScreen extends StatelessWidget {
+class OrderTrackingScreen extends StatefulWidget {
   final Order order;
 
   const OrderTrackingScreen({super.key, required this.order});
+
+  @override
+  State<OrderTrackingScreen> createState() => _OrderTrackingScreenState();
+}
+
+class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
+  late Order order;
+  late final Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    order = widget.order;
+    // Auto-refresh every 15 seconds for active orders
+    if (!order.isDelivered && !order.isCancelled) {
+      _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) => _refreshOrder());
+    } else {
+      _pollTimer = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshOrder() async {
+    final auth = context.read<AuthProvider>();
+    final orderService = context.read<OrderService>();
+    if (auth.token == null) return;
+
+    final success = await orderService.getOrder(
+      auth.token!,
+      order.documentId ?? order.id,
+    );
+    if (success && orderService.currentOrder != null && mounted) {
+      setState(() => order = orderService.currentOrder!);
+      // Stop polling if order is now complete
+      if (order.isDelivered || order.isCancelled) {
+        _pollTimer?.cancel();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,39 +161,49 @@ class OrderTrackingScreen extends StatelessWidget {
                       const SizedBox(height: AppSizes.md),
 
                       // Delivery time estimate
-                      if (order.estimatedDelivery != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSizes.sm,
-                            vertical: AppSizes.xs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryGreen.withValues(
-                              alpha: 0.1,
+                      if (!order.isCancelled && !order.isDelivered)
+                        Builder(builder: (context) {
+                          // Calculate dynamic estimate based on status
+                          String estimate;
+                          if (order.estimatedDelivery != null) {
+                            estimate = 'Est. delivery: ${Formatters.formatDateTime(order.estimatedDelivery!)}';
+                          } else {
+                            switch (order.status) {
+                              case OrderStatus.pending:
+                              case OrderStatus.confirmed:
+                                estimate = 'Est. delivery: 45-60 min after shopping starts';
+                              case OrderStatus.shopperAssigned:
+                              case OrderStatus.shopping:
+                                estimate = 'Est. delivery: 30-45 min';
+                              case OrderStatus.readyForDelivery:
+                              case OrderStatus.riderAssigned:
+                                estimate = 'Est. delivery: 15-25 min';
+                              case OrderStatus.inTransit:
+                                estimate = 'Arriving soon — 5-15 min';
+                              default:
+                                estimate = '';
+                            }
+                          }
+                          if (estimate.isEmpty) return const SizedBox.shrink();
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: AppSizes.xs),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                             ),
-                            borderRadius: BorderRadius.circular(
-                              AppSizes.radiusSm,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Iconsax.clock,
-                                color: AppColors.primaryGreen,
-                                size: 14,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Est. delivery: ${Formatters.formatDateTime(order.estimatedDelivery!)}',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.primaryGreen,
-                                  fontWeight: FontWeight.w500,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Iconsax.clock, color: AppColors.primaryGreen, size: 14),
+                                const SizedBox(width: 6),
+                                Text(
+                                  estimate,
+                                  style: AppTextStyles.caption.copyWith(color: AppColors.primaryGreen, fontWeight: FontWeight.w500),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
+                              ],
+                            ),
+                          );
+                        }),
                     ],
                   ),
                 ),

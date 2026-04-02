@@ -67,6 +67,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // Guest checkout steps
   int _guestStep = 1; // 1 = delivery info, 2 = account creation
 
+  // Special instructions
+  final TextEditingController _notesController = TextEditingController();
+
+  // Express delivery
+  bool _expressDelivery = false;
+
   @override
   void initState() {
     super.initState();
@@ -126,6 +132,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _authCityController.dispose();
     _authLandmarkController.dispose();
     _promoController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -524,7 +531,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary),
                     ),
                     Text(
-                      Formatters.formatCurrency(cartProvider.total - _promoDiscount + _tipAmount),
+                      Formatters.formatCurrency(cartProvider.total - _promoDiscount + _tipAmount + (_expressDelivery ? 5000 : 0)),
                       style: AppTextStyles.labelMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
                     ),
                   ],
@@ -632,6 +639,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                       const SizedBox(height: AppSizes.md),
 
+                      // Special instructions
+                      _buildSection(
+                        title: 'Special Instructions',
+                        icon: Iconsax.note_text,
+                        child: TextField(
+                          controller: _notesController,
+                          maxLines: 3,
+                          decoration: InputDecoration(
+                            hintText: 'e.g., "Green bananas only", "Call when arriving", "Leave at gate"',
+                            hintStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.textTertiary),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                              borderSide: BorderSide(color: AppColors.grey300),
+                            ),
+                            contentPadding: const EdgeInsets.all(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSizes.md),
+
                       // Payment method
                       _buildSection(
                         title: 'Payment Method',
@@ -649,6 +677,80 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         title: 'Delivery Time',
                         icon: Iconsax.clock,
                         child: _buildDeliverySlotPicker(),
+                      ),
+                      const SizedBox(height: AppSizes.md),
+
+                      // Express delivery option
+                      _buildSection(
+                        title: 'Delivery Speed',
+                        icon: Iconsax.flash_1,
+                        child: Column(
+                          children: [
+                            GestureDetector(
+                              onTap: () => setState(() => _expressDelivery = false),
+                              child: Container(
+                                padding: const EdgeInsets.all(AppSizes.sm),
+                                margin: const EdgeInsets.only(bottom: AppSizes.sm),
+                                decoration: BoxDecoration(
+                                  color: !_expressDelivery ? AppColors.primarySoft : AppColors.lightGrey,
+                                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                  border: !_expressDelivery ? Border.all(color: AppColors.primary) : null,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Iconsax.truck_fast, color: !_expressDelivery ? AppColors.primary : AppColors.textSecondary, size: 20),
+                                    const SizedBox(width: AppSizes.sm),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Standard', style: AppTextStyles.labelMedium.copyWith(
+                                            color: !_expressDelivery ? AppColors.primary : AppColors.textDark,
+                                          )),
+                                          Text('45-60 min', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+                                        ],
+                                      ),
+                                    ),
+                                    Text('FREE', style: AppTextStyles.labelSmall.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
+                                    if (!_expressDelivery) const SizedBox(width: 4),
+                                    if (!_expressDelivery) const Icon(Iconsax.tick_circle5, color: AppColors.primary, size: 18),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => setState(() => _expressDelivery = true),
+                              child: Container(
+                                padding: const EdgeInsets.all(AppSizes.sm),
+                                decoration: BoxDecoration(
+                                  color: _expressDelivery ? AppColors.accent.withValues(alpha: 0.1) : AppColors.lightGrey,
+                                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                  border: _expressDelivery ? Border.all(color: AppColors.accent) : null,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Iconsax.flash_1, color: _expressDelivery ? AppColors.accent : AppColors.textSecondary, size: 20),
+                                    const SizedBox(width: AppSizes.sm),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Express', style: AppTextStyles.labelMedium.copyWith(
+                                            color: _expressDelivery ? AppColors.accent : AppColors.textDark,
+                                          )),
+                                          Text('20-30 min', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+                                        ],
+                                      ),
+                                    ),
+                                    Text('+ UGX 5,000', style: AppTextStyles.labelSmall.copyWith(color: AppColors.accent, fontWeight: FontWeight.w600)),
+                                    if (_expressDelivery) const SizedBox(width: 4),
+                                    if (_expressDelivery) const Icon(Iconsax.tick_circle5, color: AppColors.accent, size: 18),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: AppSizes.md),
 
@@ -692,6 +794,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 cartProvider.deliveryFee,
                               ),
                             ),
+                            if (_expressDelivery) ...[
+                              const SizedBox(height: AppSizes.sm),
+                              _buildSummaryRow(
+                                'Express Delivery',
+                                Formatters.formatCurrency(5000),
+                              ),
+                            ],
                             if (_promoDiscount > 0) ...[
                               const SizedBox(height: AppSizes.sm),
                               _buildSummaryRow(
@@ -716,7 +825,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             _buildSummaryRow(
                               'Total',
                               Formatters.formatCurrency(
-                                cartProvider.total - _promoDiscount + _tipAmount,
+                                cartProvider.total - _promoDiscount + _tipAmount + (_expressDelivery ? 5000 : 0),
                               ),
                               isTotal: true,
                             ),
@@ -765,7 +874,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       // Place order button
                       CustomButton(
                         text:
-                            'Place Order - ${Formatters.formatCurrency(cartProvider.total - _promoDiscount + _tipAmount)}',
+                            'Place Order - ${Formatters.formatCurrency(cartProvider.total - _promoDiscount + _tipAmount + (_expressDelivery ? 5000 : 0))}',
                         isLoading: _isLoading,
                         onPressed: _consentChecked ? _placeOrder : null,
                       ),
