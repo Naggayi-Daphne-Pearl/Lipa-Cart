@@ -36,6 +36,8 @@ import 'screens/customer/addresses_screen.dart';
 import 'screens/customer/order_rating_screen.dart';
 import 'screens/customer/ratings_reviews_screen.dart';
 import 'screens/notifications/notification_inbox_screen.dart';
+import 'screens/legal/terms_of_service_screen.dart';
+import 'screens/legal/privacy_policy_screen.dart';
 
 // Admin screens
 import 'screens/admin/admin_shell.dart';
@@ -285,6 +287,14 @@ class RoleBasedRouter {
         GoRoute(
           path: '/forgot-password',
           builder: (context, state) => const ForgotPasswordScreen(),
+        ),
+        GoRoute(
+          path: '/terms-of-service',
+          builder: (context, state) => const TermsOfServiceScreen(),
+        ),
+        GoRoute(
+          path: '/privacy-policy',
+          builder: (context, state) => const PrivacyPolicyScreen(),
         ),
         GoRoute(
           path: '/profile-completion',

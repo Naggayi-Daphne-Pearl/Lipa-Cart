@@ -42,6 +42,12 @@ class AppConstants {
   static const double deliveryFeePerKm = 500;
   static const double serviceFeePercentage = 0.05;
 
+  // Delivery Zone — service area center + max radius in km
+  // Kampala city center (0.3476, 32.5825)
+  static const double serviceAreaCenterLat = 0.3476;
+  static const double serviceAreaCenterLng = 32.5825;
+  static const double serviceAreaRadiusKm = 15.0; // 15 km from Kampala center
+
   // Images
   static const String placeholderImage = 'assets/images/placeholder.png';
   static const String logoImage = 'assets/images/logo.png';

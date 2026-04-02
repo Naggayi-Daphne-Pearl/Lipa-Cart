@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -619,6 +620,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: AppColors.primary,
                       fontWeight: FontWeight.w500,
                     ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => context.push('/terms-of-service'),
                   ),
                   const TextSpan(text: ' and '),
                   TextSpan(
@@ -627,6 +630,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: AppColors.primary,
                       fontWeight: FontWeight.w500,
                     ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => context.push('/privacy-policy'),
                   ),
                 ],
               ),

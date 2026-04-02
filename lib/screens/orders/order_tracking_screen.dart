@@ -735,6 +735,76 @@ class OrderTrackingScreen extends StatelessWidget {
                     ),
                   ),
 
+                // Refund tracking for cancelled orders
+                if (order.isCancelled) ...[
+                  Container(
+                    padding: const EdgeInsets.all(AppSizes.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Iconsax.close_circle, color: AppColors.error, size: 20),
+                            const SizedBox(width: AppSizes.sm),
+                            Text('Order Cancelled', style: AppTextStyles.h5.copyWith(color: AppColors.error)),
+                          ],
+                        ),
+                        if (order.cancellationReason != null && order.cancellationReason!.isNotEmpty) ...[
+                          const SizedBox(height: AppSizes.sm),
+                          Text(
+                            'Reason: ${order.cancellationReason}',
+                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ],
+                        const Divider(height: AppSizes.lg),
+                        Row(
+                          children: [
+                            Icon(Iconsax.money_recive, color: AppColors.primaryGreen, size: 20),
+                            const SizedBox(width: AppSizes.sm),
+                            Text('Refund Status', style: AppTextStyles.labelLarge),
+                          ],
+                        ),
+                        const SizedBox(height: AppSizes.md),
+                        // Refund timeline
+                        _buildRefundStep(
+                          'Cancellation confirmed',
+                          'Your order has been cancelled',
+                          true,
+                          isFirst: true,
+                        ),
+                        _buildRefundStep(
+                          'Refund initiated',
+                          order.paymentMethod == PaymentMethod.cashOnDelivery
+                              ? 'No charge — Cash on Delivery'
+                              : 'Refund of ${Formatters.formatCurrency(order.total)} is being processed',
+                          true,
+                        ),
+                        _buildRefundStep(
+                          'Refund completed',
+                          order.paymentMethod == PaymentMethod.cashOnDelivery
+                              ? 'No payment was collected'
+                              : 'Expect ${order.paymentMethod == PaymentMethod.mobileMoney ? '1-2' : '3-5'} business days to ${order.paymentMethod.displayName}',
+                          order.paymentMethod == PaymentMethod.cashOnDelivery,
+                          isLast: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.lg),
+                ],
+
                 // Reorder button for delivered orders
                 if (order.status == OrderStatus.delivered) ...[
                   SizedBox(
@@ -1160,6 +1230,60 @@ class OrderTrackingScreen extends StatelessWidget {
             icon: const Icon(Iconsax.call, color: AppColors.primaryGreen, size: 20),
             tooltip: 'Call $role',
           ),
+      ],
+    );
+  }
+
+  Widget _buildRefundStep(String title, String subtitle, bool isComplete, {bool isFirst = false, bool isLast = false}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isComplete ? AppColors.primaryGreen : AppColors.grey300,
+              ),
+              child: Icon(
+                isComplete ? Icons.check : Icons.circle_outlined,
+                size: 14,
+                color: Colors.white,
+              ),
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 32,
+                color: isComplete ? AppColors.primaryGreen : AppColors.grey300,
+              ),
+          ],
+        ),
+        const SizedBox(width: AppSizes.sm),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: isLast ? 0 : AppSizes.sm),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.labelMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isComplete ? AppColors.textPrimary : AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

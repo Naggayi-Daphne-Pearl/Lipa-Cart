@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
+import 'dart:math' as math;
 import '../../core/constants/app_sizes.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/responsive.dart';
@@ -542,6 +544,8 @@ class _AddressFormState extends State<AddressForm> {
   double? _selectedLng;
   bool _showMap = false; // Whether user chose to use map
 
+  double _toRadians(double degrees) => degrees * math.pi / 180;
+
   @override
   void initState() {
     super.initState();
@@ -726,6 +730,31 @@ class _AddressFormState extends State<AddressForm> {
                     }
                   } catch (_) {
                     // GPS not available — skip distance check
+                  }
+
+                  // Service area boundary check
+                  if (mounted) {
+                    final dLat = _toRadians(result.latitude - AppConstants.serviceAreaCenterLat);
+                    final dLng = _toRadians(result.longitude - AppConstants.serviceAreaCenterLng);
+                    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+                        math.cos(_toRadians(AppConstants.serviceAreaCenterLat)) *
+                        math.cos(_toRadians(result.latitude)) *
+                        math.sin(dLng / 2) * math.sin(dLng / 2);
+                    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+                    final serviceDistKm = 6371.0 * c;
+                    if (serviceDistKm > AppConstants.serviceAreaRadiusKm) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'This location is outside our delivery zone '
+                            '(${serviceDistKm.toStringAsFixed(1)} km from Kampala center). '
+                            'We currently deliver within ${AppConstants.serviceAreaRadiusKm.toInt()} km.',
+                          ),
+                          backgroundColor: AppColors.error,
+                          duration: const Duration(seconds: 5),
+                        ),
+                      );
+                    }
                   }
                 },
               ),
