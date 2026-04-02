@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:intl/intl.dart';
 import '../constants/app_constants.dart';
 
@@ -74,6 +75,26 @@ class Formatters {
       return '${difference.inMinutes}m ago';
     } else {
       return 'Just now';
+    }
+  }
+
+  /// Returns a category-specific background color for product cards.
+  static Color getProductBgColor(String? categoryName) {
+    switch (categoryName?.toLowerCase()) {
+      case 'fruits':
+        return const Color(0xFFFFF8E1);
+      case 'vegetables':
+        return const Color(0xFFE8F5E9);
+      case 'meat & fish':
+        return const Color(0xFFFFEBEE);
+      case 'dairy':
+        return const Color(0xFFE3F2FD);
+      case 'bakery':
+        return const Color(0xFFFFF3E0);
+      case 'beverages':
+        return const Color(0xFFF3E5F5);
+      default:
+        return const Color(0xFFF5F5F5);
     }
   }
 }

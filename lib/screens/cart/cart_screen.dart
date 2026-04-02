@@ -38,17 +38,7 @@ class CartScreen extends StatelessWidget {
     }
   }
 
-  Color _getProductBgColor(String categoryName) {
-    final category = categoryName.toLowerCase();
-    if (category.contains('fruit')) return const Color(0xFFFFF3C7);
-    if (category.contains('vegetable')) return const Color(0xFFE8F5E9);
-    if (category.contains('meat') || category.contains('fish')) {
-      return const Color(0xFFFFEBEE);
-    }
-    if (category.contains('dairy')) return const Color(0xFFE3F2FD);
-    if (category.contains('bakery')) return const Color(0xFFFFF8E1);
-    return const Color(0xFFF5F5F5);
-  }
+  Color _getProductBgColor(String categoryName) => Formatters.getProductBgColor(categoryName);
 
   @override
   Widget build(BuildContext context) {
@@ -170,10 +160,12 @@ class CartScreen extends StatelessWidget {
                                 const SizedBox(width: AppSizes.sm),
                                 Expanded(
                                   child: Text(
-                                    'Add ${Formatters.formatCurrency(amountToFreeDelivery)} more for free delivery',
+                                    deliveryProgress > 0.8
+                                        ? '🎉 Almost there! Just ${Formatters.formatCurrency(amountToFreeDelivery)} more for free delivery'
+                                        : 'Add ${Formatters.formatCurrency(amountToFreeDelivery)} more for free delivery',
                                     style: AppTextStyles.bodySmall.copyWith(
                                       color: AppColors.primary,
-                                      fontWeight: FontWeight.w500,
+                                      fontWeight: deliveryProgress > 0.8 ? FontWeight.w700 : FontWeight.w500,
                                     ),
                                   ),
                                 ),
@@ -308,6 +300,19 @@ class CartScreen extends StatelessWidget {
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                    ),
+                    // Continue Shopping button
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(AppSizes.lg, 0, AppSizes.lg, AppSizes.lg),
+                      child: TextButton.icon(
+                        onPressed: () => GoRouter.of(context).go('/customer/categories'),
+                        icon: const Icon(Iconsax.arrow_left_2, size: 16),
+                        label: const Text('Continue Shopping'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          minimumSize: const Size(double.infinity, 44),
                         ),
                       ),
                     ),

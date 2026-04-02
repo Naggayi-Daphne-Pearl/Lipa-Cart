@@ -1154,15 +1154,26 @@ class OrderTrackingScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isCompleted
                         ? AppColors.primaryGreen
-                        : AppColors.lightGrey,
+                        : isCurrent
+                            ? AppColors.primaryGreen.withValues(alpha: 0.2)
+                            : AppColors.lightGrey,
                     shape: BoxShape.circle,
                     border: isCurrent
                         ? Border.all(color: AppColors.primaryGreen, width: 2)
                         : null,
                   ),
                   child: isCompleted
-                      ? const Icon(Icons.check, size: 14, color: Colors.white)
-                      : null,
+                      ? Icon(_getStatusIcon(status), size: 14, color: Colors.white)
+                      : isCurrent
+                          ? Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primaryGreen,
+                                shape: BoxShape.circle,
+                              ),
+                            )
+                          : null,
                 ),
                 if (!isLast)
                   Container(
@@ -1419,6 +1430,29 @@ class OrderTrackingScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  IconData _getStatusIcon(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return Icons.access_time;
+      case OrderStatus.confirmed:
+        return Icons.payment;
+      case OrderStatus.shopperAssigned:
+        return Icons.person;
+      case OrderStatus.shopping:
+        return Iconsax.shopping_bag;
+      case OrderStatus.readyForDelivery:
+        return Icons.inventory_2;
+      case OrderStatus.riderAssigned:
+        return Iconsax.truck_fast;
+      case OrderStatus.inTransit:
+        return Icons.local_shipping;
+      case OrderStatus.delivered:
+        return Icons.check_circle;
+      case OrderStatus.cancelled:
+        return Icons.cancel;
+    }
   }
 
   Color _getStatusColor(OrderStatus status) {

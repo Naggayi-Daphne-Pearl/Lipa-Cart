@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import '../core/theme/app_colors.dart';
@@ -122,6 +123,29 @@ class ProductCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                  // Out of stock overlay
+                  if (!product.isAvailable)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppSizes.radiusXl)),
+                        ),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.grey600,
+                              borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                            ),
+                            child: Text(
+                              'Out of Stock',
+                              style: AppTextStyles.caption.copyWith(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 10),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   // Favorite heart button
                   Positioned(
                     top: 8,
@@ -197,7 +221,10 @@ class ProductCard extends StatelessWidget {
                           ),
                         ),
                         GestureDetector(
-                          onTap: onAddToCart,
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            onAddToCart?.call();
+                          },
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             width: 32,

@@ -9,6 +9,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/responsive.dart';
+import '../../widgets/shimmer_loading.dart';
 import '../../models/product.dart';
 import '../../models/recipe.dart';
 import '../../providers/product_provider.dart';
@@ -40,18 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Color _getProductBgColor(String categoryName) {
-    final category = categoryName.toLowerCase();
-    if (category.contains('fruit')) return const Color(0xFFFFF3C7);
-    if (category.contains('vegetable')) return const Color(0xFFE8F5E9);
-    if (category.contains('meat') || category.contains('fish')) {
-      return const Color(0xFFFFEBEE);
-    }
-    if (category.contains('dairy')) return const Color(0xFFE3F2FD);
-    if (category.contains('bakery')) return const Color(0xFFFFF8E1);
-    if (category.contains('pantry')) return const Color(0xFFFFF3E0);
-    return const Color(0xFFF5F5F5);
-  }
+  Color _getProductBgColor(String categoryName) => Formatters.getProductBgColor(categoryName);
 
   @override
   Widget build(BuildContext context) {
@@ -967,10 +957,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 if (productProvider.isLoading)
                   const Padding(
-                    padding: EdgeInsets.all(AppSizes.xl),
-                    child: Center(
-                      child: AppLoadingIndicator.small(),
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: AppSizes.lg),
+                    child: ShimmerHorizontalRow(),
                   )
                 else
                   AdaptiveProductSection(
