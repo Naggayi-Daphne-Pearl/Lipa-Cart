@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
@@ -151,6 +153,55 @@ class OrderTrackingScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSizes.lg),
+
+                // Delivery map (shown when in transit)
+                if (order.status == OrderStatus.inTransit)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: AppSizes.lg),
+                    height: 200,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: FlutterMap(
+                      options: MapOptions(
+                        initialCenter: LatLng(
+                          order.deliveryAddress.latitude,
+                          order.deliveryAddress.longitude,
+                        ),
+                        initialZoom: 14,
+                        interactionOptions: const InteractionOptions(
+                          flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+                        ),
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.lipacart.lipa_cart',
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: LatLng(
+                                order.deliveryAddress.latitude,
+                                order.deliveryAddress.longitude,
+                              ),
+                              width: 40,
+                              height: 40,
+                              child: const Icon(Iconsax.location5, color: AppColors.error, size: 36),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
 
                 // Tracking timeline
                 Container(

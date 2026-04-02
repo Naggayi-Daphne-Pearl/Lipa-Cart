@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/constants/app_sizes.dart';
+import '../core/utils/formatters.dart';
 import '../providers/cart_provider.dart';
 
 class AppBottomNav extends StatelessWidget {
@@ -44,7 +45,36 @@ class AppBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final cartProvider = context.watch<CartProvider>();
 
-    return Container(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Cart abandonment nudge (shown when not on cart screen and cart has items)
+        if (currentIndex != 3 && cartProvider.isNotEmpty)
+          GestureDetector(
+            onTap: () => context.go('/customer/cart'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.sm),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primary, AppColors.primaryLight],
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Iconsax.bag_2, color: Colors.white, size: 18),
+                  const SizedBox(width: AppSizes.sm),
+                  Expanded(
+                    child: Text(
+                      '${cartProvider.itemCount} item${cartProvider.itemCount != 1 ? 's' : ''} in cart — ${Formatters.formatCurrency(cartProvider.total)}',
+                      style: AppTextStyles.labelSmall.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const Icon(Iconsax.arrow_right_3, color: Colors.white, size: 16),
+                ],
+              ),
+            ),
+          ),
+        Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: const BorderRadius.vertical(
@@ -100,6 +130,8 @@ class AppBottomNav extends StatelessWidget {
           ),
         ),
       ),
+    ),
+      ],
     );
   }
 

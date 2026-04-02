@@ -506,12 +506,78 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             children: [
               // Progress Stepper
               _buildProgressStepper(),
+              // Sticky order summary bar
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft,
+                  border: Border(bottom: BorderSide(color: AppColors.primary.withValues(alpha: 0.2))),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${cartProvider.itemCount} item${cartProvider.itemCount != 1 ? 's' : ''}',
+                      style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary),
+                    ),
+                    Text(
+                      Formatters.formatCurrency(cartProvider.total - _promoDiscount + _tipAmount),
+                      style: AppTextStyles.labelMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(AppSizes.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Express checkout for returning users
+                      if (!widget.isGuest && _selectedAddress != null && !_consentChecked)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSizes.md),
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() => _consentChecked = true);
+                              _placeOrder();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(AppSizes.md),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [AppColors.primary, AppColors.primaryLight],
+                                ),
+                                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Iconsax.flash_1, color: Colors.white, size: 22),
+                                  const SizedBox(width: AppSizes.sm),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Express Checkout',
+                                          style: AppTextStyles.labelMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                                        ),
+                                        Text(
+                                          'Deliver to ${_selectedAddress!.label} • ${_selectedPayment.displayName}',
+                                          style: AppTextStyles.caption.copyWith(color: Colors.white70),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Iconsax.arrow_right_3, color: Colors.white, size: 18),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
                       // Delivery address or guest form
                       if (widget.isGuest)
                         _buildSection(
