@@ -393,29 +393,68 @@ class OrderTrackingScreen extends StatelessWidget {
                                         if (item.shopperNotes != null && item.shopperNotes!.isNotEmpty)
                                           Padding(
                                             padding: const EdgeInsets.only(top: 4),
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: Colors.blue.withValues(alpha: 0.05),
-                                                borderRadius: BorderRadius.circular(AppSizes.radiusXs),
-                                              ),
-                                              child: Text(
-                                                'Shopper: ${item.shopperNotes}',
-                                                style: AppTextStyles.caption.copyWith(
-                                                  color: Colors.blue[700],
-                                                  fontStyle: FontStyle.italic,
-                                                ),
-                                              ),
-                                            ),
+                                            child: item.shopperNotes!.startsWith('SUBSTITUTE:')
+                                                ? Container(
+                                                    padding: const EdgeInsets.all(8),
+                                                    decoration: BoxDecoration(
+                                                      color: AppColors.accent.withValues(alpha: 0.08),
+                                                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                                      border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                                                    ),
+                                                    child: Row(
+                                                      children: [
+                                                        const Icon(Icons.swap_horiz, size: 16, color: AppColors.accent),
+                                                        const SizedBox(width: 6),
+                                                        Expanded(
+                                                          child: Column(
+                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                            children: [
+                                                              Text(
+                                                                'Substitute Suggested',
+                                                                style: AppTextStyles.caption.copyWith(
+                                                                  color: AppColors.accent,
+                                                                  fontWeight: FontWeight.w600,
+                                                                  fontSize: 11,
+                                                                ),
+                                                              ),
+                                                              Text(
+                                                                item.shopperNotes!.replaceFirst('SUBSTITUTE: ', ''),
+                                                                style: AppTextStyles.caption.copyWith(
+                                                                  color: AppColors.textPrimary,
+                                                                  fontWeight: FontWeight.w500,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  )
+                                                : Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.blue.withValues(alpha: 0.05),
+                                                      borderRadius: BorderRadius.circular(AppSizes.radiusXs),
+                                                    ),
+                                                    child: Text(
+                                                      'Shopper: ${item.shopperNotes}',
+                                                      style: AppTextStyles.caption.copyWith(
+                                                        color: Colors.blue[700],
+                                                        fontStyle: FontStyle.italic,
+                                                      ),
+                                                    ),
+                                                  ),
                                           ),
                                       ],
                                     ),
                                   ),
                                   const SizedBox(width: AppSizes.sm),
                                   Text(
-                                    Formatters.formatCurrency(item.totalPrice),
+                                    Formatters.formatCurrency(item.found == false ? 0 : (item.actualPrice ?? item.product.price) * item.quantity),
                                     style: AppTextStyles.labelMedium.copyWith(
                                       fontWeight: FontWeight.w700,
+                                      decoration: item.found == false ? TextDecoration.lineThrough : null,
+                                      color: item.found == false ? AppColors.textTertiary : null,
                                     ),
                                   ),
                                 ],
