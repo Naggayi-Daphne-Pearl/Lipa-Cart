@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -97,6 +98,26 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
               ),
             ),
             actions: [
+              GestureDetector(
+                onTap: () {
+                  final text = '${recipe.name}\n\n'
+                      'Prep: ${recipe.prepTime} min • Cook: ${recipe.cookTime} min • Serves ${recipe.servings}\n\n'
+                      'Ingredients:\n${recipe.ingredients.map((i) => '• ${i.name} (${i.quantity})').join('\n')}\n\n'
+                      'Shared from LipaCart';
+                  launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(text)}'));
+                },
+                child: Container(
+                  margin: const EdgeInsets.all(8),
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: AppColors.shadowSm,
+                  ),
+                  child: const Icon(Iconsax.share, color: AppColors.grey400, size: 20),
+                ),
+              ),
               GestureDetector(
                 onTap: () => recipeProvider.toggleFavorite(recipe.id),
                 child: Container(

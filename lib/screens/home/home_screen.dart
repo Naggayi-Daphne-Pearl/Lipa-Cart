@@ -468,6 +468,90 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
+                // Featured category spotlight
+                if (productProvider.categories.length >= 2)
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => context.push('/customer/category', extra: productProvider.categories[0]),
+                            child: Container(
+                              height: 100,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: const EdgeInsets.all(AppSizes.md),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Iconsax.heart5, color: AppColors.primary, size: 24),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    productProvider.categories[0].name,
+                                    style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w700),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    'Shop fresh',
+                                    style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSizes.md),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => context.push('/customer/category', extra: productProvider.categories[1]),
+                            child: Container(
+                              height: 100,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFFFF3E0), Color(0xFFFFE0B2)],
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              padding: const EdgeInsets.all(AppSizes.md),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Iconsax.flash_1, color: AppColors.accent, size: 24),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    productProvider.categories[1].name,
+                                    style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w700),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    'Top picks',
+                                    style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                SizedBox(
+                  height: context.responsive<double>(
+                    mobile: AppSizes.md,
+                    tablet: AppSizes.lg,
+                    desktop: AppSizes.xl,
+                  ),
+                ),
+
                 // Reorder section (for authenticated users with past orders)
                 if (authProvider.isAuthenticated)
                   Builder(

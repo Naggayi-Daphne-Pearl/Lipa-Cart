@@ -357,8 +357,41 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: AppSizes.xl),
+            // Templates section
+            Text('Or start from a template', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+            const SizedBox(height: AppSizes.md),
+            Wrap(
+              spacing: AppSizes.sm,
+              runSpacing: AppSizes.sm,
+              alignment: WrapAlignment.center,
+              children: [
+                _buildTemplatePill('🛒 Weekly Essentials', ['Milk', 'Bread', 'Eggs', 'Rice', 'Cooking Oil', 'Sugar', 'Tea', 'Tomatoes', 'Onions']),
+                _buildTemplatePill('🎉 Party Supplies', ['Sodas', 'Juice', 'Chips', 'Cake', 'Paper Plates', 'Napkins']),
+                _buildTemplatePill('👶 Baby Needs', ['Baby Formula', 'Diapers', 'Baby Wipes', 'Baby Food', 'Baby Cereal']),
+              ],
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTemplatePill(String label, List<String> items) {
+    return GestureDetector(
+      onTap: () {
+        final name = label.replaceAll(RegExp(r'[^\w\s]'), '').trim();
+        final description = items.join(', ');
+        _showCreateListSheet(context, templateName: name, templateDescription: description);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+          border: Border.all(color: AppColors.grey300),
+        ),
+        child: Text(label, style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w500)),
       ),
     );
   }
@@ -430,7 +463,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     );
   }
 
-  void _showCreateListSheet(BuildContext context) {
+  void _showCreateListSheet(BuildContext context, {String? templateName, String? templateDescription}) {
     final shoppingListProvider = context.read<ShoppingListProvider>();
     final authProvider = context.read<AuthProvider>();
     final isPremium = authProvider.user?.isPremium ?? false;
@@ -440,8 +473,8 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
       return;
     }
 
-    final nameController = TextEditingController();
-    final descController = TextEditingController();
+    final nameController = TextEditingController(text: templateName ?? '');
+    final descController = TextEditingController(text: templateDescription ?? '');
     String selectedEmoji = '🛒';
     String selectedColor = ShoppingListProvider.listColors[0];
 

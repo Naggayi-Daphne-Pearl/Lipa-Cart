@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -933,9 +934,12 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                   Iconsax.share,
                   color: AppColors.textPrimary,
                 ),
-                title: const Text('Share List'),
+                title: const Text('Share via WhatsApp'),
                 onTap: () {
                   Navigator.pop(context);
+                  final items = list.items.map((i) => '• ${i.name} (${i.quantity} ${i.unit})').join('\n');
+                  final text = 'Shopping List: ${list.name}\n\n$items\n\nShared from LipaCart';
+                  launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(text)}'));
                 },
               ),
               ListTile(

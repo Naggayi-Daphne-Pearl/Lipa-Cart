@@ -68,6 +68,10 @@ class _AdminShellState extends State<AdminShell> {
     final pageIcon = _getPageIcon(_currentRoute);
 
     return Scaffold(
+      // Mobile drawer
+      drawer: isMobile ? Drawer(
+        child: _buildSidebarContent(context),
+      ) : null,
       // Top bar
       appBar: AppBar(
         elevation: 0,
@@ -75,6 +79,12 @@ class _AdminShellState extends State<AdminShell> {
         foregroundColor: AppColors.textPrimary,
         surfaceTintColor: Colors.transparent,
         toolbarHeight: 64,
+        leading: isMobile ? Builder(
+          builder: (ctx) => IconButton(
+            icon: const Icon(Iconsax.menu_1),
+            onPressed: () => Scaffold.of(ctx).openDrawer(),
+          ),
+        ) : null,
         title: Row(
           children: [
             Icon(pageIcon, size: 22, color: AppColors.primary),
@@ -248,149 +258,15 @@ class _AdminShellState extends State<AdminShell> {
       ),
       body: Row(
         children: [
-          // Sidebar
+          // Sidebar (desktop only)
           if (!isMobile)
             Container(
               width: 240,
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border(
-                  right: BorderSide(color: AppColors.grey200),
-                ),
+                border: Border(right: BorderSide(color: AppColors.grey200)),
               ),
-              child: Column(
-                children: [
-                  // Logo
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Center(
-                            child: Text(
-                              'LC',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'Lipa Cart',
-                          style: AppTextStyles.h5.copyWith(
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(color: AppColors.grey200, height: 1),
-                  // Nav items
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 8, horizontal: 8),
-                      children: [
-                        _SidebarItem(
-                          icon: Iconsax.category,
-                          label: 'Dashboard',
-                          isActive:
-                              _currentRoute.contains('/admin/dashboard'),
-                          onTap: () => _navigate('/admin/dashboard'),
-                        ),
-                        _SidebarItem(
-                          icon: Iconsax.box,
-                          label: 'Products',
-                          isActive:
-                              _currentRoute.contains('/admin/products'),
-                          onTap: () => _navigate('/admin/products'),
-                        ),
-                        _SidebarItem(
-                          icon: Iconsax.bag_2,
-                          label: 'Orders',
-                          isActive:
-                              _currentRoute.contains('/admin/orders'),
-                          onTap: () => _navigate('/admin/orders'),
-                        ),
-                        _SidebarItem(
-                          icon: Iconsax.shop,
-                          label: 'Shoppers',
-                          isActive:
-                              _currentRoute.contains('/admin/users'),
-                          onTap: () => _navigate('/admin/users'),
-                        ),
-                        _SidebarItem(
-                          icon: Iconsax.truck_fast,
-                          label: 'Riders',
-                          isActive:
-                              _currentRoute.contains('/admin/riders'),
-                          onTap: () => _navigate('/admin/riders'),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          child: Divider(height: 1),
-                        ),
-                        _SidebarItem(
-                          icon: Iconsax.chart_2,
-                          label: 'Analytics',
-                          isActive:
-                              _currentRoute.contains('/admin/analytics'),
-                          onTap: () => _navigate('/admin/analytics'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Footer
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.primarySoft,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Iconsax.message_question,
-                              size: 18, color: AppColors.primary),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Need help?',
-                                  style: AppTextStyles.labelSmall.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                Text(
-                                  'Contact support',
-                                  style: AppTextStyles.caption.copyWith(
-                                    fontSize: 10,
-                                    color: AppColors.textTertiary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              child: _buildSidebarContent(context),
             ),
           // Main content
           Expanded(
@@ -398,6 +274,65 @@ class _AdminShellState extends State<AdminShell> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSidebarContent(BuildContext context) {
+    return Column(
+      children: [
+        // Logo
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+          child: Row(
+            children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
+                child: const Center(child: Text('LC', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))),
+              ),
+              const SizedBox(width: 10),
+              Text('Lipa Cart', style: AppTextStyles.h5.copyWith(fontSize: 16)),
+            ],
+          ),
+        ),
+        Divider(color: AppColors.grey200, height: 1),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+            children: [
+              _SidebarItem(icon: Iconsax.category, label: 'Dashboard', isActive: _currentRoute.contains('/admin/dashboard'), onTap: () { _navigate('/admin/dashboard'); Navigator.of(context).maybePop(); }),
+              _SidebarItem(icon: Iconsax.box, label: 'Products', isActive: _currentRoute.contains('/admin/products'), onTap: () { _navigate('/admin/products'); Navigator.of(context).maybePop(); }),
+              _SidebarItem(icon: Iconsax.bag_2, label: 'Orders', isActive: _currentRoute.contains('/admin/orders'), onTap: () { _navigate('/admin/orders'); Navigator.of(context).maybePop(); }),
+              _SidebarItem(icon: Iconsax.shop, label: 'Shoppers', isActive: _currentRoute.contains('/admin/users'), onTap: () { _navigate('/admin/users'); Navigator.of(context).maybePop(); }),
+              _SidebarItem(icon: Iconsax.truck_fast, label: 'Riders', isActive: _currentRoute.contains('/admin/riders'), onTap: () { _navigate('/admin/riders'); Navigator.of(context).maybePop(); }),
+              const Padding(padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), child: Divider(height: 1)),
+              _SidebarItem(icon: Iconsax.chart_2, label: 'Analytics', isActive: _currentRoute.contains('/admin/analytics'), onTap: () { _navigate('/admin/analytics'); Navigator.of(context).maybePop(); }),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(10)),
+            child: Row(
+              children: [
+                Icon(Iconsax.message_question, size: 18, color: AppColors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Need help?', style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                      Text('Contact support', style: AppTextStyles.caption.copyWith(fontSize: 10, color: AppColors.textTertiary)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
