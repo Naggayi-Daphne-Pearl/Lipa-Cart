@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/constants/app_sizes.dart';
-import '../core/utils/formatters.dart';
 import '../providers/cart_provider.dart';
 
 class AppBottomNav extends StatelessWidget {
@@ -14,28 +13,22 @@ class AppBottomNav extends StatelessWidget {
   const AppBottomNav({super.key, this.currentIndex = 0});
 
   void _onNavTap(BuildContext context, int index) {
-    // Avoid navigating to the same page
     if (index == currentIndex) return;
 
     switch (index) {
       case 0:
-        // Home
         context.go('/customer/home');
         break;
       case 1:
-        // Browse - navigate to categories
         context.go('/customer/categories');
         break;
       case 2:
-        // Lists
         context.go('/customer/shopping-lists');
         break;
       case 3:
-        // Cart
         context.go('/customer/cart');
         break;
       case 4:
-        // Profile
         context.go('/customer/profile');
         break;
     }
@@ -45,41 +38,10 @@ class AppBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final cartProvider = context.watch<CartProvider>();
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Cart abandonment nudge (shown when not on cart screen and cart has items)
-        if (currentIndex != 3 && cartProvider.isNotEmpty)
-          GestureDetector(
-            onTap: () => context.go('/customer/cart'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.sm),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.primary, AppColors.primaryLight],
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Iconsax.bag_2, color: Colors.white, size: 18),
-                  const SizedBox(width: AppSizes.sm),
-                  Expanded(
-                    child: Text(
-                      '${cartProvider.itemCount} item${cartProvider.itemCount != 1 ? 's' : ''} in cart — ${Formatters.formatCurrency(cartProvider.total)}',
-                      style: AppTextStyles.labelSmall.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  const Icon(Iconsax.arrow_right_3, color: Colors.white, size: 16),
-                ],
-              ),
-            ),
-          ),
-        Container(
+    return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppSizes.radiusXl),
-        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppSizes.radiusXl)),
         boxShadow: [
           BoxShadow(
             color: AppColors.black.withValues(alpha: 0.05),
@@ -90,48 +52,19 @@ class AppBottomNav extends StatelessWidget {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.sm,
-            vertical: AppSizes.md,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: AppSizes.md),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(
-                context: context,
-                icon: Iconsax.home_2,
-                activeIcon: Iconsax.home_15,
-                label: 'Home',
-                index: 0,
-              ),
-              _buildNavItem(
-                context: context,
-                icon: Iconsax.search_normal,
-                activeIcon: Iconsax.search_normal_1,
-                label: 'Browse',
-                index: 1,
-              ),
-              _buildNavItem(
-                context: context,
-                icon: Iconsax.clipboard_text,
-                activeIcon: Iconsax.clipboard_text,
-                label: 'Lists',
-                index: 2,
-              ),
+              _buildNavItem(context: context, icon: Iconsax.home_2, activeIcon: Iconsax.home_15, label: 'Home', index: 0),
+              _buildNavItem(context: context, icon: Iconsax.search_normal, activeIcon: Iconsax.search_normal_1, label: 'Browse', index: 1),
+              _buildNavItem(context: context, icon: Iconsax.clipboard_text, activeIcon: Iconsax.clipboard_text, label: 'Lists', index: 2),
               _buildCartNavItem(context, cartProvider.itemCount),
-              _buildNavItem(
-                context: context,
-                icon: Iconsax.user,
-                activeIcon: Iconsax.user,
-                label: 'Profile',
-                index: 4,
-              ),
+              _buildNavItem(context: context, icon: Iconsax.user, activeIcon: Iconsax.user, label: 'Profile', index: 4),
             ],
           ),
         ),
       ),
-    ),
-      ],
     );
   }
 
@@ -196,10 +129,7 @@ class AppBottomNav extends StatelessWidget {
                       color: AppColors.accent,
                       shape: BoxShape.circle,
                     ),
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
-                    ),
+                    constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                     child: Text(
                       itemCount > 9 ? '9+' : itemCount.toString(),
                       style: AppTextStyles.caption.copyWith(

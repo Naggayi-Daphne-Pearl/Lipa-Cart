@@ -199,17 +199,25 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: OutlinedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
                       final listProvider = context.read<ShoppingListProvider>();
                       final authToken = context.read<AuthProvider>().token;
                       // Create a new list from order items
-                      listProvider.createList(
+                      final created = await listProvider.createList(
                         name: 'Order #${order.orderNumber}',
                         emoji: '🛒',
                         color: '#15874B',
                         authToken: authToken,
                       );
-                      // Get the newly created list
+                      if (!created || listProvider.lists.isEmpty) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Failed to create shopping list'), backgroundColor: Colors.red),
+                          );
+                        }
+                        return;
+                      }
+                      // Get the newly created list and add items
                       final newList = listProvider.lists.last;
                       for (final item in order.items) {
                         final listItem = ShoppingListItem(
@@ -220,14 +228,16 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                           unitPrice: item.product.price,
                           linkedProduct: item.product,
                         );
-                        listProvider.addItemToList(newList.id, listItem, authToken: authToken);
+                        await listProvider.addItemToList(newList.id, listItem, authToken: authToken);
                       }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Saved as shopping list for easy reordering!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Saved ${order.items.length} items as shopping list!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
                     },
                     icon: const Icon(Iconsax.clipboard_text, size: 18),
                     label: const Text('Save as Shopping List'),
