@@ -564,8 +564,108 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
             ),
           ),
         ),
+            // Suggest Substitute button (shown when item not found)
+            if (!item.found)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showSubstituteDialog(item),
+                    icon: const Icon(Icons.swap_horiz, size: 16),
+                    label: const Text('Suggest Substitute'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accent,
+                      side: BorderSide(color: AppColors.accent.withValues(alpha: 0.5)),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showSubstituteDialog(_ChecklistItem item) {
+    final substituteController = TextEditingController();
+    final priceController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.swap_horiz, color: AppColors.accent, size: 22),
+            const SizedBox(width: 8),
+            const Text('Suggest Substitute'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Original: ${item.cartItem.product.name}',
+              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: substituteController,
+              decoration: InputDecoration(
+                labelText: 'Substitute item name',
+                hintText: 'e.g. Brand X Milk instead',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: priceController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Price (UGX)',
+                prefixText: 'UGX ',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = substituteController.text.trim();
+              if (name.isEmpty) return;
+
+              Navigator.pop(ctx);
+
+              // Save substitute info in the notes field
+              final price = priceController.text.trim();
+              final note = 'SUBSTITUTE: $name${price.isNotEmpty ? ' (UGX $price)' : ''}';
+              setState(() {
+                item.notesController.text = note;
+              });
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Substitute suggested: $name'),
+                  backgroundColor: AppColors.accent,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Suggest'),
+          ),
+        ],
       ),
     );
   }

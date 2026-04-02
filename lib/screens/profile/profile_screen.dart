@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -467,6 +470,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         title: 'Addresses',
                         onTap: () => context.go('/customer/addresses'),
                       ),
+                      _MenuItem(
+                        icon: Iconsax.card,
+                        title: 'Payment Methods',
+                        onTap: () => _showPaymentMethodsSheet(context),
+                      ),
+                      _MenuItem(
+                        icon: Iconsax.call,
+                        title: 'Change Phone Number',
+                        onTap: () => _showChangePhoneDialog(context),
+                      ),
+                      _MenuItem(
+                        icon: Iconsax.trash,
+                        title: 'Delete Account',
+                        onTap: () => _showDeleteAccountDialog(context),
+                      ),
                     ]),
                   ),
                 ],
@@ -644,6 +662,288 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Divider(height: 1, color: AppColors.grey100),
           ),
       ],
+    );
+  }
+
+  // --- Saved Payment Methods ---
+  void _showPaymentMethodsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(AppSizes.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(color: AppColors.grey300, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: AppSizes.lg),
+              Text('Payment Methods', style: AppTextStyles.h5),
+              const SizedBox(height: AppSizes.lg),
+              _buildPaymentMethodTile(
+                icon: Iconsax.mobile,
+                title: 'Mobile Money',
+                subtitle: 'MTN MoMo, Airtel Money',
+                isDefault: true,
+              ),
+              const Divider(height: 1),
+              _buildPaymentMethodTile(
+                icon: Iconsax.card,
+                title: 'Debit / Credit Card',
+                subtitle: 'Visa, Mastercard',
+                isDefault: false,
+              ),
+              const Divider(height: 1),
+              _buildPaymentMethodTile(
+                icon: Iconsax.money_recive,
+                title: 'Cash on Delivery',
+                subtitle: 'Pay when you receive your order',
+                isDefault: false,
+              ),
+              const SizedBox(height: AppSizes.lg),
+              Text(
+                'Your default payment method is used at checkout. Full payment integration with MTN MoMo and Airtel Money coming soon.',
+                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: AppSizes.md),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPaymentMethodTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool isDefault,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        width: 44, height: 44,
+        decoration: BoxDecoration(
+          color: AppColors.primarySoft,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: AppColors.primary, size: 22),
+      ),
+      title: Text(title, style: AppTextStyles.labelMedium),
+      subtitle: Text(subtitle, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+      trailing: isDefault
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+              ),
+              child: Text('Default', style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+            )
+          : null,
+    );
+  }
+
+  // --- Change Phone Number Dialog ---
+  void _showChangePhoneDialog(BuildContext context) {
+    final phoneController = TextEditingController();
+    final otpController = TextEditingController();
+    bool otpSent = false;
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Change Phone Number'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!otpSent) ...[
+                const Text('Enter your new phone number. We\'ll send an OTP to verify it.'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    prefixText: '+256 ',
+                    hintText: '7XXXXXXXX',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ] else ...[
+                Text('Enter the OTP sent to +256 ${phoneController.text}'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: otpController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  decoration: InputDecoration(
+                    hintText: '6-digit OTP',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final authProvider = context.read<AuthProvider>();
+                      final token = authProvider.token;
+                      if (token == null) return;
+
+                      setDialogState(() => isLoading = true);
+
+                      if (!otpSent) {
+                        // Request OTP for new phone
+                        final phone = '+256${phoneController.text.trim()}';
+                        try {
+                          await http.post(
+                            Uri.parse('${AppConstants.apiUrl}/otp/send'),
+                            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+                            body: jsonEncode({'phone': phone}),
+                          );
+                          setDialogState(() {
+                            otpSent = true;
+                            isLoading = false;
+                          });
+                        } catch (_) {
+                          setDialogState(() => isLoading = false);
+                        }
+                      } else {
+                        // Verify OTP and change phone
+                        final phone = '+256${phoneController.text.trim()}';
+                        try {
+                          final response = await http.post(
+                            Uri.parse('${AppConstants.apiUrl}/user/change-phone'),
+                            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+                            body: jsonEncode({'new_phone': phone, 'otp': otpController.text.trim()}),
+                          );
+
+                          Navigator.pop(ctx);
+
+                          if (response.statusCode == 200 && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Phone number updated! Please log in again.'), backgroundColor: AppColors.success),
+                            );
+                            await LogoutHelper.logoutAndClear(context);
+                            if (context.mounted) GoRouter.of(context).go('/login');
+                          } else if (context.mounted) {
+                            final data = jsonDecode(response.body);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(data['error']?['message'] ?? 'Failed to change phone'), backgroundColor: AppColors.error),
+                            );
+                          }
+                        } catch (_) {
+                          Navigator.pop(ctx);
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              child: isLoading
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Text(otpSent ? 'Verify & Change' : 'Send OTP'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- Delete Account Dialog ---
+  void _showDeleteAccountDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Iconsax.warning_2, color: AppColors.error, size: 24),
+            const SizedBox(width: 8),
+            const Text('Delete Account'),
+          ],
+        ),
+        content: const Text(
+          'This action is permanent and cannot be undone. All your data, order history, and saved addresses will be deleted.\n\nAre you sure you want to proceed?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Keep Account'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+
+              final authProvider = context.read<AuthProvider>();
+              final token = authProvider.token;
+              if (token == null) return;
+
+              // Show loading
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) => const Center(
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [CircularProgressIndicator(), SizedBox(height: 16), Text('Deleting account...')],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              try {
+                final response = await http.delete(
+                  Uri.parse('${AppConstants.apiUrl}/user/delete-account'),
+                  headers: {'Authorization': 'Bearer $token'},
+                );
+
+                if (context.mounted) Navigator.of(context).pop(); // dismiss loading
+
+                if (response.statusCode == 200 && context.mounted) {
+                  await LogoutHelper.logoutAndClear(context);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Account deleted successfully'), backgroundColor: AppColors.success),
+                    );
+                    GoRouter.of(context).go('/login');
+                  }
+                } else if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to delete account'), backgroundColor: AppColors.error),
+                  );
+                }
+              } catch (_) {
+                if (context.mounted) Navigator.of(context).pop();
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
+            child: const Text('Delete Account'),
+          ),
+        ],
+      ),
     );
   }
 }

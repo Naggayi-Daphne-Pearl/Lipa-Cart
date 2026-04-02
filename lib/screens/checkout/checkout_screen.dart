@@ -51,6 +51,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  // Promo code
+  final TextEditingController _promoController = TextEditingController();
+  double _promoDiscount = 0;
+  String? _appliedPromoCode;
+  bool _isValidatingPromo = false;
+
+  // Delivery time slot
+  String? _selectedDeliverySlot;
+
+  // Tip
+  double _tipAmount = 0;
+  int _selectedTipIndex = -1; // -1 = no tip, 0-3 = preset amounts
+
   @override
   void initState() {
     super.initState();
@@ -109,6 +122,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _authAddressController.dispose();
     _authCityController.dispose();
     _authLandmarkController.dispose();
+    _promoController.dispose();
     super.dispose();
   }
 
@@ -559,6 +573,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                       const SizedBox(height: AppSizes.md),
 
+                      // Delivery time slot
+                      _buildSection(
+                        title: 'Delivery Time',
+                        icon: Iconsax.clock,
+                        child: _buildDeliverySlotPicker(),
+                      ),
+                      const SizedBox(height: AppSizes.md),
+
+                      // Tip for shopper/rider
+                      _buildSection(
+                        title: 'Add a Tip',
+                        icon: Iconsax.heart,
+                        child: _buildTipSelector(),
+                      ),
+                      const SizedBox(height: AppSizes.md),
+
+                      // Promo code
+                      _buildSection(
+                        title: 'Promo Code',
+                        icon: Iconsax.ticket_discount,
+                        child: _buildPromoCodeField(),
+                      ),
+                      const SizedBox(height: AppSizes.md),
+
                       // Order summary
                       _buildSection(
                         title: 'Order Summary',
@@ -583,6 +621,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 cartProvider.deliveryFee,
                               ),
                             ),
+                            if (_promoDiscount > 0) ...[
+                              const SizedBox(height: AppSizes.sm),
+                              _buildSummaryRow(
+                                'Promo Discount',
+                                '- ${Formatters.formatCurrency(_promoDiscount)}',
+                                isDiscount: true,
+                              ),
+                            ],
+                            if (_tipAmount > 0) ...[
+                              const SizedBox(height: AppSizes.sm),
+                              _buildSummaryRow(
+                                'Tip',
+                                Formatters.formatCurrency(_tipAmount),
+                              ),
+                            ],
                             const Padding(
                               padding: EdgeInsets.symmetric(
                                 vertical: AppSizes.sm,
@@ -591,7 +644,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             ),
                             _buildSummaryRow(
                               'Total',
-                              Formatters.formatCurrency(cartProvider.total),
+                              Formatters.formatCurrency(
+                                cartProvider.total - _promoDiscount + _tipAmount,
+                              ),
                               isTotal: true,
                             ),
                           ],
@@ -639,7 +694,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       // Place order button
                       CustomButton(
                         text:
-                            'Place Order - ${Formatters.formatCurrency(cartProvider.total)}',
+                            'Place Order - ${Formatters.formatCurrency(cartProvider.total - _promoDiscount + _tipAmount)}',
                         isLoading: _isLoading,
                         onPressed: _consentChecked ? _placeOrder : null,
                       ),
@@ -1190,22 +1245,293 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  Widget _buildSummaryRow(String label, String value, {bool isTotal = false}) {
+  Widget _buildSummaryRow(String label, String value, {bool isTotal = false, bool isDiscount = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: isTotal ? AppTextStyles.labelMedium : AppTextStyles.bodySmall,
+          style: isTotal
+              ? AppTextStyles.labelMedium
+              : AppTextStyles.bodySmall.copyWith(
+                  color: isDiscount ? AppColors.success : null,
+                ),
         ),
         Text(
           value,
           style: isTotal
               ? AppTextStyles.priceMedium
-              : AppTextStyles.labelMedium,
+              : AppTextStyles.labelMedium.copyWith(
+                  color: isDiscount ? AppColors.success : null,
+                ),
         ),
       ],
     );
+  }
+
+  // --- Delivery Time Slot Picker ---
+  Widget _buildDeliverySlotPicker() {
+    final slots = _getDeliverySlots();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Choose a delivery window',
+          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: AppSizes.sm),
+        Wrap(
+          spacing: AppSizes.sm,
+          runSpacing: AppSizes.sm,
+          children: slots.map((slot) {
+            final isSelected = _selectedDeliverySlot == slot;
+            return GestureDetector(
+              onTap: () => setState(() => _selectedDeliverySlot = isSelected ? null : slot),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primaryOrange.withValues(alpha: 0.1) : AppColors.lightGrey,
+                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                  border: isSelected ? Border.all(color: AppColors.primaryOrange) : null,
+                ),
+                child: Text(
+                  slot,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: isSelected ? AppColors.primaryOrange : AppColors.textDark,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  List<String> _getDeliverySlots() {
+    final now = DateTime.now();
+    final hour = now.hour;
+    final slots = <String>[];
+
+    // Today's remaining slots (2-hour windows)
+    final todaySlots = [
+      [9, 11, '9 AM - 11 AM'],
+      [11, 13, '11 AM - 1 PM'],
+      [13, 15, '1 PM - 3 PM'],
+      [15, 17, '3 PM - 5 PM'],
+      [17, 19, '5 PM - 7 PM'],
+    ];
+
+    for (final s in todaySlots) {
+      if (hour < (s[0] as int)) {
+        slots.add('Today, ${s[2]}');
+      }
+    }
+
+    // If no today slots, or always show tomorrow
+    slots.addAll([
+      'Tomorrow, 9 AM - 11 AM',
+      'Tomorrow, 11 AM - 1 PM',
+      'Tomorrow, 1 PM - 3 PM',
+    ]);
+
+    return slots.take(5).toList();
+  }
+
+  // --- Tip Selector ---
+  Widget _buildTipSelector() {
+    final tipPresets = [1000.0, 2000.0, 5000.0, 10000.0];
+    final tipLabels = ['1K', '2K', '5K', '10K'];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Say thanks to your shopper & rider',
+          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: AppSizes.sm),
+        Row(
+          children: [
+            ...List.generate(tipPresets.length, (i) {
+              final isSelected = _selectedTipIndex == i;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      if (_selectedTipIndex == i) {
+                        _selectedTipIndex = -1;
+                        _tipAmount = 0;
+                      } else {
+                        _selectedTipIndex = i;
+                        _tipAmount = tipPresets[i];
+                      }
+                    });
+                  },
+                  child: Container(
+                    margin: EdgeInsets.only(right: i < 3 ? AppSizes.xs : 0),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primaryOrange.withValues(alpha: 0.1) : AppColors.lightGrey,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                      border: isSelected ? Border.all(color: AppColors.primaryOrange) : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        'UGX ${tipLabels[i]}',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: isSelected ? AppColors.primaryOrange : AppColors.textDark,
+                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // --- Promo Code Field ---
+  Widget _buildPromoCodeField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_appliedPromoCode != null)
+          Container(
+            padding: const EdgeInsets.all(AppSizes.sm),
+            decoration: BoxDecoration(
+              color: AppColors.success.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+              border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Iconsax.tick_circle5, color: AppColors.success, size: 18),
+                const SizedBox(width: AppSizes.sm),
+                Expanded(
+                  child: Text(
+                    '$_appliedPromoCode applied — ${Formatters.formatCurrency(_promoDiscount)} off',
+                    style: AppTextStyles.labelSmall.copyWith(color: AppColors.success),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() {
+                    _appliedPromoCode = null;
+                    _promoDiscount = 0;
+                    _promoController.clear();
+                  }),
+                  child: const Icon(Icons.close, size: 18, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          )
+        else
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _promoController,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: InputDecoration(
+                    hintText: 'Enter promo code',
+                    hintStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.textTertiary),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                      borderSide: BorderSide(color: AppColors.grey300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                      borderSide: BorderSide(color: AppColors.grey300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                      borderSide: const BorderSide(color: AppColors.primaryOrange),
+                    ),
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSizes.sm),
+              SizedBox(
+                height: 40,
+                child: ElevatedButton(
+                  onPressed: _isValidatingPromo ? null : _validatePromoCode,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryOrange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  child: _isValidatingPromo
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Apply'),
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Future<void> _validatePromoCode() async {
+    final code = _promoController.text.trim();
+    if (code.isEmpty) return;
+
+    setState(() => _isValidatingPromo = true);
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final cartProvider = context.read<CartProvider>();
+      final response = await http.post(
+        Uri.parse('${AppConstants.apiUrl}/promo-codes/validate'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (authProvider.token != null) 'Authorization': 'Bearer ${authProvider.token}',
+        },
+        body: jsonEncode({
+          'code': code.toUpperCase(),
+          'subtotal': cartProvider.subtotal,
+        }),
+      );
+
+      if (!mounted) return;
+      setState(() => _isValidatingPromo = false);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _appliedPromoCode = data['code'];
+          _promoDiscount = (data['discount_amount'] as num).toDouble();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Promo code applied! ${Formatters.formatCurrency(_promoDiscount)} off'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } else {
+        final data = jsonDecode(response.body);
+        final message = data['error']?['message'] ?? 'Invalid promo code';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: AppColors.error),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isValidatingPromo = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not validate promo code'), backgroundColor: AppColors.error),
+        );
+      }
+    }
   }
 
   void _showAddressSelector(AuthProvider authProvider) {

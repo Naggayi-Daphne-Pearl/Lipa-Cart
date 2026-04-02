@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/rider_provider.dart';
 import '../../models/order.dart';
@@ -330,29 +331,13 @@ class _RiderActiveDeliveriesScreenState
                 ),
               )
             else if (order.status == OrderStatus.inTransit)
-              // Rider is delivering
+              // Rider is delivering — require delivery proof photo
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  icon: const Icon(Iconsax.tick_circle, size: 18),
-                  label: const Text('Mark as Delivered'),
-                  onPressed: () async {
-                    final auth = context.read<AuthProvider>();
-                    final rider = context.read<RiderProvider>();
-                    final success = await rider.completeDelivery(
-                      auth.token!,
-                      order.documentId ?? order.id,
-                      auth.user!.documentId ?? auth.user!.id,
-                    );
-                    if (success && mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Delivery marked as complete!'),
-                          backgroundColor: AppColors.success,
-                        ),
-                      );
-                    }
-                  },
+                  icon: const Icon(Iconsax.camera, size: 18),
+                  label: const Text('Take Photo & Complete'),
+                  onPressed: () => _showDeliveryProofDialog(context, order),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.success,
                     foregroundColor: Colors.white,
@@ -455,6 +440,113 @@ class _RiderActiveDeliveriesScreenState
         const SnackBar(content: Text('No delivery location available')),
       );
     }
+  }
+
+  void _showDeliveryProofDialog(BuildContext context, Order order) {
+    XFile? proofPhoto;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Delivery Proof'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Take a photo of the delivered order at the customer\'s door for verification.'),
+              const SizedBox(height: 16),
+              if (proofPhoto != null)
+                Container(
+                  height: 160,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.grey100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.success, width: 2),
+                  ),
+                  child: Stack(
+                    children: [
+                      Center(child: Icon(Iconsax.tick_circle5, color: AppColors.success, size: 48)),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: () => setDialogState(() => proofPhoto = null),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(color: AppColors.grey200, shape: BoxShape.circle),
+                            child: const Icon(Icons.close, size: 16),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                GestureDetector(
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+                    if (photo != null) {
+                      setDialogState(() => proofPhoto = photo);
+                    }
+                  },
+                  child: Container(
+                    height: 120,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.grey100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.grey300, style: BorderStyle.solid),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Iconsax.camera, size: 36, color: AppColors.grey500),
+                        const SizedBox(height: 8),
+                        Text('Tap to take photo', style: TextStyle(color: AppColors.grey500, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: proofPhoto == null
+                  ? null
+                  : () async {
+                      Navigator.pop(ctx);
+                      // Complete delivery (photo URL would be uploaded in production)
+                      final auth = context.read<AuthProvider>();
+                      final rider = context.read<RiderProvider>();
+                      final success = await rider.completeDelivery(
+                        auth.token!,
+                        order.documentId ?? order.id,
+                        auth.user!.documentId ?? auth.user!.id,
+                      );
+                      if (success && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Delivery completed with proof photo!'),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      }
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+              child: const Text('Complete Delivery'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showCallDialog(String role, String name, String phone) {

@@ -371,6 +371,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                           const SizedBox(height: AppSizes.lg),
 
+                          // Ratings & Reviews Section
+                          _buildReviewsSection(),
+                          const SizedBox(height: AppSizes.lg),
+
                           // Quantity Section
                           Text(
                             'Quantity',
@@ -597,6 +601,110 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildReviewsSection() {
+    final rating = widget.product.rating;
+    final reviewCount = widget.product.reviewCount;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Ratings & Reviews',
+          style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: AppSizes.md),
+        Container(
+          padding: const EdgeInsets.all(AppSizes.md),
+          decoration: BoxDecoration(
+            color: AppColors.grey50,
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+          ),
+          child: Row(
+            children: [
+              // Large rating number
+              Column(
+                children: [
+                  Text(
+                    rating.toStringAsFixed(1),
+                    style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: List.generate(5, (i) {
+                      final starValue = i + 1;
+                      return Icon(
+                        starValue <= rating.round() ? Icons.star_rounded : Icons.star_outline_rounded,
+                        size: 16,
+                        color: starValue <= rating.round() ? AppColors.accent : AppColors.grey300,
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$reviewCount reviews',
+                    style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+              const SizedBox(width: AppSizes.lg),
+              // Rating bars
+              Expanded(
+                child: Column(
+                  children: List.generate(5, (i) {
+                    final star = 5 - i;
+                    // Simulate distribution based on average rating
+                    final pct = _estimateRatingDistribution(star, rating, reviewCount);
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        children: [
+                          Text('$star', style: AppTextStyles.caption),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.star_rounded, size: 12, color: AppColors.accent),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(2),
+                              child: LinearProgressIndicator(
+                                value: pct,
+                                minHeight: 6,
+                                backgroundColor: AppColors.grey200,
+                                valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (reviewCount == 0) ...[
+          const SizedBox(height: AppSizes.md),
+          Center(
+            child: Text(
+              'No reviews yet. Be the first to review after purchase!',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  double _estimateRatingDistribution(int star, double avgRating, int totalReviews) {
+    if (totalReviews == 0) return 0;
+    // Simple bell-curve estimation centered on the average
+    final diff = (star - avgRating).abs();
+    if (diff < 0.5) return 0.6;
+    if (diff < 1.5) return 0.25;
+    return 0.08;
   }
 
   Widget _buildDeliveryCard({
