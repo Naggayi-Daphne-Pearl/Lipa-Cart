@@ -58,7 +58,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                 _section('11. Changes to Terms',
                     'We may update these terms at any time. Continued use of the application after changes constitutes acceptance of the updated terms.'),
                 _section('12. Contact',
-                    'For questions about these terms, contact us at support@lipacart.com.'),
+                    'For questions about these terms, contact us at daphnepearl101@gmail.com.'),
                 const SizedBox(height: AppSizes.xl),
               ],
             ),

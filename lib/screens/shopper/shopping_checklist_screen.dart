@@ -337,7 +337,7 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                 ),
-                if (widget.order.customer!.phoneNumber.isNotEmpty)
+                if (widget.order.customer!.phoneNumber.isNotEmpty) ...[
                   GestureDetector(
                     onTap: () => _showCallDialog(
                       'Customer',
@@ -367,6 +367,36 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      final phone = widget.order.customer!.phoneNumber.replaceAll('+', '');
+                      launchUrl(Uri.parse('https://wa.me/$phone?text=Hi%2C%20I%27m%20shopping%20your%20LipaCart%20order'));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF25D366).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.chat, size: 14, color: Color(0xFF25D366)),
+                          SizedBox(width: 4),
+                          Text(
+                            'WhatsApp',
+                            style: TextStyle(
+                              color: Color(0xFF25D366),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 10),

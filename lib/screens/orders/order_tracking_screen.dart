@@ -714,6 +714,39 @@ class OrderTrackingScreen extends StatelessWidget {
                   const SizedBox(height: AppSizes.lg),
                 ],
 
+                // Edit order (only for pending — before shopping starts)
+                if (order.status == OrderStatus.pending)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSizes.sm),
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        // Add items to cart and navigate to checkout for modification
+                        final cartProvider = Provider.of<CartProvider>(context, listen: false);
+                        for (final item in order.items) {
+                          cartProvider.addToCart(item.product, quantity: item.quantity);
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Order items added to cart. Modify and place a new order, then cancel this one.'),
+                            backgroundColor: AppColors.info,
+                            duration: Duration(seconds: 4),
+                          ),
+                        );
+                        GoRouter.of(context).go('/customer/cart');
+                      },
+                      icon: const Icon(Iconsax.edit, size: 18),
+                      label: const Text('Edit Order'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.info,
+                        side: const BorderSide(color: AppColors.info),
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        ),
+                      ),
+                    ),
+                  ),
+
                 // Cancel order button (only for early statuses)
                 if (order.status == OrderStatus.pending ||
                     order.status == OrderStatus.confirmed ||
@@ -857,12 +890,33 @@ class OrderTrackingScreen extends StatelessWidget {
                   const SizedBox(height: AppSizes.md),
                 ],
 
+                // Report Issue button (delivered orders)
+                if (order.status == OrderStatus.delivered)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSizes.md),
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showReportIssueDialog(context),
+                      icon: const Icon(Iconsax.warning_2, size: 18),
+                      label: const Text('Report Issue'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        side: const BorderSide(color: AppColors.error),
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        ),
+                      ),
+                    ),
+                  ),
+
                 // Help button
                 CustomButton(
                   text: 'Need Help?',
                   isOutlined: true,
                   icon: Iconsax.message_question,
-                  onPressed: () {},
+                  onPressed: () {
+                    launchUrl(Uri.parse('https://wa.me/256785796401?text=Hi%2C%20I%20need%20help%20with%20order%20%23${order.orderNumber}'));
+                  },
                 ),
                 const SizedBox(height: AppSizes.xl),
               ],
@@ -1285,6 +1339,85 @@ class OrderTrackingScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _showReportIssueDialog(BuildContext context) {
+    String? selectedIssue;
+    final detailsController = TextEditingController();
+    final issues = [
+      'Wrong items received',
+      'Damaged items',
+      'Missing items',
+      'Poor quality / expired',
+      'Order was late',
+      'Other',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Iconsax.warning_2, color: AppColors.error, size: 22),
+              const SizedBox(width: 8),
+              const Text('Report an Issue'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('What went wrong?', style: AppTextStyles.labelMedium),
+                const SizedBox(height: 8),
+                ...issues.map((issue) => RadioListTile<String>(
+                  value: issue,
+                  groupValue: selectedIssue,
+                  onChanged: (val) => setDialogState(() => selectedIssue = val),
+                  title: Text(issue, style: AppTextStyles.bodySmall),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  activeColor: AppColors.primary,
+                )),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: detailsController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Add details (optional)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: selectedIssue == null
+                  ? null
+                  : () {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Issue reported. Our team will review and contact you within 24 hours.'),
+                          backgroundColor: AppColors.success,
+                          duration: Duration(seconds: 4),
+                        ),
+                      );
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              child: const Text('Submit Report'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

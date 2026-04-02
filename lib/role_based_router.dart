@@ -38,6 +38,9 @@ import 'screens/customer/ratings_reviews_screen.dart';
 import 'screens/notifications/notification_inbox_screen.dart';
 import 'screens/legal/terms_of_service_screen.dart';
 import 'screens/legal/privacy_policy_screen.dart';
+import 'screens/support/help_support_screen.dart';
+import 'screens/common/not_found_screen.dart';
+import 'screens/settings/app_settings_screen.dart';
 
 // Admin screens
 import 'screens/admin/admin_shell.dart';
@@ -120,6 +123,7 @@ class RoleBasedRouter {
       initialLocation: '/',
       refreshListenable: authProvider,
       observers: [SentryNavigatorObserver()],
+      errorBuilder: (context, state) => const NotFoundScreen(),
       redirect: (context, state) {
         final isAuthenticated = authProvider.isAuthenticated;
         final isInitial = authProvider.status == AuthStatus.initial;
@@ -398,6 +402,14 @@ class RoleBasedRouter {
         GoRoute(
           path: '/customer/notifications',
           builder: (context, state) => const NotificationInboxScreen(),
+        ),
+        GoRoute(
+          path: '/customer/help',
+          builder: (context, state) => const HelpSupportScreen(),
+        ),
+        GoRoute(
+          path: '/customer/settings',
+          builder: (context, state) => const AppSettingsScreen(),
         ),
         GoRoute(
           path: '/customer/orders',

@@ -95,7 +95,9 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
       backgroundColor: AppColors.background,
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
@@ -283,6 +285,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
           ),
         ),
       ),
+    ),
     );
   }
 

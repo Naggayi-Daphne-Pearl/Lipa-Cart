@@ -330,13 +330,40 @@ class _RiderActiveDeliveriesScreenState
                   },
                 ),
               )
-            else if (order.status == OrderStatus.inTransit)
+            else if (order.status == OrderStatus.inTransit) ...[
+              // COD: Collect cash first
+              if (order.paymentMethod == PaymentMethod.cashOnDelivery)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSizes.sm),
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSizes.sm),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                      border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Iconsax.money_recive, color: AppColors.warning, size: 20),
+                        const SizedBox(width: AppSizes.sm),
+                        Expanded(
+                          child: Text(
+                            'Collect ${Formatters.formatCurrency(order.total)} cash before completing',
+                            style: const TextStyle(color: AppColors.warning, fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               // Rider is delivering — require delivery proof photo
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   icon: const Icon(Iconsax.camera, size: 18),
-                  label: const Text('Take Photo & Complete'),
+                  label: Text(order.paymentMethod == PaymentMethod.cashOnDelivery
+                      ? 'Cash Collected — Take Photo'
+                      : 'Take Photo & Complete'),
                   onPressed: () => _showDeliveryProofDialog(context, order),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.success,
@@ -347,6 +374,7 @@ class _RiderActiveDeliveriesScreenState
                   ),
                 ),
               ),
+            ],
             // Call buttons row
             if ((order.customer != null && order.customer!.phoneNumber.isNotEmpty) ||
                 (order.shopperName != null && order.shopperPhone != null)) ...[

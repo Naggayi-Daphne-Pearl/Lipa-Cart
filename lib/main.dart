@@ -10,6 +10,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'core/config/app_config.dart';
 import 'core/config/firebase_options.dart';
 import 'core/theme/app_theme.dart';
+import 'widgets/connectivity_banner.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/product_provider.dart';
@@ -149,12 +150,14 @@ class _LipaCartAppState extends State<LipaCartApp> {
           // navigate to /login on auth expiry from anywhere in the app.
           SessionService.setRouterContext(context);
 
-          return MaterialApp.router(
-            title: 'LipaCart',
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.lightTheme,
-            scaffoldMessengerKey: SessionService.scaffoldMessengerKey,
-            routerConfig: _router!,
+          return ConnectivityBanner(
+            child: MaterialApp.router(
+              title: 'LipaCart',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.lightTheme,
+              scaffoldMessengerKey: SessionService.scaffoldMessengerKey,
+              routerConfig: _router!,
+            ),
           );
         },
       ),

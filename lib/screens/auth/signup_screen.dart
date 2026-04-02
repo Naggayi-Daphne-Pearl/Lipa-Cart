@@ -28,6 +28,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  double _passwordStrength = 0;
   bool _obscureConfirmPassword = true;
   String _selectedRole = 'customer';
 
@@ -98,6 +99,19 @@ class _SignupScreenState extends State<SignupScreen> {
         context.go('/customer/home');
         break;
     }
+  }
+
+  double _calcPasswordStrength(String password) {
+    if (password.isEmpty) return 0;
+    double strength = 0;
+    if (password.length >= 6) strength += 0.2;
+    if (password.length >= 8) strength += 0.1;
+    if (password.length >= 12) strength += 0.1;
+    if (RegExp(r'[a-z]').hasMatch(password)) strength += 0.1;
+    if (RegExp(r'[A-Z]').hasMatch(password)) strength += 0.15;
+    if (RegExp(r'[0-9]').hasMatch(password)) strength += 0.15;
+    if (RegExp(r'[!@#\$%\^&\*\(\)_\+\-=]').hasMatch(password)) strength += 0.2;
+    return strength.clamp(0.0, 1.0);
   }
 
   bool _isDesktop(BuildContext context) {
@@ -351,6 +365,7 @@ class _SignupScreenState extends State<SignupScreen> {
   Widget _buildFormContent({required bool isDesktop}) {
     return Form(
       key: _formKey,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       child: Column(
         crossAxisAlignment:
             isDesktop ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
@@ -592,6 +607,9 @@ class _SignupScreenState extends State<SignupScreen> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
+                  onChanged: (value) {
+                    setState(() => _passwordStrength = _calcPasswordStrength(value));
+                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Password is required';
@@ -631,6 +649,43 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                 ),
+                // Password strength indicator
+                if (_passwordController.text.isNotEmpty) ...[
+                  const SizedBox(height: AppSizes.sm),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: _passwordStrength,
+                      minHeight: 4,
+                      backgroundColor: AppColors.grey200,
+                      valueColor: AlwaysStoppedAnimation(
+                        _passwordStrength < 0.3
+                            ? AppColors.error
+                            : _passwordStrength < 0.6
+                                ? AppColors.warning
+                                : AppColors.success,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _passwordStrength < 0.3
+                        ? 'Weak'
+                        : _passwordStrength < 0.6
+                            ? 'Fair'
+                            : _passwordStrength < 0.8
+                                ? 'Good'
+                                : 'Strong',
+                    style: AppTextStyles.caption.copyWith(
+                      color: _passwordStrength < 0.3
+                          ? AppColors.error
+                          : _passwordStrength < 0.6
+                              ? AppColors.warning
+                              : AppColors.success,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppSizes.lg),
                 // Confirm Password
                 Text(

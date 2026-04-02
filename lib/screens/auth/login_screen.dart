@@ -1,6 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:local_auth/local_auth.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
@@ -31,8 +33,57 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _usePassword = true;
   bool _obscurePassword = true;
 
+  bool _biometricsAvailable = false;
+  final LocalAuthentication _localAuth = LocalAuthentication();
+
   static const double _desktopBreakpoint = 800;
   static const double _formMaxWidth = 440;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometrics();
+  }
+
+  Future<void> _checkBiometrics() async {
+    if (kIsWeb) return;
+    try {
+      final canCheck = await _localAuth.canCheckBiometrics;
+      final isDeviceSupported = await _localAuth.isDeviceSupported();
+      if (mounted) {
+        setState(() => _biometricsAvailable = canCheck && isDeviceSupported);
+      }
+    } catch (_) {
+      // Biometrics not available
+    }
+  }
+
+  Future<void> _authenticateWithBiometrics() async {
+    try {
+      final authenticated = await _localAuth.authenticate(
+        localizedReason: 'Sign in with biometrics',
+        options: const AuthenticationOptions(biometricOnly: true),
+      );
+      if (authenticated && mounted) {
+        // Try auto-login with saved credentials
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final success = await authProvider.tryAutoLogin();
+        if (success && mounted) {
+          await _handlePostLogin(authProvider);
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No saved session. Please log in with phone number first.'), backgroundColor: AppColors.warning),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Biometric authentication failed'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -322,6 +373,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildFormContent({required bool isDesktop}) {
     return Form(
       key: _formKey,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       child: Column(
         crossAxisAlignment:
             isDesktop ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
@@ -528,6 +580,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? AppSizes.buttonHeightMd
                       : AppSizes.buttonHeightLg,
                 ),
+                // Biometric login
+                if (_biometricsAvailable) ...[
+                  const SizedBox(height: AppSizes.md),
+                  Center(
+                    child: IconButton(
+                      onPressed: _authenticateWithBiometrics,
+                      icon: const Icon(Icons.fingerprint, size: 40, color: AppColors.primary),
+                      tooltip: 'Sign in with biometrics',
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../core/constants/app_constants.dart';
@@ -278,7 +279,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Expanded(
                           child: GestureDetector(
                             onTap: () {
-                              // TODO: Open live chat
+                              launchUrl(Uri.parse('mailto:daphnepearl101@gmail.com?subject=Help%20Request'));
                             },
                             child: Container(
                               padding: EdgeInsets.symmetric(
@@ -320,7 +321,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Expanded(
                           child: GestureDetector(
                             onTap: () {
-                              // TODO: Open WhatsApp
+                              launchUrl(Uri.parse('https://wa.me/256785796401?text=Hi%20LipaCart%2C%20I%20need%20help'));
                             },
                             child: Container(
                               padding: EdgeInsets.symmetric(
@@ -383,9 +384,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _MenuItem(
                       icon: Iconsax.info_circle,
                       title: 'Help & Support',
-                      onTap: () {},
+                      onTap: () => context.push('/customer/help'),
                     ),
-                  ], showDividers: false),
+                    _MenuItem(
+                      icon: Iconsax.setting_2,
+                      title: 'App Settings',
+                      onTap: () => context.push('/customer/settings'),
+                    ),
+                  ]),
                 ),
 
                 SizedBox(
