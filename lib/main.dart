@@ -25,16 +25,6 @@ import 'services/session_service.dart';
 import 'role_based_router.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Firebase if configured (skip gracefully in dev without config)
-  if (DefaultFirebaseOptions.isConfigured) {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    await NotificationService().init();
-  }
-
   await SentryFlutter.init(
     (options) {
       options.dsn = AppConfig.sentryDsn;
@@ -42,6 +32,16 @@ Future<void> main() async {
       options.environment = AppConfig.sentryEnvironment;
     },
     appRunner: () async {
+      WidgetsFlutterBinding.ensureInitialized();
+
+      // Initialize Firebase if configured (skip gracefully in dev without config)
+      if (DefaultFirebaseOptions.isConfigured) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+        await NotificationService().init();
+      }
+
       // Only set system UI overlay and orientations on mobile
       if (!kIsWeb) {
         SystemChrome.setSystemUIOverlayStyle(
