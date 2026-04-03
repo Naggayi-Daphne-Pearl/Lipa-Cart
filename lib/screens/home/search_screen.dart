@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -21,6 +22,43 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final _searchController = TextEditingController();
+  static const _historyKey = 'search_history';
+  static const _maxHistory = 10;
+  List<String> _searchHistory = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSearchHistory();
+  }
+
+  Future<void> _loadSearchHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _searchHistory = prefs.getStringList(_historyKey) ?? [];
+    });
+  }
+
+  Future<void> _addToHistory(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
+    _searchHistory.remove(trimmed);
+    _searchHistory.insert(0, trimmed);
+    if (_searchHistory.length > _maxHistory) {
+      _searchHistory = _searchHistory.sublist(0, _maxHistory);
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_historyKey, _searchHistory);
+    setState(() {});
+  }
+
+  Future<void> _clearHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_historyKey);
+    setState(() {
+      _searchHistory = [];
+    });
+  }
 
   @override
   void dispose() {
@@ -87,6 +125,7 @@ class _SearchScreenState extends State<SearchScreen> {
               autofocus: true,
               hintText: 'Search for groceries...',
               onChanged: (value) => productProvider.search(value),
+              onSubmitted: (value) => _addToHistory(value),
               onClear: () => productProvider.clearSearch(),
             ),
           ),
@@ -168,49 +207,114 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  void _performSearch(String term, ProductProvider productProvider) {
+    _searchController.text = term;
+    _searchController.selection = TextSelection.fromPosition(
+      TextPosition(offset: term.length),
+    );
+    productProvider.search(term);
+    _addToHistory(term);
+  }
+
+  List<String> _getTrendingSearches(ProductProvider productProvider) {
+    // Derive from featured products + top available products
+    final featured = productProvider.featuredProducts.take(4).map((p) => p.name);
+    final available = productProvider.products
+        .where((p) => p.isAvailable && !p.isFeatured)
+        .take(4)
+        .map((p) => p.name);
+    final combined = {...featured, ...available}.toList();
+    return combined.take(8).toList();
+  }
+
   Widget _buildSuggestions(ProductProvider productProvider) {
+    final trending = _getTrendingSearches(productProvider);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSizes.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Popular Searches', style: AppTextStyles.h5),
+          // Recent searches
+          if (_searchHistory.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Recent Searches', style: AppTextStyles.h5),
+                GestureDetector(
+                  onTap: _clearHistory,
+                  child: Text(
+                    'Clear',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSizes.sm),
+            ..._searchHistory.map((term) {
+              return ListTile(
+                onTap: () => _performSearch(term, productProvider),
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                leading: const Icon(
+                  Iconsax.clock,
+                  size: 18,
+                  color: AppColors.textLight,
+                ),
+                title: Text(term, style: AppTextStyles.bodyMedium),
+                trailing: GestureDetector(
+                  onTap: () async {
+                    setState(() => _searchHistory.remove(term));
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setStringList(_historyKey, _searchHistory);
+                  },
+                  child: const Icon(
+                    Iconsax.close_circle,
+                    size: 16,
+                    color: AppColors.textLight,
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: AppSizes.lg),
+          ],
+
+          // Trending searches (from actual products)
+          Text('Trending', style: AppTextStyles.h5),
           const SizedBox(height: AppSizes.md),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children:
-                [
-                  'Tomatoes',
-                  'Milk',
-                  'Eggs',
-                  'Rice',
-                  'Bananas',
-                  'Onions',
-                  'Fish',
-                  'Avocado',
-                ].map((term) {
-                  return GestureDetector(
-                    onTap: () {
-                      _searchController.text = term;
-                      productProvider.search(term);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
+            children: trending.map((term) {
+              return GestureDetector(
+                onTap: () => _performSearch(term, productProvider),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                    border: Border.all(color: AppColors.lightGrey),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Iconsax.trend_up,
+                        size: 14,
+                        color: AppColors.primary,
                       ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(
-                          AppSizes.radiusFull,
-                        ),
-                        border: Border.all(color: AppColors.lightGrey),
-                      ),
-                      child: Text(term, style: AppTextStyles.labelMedium),
-                    ),
-                  );
-                }).toList(),
+                      const SizedBox(width: 6),
+                      Text(term, style: AppTextStyles.labelMedium),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
           ),
           const SizedBox(height: AppSizes.xl),
           Text('Browse Categories', style: AppTextStyles.h5),

@@ -57,16 +57,16 @@ class _MainShellState extends State<MainShell> {
     final cartProvider = context.watch<CartProvider>();
     final isDesktopOrTablet = context.isTablet || context.isDesktop;
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
         if (_selectedTab != 0) {
           setState(() => _selectedTab = 0);
-          return false;
+        } else {
+          // On mobile, exit the app. On web, this is a no-op (canPop: false blocks it).
+          SystemNavigator.pop();
         }
-
-        // Prevent returning to splash; exit app on root tab.
-        SystemNavigator.pop();
-        return false;
       },
       child: Scaffold(
         body: Container(

@@ -100,10 +100,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
             actions: [
               GestureDetector(
                 onTap: () {
-                  final text = '${recipe.name}\n\n'
-                      'Prep: ${recipe.prepTime} min • Cook: ${recipe.cookTime} min • Serves ${recipe.servings}\n\n'
-                      'Ingredients:\n${recipe.ingredients.map((i) => '• ${i.name} (${i.quantity})').join('\n')}\n\n'
-                      'Shared from LipaCart';
+                  final ingredients = recipe.ingredients.asMap().entries
+                      .map((e) => '${e.key + 1}. ${e.value.name} — ${e.value.quantity}')
+                      .join('\n');
+                  final text = '🍳 *${recipe.name}*\n\n'
+                      '⏱ Prep: ${recipe.prepTime} min • Cook: ${recipe.cookTime} min • Serves ${recipe.servings}\n\n'
+                      '*Ingredients:*\n$ingredients\n\n'
+                      '— Shared via *LipaCart*\n📲 lipacart.com';
                   launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(text)}'));
                 },
                 child: Container(

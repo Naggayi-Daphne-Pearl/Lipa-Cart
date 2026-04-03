@@ -12,6 +12,7 @@ class SearchBarWidget extends StatelessWidget {
   final bool readOnly;
   final bool autofocus;
   final VoidCallback? onClear;
+  final ValueChanged<String>? onSubmitted;
 
   const SearchBarWidget({
     super.key,
@@ -22,6 +23,7 @@ class SearchBarWidget extends StatelessWidget {
     this.readOnly = false,
     this.autofocus = false,
     this.onClear,
+    this.onSubmitted,
   });
 
   @override
@@ -41,6 +43,7 @@ class SearchBarWidget extends StatelessWidget {
         readOnly: readOnly,
         autofocus: autofocus,
         onChanged: onChanged,
+        onSubmitted: onSubmitted,
         onTap: onTap,
         style: AppTextStyles.bodyMedium,
         cursorColor: AppColors.primary,

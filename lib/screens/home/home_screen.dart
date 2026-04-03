@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -33,10 +34,13 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final PageController _bannerController = PageController();
+  Timer? _bannerTimer;
+  static const _bannerCount = 3;
 
   @override
   void initState() {
     super.initState();
+    _startBannerAutoScroll();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final productProvider = context.read<ProductProvider>();
       await productProvider.loadProducts();
@@ -46,8 +50,21 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _startBannerAutoScroll() {
+    _bannerTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || !_bannerController.hasClients) return;
+      final next = ((_bannerController.page?.round() ?? 0) + 1) % _bannerCount;
+      _bannerController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
   @override
   void dispose() {
+    _bannerTimer?.cancel();
     _bannerController.dispose();
     super.dispose();
   }
@@ -387,9 +404,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               SizedBox(
                                 height: context.responsive(
-                                  mobile: 140.0,
-                                  tablet: 150.0,
-                                  desktop: 160.0,
+                                  mobile: 170.0,
+                                  tablet: 180.0,
+                                  desktop: 190.0,
                                 ),
                                 child: PageView(
                                   controller: _bannerController,

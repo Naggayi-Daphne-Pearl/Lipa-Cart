@@ -134,7 +134,11 @@
         },
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp();
+            appRunner.runApp().then(function() {
+              // Remove the web loading screen once Flutter is rendered
+              var loader = document.querySelector('.loading');
+              if (loader) loader.remove();
+            });
           });
         }
       });

@@ -937,8 +937,16 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 title: const Text('Share via WhatsApp'),
                 onTap: () {
                   Navigator.pop(context);
-                  final items = list.items.map((i) => '• ${i.name} (${i.quantity}${i.unit != null ? ' ${i.unit}' : ''})').join('\n');
-                  final text = 'Shopping List: ${list.name}\n\n$items\n\nShared from LipaCart';
+                  final items = list.items.asMap().entries.map((e) {
+                    final i = e.value;
+                    final qty = i.quantity % 1 == 0 ? i.quantity.toInt().toString() : i.quantity.toString();
+                    final unit = i.unit != null ? ' ${i.unit}' : '';
+                    return '${e.key + 1}. ${i.name} — $qty$unit';
+                  }).join('\n');
+                  final checked = list.items.where((i) => i.isChecked).length;
+                  final total = list.items.length;
+                  final progress = total > 0 ? '($checked/$total done)\n' : '';
+                  final text = '🛒 *${list.name}*\n$progress\n$items\n\n— Shared via *LipaCart*\n📲 lipacart.com';
                   launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(text)}'));
                 },
               ),
