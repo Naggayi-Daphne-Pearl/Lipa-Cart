@@ -6,7 +6,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_constants.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/app_loading_indicator.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -16,54 +15,54 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+    with TickerProviderStateMixin {
+  late AnimationController _logoController;
+  late AnimationController _pulseController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+
+    // Logo entrance: fade + scale
+    _logoController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 800),
     );
-
     _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0, 0.5, curve: Curves.easeOut),
-      ),
+      CurvedAnimation(parent: _logoController, curve: Curves.easeOut),
+    );
+    _scaleAnimation = Tween<double>(begin: 0.7, end: 1).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0, 0.5, curve: Curves.easeOut),
-      ),
+    // Subtle pulse glow
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
     );
+    _pulseAnimation = Tween<double>(begin: 0.4, end: 0.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    _pulseController.repeat(reverse: true);
 
-    _controller.forward();
+    _logoController.forward();
     _navigateToNext();
   }
 
   Future<void> _navigateToNext() async {
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(milliseconds: 1200));
     if (!mounted) return;
 
     final authProvider = context.read<AuthProvider>();
-
-    // Initialize first launch status from SharedPreferences
     await authProvider.initializeFirstLaunch();
-
-    // Try to restore existing session from stored JWT
     await authProvider.tryAutoLogin();
 
     if (!mounted) return;
 
-    // Guest browsing allowed - route based on role if authenticated
     if (authProvider.isAuthenticated) {
-      // User is logged in - route to home based on user role
       final userRole = authProvider.user?.role;
       switch (userRole?.toString()) {
         case 'UserRole.admin':
@@ -79,27 +78,36 @@ class _SplashScreenState extends State<SplashScreen>
           context.replace('/customer/home');
       }
     } else {
-      // Not authenticated - go to login
       context.replace('/login');
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _logoController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async => false, // Disable back button on splash screen
+    return PopScope(
+      canPop: false,
       child: Scaffold(
         body: Container(
-          decoration: BoxDecoration(color: AppColors.background),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFFFFDF8),
+                Color(0xFFF7F2E8),
+              ],
+            ),
+          ),
           child: Center(
             child: AnimatedBuilder(
-              animation: _controller,
+              animation: _logoController,
               builder: (context, child) {
                 return FadeTransition(
                   opacity: _fadeAnimation,
@@ -108,50 +116,56 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Logo container
-                        Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF1B7F4E), Color(0xFF15874B)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(32),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.4),
-                                blurRadius: 32,
-                                offset: const Offset(0, 12),
+                        // Pulsing glow behind logo
+                        AnimatedBuilder(
+                          animation: _pulseController,
+                          builder: (context, child) {
+                            return Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF1B7F4E), Color(0xFF15874B)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(32),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(alpha: _pulseAnimation.value),
+                                    blurRadius: 40,
+                                    spreadRadius: 8,
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(24.0),
-                            child: SvgPicture.asset(
-                              'assets/images/logos/logo-on-green-1.svg',
-                              fit: BoxFit.contain,
-                            ),
-                          ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(24.0),
+                                child: SvgPicture.asset(
+                                  'assets/images/logos/logo-on-green-1.svg',
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 28),
                         Text(
                           AppConstants.appName,
                           style: AppTextStyles.h2.copyWith(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.5,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Text(
-                          AppConstants.appTagline,
+                          'Fresh Groceries Delivered',
                           style: AppTextStyles.bodyMedium.copyWith(
                             color: AppColors.textSecondary,
+                            letterSpacing: 0.3,
                           ),
                         ),
-                        const SizedBox(height: 32),
-                        const AppLoadingIndicator(),
+                        // No spinner — just the pulsing logo glow
                       ],
                     ),
                   ),

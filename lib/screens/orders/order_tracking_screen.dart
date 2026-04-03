@@ -456,31 +456,74 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                                                       borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                                                       border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
                                                     ),
-                                                    child: Row(
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
                                                       children: [
-                                                        const Icon(Icons.swap_horiz, size: 16, color: AppColors.accent),
-                                                        const SizedBox(width: 6),
-                                                        Expanded(
-                                                          child: Column(
-                                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                                            children: [
-                                                              Text(
-                                                                'Substitute Suggested',
-                                                                style: AppTextStyles.caption.copyWith(
-                                                                  color: AppColors.accent,
-                                                                  fontWeight: FontWeight.w600,
-                                                                  fontSize: 11,
-                                                                ),
+                                                        Row(
+                                                          children: [
+                                                            const Icon(Icons.swap_horiz, size: 16, color: AppColors.accent),
+                                                            const SizedBox(width: 6),
+                                                            Text(
+                                                              'Substitute Suggested',
+                                                              style: AppTextStyles.caption.copyWith(
+                                                                color: AppColors.accent,
+                                                                fontWeight: FontWeight.w600,
+                                                                fontSize: 11,
                                                               ),
-                                                              Text(
-                                                                item.shopperNotes!.replaceFirst('SUBSTITUTE: ', ''),
-                                                                style: AppTextStyles.caption.copyWith(
-                                                                  color: AppColors.textPrimary,
-                                                                  fontWeight: FontWeight.w500,
-                                                                ),
-                                                              ),
-                                                            ],
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        const SizedBox(height: 4),
+                                                        Text(
+                                                          item.shopperNotes!.replaceFirst('SUBSTITUTE: ', ''),
+                                                          style: AppTextStyles.caption.copyWith(
+                                                            color: AppColors.textPrimary,
+                                                            fontWeight: FontWeight.w500,
                                                           ),
+                                                        ),
+                                                        const SizedBox(height: 8),
+                                                        Row(
+                                                          children: [
+                                                            Expanded(
+                                                              child: SizedBox(
+                                                                height: 30,
+                                                                child: OutlinedButton(
+                                                                  onPressed: () {
+                                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                                      const SnackBar(content: Text('Substitute accepted. Your shopper will add it.'), backgroundColor: AppColors.success),
+                                                                    );
+                                                                  },
+                                                                  style: OutlinedButton.styleFrom(
+                                                                    foregroundColor: AppColors.success,
+                                                                    side: const BorderSide(color: AppColors.success),
+                                                                    padding: EdgeInsets.zero,
+                                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                                                  ),
+                                                                  child: const Text('Accept', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            const SizedBox(width: 8),
+                                                            Expanded(
+                                                              child: SizedBox(
+                                                                height: 30,
+                                                                child: OutlinedButton(
+                                                                  onPressed: () {
+                                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                                      const SnackBar(content: Text('Substitute rejected. Item will be removed from order.'), backgroundColor: AppColors.error),
+                                                                    );
+                                                                  },
+                                                                  style: OutlinedButton.styleFrom(
+                                                                    foregroundColor: AppColors.error,
+                                                                    side: const BorderSide(color: AppColors.error),
+                                                                    padding: EdgeInsets.zero,
+                                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                                                  ),
+                                                                  child: const Text('Reject', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
                                                         ),
                                                       ],
                                                     ),
@@ -628,14 +671,20 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                         }
 
                         if (hasUnfoundItems) {
-                          // Some items not found — show original estimate struck through + adjusted total
-                          // Calculate original estimated total from ALL items
+                          // Calculate original total from ALL items (including not-found)
                           double originalSubtotal = 0;
+                          double adjustedSubtotal = 0;
                           for (final item in order.items) {
-                            originalSubtotal += item.product.price * item.quantity;
+                            final price = item.product.price * item.quantity;
+                            originalSubtotal += price;
+                            if (item.found != false) {
+                              adjustedSubtotal += (item.actualPrice ?? item.product.price) * item.quantity;
+                            }
                           }
                           final originalServiceFee = originalSubtotal * 0.05;
                           final originalTotal = originalSubtotal + originalServiceFee + order.deliveryFee;
+                          final adjustedServiceFee = adjustedSubtotal * 0.05;
+                          final adjustedTotal = adjustedSubtotal + adjustedServiceFee + order.deliveryFee;
 
                           return Column(
                             children: [
@@ -658,7 +707,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text('Adjusted Total', style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700)),
-                                  Text(Formatters.formatCurrency(order.total),
+                                  Text(Formatters.formatCurrency(adjustedTotal),
                                     style: AppTextStyles.h4.copyWith(color: AppColors.primaryGreen, fontWeight: FontWeight.w700)),
                                 ],
                               ),
