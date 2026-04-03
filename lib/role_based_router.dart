@@ -140,9 +140,17 @@ class RoleBasedRouter {
         final isAuthenticated = authProvider.isAuthenticated;
         final isInitial = authProvider.status == AuthStatus.initial;
         final userRole = authProvider.user?.role;
+        final isSplash = state.matchedLocation == '/';
 
-        // Still loading - let splash handle
-        if (isInitial) return null;
+        // Still loading — only allow splash, redirect everything else to splash
+        if (isInitial) {
+          return isSplash ? null : '/';
+        }
+
+        // After initial load, never go back to splash
+        if (isSplash && !isInitial) {
+          return isAuthenticated ? _homeForRole(userRole, kycStatus: authProvider.user?.kycStatus) : '/login';
+        }
 
         // Define protected routes (require authentication)
         // Customer routes are open for guest browsing
