@@ -105,9 +105,9 @@ class NotificationService {
 
     try {
       if (kIsWeb) {
-        // Web requires a VAPID key — get this from Firebase Console → Cloud Messaging → Web Push certificates
+        // Web requires a VAPID key from Firebase Console → Cloud Messaging → Web Push certificates
         return await _messaging!.getToken(
-          vapidKey: const String.fromEnvironment('FIREBASE_VAPID_KEY', defaultValue: ''),
+          vapidKey: 'BMrbqo9Y3Jm9LPgvapCjKgbCS75GRDH78147SmrRSI6StsTqMi2xudsdljV4UG9P0Ypmz4hffrXYzwZUQ1ClDpQ',
         );
       }
       return await _messaging!.getToken();

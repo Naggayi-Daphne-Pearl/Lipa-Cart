@@ -1,13 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/responsive.dart';
 import '../../widgets/shimmer_loading.dart';
@@ -36,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final PageController _bannerController = PageController();
   Timer? _bannerTimer;
   static const _bannerCount = 3;
+  int _unreadNotifications = 0;
 
   @override
   void initState() {
@@ -47,7 +51,25 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         context.read<RecipeProvider>().loadRecipes(products: productProvider.products);
       }
+      _fetchUnreadCount();
     });
+  }
+
+  Future<void> _fetchUnreadCount() async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConstants.apiUrl}/notifications/mine?pageSize=1'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200 && mounted) {
+        final body = jsonDecode(response.body);
+        setState(() {
+          _unreadNotifications = body['meta']?['unreadCount'] ?? 0;
+        });
+      }
+    } catch (_) {}
   }
 
   void _startBannerAutoScroll() {
@@ -152,34 +174,68 @@ class _HomeScreenState extends State<HomeScreen> {
 
                               const Spacer(),
 
-                              // Notifications Bell (always on the right)
+                              // Notifications Bell with badge
                               GestureDetector(
-                                onTap: () => context.push('/customer/notifications'),
-                                child: Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surface,
-                                    borderRadius: BorderRadius.circular(
-                                      AppSizes.radiusMd,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.06,
+                                onTap: () async {
+                                  await context.push('/customer/notifications');
+                                  // Refresh count when returning from inbox
+                                  _fetchUnreadCount();
+                                },
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface,
+                                        borderRadius: BorderRadius.circular(
+                                          AppSizes.radiusMd,
                                         ),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.06,
+                                            ),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                  child: const Center(
-                                    child: Icon(
-                                      Iconsax.notification,
-                                      color: AppColors.textPrimary,
-                                      size: 22,
+                                      child: const Center(
+                                        child: Icon(
+                                          Iconsax.notification,
+                                          color: AppColors.textPrimary,
+                                          size: 22,
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                    if (_unreadNotifications > 0)
+                                      Positioned(
+                                        top: -4,
+                                        right: -4,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(
+                                            color: AppColors.error,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          constraints: const BoxConstraints(
+                                            minWidth: 18,
+                                            minHeight: 18,
+                                          ),
+                                          child: Text(
+                                            _unreadNotifications > 9 ? '9+' : '$_unreadNotifications',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
                             ],
