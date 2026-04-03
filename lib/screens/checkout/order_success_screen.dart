@@ -104,9 +104,10 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(AppSizes.lg),
-            child: Column(
+            child: SingleChildScrollView(
+              child: Column(
               children: [
-                const Spacer(),
+                const SizedBox(height: AppSizes.xl),
                 // Animated Success icon
                 AnimatedBuilder(
                   animation: _controller,
@@ -272,7 +273,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                   ),
                 ),
 
-                const Spacer(),
+                const SizedBox(height: AppSizes.xl),
 
                 // Buttons
                 if (_isGuest)
@@ -313,6 +314,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                     ],
                   ),
               ],
+            ),
             ),
           ),
         ),
