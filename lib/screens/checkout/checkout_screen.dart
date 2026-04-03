@@ -51,28 +51,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  // Promo code
-  final TextEditingController _promoController = TextEditingController();
-  double _promoDiscount = 0;
-  String? _appliedPromoCode;
-  bool _isValidatingPromo = false;
-
-  // Delivery time slot
-  String? _selectedDeliverySlot;
-
-  // Tip
-  double _tipAmount = 0;
-  int _selectedTipIndex = -1; // -1 = no tip, 0-3 = preset amounts
-
-  // Guest checkout steps
-  int _guestStep = 1; // 1 = delivery info, 2 = account creation
-
-  // Special instructions
-  final TextEditingController _notesController = TextEditingController();
-
-  // Express delivery
-  bool _expressDelivery = false;
-
   @override
   void initState() {
     super.initState();
@@ -131,8 +109,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _authAddressController.dispose();
     _authCityController.dispose();
     _authLandmarkController.dispose();
-    _promoController.dispose();
-    _notesController.dispose();
     super.dispose();
   }
 
@@ -516,86 +492,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             children: [
               // Progress Stepper
               _buildProgressStepper(),
-              // Sticky order summary bar
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.sm),
-                decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
-                  border: Border(bottom: BorderSide(color: AppColors.primary.withValues(alpha: 0.2))),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '${cartProvider.itemCount} item${cartProvider.itemCount != 1 ? 's' : ''}',
-                      style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary),
-                    ),
-                    Text(
-                      Formatters.formatCurrency(cartProvider.total - _promoDiscount + _tipAmount + (_expressDelivery ? 5000 : 0)),
-                      style: AppTextStyles.labelMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(AppSizes.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Express checkout for returning users
-                      if (!widget.isGuest && _selectedAddress != null && !_consentChecked)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: AppSizes.md),
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() => _consentChecked = true);
-                              _placeOrder();
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(AppSizes.md),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [AppColors.primary, AppColors.primaryLight],
-                                ),
-                                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Iconsax.flash_1, color: Colors.white, size: 22),
-                                  const SizedBox(width: AppSizes.sm),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Express Checkout',
-                                          style: AppTextStyles.labelMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
-                                        ),
-                                        Text(
-                                          'Deliver to ${_selectedAddress!.label} • ${_selectedPayment.displayName}',
-                                          style: AppTextStyles.caption.copyWith(color: Colors.white70),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const Icon(Iconsax.arrow_right_3, color: Colors.white, size: 18),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-
                       // Delivery address or guest form
                       if (widget.isGuest)
                         _buildSection(
-                          title: _guestStep == 1 ? 'Step 1: Delivery Details' : 'Step 2: Create Account',
-                          icon: _guestStep == 1 ? Iconsax.location : Iconsax.user_add,
-                          child: _guestStep == 1
-                              ? _buildGuestDeliveryForm()
-                              : _buildGuestAccountForm(),
+                          title: 'Sign Up & Delivery Details',
+                          icon: Iconsax.user_add,
+                          child: _buildGuestAddressForm(),
                         )
                       else
                         _buildSection(
@@ -639,27 +547,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                       const SizedBox(height: AppSizes.md),
 
-                      // Special instructions
-                      _buildSection(
-                        title: 'Special Instructions',
-                        icon: Iconsax.note_text,
-                        child: TextField(
-                          controller: _notesController,
-                          maxLines: 3,
-                          decoration: InputDecoration(
-                            hintText: 'e.g., "Green bananas only", "Call when arriving", "Leave at gate"',
-                            hintStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.textTertiary),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                              borderSide: BorderSide(color: AppColors.grey300),
-                            ),
-                            contentPadding: const EdgeInsets.all(12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSizes.md),
-
                       // Payment method
                       _buildSection(
                         title: 'Payment Method',
@@ -669,104 +556,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             return _buildPaymentOption(method);
                           }).toList(),
                         ),
-                      ),
-                      const SizedBox(height: AppSizes.md),
-
-                      // Delivery time slot
-                      _buildSection(
-                        title: 'Delivery Time',
-                        icon: Iconsax.clock,
-                        child: _buildDeliverySlotPicker(),
-                      ),
-                      const SizedBox(height: AppSizes.md),
-
-                      // Express delivery option
-                      _buildSection(
-                        title: 'Delivery Speed',
-                        icon: Iconsax.flash_1,
-                        child: Column(
-                          children: [
-                            GestureDetector(
-                              onTap: () => setState(() => _expressDelivery = false),
-                              child: Container(
-                                padding: const EdgeInsets.all(AppSizes.sm),
-                                margin: const EdgeInsets.only(bottom: AppSizes.sm),
-                                decoration: BoxDecoration(
-                                  color: !_expressDelivery ? AppColors.primarySoft : AppColors.lightGrey,
-                                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                                  border: !_expressDelivery ? Border.all(color: AppColors.primary) : null,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Iconsax.truck_fast, color: !_expressDelivery ? AppColors.primary : AppColors.textSecondary, size: 20),
-                                    const SizedBox(width: AppSizes.sm),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Standard', style: AppTextStyles.labelMedium.copyWith(
-                                            color: !_expressDelivery ? AppColors.primary : AppColors.textDark,
-                                          )),
-                                          Text('45-60 min', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-                                        ],
-                                      ),
-                                    ),
-                                    Text('FREE', style: AppTextStyles.labelSmall.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
-                                    if (!_expressDelivery) const SizedBox(width: 4),
-                                    if (!_expressDelivery) const Icon(Iconsax.tick_circle5, color: AppColors.primary, size: 18),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => setState(() => _expressDelivery = true),
-                              child: Container(
-                                padding: const EdgeInsets.all(AppSizes.sm),
-                                decoration: BoxDecoration(
-                                  color: _expressDelivery ? AppColors.accent.withValues(alpha: 0.1) : AppColors.lightGrey,
-                                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                                  border: _expressDelivery ? Border.all(color: AppColors.accent) : null,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Iconsax.flash_1, color: _expressDelivery ? AppColors.accent : AppColors.textSecondary, size: 20),
-                                    const SizedBox(width: AppSizes.sm),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Express', style: AppTextStyles.labelMedium.copyWith(
-                                            color: _expressDelivery ? AppColors.accent : AppColors.textDark,
-                                          )),
-                                          Text('20-30 min', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-                                        ],
-                                      ),
-                                    ),
-                                    Text('+ UGX 5,000', style: AppTextStyles.labelSmall.copyWith(color: AppColors.accent, fontWeight: FontWeight.w600)),
-                                    if (_expressDelivery) const SizedBox(width: 4),
-                                    if (_expressDelivery) const Icon(Iconsax.tick_circle5, color: AppColors.accent, size: 18),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSizes.md),
-
-                      // Tip for shopper/rider
-                      _buildSection(
-                        title: 'Add a Tip',
-                        icon: Iconsax.heart,
-                        child: _buildTipSelector(),
-                      ),
-                      const SizedBox(height: AppSizes.md),
-
-                      // Promo code
-                      _buildSection(
-                        title: 'Promo Code',
-                        icon: Iconsax.ticket_discount,
-                        child: _buildPromoCodeField(),
                       ),
                       const SizedBox(height: AppSizes.md),
 
@@ -794,28 +583,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 cartProvider.deliveryFee,
                               ),
                             ),
-                            if (_expressDelivery) ...[
-                              const SizedBox(height: AppSizes.sm),
-                              _buildSummaryRow(
-                                'Express Delivery',
-                                Formatters.formatCurrency(5000),
-                              ),
-                            ],
-                            if (_promoDiscount > 0) ...[
-                              const SizedBox(height: AppSizes.sm),
-                              _buildSummaryRow(
-                                'Promo Discount',
-                                '- ${Formatters.formatCurrency(_promoDiscount)}',
-                                isDiscount: true,
-                              ),
-                            ],
-                            if (_tipAmount > 0) ...[
-                              const SizedBox(height: AppSizes.sm),
-                              _buildSummaryRow(
-                                'Tip',
-                                Formatters.formatCurrency(_tipAmount),
-                              ),
-                            ],
                             const Padding(
                               padding: EdgeInsets.symmetric(
                                 vertical: AppSizes.sm,
@@ -824,9 +591,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             ),
                             _buildSummaryRow(
                               'Total',
-                              Formatters.formatCurrency(
-                                cartProvider.total - _promoDiscount + _tipAmount + (_expressDelivery ? 5000 : 0),
-                              ),
+                              Formatters.formatCurrency(cartProvider.total),
                               isTotal: true,
                             ),
                           ],
@@ -874,7 +639,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       // Place order button
                       CustomButton(
                         text:
-                            'Place Order - ${Formatters.formatCurrency(cartProvider.total - _promoDiscount + _tipAmount + (_expressDelivery ? 5000 : 0))}',
+                            'Place Order - ${Formatters.formatCurrency(cartProvider.total)}',
                         isLoading: _isLoading,
                         onPressed: _consentChecked ? _placeOrder : null,
                       ),
@@ -1264,20 +1029,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  // Step 1: Delivery info (Name, Phone, Address, City)
-  Widget _buildGuestDeliveryForm() {
+  Widget _buildGuestAddressForm() {
     return Column(
       children: [
+        // Name field
         TextField(
           controller: _guestNameController,
           decoration: InputDecoration(
             hintText: 'Your full name',
             labelText: 'Name (required)',
-            prefixIcon: const Icon(Iconsax.user, size: 20),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
           ),
         ),
         const SizedBox(height: AppSizes.md),
+        // Phone number field
         TextField(
           controller: _guestPhoneController,
           keyboardType: TextInputType.number,
@@ -1285,131 +1052,79 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             hintText: '701234567',
             labelText: 'Phone Number (9 digits)',
             prefixText: '+256 ',
-            prefixIcon: const Icon(Iconsax.call, size: 20),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
-          ),
-        ),
-        const SizedBox(height: AppSizes.md),
-        TextField(
-          controller: _guestAddressController,
-          decoration: InputDecoration(
-            hintText: 'e.g., 123 Main St, Plot 45',
-            labelText: 'Delivery Address (required)',
-            prefixIcon: const Icon(Iconsax.location, size: 20),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
-          ),
-          maxLines: 2,
-        ),
-        const SizedBox(height: AppSizes.md),
-        TextField(
-          controller: _guestCityController,
-          decoration: InputDecoration(
-            hintText: 'e.g., Kampala',
-            labelText: 'City (optional)',
-            prefixIcon: const Icon(Iconsax.building, size: 20),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
-          ),
-        ),
-        const SizedBox(height: AppSizes.lg),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () {
-              if (_guestNameController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter your name'), backgroundColor: AppColors.error),
-                );
-                return;
-              }
-              if (_guestPhoneController.text.trim().length != 9) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Phone number must be 9 digits'), backgroundColor: AppColors.error),
-                );
-                return;
-              }
-              if (_guestAddressController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a delivery address'), backgroundColor: AppColors.error),
-                );
-                return;
-              }
-              setState(() => _guestStep = 2);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.radiusMd)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
             ),
-            child: const Text('Continue to Account Setup'),
           ),
-        ),
-      ],
-    );
-  }
-
-  // Step 2: Account creation (Password, Confirm Password)
-  Widget _buildGuestAccountForm() {
-    return Column(
-      children: [
-        // Show summary of step 1
-        Container(
-          padding: const EdgeInsets.all(AppSizes.sm),
-          decoration: BoxDecoration(
-            color: AppColors.primarySoft,
-            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-          ),
-          child: Row(
-            children: [
-              const Icon(Iconsax.tick_circle5, color: AppColors.primary, size: 18),
-              const SizedBox(width: AppSizes.sm),
-              Expanded(
-                child: Text(
-                  '${_guestNameController.text} • +256${_guestPhoneController.text} • ${_guestAddressController.text}',
-                  style: AppTextStyles.caption.copyWith(color: AppColors.primary),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => setState(() => _guestStep = 1),
-                child: Text('Edit', style: AppTextStyles.caption.copyWith(color: AppColors.accent, fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSizes.lg),
-        Text(
-          'Create an account to track your order',
-          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
         ),
         const SizedBox(height: AppSizes.md),
+        // Password field
         TextField(
           controller: _guestPasswordController,
           obscureText: _obscurePassword,
           decoration: InputDecoration(
             hintText: 'At least 6 characters',
             labelText: 'Password (required)',
-            prefixIcon: const Icon(Iconsax.lock, size: 20),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
             suffixIcon: IconButton(
-              icon: Icon(_obscurePassword ? Iconsax.eye_slash : Iconsax.eye, color: AppColors.grey400),
-              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              icon: Icon(
+                _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
+                color: AppColors.grey400,
+              ),
+              onPressed: () {
+                setState(() => _obscurePassword = !_obscurePassword);
+              },
             ),
           ),
         ),
         const SizedBox(height: AppSizes.md),
+        // Confirm Password field
         TextField(
           controller: _guestConfirmPasswordController,
           obscureText: _obscureConfirmPassword,
           decoration: InputDecoration(
             hintText: 'Re-enter your password',
             labelText: 'Confirm Password (required)',
-            prefixIcon: const Icon(Iconsax.lock, size: 20),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
             suffixIcon: IconButton(
-              icon: Icon(_obscureConfirmPassword ? Iconsax.eye_slash : Iconsax.eye, color: AppColors.grey400),
-              onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+              icon: Icon(
+                _obscureConfirmPassword ? Iconsax.eye_slash : Iconsax.eye,
+                color: AppColors.grey400,
+              ),
+              onPressed: () {
+                setState(
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSizes.md),
+        // Delivery address field
+        TextField(
+          controller: _guestAddressController,
+          decoration: InputDecoration(
+            hintText: 'e.g., 123 Main St, Plot 45',
+            labelText: 'Delivery Address (required)',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
+          ),
+          maxLines: 2,
+        ),
+        const SizedBox(height: AppSizes.md),
+        // City field (optional)
+        TextField(
+          controller: _guestCityController,
+          decoration: InputDecoration(
+            hintText: 'e.g., Kampala',
+            labelText: 'City (optional)',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
             ),
           ),
         ),
@@ -1475,293 +1190,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  Widget _buildSummaryRow(String label, String value, {bool isTotal = false, bool isDiscount = false}) {
+  Widget _buildSummaryRow(String label, String value, {bool isTotal = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: isTotal
-              ? AppTextStyles.labelMedium
-              : AppTextStyles.bodySmall.copyWith(
-                  color: isDiscount ? AppColors.success : null,
-                ),
+          style: isTotal ? AppTextStyles.labelMedium : AppTextStyles.bodySmall,
         ),
         Text(
           value,
           style: isTotal
               ? AppTextStyles.priceMedium
-              : AppTextStyles.labelMedium.copyWith(
-                  color: isDiscount ? AppColors.success : null,
-                ),
+              : AppTextStyles.labelMedium,
         ),
       ],
     );
-  }
-
-  // --- Delivery Time Slot Picker ---
-  Widget _buildDeliverySlotPicker() {
-    final slots = _getDeliverySlots();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Choose a delivery window',
-          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
-        ),
-        const SizedBox(height: AppSizes.sm),
-        Wrap(
-          spacing: AppSizes.sm,
-          runSpacing: AppSizes.sm,
-          children: slots.map((slot) {
-            final isSelected = _selectedDeliverySlot == slot;
-            return GestureDetector(
-              onTap: () => setState(() => _selectedDeliverySlot = isSelected ? null : slot),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primaryOrange.withValues(alpha: 0.1) : AppColors.lightGrey,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                  border: isSelected ? Border.all(color: AppColors.primaryOrange) : null,
-                ),
-                child: Text(
-                  slot,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: isSelected ? AppColors.primaryOrange : AppColors.textDark,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  List<String> _getDeliverySlots() {
-    final now = DateTime.now();
-    final hour = now.hour;
-    final slots = <String>[];
-
-    // Today's remaining slots (2-hour windows)
-    final todaySlots = [
-      [9, 11, '9 AM - 11 AM'],
-      [11, 13, '11 AM - 1 PM'],
-      [13, 15, '1 PM - 3 PM'],
-      [15, 17, '3 PM - 5 PM'],
-      [17, 19, '5 PM - 7 PM'],
-    ];
-
-    for (final s in todaySlots) {
-      if (hour < (s[0] as int)) {
-        slots.add('Today, ${s[2]}');
-      }
-    }
-
-    // If no today slots, or always show tomorrow
-    slots.addAll([
-      'Tomorrow, 9 AM - 11 AM',
-      'Tomorrow, 11 AM - 1 PM',
-      'Tomorrow, 1 PM - 3 PM',
-    ]);
-
-    return slots.take(5).toList();
-  }
-
-  // --- Tip Selector ---
-  Widget _buildTipSelector() {
-    final tipPresets = [1000.0, 2000.0, 5000.0, 10000.0];
-    final tipLabels = ['1K', '2K', '5K', '10K'];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Say thanks to your shopper & rider',
-          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
-        ),
-        const SizedBox(height: AppSizes.sm),
-        Row(
-          children: [
-            ...List.generate(tipPresets.length, (i) {
-              final isSelected = _selectedTipIndex == i;
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      if (_selectedTipIndex == i) {
-                        _selectedTipIndex = -1;
-                        _tipAmount = 0;
-                      } else {
-                        _selectedTipIndex = i;
-                        _tipAmount = tipPresets[i];
-                      }
-                    });
-                  },
-                  child: Container(
-                    margin: EdgeInsets.only(right: i < 3 ? AppSizes.xs : 0),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primaryOrange.withValues(alpha: 0.1) : AppColors.lightGrey,
-                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                      border: isSelected ? Border.all(color: AppColors.primaryOrange) : null,
-                    ),
-                    child: Center(
-                      child: Text(
-                        'UGX ${tipLabels[i]}',
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: isSelected ? AppColors.primaryOrange : AppColors.textDark,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // --- Promo Code Field ---
-  Widget _buildPromoCodeField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_appliedPromoCode != null)
-          Container(
-            padding: const EdgeInsets.all(AppSizes.sm),
-            decoration: BoxDecoration(
-              color: AppColors.success.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-              border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Iconsax.tick_circle5, color: AppColors.success, size: 18),
-                const SizedBox(width: AppSizes.sm),
-                Expanded(
-                  child: Text(
-                    '$_appliedPromoCode applied — ${Formatters.formatCurrency(_promoDiscount)} off',
-                    style: AppTextStyles.labelSmall.copyWith(color: AppColors.success),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => setState(() {
-                    _appliedPromoCode = null;
-                    _promoDiscount = 0;
-                    _promoController.clear();
-                  }),
-                  child: const Icon(Icons.close, size: 18, color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-          )
-        else
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _promoController,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: InputDecoration(
-                    hintText: 'Enter promo code',
-                    hintStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.textTertiary),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                      borderSide: BorderSide(color: AppColors.grey300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                      borderSide: BorderSide(color: AppColors.grey300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                      borderSide: const BorderSide(color: AppColors.primaryOrange),
-                    ),
-                    isDense: true,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSizes.sm),
-              SizedBox(
-                height: 40,
-                child: ElevatedButton(
-                  onPressed: _isValidatingPromo ? null : _validatePromoCode,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryOrange,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                  ),
-                  child: _isValidatingPromo
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Apply'),
-                ),
-              ),
-            ],
-          ),
-      ],
-    );
-  }
-
-  Future<void> _validatePromoCode() async {
-    final code = _promoController.text.trim();
-    if (code.isEmpty) return;
-
-    setState(() => _isValidatingPromo = true);
-
-    try {
-      final authProvider = context.read<AuthProvider>();
-      final cartProvider = context.read<CartProvider>();
-      final response = await http.post(
-        Uri.parse('${AppConstants.apiUrl}/promo-codes/validate'),
-        headers: {
-          'Content-Type': 'application/json',
-          if (authProvider.token != null) 'Authorization': 'Bearer ${authProvider.token}',
-        },
-        body: jsonEncode({
-          'code': code.toUpperCase(),
-          'subtotal': cartProvider.subtotal,
-        }),
-      );
-
-      if (!mounted) return;
-      setState(() => _isValidatingPromo = false);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _appliedPromoCode = data['code'];
-          _promoDiscount = (data['discount_amount'] as num).toDouble();
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Promo code applied! ${Formatters.formatCurrency(_promoDiscount)} off'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      } else {
-        final data = jsonDecode(response.body);
-        final message = data['error']?['message'] ?? 'Invalid promo code';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: AppColors.error),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isValidatingPromo = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not validate promo code'), backgroundColor: AppColors.error),
-        );
-      }
-    }
   }
 
   void _showAddressSelector(AuthProvider authProvider) {
