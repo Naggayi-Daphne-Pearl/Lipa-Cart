@@ -52,10 +52,15 @@ Future<void> main() async {
           ),
         );
 
-        SystemChrome.setPreferredOrientations([
-          DeviceOrientation.portraitUp,
-          DeviceOrientation.portraitDown,
-        ]);
+        // Allow landscape on tablets (shortestSide >= 600), portrait-only on phones
+        final shortestSide = PlatformDispatcher.instance.views.first.physicalSize.shortestSide /
+            PlatformDispatcher.instance.views.first.devicePixelRatio;
+        if (shortestSide < 600) {
+          SystemChrome.setPreferredOrientations([
+            DeviceOrientation.portraitUp,
+            DeviceOrientation.portraitDown,
+          ]);
+        }
       }
 
       // Capture Flutter framework errors to Sentry

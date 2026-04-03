@@ -57,10 +57,10 @@ class AppBottomNav extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(context: context, icon: Iconsax.home_2, activeIcon: Iconsax.home_15, label: 'Home', index: 0),
-              _buildNavItem(context: context, icon: Iconsax.search_normal, activeIcon: Iconsax.search_normal_1, label: 'Browse', index: 1),
-              _buildNavItem(context: context, icon: Iconsax.clipboard_text, activeIcon: Iconsax.clipboard_text, label: 'Lists', index: 2),
+              _buildNavItem(context: context, icon: Iconsax.search_normal, activeIcon: Iconsax.search_normal_1, label: 'Shop', index: 1),
+              _buildNavItem(context: context, icon: Iconsax.clipboard_text, activeIcon: Iconsax.clipboard_tick, label: 'Lists', index: 2),
               _buildCartNavItem(context, cartProvider.itemCount),
-              _buildNavItem(context: context, icon: Iconsax.user, activeIcon: Iconsax.user, label: 'Profile', index: 4),
+              _buildNavItem(context: context, icon: Iconsax.user, activeIcon: Iconsax.user_tick, label: 'Profile', index: 4),
             ],
           ),
         ),

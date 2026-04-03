@@ -114,6 +114,18 @@ class RoleBasedRouter {
     _router = null;
   }
 
+  /// Creates a fade transition page for smoother navigation.
+  static CustomTransitionPage<void> _fadePage(Widget child, GoRouterState state) {
+    return CustomTransitionPage(
+      key: state.pageKey,
+      child: child,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      transitionDuration: const Duration(milliseconds: 200),
+    );
+  }
+
   static GoRouter getRouter(BuildContext context) {
     if (_router != null) return _router!;
 
@@ -311,15 +323,15 @@ class RoleBasedRouter {
         // Customer Routes
         GoRoute(
           path: '/customer/home',
-          builder: (context, state) => const MainShell(),
+          pageBuilder: (context, state) => _fadePage(const MainShell(), state),
         ),
         GoRoute(
           path: '/customer/search',
-          builder: (context, state) => const SearchScreen(),
+          pageBuilder: (context, state) => _fadePage(const SearchScreen(), state),
         ),
         GoRoute(
           path: '/customer/categories',
-          builder: (context, state) => const CategoriesScreen(),
+          pageBuilder: (context, state) => _fadePage(const CategoriesScreen(), state),
         ),
         GoRoute(
           path: '/customer/category',
@@ -360,7 +372,7 @@ class RoleBasedRouter {
         ),
         GoRoute(
           path: '/customer/cart',
-          builder: (context, state) => const CartScreen(),
+          pageBuilder: (context, state) => _fadePage(const CartScreen(), state),
         ),
         GoRoute(
           path: '/customer/checkout',

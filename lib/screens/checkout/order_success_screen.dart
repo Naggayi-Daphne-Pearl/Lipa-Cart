@@ -195,6 +195,28 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                 ),
                 const SizedBox(height: 16),
 
+                // What happens next timeline
+                Container(
+                  padding: const EdgeInsets.all(AppSizes.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightGrey,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('What happens next?', style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: AppSizes.md),
+                      _buildNextStep(1, 'Payment confirmed', 'We\'ll verify your payment', true),
+                      _buildNextStep(2, 'Shopper assigned', 'A personal shopper picks your items', false),
+                      _buildNextStep(3, 'Shopping in progress', 'Your shopper selects the freshest items', false),
+                      _buildNextStep(4, 'Rider picks up', 'A rider collects your order', false),
+                      _buildNextStep(5, 'Delivered to you', 'Enjoy your fresh groceries!', false, isLast: true),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
                 // Save as shopping list
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -296,6 +318,48 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
         ),
       ),
     ),
+    );
+  }
+
+  Widget _buildNextStep(int step, String title, String subtitle, bool isActive, {bool isLast = false}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 24, height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isActive ? AppColors.primary : AppColors.grey300,
+              ),
+              child: Center(
+                child: isActive
+                    ? const Icon(Icons.check, size: 14, color: Colors.white)
+                    : Text('$step', style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600)),
+              ),
+            ),
+            if (!isLast)
+              Container(width: 2, height: 24, color: isActive ? AppColors.primary : AppColors.grey300),
+          ],
+        ),
+        const SizedBox(width: AppSizes.sm),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: isLast ? 0 : AppSizes.xs),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.labelSmall.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+                )),
+                Text(subtitle, style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

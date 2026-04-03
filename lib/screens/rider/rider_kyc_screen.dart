@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 
 import '../../providers/auth_provider.dart';
@@ -63,6 +64,57 @@ class _RiderKycScreenState extends State<RiderKycScreen> {
 
   bool _isLoading = false;
   String? _loadingMessage;
+
+  static const _draftKey = 'rider_kyc_draft';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDraft();
+  }
+
+  Future<void> _loadDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    final step = prefs.getInt('${_draftKey}_step');
+    if (step != null && mounted) {
+      setState(() {
+        _currentStep = step;
+        _idNumberController.text = prefs.getString('${_draftKey}_idNumber') ?? '';
+        _selectedIdType = prefs.getString('${_draftKey}_idType') ?? 'National ID';
+        _licenseNumberController.text = prefs.getString('${_draftKey}_license') ?? '';
+        _vehicleMakeController.text = prefs.getString('${_draftKey}_make') ?? '';
+        _vehiclePlateController.text = prefs.getString('${_draftKey}_plate') ?? '';
+        _selectedVehicleType = prefs.getString('${_draftKey}_vehicleType') ?? 'Motorcycle';
+        _momoNumberController.text = prefs.getString('${_draftKey}_momo') ?? '';
+        _selectedPaymentMethod = prefs.getString('${_draftKey}_payMethod') ?? 'Mobile Money';
+        _emergencyNameController.text = prefs.getString('${_draftKey}_emergName') ?? '';
+        _emergencyPhoneController.text = prefs.getString('${_draftKey}_emergPhone') ?? '';
+      });
+    }
+  }
+
+  Future<void> _saveDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setInt('${_draftKey}_step', _currentStep);
+    prefs.setString('${_draftKey}_idNumber', _idNumberController.text);
+    prefs.setString('${_draftKey}_idType', _selectedIdType);
+    prefs.setString('${_draftKey}_license', _licenseNumberController.text);
+    prefs.setString('${_draftKey}_make', _vehicleMakeController.text);
+    prefs.setString('${_draftKey}_plate', _vehiclePlateController.text);
+    prefs.setString('${_draftKey}_vehicleType', _selectedVehicleType);
+    prefs.setString('${_draftKey}_momo', _momoNumberController.text);
+    prefs.setString('${_draftKey}_payMethod', _selectedPaymentMethod);
+    prefs.setString('${_draftKey}_emergName', _emergencyNameController.text);
+    prefs.setString('${_draftKey}_emergPhone', _emergencyPhoneController.text);
+  }
+
+  Future<void> _clearDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys().where((k) => k.startsWith(_draftKey));
+    for (final k in keys) {
+      prefs.remove(k);
+    }
+  }
 
   @override
   void dispose() {
@@ -144,6 +196,7 @@ class _RiderKycScreenState extends State<RiderKycScreen> {
       if (!_paymentFormKey.currentState!.validate()) return;
     }
     setState(() => _currentStep++);
+    _saveDraft();
   }
 
   void _previousStep() {
@@ -246,6 +299,7 @@ class _RiderKycScreenState extends State<RiderKycScreen> {
       );
 
       if (success && mounted) {
+        _clearDraft();
         authProvider.updateKycStatus('pending_review');
         context.go('/rider/pending-approval');
       } else if (mounted) {
