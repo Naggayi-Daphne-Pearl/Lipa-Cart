@@ -120,6 +120,19 @@
   <script>
     // The value below is injected by flutter build, do not touch.
     var serviceWorkerVersion = null;
+
+    // Helper for Flutter to show browser notifications when app is in foreground
+    function showBrowserNotification(title, body) {
+      if (Notification.permission === 'granted') {
+        new Notification(title, { body: body, icon: '/favicon.png' });
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(function(perm) {
+          if (perm === 'granted') {
+            new Notification(title, { body: body, icon: '/favicon.png' });
+          }
+        });
+      }
+    }
   </script>
 
   <!-- This script adds the flutter initialization JS code -->

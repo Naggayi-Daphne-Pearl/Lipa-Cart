@@ -5,6 +5,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import '../core/constants/app_constants.dart';
 import '../core/config/firebase_options.dart';
+import 'web_notification_stub.dart'
+    if (dart.library.js_interop) 'web_notification.dart';
 
 /// Top-level handler for background FCM messages (must be a top-level function).
 @pragma('vm:entry-point')
@@ -159,23 +161,53 @@ class NotificationService {
     final notification = message.notification;
     if (notification == null) return;
 
-    _localNotifications.show(
-      notification.hashCode,
-      notification.title,
-      notification.body,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _orderChannel.id,
-          _orderChannel.name,
-          channelDescription: _orderChannel.description,
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
+    if (kIsWeb) {
+      debugPrint('[notifications] *** FOREGROUND WEB MESSAGE RECEIVED ***');
+      debugPrint('[notifications] Title: ${notification.title}');
+      debugPrint('[notifications] Body: ${notification.body}');
+      _showWebNotification(notification.title ?? 'LipaCart', notification.body ?? '');
+    } else {
+      _localNotifications.show(
+        notification.hashCode,
+        notification.title,
+        notification.body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _orderChannel.id,
+            _orderChannel.name,
+            channelDescription: _orderChannel.description,
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@mipmap/ic_launcher',
+          ),
+          iOS: const DarwinNotificationDetails(),
         ),
-        iOS: const DarwinNotificationDetails(),
-      ),
-      payload: jsonEncode(message.data),
-    );
+        payload: jsonEncode(message.data),
+      );
+    }
+  }
+
+  /// Show a browser notification on web using the service worker registration.
+  void _showWebNotification(String title, String body) {
+    // Use Firebase messaging's built-in foreground notification by re-dispatching
+    // through the service worker. We access it via the messaging instance.
+    try {
+      // The simplest approach: show via JS eval through the Flutter web engine
+      // This works because we're already running in a browser context
+      _webNotificationFallback(title, body);
+    } catch (e) {
+      debugPrint('[notifications] Web notification failed: $e');
+    }
+  }
+
+  void _webNotificationFallback(String title, String body) {
+    if (kIsWeb) {
+      try {
+        callShowBrowserNotification(title, body);
+      } catch (e) {
+        debugPrint('[notifications] Browser notification error: $e');
+      }
+    }
   }
 
   /// Handle notification tap from FCM (background/terminated).
