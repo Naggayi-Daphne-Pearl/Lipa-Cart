@@ -3,21 +3,19 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/rider_provider.dart';
+import '../../providers/shopper_provider.dart';
 import '../../models/user.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 
-class RiderRatingsScreen extends StatefulWidget {
-  const RiderRatingsScreen({super.key});
+class ShopperRatingsScreen extends StatefulWidget {
+  const ShopperRatingsScreen({super.key});
 
   @override
-  State<RiderRatingsScreen> createState() => _RiderRatingsScreenState();
+  State<ShopperRatingsScreen> createState() => _ShopperRatingsScreenState();
 }
 
-class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
-  static const Color _brandColor = AppColors.accent;
-
+class _ShopperRatingsScreenState extends State<ShopperRatingsScreen> {
   @override
   void initState() {
     super.initState();
@@ -29,24 +27,24 @@ class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
   void _validateRoleAndLoad() {
     final authProvider = context.read<AuthProvider>();
 
-    if (authProvider.user?.role != UserRole.rider) {
+    if (authProvider.user?.role != UserRole.shopper) {
       Future.microtask(() {
         GoRouter.of(context).go(
           authProvider.user?.role == UserRole.admin
               ? '/admin/dashboard'
-              : authProvider.user?.role == UserRole.shopper
-                  ? '/shopper/home'
+              : authProvider.user?.role == UserRole.rider
+                  ? '/rider/home'
                   : '/customer/home',
         );
       });
       return;
     }
 
-    final riderProvider = context.read<RiderProvider>();
+    final shopperProvider = context.read<ShopperProvider>();
     final token = authProvider.token;
-    final riderId = authProvider.user?.riderId;
-    if (token != null && riderId != null) {
-      riderProvider.loadRiderProfile(token, riderId);
+    final shopperId = authProvider.user?.shopperId;
+    if (token != null && shopperId != null) {
+      shopperProvider.loadShopperProfile(token, shopperId);
     }
   }
 
@@ -60,11 +58,11 @@ class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
       ),
-      body: Consumer<RiderProvider>(
-        builder: (context, rider, _) {
-          final rating = rider.averageRating;
-          final reviews = rider.totalReviews;
-          final completedCount = rider.completedOrders;
+      body: Consumer<ShopperProvider>(
+        builder: (context, shopper, _) {
+          final rating = shopper.averageRating;
+          final reviews = shopper.totalReviews;
+          final completedCount = shopper.completedOrders;
           final hasData = reviews > 0;
 
           return SingleChildScrollView(
@@ -109,10 +107,8 @@ class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
                                   return const Icon(Icons.star_rounded,
                                       size: 28, color: Colors.amber);
                                 } else if (i < rating) {
-                                  return const Icon(
-                                      Icons.star_half_rounded,
-                                      size: 28,
-                                      color: Colors.amber);
+                                  return const Icon(Icons.star_half_rounded,
+                                      size: 28, color: Colors.amber);
                                 }
                                 return Icon(Icons.star_outline_rounded,
                                     size: 28, color: AppColors.grey300);
@@ -133,11 +129,11 @@ class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: AppColors.accentSoft,
+                                color: AppColors.primarySoft,
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(Iconsax.star_1,
-                                  size: 40, color: _brandColor),
+                              child: const Icon(Iconsax.star_1,
+                                  size: 40, color: AppColors.primary),
                             ),
                             const SizedBox(height: AppSizes.md),
                             const Text(
@@ -150,7 +146,7 @@ class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
                             ),
                             const SizedBox(height: AppSizes.xs),
                             const Text(
-                              'Complete deliveries to start receiving ratings from customers',
+                              'Complete shopping tasks to start receiving ratings from customers',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 14,
@@ -220,8 +216,7 @@ class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
                     padding: const EdgeInsets.all(AppSizes.md),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
-                      borderRadius:
-                          BorderRadius.circular(AppSizes.radiusMd),
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                       border: Border.all(color: AppColors.grey200),
                       boxShadow: AppColors.shadowSm,
                     ),
@@ -232,7 +227,7 @@ class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
                   const SizedBox(height: AppSizes.lg),
                 ],
 
-                // Customer Reviews
+                // Customer Reviews placeholder
                 Text(
                   'Customer Reviews',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -279,6 +274,27 @@ class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
         },
       ),
     );
+  }
+
+  /// Estimate breakdown distribution from average rating and total count.
+  /// Real per-star counts would come from backend when available.
+  List<Widget> _buildRatingBreakdown(double avgRating, int totalReviews) {
+    // Approximate distribution centered around the average
+    final Map<int, double> distribution = {};
+    double totalWeight = 0;
+    for (int star = 1; star <= 5; star++) {
+      // Weight each star by proximity to the average
+      final diff = (star - avgRating).abs();
+      final weight = diff < 1 ? 2.0 : (diff < 2 ? 0.8 : 0.2);
+      distribution[star] = weight;
+      totalWeight += weight;
+    }
+
+    return List.generate(5, (i) {
+      final star = 5 - i;
+      final fraction = distribution[star]! / totalWeight;
+      return _buildRatingBar('$star', fraction);
+    });
   }
 
   Widget _buildPerfCard({
@@ -329,23 +345,6 @@ class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
     );
   }
 
-  /// Estimate breakdown distribution from average rating and total count.
-  List<Widget> _buildRatingBreakdown(double avgRating, int totalReviews) {
-    final Map<int, double> distribution = {};
-    double totalWeight = 0;
-    for (int star = 1; star <= 5; star++) {
-      final diff = (star - avgRating).abs();
-      final weight = diff < 1 ? 2.0 : (diff < 2 ? 0.8 : 0.2);
-      distribution[star] = weight;
-      totalWeight += weight;
-    }
-    return List.generate(5, (i) {
-      final star = 5 - i;
-      final fraction = distribution[star]! / totalWeight;
-      return _buildRatingBar('$star', fraction);
-    });
-  }
-
   Widget _buildRatingBar(String stars, double percentage) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -354,7 +353,7 @@ class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
           SizedBox(
             width: 24,
             child: Text(
-              '$stars',
+              stars,
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -371,8 +370,7 @@ class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
                 value: percentage,
                 minHeight: 8,
                 backgroundColor: AppColors.grey100,
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(Colors.amber),
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.amber),
               ),
             ),
           ),

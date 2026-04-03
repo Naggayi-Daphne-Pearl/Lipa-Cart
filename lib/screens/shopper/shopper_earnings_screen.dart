@@ -6,8 +6,11 @@ import '../../providers/shopper_provider.dart';
 import '../../models/order.dart';
 import '../../models/user.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/app_loading_indicator.dart';
+
+enum _EarningsPeriod { today, week, month, all }
 
 class ShopperEarningsScreen extends StatefulWidget {
   const ShopperEarningsScreen({super.key});
@@ -17,6 +20,27 @@ class ShopperEarningsScreen extends StatefulWidget {
 }
 
 class _ShopperEarningsScreenState extends State<ShopperEarningsScreen> {
+  _EarningsPeriod _selectedPeriod = _EarningsPeriod.all;
+
+  List<Order> _filterByPeriod(List<Order> tasks) {
+    if (_selectedPeriod == _EarningsPeriod.all) return tasks;
+    final now = DateTime.now();
+    final cutoff = switch (_selectedPeriod) {
+      _EarningsPeriod.today => DateTime(now.year, now.month, now.day),
+      _EarningsPeriod.week => now.subtract(const Duration(days: 7)),
+      _EarningsPeriod.month => DateTime(now.year, now.month - 1, now.day),
+      _EarningsPeriod.all => now,
+    };
+    return tasks.where((o) => o.createdAt.isAfter(cutoff)).toList();
+  }
+
+  String _periodLabel(_EarningsPeriod p) => switch (p) {
+    _EarningsPeriod.today => 'Today',
+    _EarningsPeriod.week => 'Week',
+    _EarningsPeriod.month => 'Month',
+    _EarningsPeriod.all => 'All Time',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -63,9 +87,14 @@ class _ShopperEarningsScreenState extends State<ShopperEarningsScreen> {
             return const AppLoadingPage();
           }
 
-          final totalEarnings = shopper.totalEarnings;
-          final completedCount = shopper.completedOrders;
-          final recentTasks = shopper.completedTasks.take(5).toList();
+          final filteredTasks = _filterByPeriod(shopper.completedTasks);
+          final totalEarnings = _selectedPeriod == _EarningsPeriod.all
+              ? shopper.totalEarnings
+              : filteredTasks.fold<double>(0, (sum, o) => sum + o.total);
+          final completedCount = _selectedPeriod == _EarningsPeriod.all
+              ? shopper.completedOrders
+              : filteredTasks.length;
+          final recentTasks = filteredTasks.take(5).toList();
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -115,7 +144,37 @@ class _ShopperEarningsScreenState extends State<ShopperEarningsScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSizes.md),
+
+                // Period filter
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _EarningsPeriod.values.map((p) {
+                      final isSelected = _selectedPeriod == p;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(_periodLabel(p)),
+                          selected: isSelected,
+                          onSelected: (_) => setState(() => _selectedPeriod = p),
+                          selectedColor: AppColors.primary,
+                          labelStyle: TextStyle(
+                            color: isSelected ? Colors.white : AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                          backgroundColor: AppColors.surface,
+                          side: BorderSide(color: isSelected ? AppColors.primary : AppColors.grey200),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.lg),
 
                 // Earnings Breakdown
                 Text(

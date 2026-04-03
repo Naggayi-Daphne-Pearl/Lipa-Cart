@@ -63,8 +63,20 @@ Future<void> main() async {
         }
       }
 
+      // Prevent GoRouter empty-stack assertion on web back button
+      GoRouter.optionURLReflectsImperativeAPIs = true;
+
       // Capture Flutter framework errors to Sentry
       FlutterError.onError = (FlutterErrorDetails details) {
+        // Suppress GoRouter/Navigator assertions caused by web back button
+        // popping the last route (empty stack, locked navigator, duplicate keys)
+        final message = details.exception.toString();
+        if (message.contains('currentConfiguration.isNotEmpty') ||
+            message.contains('popped the last page') ||
+            message.contains('!_debugLocked') ||
+            message.contains('Duplicate GlobalKey')) {
+          return;
+        }
         FlutterError.presentError(details);
         Sentry.captureException(
           details.exception,

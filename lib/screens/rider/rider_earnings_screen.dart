@@ -18,8 +18,11 @@ class RiderEarningsScreen extends StatefulWidget {
   State<RiderEarningsScreen> createState() => _RiderEarningsScreenState();
 }
 
+enum _EarningsPeriod { today, week, month, all }
+
 class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
   static const Color _brandColor = AppColors.accent;
+  _EarningsPeriod _selectedPeriod = _EarningsPeriod.all;
 
   @override
   void initState() {
@@ -55,6 +58,25 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
     }
   }
 
+  List<Order> _filterByPeriod(List<Order> deliveries) {
+    if (_selectedPeriod == _EarningsPeriod.all) return deliveries;
+    final now = DateTime.now();
+    final cutoff = switch (_selectedPeriod) {
+      _EarningsPeriod.today => DateTime(now.year, now.month, now.day),
+      _EarningsPeriod.week => now.subtract(const Duration(days: 7)),
+      _EarningsPeriod.month => DateTime(now.year, now.month - 1, now.day),
+      _EarningsPeriod.all => now,
+    };
+    return deliveries.where((o) => o.createdAt.isAfter(cutoff)).toList();
+  }
+
+  String _periodLabel(_EarningsPeriod p) => switch (p) {
+    _EarningsPeriod.today => 'Today',
+    _EarningsPeriod.week => 'Week',
+    _EarningsPeriod.month => 'Month',
+    _EarningsPeriod.all => 'All Time',
+  };
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -71,9 +93,14 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
             return const AppLoadingPage();
           }
 
-          final totalEarnings = rider.totalEarnings;
-          final completedCount = rider.completedOrders;
-          final recentDeliveries = rider.completedDeliveries.take(5).toList();
+          final filteredDeliveries = _filterByPeriod(rider.completedDeliveries);
+          final totalEarnings = _selectedPeriod == _EarningsPeriod.all
+              ? rider.totalEarnings
+              : filteredDeliveries.fold<double>(0, (sum, o) => sum + o.deliveryFee);
+          final completedCount = _selectedPeriod == _EarningsPeriod.all
+              ? rider.completedOrders
+              : filteredDeliveries.length;
+          final recentDeliveries = filteredDeliveries.take(5).toList();
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(AppSizes.md),
@@ -131,6 +158,36 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
                         ],
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: AppSizes.md),
+
+                // Period filter
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _EarningsPeriod.values.map((p) {
+                      final isSelected = _selectedPeriod == p;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(_periodLabel(p)),
+                          selected: isSelected,
+                          onSelected: (_) => setState(() => _selectedPeriod = p),
+                          selectedColor: _brandColor,
+                          labelStyle: TextStyle(
+                            color: isSelected ? Colors.white : AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                          backgroundColor: AppColors.surface,
+                          side: BorderSide(color: isSelected ? _brandColor : AppColors.grey200),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
                 const SizedBox(height: AppSizes.lg),

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/rider_provider.dart';
 import '../../models/order.dart';
@@ -238,6 +240,51 @@ class _RiderActiveDeliveriesScreenState
                 ),
               ],
             ),
+            // Mini map preview
+            if (order.deliveryAddress.latitude != 0 && order.deliveryAddress.longitude != 0)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSizes.sm),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                  child: SizedBox(
+                    height: 120,
+                    width: double.infinity,
+                    child: IgnorePointer(
+                      child: FlutterMap(
+                        options: MapOptions(
+                          initialCenter: LatLng(
+                            order.deliveryAddress.latitude,
+                            order.deliveryAddress.longitude,
+                          ),
+                          initialZoom: 14,
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          ),
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: LatLng(
+                                  order.deliveryAddress.latitude,
+                                  order.deliveryAddress.longitude,
+                                ),
+                                width: 40,
+                                height: 40,
+                                child: const Icon(
+                                  Iconsax.location5,
+                                  color: AppColors.error,
+                                  size: 32,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             const SizedBox(height: AppSizes.sm),
             // Items summary
             Row(

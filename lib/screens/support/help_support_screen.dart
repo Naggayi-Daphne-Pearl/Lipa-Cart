@@ -80,7 +80,7 @@ class HelpSupportScreen extends StatelessWidget {
                 _buildContactTile(
                   icon: Iconsax.call,
                   title: 'Call Us',
-                  subtitle: '+256 700 000 000',
+                  subtitle: '+256 7857896401',
                   color: AppColors.primary,
                   onTap: () => launchUrl(Uri(scheme: 'tel', path: '+256785796401')),
                 ),

@@ -196,24 +196,7 @@ class _ShopperAvailableTasksScreenState
                     ),
                   ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'NEW',
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
+                _buildUrgencyBadge(task.createdAt),
               ],
             ),
             const SizedBox(height: 16),
@@ -327,6 +310,48 @@ class _ShopperAvailableTasksScreenState
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUrgencyBadge(DateTime createdAt) {
+    final minutesAgo = DateTime.now().difference(createdAt).inMinutes;
+    final String label;
+    final Color color;
+    final Color bgColor;
+
+    if (minutesAgo < 5) {
+      label = 'NEW';
+      color = Colors.green;
+      bgColor = Colors.green.withValues(alpha: 0.1);
+    } else if (minutesAgo < 15) {
+      label = '${minutesAgo}m ago';
+      color = Colors.blue;
+      bgColor = Colors.blue.withValues(alpha: 0.1);
+    } else if (minutesAgo < 30) {
+      label = '${minutesAgo}m ago';
+      color = Colors.orange;
+      bgColor = Colors.orange.withValues(alpha: 0.1);
+    } else {
+      final display = minutesAgo < 60 ? '${minutesAgo}m' : '${minutesAgo ~/ 60}h';
+      label = 'Urgent · $display';
+      color = Colors.red;
+      bgColor = Colors.red.withValues(alpha: 0.1);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
         ),
       ),
     );

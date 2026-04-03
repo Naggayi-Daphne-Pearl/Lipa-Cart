@@ -135,11 +135,15 @@
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {
             appRunner.runApp().then(function() {
-              // Remove the web loading screen once Flutter is rendered
               var loader = document.querySelector('.loading');
               if (loader) loader.remove();
             });
           });
+          // Fallback: remove loader after 5s even if runApp callback doesn't fire
+          setTimeout(function() {
+            var loader = document.querySelector('.loading');
+            if (loader) loader.remove();
+          }, 5000);
         }
       });
     });

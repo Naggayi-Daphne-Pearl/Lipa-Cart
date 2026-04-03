@@ -72,6 +72,7 @@ import 'screens/shopper/shopper_kyc_screen.dart';
 import 'screens/shopper/shopper_pending_approval_screen.dart';
 import 'screens/shopper/shopping_checklist_screen.dart';
 import 'screens/shopper/shopper_profile_screen.dart';
+import 'screens/shopper/shopper_ratings_screen.dart';
 
 /// Helper to get home route based on user role
 String _homeForRole(UserRole? role, {String? kycStatus}) {
@@ -115,6 +116,20 @@ class RoleBasedRouter {
   }
 
   /// Creates a fade transition page for smoother navigation.
+  /// Wraps a screen so that back navigation goes to customer home
+  /// instead of popping an empty stack (which crashes on web).
+  static Widget _safeBack(Widget child) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _router?.go('/customer/home');
+        }
+      },
+      child: child,
+    );
+  }
+
   static CustomTransitionPage<void> _fadePage(Widget child, GoRouterState state) {
     return CustomTransitionPage(
       key: state.pageKey,
@@ -135,7 +150,10 @@ class RoleBasedRouter {
       initialLocation: '/',
       refreshListenable: authProvider,
       observers: [SentryNavigatorObserver()],
-      errorBuilder: (context, state) => const NotFoundScreen(),
+      onException: (context, state, router) {
+        // Catch navigation errors (empty stack, unknown routes, 404s) → go to 404 page
+        router.go('/not-found');
+      },
       redirect: (context, state) {
         final isAuthenticated = authProvider.isAuthenticated;
         final isInitial = authProvider.status == AuthStatus.initial;
@@ -321,6 +339,10 @@ class RoleBasedRouter {
           builder: (context, state) => const PrivacyPolicyScreen(),
         ),
         GoRoute(
+          path: '/not-found',
+          builder: (context, state) => const NotFoundScreen(),
+        ),
+        GoRoute(
           path: '/profile-completion',
           builder: (context, state) {
             final phoneNumber = state.extra as String? ?? '';
@@ -335,11 +357,11 @@ class RoleBasedRouter {
         ),
         GoRoute(
           path: '/customer/search',
-          pageBuilder: (context, state) => _fadePage(const SearchScreen(), state),
+          pageBuilder: (context, state) => _fadePage(_safeBack(const SearchScreen()), state),
         ),
         GoRoute(
           path: '/customer/categories',
-          pageBuilder: (context, state) => _fadePage(const CategoriesScreen(), state),
+          pageBuilder: (context, state) => _fadePage(_safeBack(const CategoriesScreen()), state),
         ),
         GoRoute(
           path: '/customer/category',
@@ -375,12 +397,12 @@ class RoleBasedRouter {
           path: '/customer/addresses',
           builder: (context, state) {
             final returnRoute = state.uri.queryParameters['return'];
-            return AddressesScreen(returnRoute: returnRoute);
+            return _safeBack(AddressesScreen(returnRoute: returnRoute));
           },
         ),
         GoRoute(
           path: '/customer/cart',
-          pageBuilder: (context, state) => _fadePage(const CartScreen(), state),
+          pageBuilder: (context, state) => _fadePage(_safeBack(const CartScreen()), state),
         ),
         GoRoute(
           path: '/customer/checkout',
@@ -421,19 +443,19 @@ class RoleBasedRouter {
         ),
         GoRoute(
           path: '/customer/notifications',
-          builder: (context, state) => const NotificationInboxScreen(),
+          builder: (context, state) => _safeBack(const NotificationInboxScreen()),
         ),
         GoRoute(
           path: '/customer/help',
-          builder: (context, state) => const HelpSupportScreen(),
+          builder: (context, state) => _safeBack(const HelpSupportScreen()),
         ),
         GoRoute(
           path: '/customer/settings',
-          builder: (context, state) => const AppSettingsScreen(),
+          builder: (context, state) => _safeBack(const AppSettingsScreen()),
         ),
         GoRoute(
           path: '/customer/orders',
-          builder: (context, state) => const OrdersScreen(),
+          builder: (context, state) => _safeBack(const OrdersScreen()),
         ),
         GoRoute(
           path: '/customer/order-tracking',
@@ -499,11 +521,11 @@ class RoleBasedRouter {
         ),
         GoRoute(
           path: '/customer/ratings-reviews',
-          builder: (context, state) => const RatingsReviewsScreen(),
+          builder: (context, state) => _safeBack(const RatingsReviewsScreen()),
         ),
         GoRoute(
           path: '/customer/profile',
-          builder: (context, state) => const ProfileScreen(),
+          builder: (context, state) => _safeBack(const ProfileScreen()),
         ),
 
         // Admin Routes
@@ -625,6 +647,10 @@ class RoleBasedRouter {
         GoRoute(
           path: '/shopper/earnings',
           builder: (context, state) => const ShopperEarningsScreen(),
+        ),
+        GoRoute(
+          path: '/shopper/ratings',
+          builder: (context, state) => const ShopperRatingsScreen(),
         ),
         GoRoute(
           path: '/shopper/profile',

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +9,7 @@ import '../../models/order.dart';
 import '../../models/user.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/rider_button.dart';
@@ -224,24 +226,7 @@ class _RiderAvailableDeliveriesScreenState
                     ),
                   ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentSoft,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                  ),
-                  child: Text(
-                    'NEW',
-                    style: TextStyle(
-                      color: _brandColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
+                _buildUrgencyBadge(delivery.createdAt),
               ],
             ),
             const SizedBox(height: AppSizes.md),
@@ -271,6 +256,18 @@ class _RiderAvailableDeliveriesScreenState
               maxLines: 2,
             ),
             const SizedBox(height: AppSizes.sm),
+
+            // Distance & ETA
+            if (_getDistanceAndEta(delivery).isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSizes.sm),
+                child: _buildInfoRow(
+                  icon: Iconsax.routing_2,
+                  label: 'Distance & ETA',
+                  value: _getDistanceAndEta(delivery),
+                  valueColor: AppColors.info,
+                ),
+              ),
 
             // Delivery fee
             _buildInfoRow(
@@ -337,6 +334,77 @@ class _RiderAvailableDeliveriesScreenState
         ),
       ),
     );
+  }
+
+  Widget _buildUrgencyBadge(DateTime createdAt) {
+    final minutesAgo = DateTime.now().difference(createdAt).inMinutes;
+    final String label;
+    final Color color;
+    final Color bgColor;
+
+    if (minutesAgo < 5) {
+      label = 'NEW';
+      color = _brandColor;
+      bgColor = AppColors.accentSoft;
+    } else if (minutesAgo < 15) {
+      label = '${minutesAgo}m ago';
+      color = AppColors.info;
+      bgColor = AppColors.info.withValues(alpha: 0.1);
+    } else if (minutesAgo < 30) {
+      label = '${minutesAgo}m ago';
+      color = AppColors.warning;
+      bgColor = AppColors.warning.withValues(alpha: 0.1);
+    } else {
+      final display = minutesAgo < 60 ? '${minutesAgo}m' : '${minutesAgo ~/ 60}h';
+      label = 'Urgent · $display';
+      color = AppColors.error;
+      bgColor = AppColors.error.withValues(alpha: 0.1);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+
+  double _haversineDistance(double lat1, double lng1, double lat2, double lng2) {
+    const earthRadiusKm = 6371.0;
+    final dLat = (lat2 - lat1) * math.pi / 180;
+    final dLng = (lng2 - lng1) * math.pi / 180;
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * math.pi / 180) * math.cos(lat2 * math.pi / 180) *
+        math.sin(dLng / 2) * math.sin(dLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return earthRadiusKm * c;
+  }
+
+  /// Distance from Kampala center (rider hub) to delivery address
+  String _getDistanceAndEta(Order delivery) {
+    final lat = delivery.deliveryAddress.latitude;
+    final lng = delivery.deliveryAddress.longitude;
+    if (lat == 0 && lng == 0) {
+      return '';
+    }
+    final km = _haversineDistance(
+      AppConstants.serviceAreaCenterLat,
+      AppConstants.serviceAreaCenterLng,
+      lat,
+      lng,
+    );
+    // Estimate: ~20 km/h average in Kampala traffic
+    final minutes = (km / 20 * 60).round();
+    return '${km.toStringAsFixed(1)} km · ~$minutes min';
   }
 
   Widget _buildInfoRow({
