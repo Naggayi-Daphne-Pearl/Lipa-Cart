@@ -423,8 +423,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
                             desktop: 20.0,
                           ),
                           childAspectRatio: context.responsive<double>(
-                            mobile: 0.72,
-                            tablet: 0.75,
+                            mobile: 0.68,
+                            tablet: 0.73,
                             desktop: 0.78,
                           ),
                         ),
@@ -689,7 +689,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                         ),
                         height: 1.2,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(

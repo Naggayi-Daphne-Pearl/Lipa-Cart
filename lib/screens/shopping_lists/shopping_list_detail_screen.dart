@@ -819,7 +819,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
         ),
         const SizedBox(height: AppSizes.sm),
         SizedBox(
-          height: 212,
+          height: 132,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: suggestions.length,
@@ -842,6 +842,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
   ) {
     return Container(
       width: 220,
+      padding: const EdgeInsets.all(AppSizes.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSizes.radiusLg),
@@ -850,79 +851,54 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 220,
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppColors.grey100,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(AppSizes.radiusLg),
-              ),
+          Text(
+            product.name,
+            style: AppTextStyles.labelMedium.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
             ),
-            child: const Center(
-              child: Icon(
-                Iconsax.shopping_bag,
-                size: 32,
-                color: AppColors.grey400,
-              ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: AppSizes.xs),
+          Text(
+            Formatters.formatCurrency(product.price),
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(AppSizes.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
+          const Spacer(),
+          GestureDetector(
+            onTap: () async {
+              await context.read<ShoppingListProvider>().addProductToList(
+                list.id,
+                product,
+                authToken: authToken,
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${product.name} added to ${list.name}'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              ),
+              child: Center(
+                child: Text(
+                  'Add to list',
                   style: AppTextStyles.labelMedium.copyWith(
+                    color: Colors.white,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: AppSizes.xs),
-                Text(
-                  Formatters.formatCurrency(product.price),
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: AppSizes.sm),
-                GestureDetector(
-                  onTap: () async {
-                    await context.read<ShoppingListProvider>().addProductToList(
-                      list.id,
-                      product,
-                      authToken: authToken,
-                    );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${product.name} added to ${list.name}'),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Add to list',
-                        style: AppTextStyles.labelMedium.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],

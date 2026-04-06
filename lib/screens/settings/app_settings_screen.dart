@@ -26,7 +26,13 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Iconsax.arrow_left),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/customer/profile');
+            }
+          },
         ),
         title: const Text('Settings'),
       ),
@@ -39,7 +45,10 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Notifications Section
-                Text('Notifications', style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  'Notifications',
+                  style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: AppSizes.md),
                 _buildToggleTile(
                   icon: Iconsax.notification,
@@ -66,7 +75,10 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 const SizedBox(height: AppSizes.xl),
 
                 // Legal Section
-                Text('Legal', style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  'Legal',
+                  style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: AppSizes.md),
                 _buildNavTile(
                   icon: Iconsax.document_text,
@@ -82,7 +94,10 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 const SizedBox(height: AppSizes.xl),
 
                 // About Section
-                Text('About', style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  'About',
+                  style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: AppSizes.md),
                 Container(
                   padding: const EdgeInsets.all(AppSizes.md),
@@ -95,19 +110,34 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                       Row(
                         children: [
                           Container(
-                            width: 44, height: 44,
+                            width: 44,
+                            height: 44,
                             decoration: BoxDecoration(
                               color: AppColors.primarySoft,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Iconsax.shop, color: AppColors.primary, size: 22),
+                            child: const Icon(
+                              Iconsax.shop,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
                           ),
                           const SizedBox(width: AppSizes.md),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('LipaCart', style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w600)),
-                              Text('Version 1.0.0', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+                              Text(
+                                'LipaCart',
+                                style: AppTextStyles.labelLarge.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                'Version 1.0.0',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -115,7 +145,9 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                       const SizedBox(height: AppSizes.md),
                       Text(
                         'Fresh groceries delivered to your doorstep. Built for East Africa.',
-                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -145,7 +177,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
       ),
       child: SwitchListTile(
         secondary: Container(
-          width: 40, height: 40,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
             color: AppColors.primarySoft,
             borderRadius: BorderRadius.circular(10),
@@ -153,11 +186,17 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
           child: Icon(icon, color: AppColors.primary, size: 20),
         ),
         title: Text(title, style: AppTextStyles.labelMedium),
-        subtitle: Text(subtitle, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+        subtitle: Text(
+          subtitle,
+          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+        ),
         value: value,
         onChanged: onChanged,
-        activeColor: AppColors.primary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.radiusMd)),
+        activeThumbColor: AppColors.primary,
+        activeTrackColor: AppColors.primarySoft,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        ),
       ),
     );
   }
@@ -176,7 +215,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
       child: ListTile(
         onTap: onTap,
         leading: Container(
-          width: 40, height: 40,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
             color: AppColors.primarySoft,
             borderRadius: BorderRadius.circular(10),
@@ -184,8 +224,14 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
           child: Icon(icon, color: AppColors.primary, size: 20),
         ),
         title: Text(title, style: AppTextStyles.labelMedium),
-        trailing: Icon(Iconsax.arrow_right_3, size: 18, color: AppColors.textSecondary),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.radiusMd)),
+        trailing: Icon(
+          Iconsax.arrow_right_3,
+          size: 18,
+          color: AppColors.textSecondary,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        ),
       ),
     );
   }

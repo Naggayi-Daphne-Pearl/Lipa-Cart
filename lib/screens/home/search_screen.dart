@@ -102,7 +102,11 @@ class _SearchScreenState extends State<SearchScreen> {
           icon: const Icon(Iconsax.arrow_left),
           onPressed: () {
             productProvider.clearSearch();
-            Navigator.pop(context);
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/customer/home');
+            }
           },
         ),
         title: const Text('Search'),
@@ -218,7 +222,9 @@ class _SearchScreenState extends State<SearchScreen> {
 
   List<String> _getTrendingSearches(ProductProvider productProvider) {
     // Derive from featured products + top available products
-    final featured = productProvider.featuredProducts.take(4).map((p) => p.name);
+    final featured = productProvider.featuredProducts
+        .take(4)
+        .map((p) => p.name);
     final available = productProvider.products
         .where((p) => p.isAvailable && !p.isFeatured)
         .take(4)

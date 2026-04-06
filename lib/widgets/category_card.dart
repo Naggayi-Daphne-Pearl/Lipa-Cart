@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../core/theme/app_colors.dart';
+import '../core/theme/app_text_styles.dart';
 import '../core/utils/responsive.dart';
 import '../models/category.dart';
 import 'app_loading_indicator.dart';
@@ -89,9 +90,8 @@ class CategoryCard extends StatelessWidget {
                       child: CachedNetworkImage(
                         imageUrl: category.image,
                         fit: BoxFit.cover,
-                        placeholder: (context, url) => const Center(
-                          child: AppLoadingIndicator.small(),
-                        ),
+                        placeholder: (context, url) =>
+                            const Center(child: AppLoadingIndicator.small()),
                         errorWidget: (context, url, error) => Icon(
                           Icons.category_outlined,
                           color: categoryColor,
@@ -163,10 +163,9 @@ class CategoryCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   child: CachedNetworkImage(
                     imageUrl: category.image,
-                    fit: BoxFit.contain,
-                    placeholder: (context, url) => const Center(
-                      child: AppLoadingIndicator.small(),
-                    ),
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) =>
+                        const Center(child: AppLoadingIndicator.small()),
                     errorWidget: (context, url, error) => Container(
                       color: categoryBgColor,
                       child: Icon(
@@ -185,7 +184,7 @@ class CategoryCard extends StatelessWidget {
               left: 0,
               right: 0,
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(12, 28, 12, 12),
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.vertical(
                     bottom: Radius.circular(20),
@@ -195,13 +194,13 @@ class CategoryCard extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      AppColors.black.withValues(alpha: 0.7),
+                      AppColors.black.withValues(alpha: 0.76),
                     ],
                     stops: const [0.0, 1.0],
                   ),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
                       child: Column(
@@ -210,19 +209,18 @@ class CategoryCard extends StatelessWidget {
                         children: [
                           Text(
                             category.name,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                            style: AppTextStyles.cardTitle.copyWith(
+                              fontSize: 15,
                               color: Colors.white,
-                              shadows: [
+                              height: 1.1,
+                              shadows: const [
                                 Shadow(color: Colors.black26, blurRadius: 4),
                               ],
                             ),
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 4),
-                          // Count badge
+                          const SizedBox(height: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -234,7 +232,7 @@ class CategoryCard extends StatelessWidget {
                             ),
                             child: Text(
                               '${category.productCount} items',
-                              style: const TextStyle(
+                              style: AppTextStyles.caption.copyWith(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
@@ -244,10 +242,10 @@ class CategoryCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    // Arrow icon
+                    const SizedBox(width: 8),
                     Container(
-                      width: 32,
-                      height: 32,
+                      width: 30,
+                      height: 30,
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
@@ -255,7 +253,7 @@ class CategoryCard extends StatelessWidget {
                       child: const Icon(
                         Icons.arrow_forward_ios,
                         color: Colors.white,
-                        size: 14,
+                        size: 13,
                       ),
                     ),
                   ],

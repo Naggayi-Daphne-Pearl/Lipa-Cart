@@ -62,8 +62,10 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     final visibleLists = searchQuery.isEmpty
         ? provider.lists
         : provider.lists.where((list) {
-            final matchesList = list.name.toLowerCase().contains(searchQuery) ||
-                (list.description?.toLowerCase().contains(searchQuery) ?? false);
+            final matchesList =
+                list.name.toLowerCase().contains(searchQuery) ||
+                (list.description?.toLowerCase().contains(searchQuery) ??
+                    false);
             final matchesItems = list.items.any(
               (item) => item.name.toLowerCase().contains(searchQuery),
             );
@@ -95,7 +97,13 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                 child: Row(
                   children: [
                     GestureDetector(
-                      onTap: () => Navigator.pop(context),
+                      onTap: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/customer/home');
+                        }
+                      },
                       child: Container(
                         width: 44,
                         height: 44,
@@ -179,7 +187,9 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                           ),
                           _buildInsightChip(
                             icon: Iconsax.wallet_2,
-                            label: Formatters.formatCurrency(visibleEstimatedTotal),
+                            label: Formatters.formatCurrency(
+                              visibleEstimatedTotal,
+                            ),
                           ),
                         ],
                       ),
@@ -192,9 +202,21 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                               label: 'Weekly',
                               emoji: '🛒',
                               items: [
-                                ShoppingListItem(id: 'wk_bread', name: 'Bread', unitPrice: 4000),
-                                ShoppingListItem(id: 'wk_milk', name: 'Milk', unitPrice: 5000),
-                                ShoppingListItem(id: 'wk_eggs', name: 'Eggs', unitPrice: 6000),
+                                ShoppingListItem(
+                                  id: 'wk_bread',
+                                  name: 'Bread',
+                                  unitPrice: 4000,
+                                ),
+                                ShoppingListItem(
+                                  id: 'wk_milk',
+                                  name: 'Milk',
+                                  unitPrice: 5000,
+                                ),
+                                ShoppingListItem(
+                                  id: 'wk_eggs',
+                                  name: 'Eggs',
+                                  unitPrice: 6000,
+                                ),
                               ],
                             ),
                             const SizedBox(width: AppSizes.sm),
@@ -202,9 +224,21 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                               label: 'Meal Prep',
                               emoji: '🥗',
                               items: [
-                                ShoppingListItem(id: 'mp_chicken', name: 'Chicken Breast', unitPrice: 18000),
-                                ShoppingListItem(id: 'mp_rice', name: 'Rice', unitPrice: 8000),
-                                ShoppingListItem(id: 'mp_veg', name: 'Mixed Vegetables', unitPrice: 7000),
+                                ShoppingListItem(
+                                  id: 'mp_chicken',
+                                  name: 'Chicken Breast',
+                                  unitPrice: 18000,
+                                ),
+                                ShoppingListItem(
+                                  id: 'mp_rice',
+                                  name: 'Rice',
+                                  unitPrice: 8000,
+                                ),
+                                ShoppingListItem(
+                                  id: 'mp_veg',
+                                  name: 'Mixed Vegetables',
+                                  unitPrice: 7000,
+                                ),
                               ],
                             ),
                             const SizedBox(width: AppSizes.sm),
@@ -212,9 +246,21 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                               label: 'BBQ',
                               emoji: '🔥',
                               items: [
-                                ShoppingListItem(id: 'bbq_beef', name: 'Beef', unitPrice: 22000),
-                                ShoppingListItem(id: 'bbq_soda', name: 'Soda', unitPrice: 2000),
-                                ShoppingListItem(id: 'bbq_charcoal', name: 'Charcoal', unitPrice: 6000),
+                                ShoppingListItem(
+                                  id: 'bbq_beef',
+                                  name: 'Beef',
+                                  unitPrice: 22000,
+                                ),
+                                ShoppingListItem(
+                                  id: 'bbq_soda',
+                                  name: 'Soda',
+                                  unitPrice: 2000,
+                                ),
+                                ShoppingListItem(
+                                  id: 'bbq_charcoal',
+                                  name: 'Charcoal',
+                                  unitPrice: 6000,
+                                ),
                               ],
                             ),
                           ],
@@ -322,28 +368,46 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     );
   }
 
+  Widget _buildAdaptiveEmptyState({required List<Widget> children}) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSizes.xl),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight > 0
+                  ? constraints.maxHeight - (AppSizes.xl * 2)
+                  : 0,
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: children,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildNoSearchResults() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSizes.xl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Iconsax.search_status, size: 48, color: AppColors.grey400),
-            const SizedBox(height: AppSizes.md),
-            Text(
-              'No matching lists found',
-              style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: AppSizes.xs),
-            Text(
-              'Try a different keyword or create a new quick list from the templates above.',
-              style: AppTextStyles.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
+    return _buildAdaptiveEmptyState(
+      children: [
+        const Icon(Iconsax.search_status, size: 48, color: AppColors.grey400),
+        const SizedBox(height: AppSizes.md),
+        Text(
+          'No matching lists found',
+          style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700),
         ),
-      ),
+        const SizedBox(height: AppSizes.xs),
+        Text(
+          'Try a different keyword or create a new quick list from the templates above.',
+          style: AppTextStyles.bodySmall,
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 
@@ -515,211 +579,204 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSizes.xl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: AppColors.primarySoft,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Iconsax.clipboard_text,
-                size: 56,
-                color: AppColors.primary,
-              ),
+    return _buildAdaptiveEmptyState(
+      children: [
+        Container(
+          width: 120,
+          height: 120,
+          decoration: const BoxDecoration(
+            color: AppColors.primarySoft,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Iconsax.clipboard_text,
+            size: 56,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: AppSizes.lg),
+        Text(
+          'No Shopping Lists Yet',
+          style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: AppSizes.sm),
+        Text(
+          'Create your first shopping list to start\norganizing your groceries',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSizes.xl),
+        GestureDetector(
+          onTap: () => _showCreateListSheet(context),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSizes.xl,
+              vertical: AppSizes.md,
             ),
-            const SizedBox(height: AppSizes.lg),
-            Text(
-              'No Shopping Lists Yet',
-              style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(AppSizes.radiusFull),
             ),
-            const SizedBox(height: AppSizes.sm),
-            Text(
-              'Create your first shopping list to start\norganizing your groceries',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSizes.xl),
-            GestureDetector(
-              onTap: () => _showCreateListSheet(context),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.xl,
-                  vertical: AppSizes.md,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Iconsax.add, color: Colors.white, size: 20),
-                    const SizedBox(width: AppSizes.sm),
-                    Text(
-                      'Create Your First List',
-                      style: AppTextStyles.labelMedium.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSizes.xl),
-            // Templates section
-            Text(
-              'Or start from a template',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppSizes.md),
-            Wrap(
-              spacing: AppSizes.sm,
-              runSpacing: AppSizes.sm,
-              alignment: WrapAlignment.center,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _buildTemplatePill('🛒 Weekly Essentials', [
-                  ShoppingListItem(
-                    id: 'weekly_milk',
-                    name: 'Milk',
-                    quantity: 1,
-                    unitPrice: 5000,
+                const Icon(Iconsax.add, color: Colors.white, size: 20),
+                const SizedBox(width: AppSizes.sm),
+                Text(
+                  'Create Your First List',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
                   ),
-                  ShoppingListItem(
-                    id: 'weekly_bread',
-                    name: 'Bread',
-                    quantity: 1,
-                    unitPrice: 4000,
-                  ),
-                  ShoppingListItem(
-                    id: 'weekly_eggs',
-                    name: 'Eggs',
-                    quantity: 1,
-                    unitPrice: 6000,
-                  ),
-                  ShoppingListItem(
-                    id: 'weekly_rice',
-                    name: 'Rice',
-                    quantity: 1,
-                    unitPrice: 8000,
-                  ),
-                  ShoppingListItem(
-                    id: 'weekly_cooking_oil',
-                    name: 'Cooking Oil',
-                    quantity: 1,
-                    unitPrice: 13000,
-                  ),
-                  ShoppingListItem(
-                    id: 'weekly_sugar',
-                    name: 'Sugar',
-                    quantity: 1,
-                    unitPrice: 6000,
-                  ),
-                  ShoppingListItem(
-                    id: 'weekly_tea',
-                    name: 'Tea',
-                    quantity: 1,
-                    unitPrice: 5000,
-                  ),
-                  ShoppingListItem(
-                    id: 'weekly_tomatoes',
-                    name: 'Tomatoes',
-                    quantity: 1,
-                    unitPrice: 3000,
-                  ),
-                  ShoppingListItem(
-                    id: 'weekly_onions',
-                    name: 'Onions',
-                    quantity: 1,
-                    unitPrice: 2500,
-                  ),
-                ]),
-                _buildTemplatePill('🎉 Party Supplies', [
-                  ShoppingListItem(
-                    id: 'party_sodas',
-                    name: 'Sodas',
-                    quantity: 1,
-                    unitPrice: 2000,
-                  ),
-                  ShoppingListItem(
-                    id: 'party_juice',
-                    name: 'Juice',
-                    quantity: 1,
-                    unitPrice: 5000,
-                  ),
-                  ShoppingListItem(
-                    id: 'party_chips',
-                    name: 'Chips',
-                    quantity: 1,
-                    unitPrice: 3500,
-                  ),
-                  ShoppingListItem(
-                    id: 'party_cake',
-                    name: 'Cake',
-                    quantity: 1,
-                    unitPrice: 12000,
-                  ),
-                  ShoppingListItem(
-                    id: 'party_paper_plates',
-                    name: 'Paper Plates',
-                    quantity: 1,
-                    unitPrice: 1500,
-                  ),
-                  ShoppingListItem(
-                    id: 'party_napkins',
-                    name: 'Napkins',
-                    quantity: 1,
-                    unitPrice: 1200,
-                  ),
-                ]),
-                _buildTemplatePill('👶 Baby Needs', [
-                  ShoppingListItem(
-                    id: 'baby_formula',
-                    name: 'Baby Formula',
-                    quantity: 1,
-                    unitPrice: 25000,
-                  ),
-                  ShoppingListItem(
-                    id: 'baby_diapers',
-                    name: 'Diapers',
-                    quantity: 1,
-                    unitPrice: 12000,
-                  ),
-                  ShoppingListItem(
-                    id: 'baby_wipes',
-                    name: 'Baby Wipes',
-                    quantity: 1,
-                    unitPrice: 4000,
-                  ),
-                  ShoppingListItem(
-                    id: 'baby_food',
-                    name: 'Baby Food',
-                    quantity: 1,
-                    unitPrice: 7000,
-                  ),
-                  ShoppingListItem(
-                    id: 'baby_cereal',
-                    name: 'Baby Cereal',
-                    quantity: 1,
-                    unitPrice: 4500,
-                  ),
-                ]),
+                ),
               ],
             ),
+          ),
+        ),
+        const SizedBox(height: AppSizes.xl),
+        Text(
+          'Or start from a template',
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: AppSizes.md),
+        Wrap(
+          spacing: AppSizes.sm,
+          runSpacing: AppSizes.sm,
+          alignment: WrapAlignment.center,
+          children: [
+            _buildTemplatePill('🛒 Weekly Essentials', [
+              ShoppingListItem(
+                id: 'weekly_milk',
+                name: 'Milk',
+                quantity: 1,
+                unitPrice: 5000,
+              ),
+              ShoppingListItem(
+                id: 'weekly_bread',
+                name: 'Bread',
+                quantity: 1,
+                unitPrice: 4000,
+              ),
+              ShoppingListItem(
+                id: 'weekly_eggs',
+                name: 'Eggs',
+                quantity: 1,
+                unitPrice: 6000,
+              ),
+              ShoppingListItem(
+                id: 'weekly_rice',
+                name: 'Rice',
+                quantity: 1,
+                unitPrice: 8000,
+              ),
+              ShoppingListItem(
+                id: 'weekly_cooking_oil',
+                name: 'Cooking Oil',
+                quantity: 1,
+                unitPrice: 13000,
+              ),
+              ShoppingListItem(
+                id: 'weekly_sugar',
+                name: 'Sugar',
+                quantity: 1,
+                unitPrice: 6000,
+              ),
+              ShoppingListItem(
+                id: 'weekly_tea',
+                name: 'Tea',
+                quantity: 1,
+                unitPrice: 5000,
+              ),
+              ShoppingListItem(
+                id: 'weekly_tomatoes',
+                name: 'Tomatoes',
+                quantity: 1,
+                unitPrice: 3000,
+              ),
+              ShoppingListItem(
+                id: 'weekly_onions',
+                name: 'Onions',
+                quantity: 1,
+                unitPrice: 2500,
+              ),
+            ]),
+            _buildTemplatePill('🎉 Party Supplies', [
+              ShoppingListItem(
+                id: 'party_sodas',
+                name: 'Sodas',
+                quantity: 1,
+                unitPrice: 2000,
+              ),
+              ShoppingListItem(
+                id: 'party_juice',
+                name: 'Juice',
+                quantity: 1,
+                unitPrice: 5000,
+              ),
+              ShoppingListItem(
+                id: 'party_chips',
+                name: 'Chips',
+                quantity: 1,
+                unitPrice: 3500,
+              ),
+              ShoppingListItem(
+                id: 'party_cake',
+                name: 'Cake',
+                quantity: 1,
+                unitPrice: 12000,
+              ),
+              ShoppingListItem(
+                id: 'party_paper_plates',
+                name: 'Paper Plates',
+                quantity: 1,
+                unitPrice: 1500,
+              ),
+              ShoppingListItem(
+                id: 'party_napkins',
+                name: 'Napkins',
+                quantity: 1,
+                unitPrice: 1200,
+              ),
+            ]),
+            _buildTemplatePill('👶 Baby Needs', [
+              ShoppingListItem(
+                id: 'baby_formula',
+                name: 'Baby Formula',
+                quantity: 1,
+                unitPrice: 25000,
+              ),
+              ShoppingListItem(
+                id: 'baby_diapers',
+                name: 'Diapers',
+                quantity: 1,
+                unitPrice: 12000,
+              ),
+              ShoppingListItem(
+                id: 'baby_wipes',
+                name: 'Baby Wipes',
+                quantity: 1,
+                unitPrice: 4000,
+              ),
+              ShoppingListItem(
+                id: 'baby_food',
+                name: 'Baby Food',
+                quantity: 1,
+                unitPrice: 7000,
+              ),
+              ShoppingListItem(
+                id: 'baby_cereal',
+                name: 'Baby Cereal',
+                quantity: 1,
+                unitPrice: 4500,
+              ),
+            ]),
           ],
         ),
-      ),
+      ],
     );
   }
 
@@ -745,69 +802,59 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
   }
 
   Widget _buildUnauthenticatedState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSizes.xl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: AppColors.primarySoft,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Iconsax.lock,
-                size: 56,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: AppSizes.lg),
-            Text(
-              'Sign In Required',
-              style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: AppSizes.sm),
-            Text(
-              'Please sign in to view and create\nshopping lists',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSizes.xl),
-            GestureDetector(
-              onTap: () => context.go('/login'),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.xl,
-                  vertical: AppSizes.md,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Iconsax.login, color: Colors.white, size: 20),
-                    const SizedBox(width: AppSizes.sm),
-                    Text(
-                      'Sign In',
-                      style: AppTextStyles.labelMedium.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+    return _buildAdaptiveEmptyState(
+      children: [
+        Container(
+          width: 120,
+          height: 120,
+          decoration: const BoxDecoration(
+            color: AppColors.primarySoft,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Iconsax.lock, size: 56, color: AppColors.primary),
         ),
-      ),
+        const SizedBox(height: AppSizes.lg),
+        Text(
+          'Sign In Required',
+          style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: AppSizes.sm),
+        Text(
+          'Please sign in to view and create\nshopping lists',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSizes.xl),
+        GestureDetector(
+          onTap: () => context.go('/login'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSizes.xl,
+              vertical: AppSizes.md,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Iconsax.login, color: Colors.white, size: 20),
+                const SizedBox(width: AppSizes.sm),
+                Text(
+                  'Sign In',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1044,7 +1091,8 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                                     );
 
                                     try {
-                                      for (final templateItem in templateItems) {
+                                      for (final templateItem
+                                          in templateItems) {
                                         final item = ShoppingListItem(
                                           id: '${DateTime.now().millisecondsSinceEpoch}_${templateItem.name.hashCode}',
                                           name: templateItem.name.trim(),
@@ -1052,8 +1100,10 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                                           quantity: templateItem.quantity,
                                           unit: templateItem.unit,
                                           unitPrice: templateItem.unitPrice,
-                                          budgetAmount: templateItem.budgetAmount,
-                                          linkedProduct: templateItem.linkedProduct,
+                                          budgetAmount:
+                                              templateItem.budgetAmount,
+                                          linkedProduct:
+                                              templateItem.linkedProduct,
                                         );
                                         await provider.addItemToList(
                                           newList.id,

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
+import '../../core/utils/responsive.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/category_card.dart';
@@ -37,11 +38,13 @@ class CategoriesScreen extends StatelessWidget {
       ),
       body: GridView.builder(
         padding: const EdgeInsets.all(AppSizes.md),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: context.isDesktop ? 4 : (context.isTablet ? 3 : 2),
           mainAxisSpacing: AppSizes.md,
           crossAxisSpacing: AppSizes.md,
-          childAspectRatio: 1.1,
+          childAspectRatio: context.isDesktop
+              ? 1.0
+              : (context.isTablet ? 0.95 : 0.84),
         ),
         itemCount: productProvider.categories.length,
         itemBuilder: (context, index) {

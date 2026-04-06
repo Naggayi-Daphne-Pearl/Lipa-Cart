@@ -91,7 +91,13 @@ class _RecipesScreenState extends State<RecipesScreen> {
                     children: [
                       if (context.isMobile)
                         GestureDetector(
-                          onTap: () => Navigator.pop(context),
+                          onTap: () {
+                            if (context.canPop()) {
+                              context.pop();
+                            } else {
+                              context.go('/customer/home');
+                            }
+                          },
                           child: Container(
                             width: 44,
                             height: 44,
@@ -490,9 +496,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
                     placeholder: (context, url) => Container(
                       height: imageHeight,
                       color: AppColors.grey100,
-                      child: const Center(
-                        child: AppLoadingIndicator.small(),
-                      ),
+                      child: const Center(child: AppLoadingIndicator.small()),
                     ),
                     errorWidget: (context, url, error) => Container(
                       height: imageHeight,

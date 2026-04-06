@@ -352,7 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           child: GestureDetector(
                             onTap: () {
-                              context.go('/customer/search');
+                              context.push('/customer/search');
                             },
                             child: Container(
                               height: context.responsive<double>(
@@ -484,7 +484,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ],
                                       shadowColor: const Color(0xFFFF8C42),
                                       onTap: () =>
-                                          context.go('/customer/categories'),
+                                          context.push('/customer/categories'),
                                     ),
                                     _buildBannerCard(
                                       title: 'WEEKLY DEALS',
@@ -497,7 +497,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ],
                                       shadowColor: const Color(0xFF4CAF50),
                                       onTap: () =>
-                                          context.go('/customer/categories'),
+                                          context.push('/customer/categories'),
                                     ),
                                     _buildBannerCard(
                                       title: 'FREE DELIVERY',
@@ -510,7 +510,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ],
                                       shadowColor: const Color(0xFF2196F3),
                                       onTap: () =>
-                                          context.go('/customer/categories'),
+                                          context.push('/customer/categories'),
                                     ),
                                   ],
                                 ),
@@ -545,7 +545,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: _buildSectionHeader(
                     'Categories',
-                    onSeeAll: () => context.go('/customer/categories'),
+                    onSeeAll: () => context.push('/customer/categories'),
                   ),
                 ),
                 AdaptiveCategorySection(
@@ -698,7 +698,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             child: _buildSectionHeader(
                               'Reorder',
-                              onSeeAll: () => context.go('/customer/orders'),
+                              onSeeAll: () => context.push('/customer/orders'),
                             ),
                           ),
                           const SizedBox(height: AppSizes.sm),
@@ -731,8 +731,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         action: SnackBarAction(
                                           label: 'Checkout',
                                           textColor: Colors.white,
-                                          onPressed: () =>
-                                              context.go('/customer/checkout'),
+                                          onPressed: () => context.push(
+                                            '/customer/checkout',
+                                          ),
                                         ),
                                       ),
                                     );
@@ -842,7 +843,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Shopping Lists Card - Enhanced
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => context.go('/customer/shopping-lists'),
+                          onTap: () => context.push('/customer/shopping-lists'),
                           child: Container(
                             padding: const EdgeInsets.all(AppSizes.md),
                             decoration: BoxDecoration(
@@ -913,7 +914,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Recipes Card - Enhanced
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => context.go('/customer/recipes'),
+                          onTap: () => context.push('/customer/recipes'),
                           child: Container(
                             padding: const EdgeInsets.all(AppSizes.md),
                             decoration: BoxDecoration(
@@ -989,7 +990,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Text('Your Lists', style: AppTextStyles.sectionTitle),
                       GestureDetector(
-                        onTap: () => context.go('/customer/shopping-lists'),
+                        onTap: () => context.push('/customer/shopping-lists'),
                         child: Text(
                           'See All',
                           style: AppTextStyles.labelLarge.copyWith(
@@ -1008,7 +1009,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: GestureDetector(
-                          onTap: () => context.go('/customer/shopping-lists'),
+                          onTap: () => context.push('/customer/shopping-lists'),
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
@@ -1277,7 +1278,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: _buildSectionHeader(
                     'Popular Recipes',
-                    onSeeAll: () => context.go('/customer/recipes'),
+                    onSeeAll: () => context.push('/customer/recipes'),
                   ),
                 ),
                 if (!recipeProvider.isLoading &&
