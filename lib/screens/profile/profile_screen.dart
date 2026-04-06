@@ -94,6 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
+    final isGuest = !authProvider.isAuthenticated;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -106,6 +107,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Guest state — show Sign In prompt
+                if (isGuest) ...[
+                  _buildGuestHeader(context),
+                ] else ...[
                 // Header Greeting
                 Padding(
                   padding: EdgeInsets.all(
@@ -513,7 +518,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onPressed: () async {
                         await LogoutHelper.logoutAndClear(context);
                         if (context.mounted) {
-                          GoRouter.of(context).go('/login');
+                          GoRouter.of(context).go('/customer/home');
                         }
                       },
                       child: Text(
@@ -528,10 +533,202 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
 
                 const SizedBox(height: 100),
+                ], // end else (authenticated)
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildGuestHeader(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.all(
+        context.responsive<double>(
+          mobile: AppSizes.lg,
+          tablet: AppSizes.xl,
+          desktop: 24.0,
+        ),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 24),
+          // Guest avatar
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Iconsax.user,
+              size: 40,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: AppSizes.lg),
+          Text(
+            'Welcome to LipaCart',
+            style: AppTextStyles.h3.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Sign in to track orders, save addresses,\nand get personalised recommendations.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: AppSizes.xl),
+          // Sign In button
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () => context.push('/login'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Sign In',
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSizes.md),
+          // Create Account button
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: OutlinedButton(
+              onPressed: () => context.push('/signup'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: BorderSide(color: AppColors.primary, width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                ),
+              ),
+              child: Text(
+                'Create Account',
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSizes.xxl),
+          // Earn with LipaCart — Glovo-style footer
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSizes.lg),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.08),
+                  AppColors.primaryOrange.withValues(alpha: 0.06),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.15),
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Iconsax.money_recive,
+                  color: AppColors.primary,
+                  size: 32,
+                ),
+                const SizedBox(height: AppSizes.md),
+                Text(
+                  'Earn with LipaCart',
+                  style: AppTextStyles.h5.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Become a Personal Shopper or Delivery Rider and start earning today.',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: AppSizes.lg),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.push('/signup'),
+                        icon: Icon(Iconsax.shopping_bag, size: 18),
+                        label: const Text('Shopper'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: BorderSide(color: AppColors.primary),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSizes.md),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.push('/signup'),
+                        icon: Icon(Iconsax.truck_fast, size: 18),
+                        label: const Text('Rider'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primaryOrange,
+                          side: BorderSide(color: AppColors.primaryOrange),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSizes.lg),
+          // Help & Support for guests too
+          _buildMenuSection(context, 'Need Assistance?', [
+            _MenuItem(
+              icon: Iconsax.info_circle,
+              title: 'Help & Support',
+              onTap: () => context.push('/customer/help'),
+            ),
+            _MenuItem(
+              icon: Iconsax.setting_2,
+              title: 'App Settings',
+              onTap: () => context.push('/customer/settings'),
+            ),
+          ]),
+        ],
       ),
     );
   }
@@ -849,7 +1046,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               const SnackBar(content: Text('Phone number updated! Please log in again.'), backgroundColor: AppColors.success),
                             );
                             await LogoutHelper.logoutAndClear(context);
-                            if (context.mounted) GoRouter.of(context).go('/login');
+                            if (context.mounted) GoRouter.of(context).go('/customer/home');
                           } else if (context.mounted) {
                             final data = jsonDecode(response.body);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -934,7 +1131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Account deleted successfully'), backgroundColor: AppColors.success),
                     );
-                    GoRouter.of(context).go('/login');
+                    GoRouter.of(context).go('/customer/home');
                   }
                 } else if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(

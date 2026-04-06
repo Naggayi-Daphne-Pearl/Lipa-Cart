@@ -167,7 +167,11 @@ class RoleBasedRouter {
 
         // After initial load, never go back to splash
         if (isSplash && !isInitial) {
-          return isAuthenticated ? _homeForRole(userRole, kycStatus: authProvider.user?.kycStatus) : '/login';
+          if (isAuthenticated) {
+            return _homeForRole(userRole, kycStatus: authProvider.user?.kycStatus);
+          }
+          // Guest: first launch → onboarding, returning → home
+          return authProvider.isFirstLaunch ? '/onboarding' : '/customer/home';
         }
 
         // Define protected routes (require authentication)
@@ -182,6 +186,7 @@ class RoleBasedRouter {
         final isAuthRoute =
             state.matchedLocation == '/login' ||
             state.matchedLocation == '/signup' ||
+            state.matchedLocation == '/onboarding' ||
             state.matchedLocation.startsWith('/otp') ||
             state.matchedLocation == '/profile-completion' ||
             state.matchedLocation == '/forgot-password';
