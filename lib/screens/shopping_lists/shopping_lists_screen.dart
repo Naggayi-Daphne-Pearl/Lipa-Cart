@@ -368,30 +368,130 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
               alignment: WrapAlignment.center,
               children: [
                 _buildTemplatePill('🛒 Weekly Essentials', [
-                  'Milk',
-                  'Bread',
-                  'Eggs',
-                  'Rice',
-                  'Cooking Oil',
-                  'Sugar',
-                  'Tea',
-                  'Tomatoes',
-                  'Onions',
+                  ShoppingListItem(
+                    id: 'weekly_milk',
+                    name: 'Milk',
+                    quantity: 1,
+                    unitPrice: 5000,
+                  ),
+                  ShoppingListItem(
+                    id: 'weekly_bread',
+                    name: 'Bread',
+                    quantity: 1,
+                    unitPrice: 4000,
+                  ),
+                  ShoppingListItem(
+                    id: 'weekly_eggs',
+                    name: 'Eggs',
+                    quantity: 1,
+                    unitPrice: 6000,
+                  ),
+                  ShoppingListItem(
+                    id: 'weekly_rice',
+                    name: 'Rice',
+                    quantity: 1,
+                    unitPrice: 8000,
+                  ),
+                  ShoppingListItem(
+                    id: 'weekly_cooking_oil',
+                    name: 'Cooking Oil',
+                    quantity: 1,
+                    unitPrice: 13000,
+                  ),
+                  ShoppingListItem(
+                    id: 'weekly_sugar',
+                    name: 'Sugar',
+                    quantity: 1,
+                    unitPrice: 6000,
+                  ),
+                  ShoppingListItem(
+                    id: 'weekly_tea',
+                    name: 'Tea',
+                    quantity: 1,
+                    unitPrice: 5000,
+                  ),
+                  ShoppingListItem(
+                    id: 'weekly_tomatoes',
+                    name: 'Tomatoes',
+                    quantity: 1,
+                    unitPrice: 3000,
+                  ),
+                  ShoppingListItem(
+                    id: 'weekly_onions',
+                    name: 'Onions',
+                    quantity: 1,
+                    unitPrice: 2500,
+                  ),
                 ]),
                 _buildTemplatePill('🎉 Party Supplies', [
-                  'Sodas',
-                  'Juice',
-                  'Chips',
-                  'Cake',
-                  'Paper Plates',
-                  'Napkins',
+                  ShoppingListItem(
+                    id: 'party_sodas',
+                    name: 'Sodas',
+                    quantity: 1,
+                    unitPrice: 2000,
+                  ),
+                  ShoppingListItem(
+                    id: 'party_juice',
+                    name: 'Juice',
+                    quantity: 1,
+                    unitPrice: 5000,
+                  ),
+                  ShoppingListItem(
+                    id: 'party_chips',
+                    name: 'Chips',
+                    quantity: 1,
+                    unitPrice: 3500,
+                  ),
+                  ShoppingListItem(
+                    id: 'party_cake',
+                    name: 'Cake',
+                    quantity: 1,
+                    unitPrice: 12000,
+                  ),
+                  ShoppingListItem(
+                    id: 'party_paper_plates',
+                    name: 'Paper Plates',
+                    quantity: 1,
+                    unitPrice: 1500,
+                  ),
+                  ShoppingListItem(
+                    id: 'party_napkins',
+                    name: 'Napkins',
+                    quantity: 1,
+                    unitPrice: 1200,
+                  ),
                 ]),
                 _buildTemplatePill('👶 Baby Needs', [
-                  'Baby Formula',
-                  'Diapers',
-                  'Baby Wipes',
-                  'Baby Food',
-                  'Baby Cereal',
+                  ShoppingListItem(
+                    id: 'baby_formula',
+                    name: 'Baby Formula',
+                    quantity: 1,
+                    unitPrice: 25000,
+                  ),
+                  ShoppingListItem(
+                    id: 'baby_diapers',
+                    name: 'Diapers',
+                    quantity: 1,
+                    unitPrice: 12000,
+                  ),
+                  ShoppingListItem(
+                    id: 'baby_wipes',
+                    name: 'Baby Wipes',
+                    quantity: 1,
+                    unitPrice: 4000,
+                  ),
+                  ShoppingListItem(
+                    id: 'baby_food',
+                    name: 'Baby Food',
+                    quantity: 1,
+                    unitPrice: 7000,
+                  ),
+                  ShoppingListItem(
+                    id: 'baby_cereal',
+                    name: 'Baby Cereal',
+                    quantity: 1,
+                    unitPrice: 4500,
+                  ),
                 ]),
               ],
             ),
@@ -401,7 +501,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     );
   }
 
-  Widget _buildTemplatePill(String label, List<String> items) {
+  Widget _buildTemplatePill(String label, List<ShoppingListItem> items) {
     return GestureDetector(
       onTap: () {
         final name = label.replaceAll(RegExp(r'[^\w\s]'), '').trim();
@@ -493,7 +593,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     BuildContext context, {
     String? templateName,
     String? templateDescription,
-    List<String>? templateItems,
+    List<ShoppingListItem>? templateItems,
   }) {
     final shoppingListProvider = context.read<ShoppingListProvider>();
     final authProvider = context.read<AuthProvider>();
@@ -722,11 +822,16 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                                     );
 
                                     try {
-                                      for (final itemName in templateItems) {
+                                      for (final templateItem in templateItems) {
                                         final item = ShoppingListItem(
-                                          id: '${DateTime.now().millisecondsSinceEpoch}_${itemName.hashCode}',
-                                          name: itemName.trim(),
-                                          quantity: 1,
+                                          id: '${DateTime.now().millisecondsSinceEpoch}_${templateItem.name.hashCode}',
+                                          name: templateItem.name.trim(),
+                                          description: templateItem.description,
+                                          quantity: templateItem.quantity,
+                                          unit: templateItem.unit,
+                                          unitPrice: templateItem.unitPrice,
+                                          budgetAmount: templateItem.budgetAmount,
+                                          linkedProduct: templateItem.linkedProduct,
                                         );
                                         await provider.addItemToList(
                                           newList.id,
