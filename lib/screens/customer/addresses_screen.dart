@@ -30,23 +30,30 @@ class _AddressesScreenState extends State<AddressesScreen> {
   @override
   void initState() {
     super.initState();
-    _loadAddresses();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadAddresses();
+      }
+    });
   }
 
   Future<void> _loadAddresses() async {
     final authProvider = context.read<AuthProvider>();
     final addressService = context.read<AddressService>();
+    await _refreshAddresses(authProvider, addressService);
+  }
 
-    final customerId = authProvider.user?.customerId;
-    if (authProvider.user != null &&
-        authProvider.token != null &&
-        customerId != null) {
-      final success = await addressService.fetchAddresses(
-        authProvider.token!,
-        customerId,
-      );
+  Future<void> _refreshAddresses(
+    AuthProvider auth,
+    AddressService addressService,
+  ) async {
+    final customerId = auth.user?.customerId;
+    final token = auth.token;
+
+    if (auth.user != null && token != null && customerId != null) {
+      final success = await addressService.fetchAddresses(token, customerId);
       if (success) {
-        await authProvider.setAddresses(addressService.userAddresses);
+        await auth.setAddresses(addressService.userAddresses);
       }
     }
   }
@@ -259,7 +266,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
                   gpsLng: lng,
                 );
               }
-              await auth.setAddresses(addressService.userAddresses);
+              await _refreshAddresses(auth, addressService);
               if (context.mounted) {
                 Navigator.pop(context);
                 if (address == null && widget.returnRoute != null) {
@@ -297,12 +304,25 @@ class _AddressesScreenState extends State<AddressesScreen> {
     );
 
     if (confirmed == true && context.mounted) {
-      await addressService.deleteAddress(
+      final messenger = ScaffoldMessenger.of(context);
+      final deleted = await addressService.deleteAddress(
         token: auth.token!,
         addressId: id,
         addressDocumentId: documentId,
       );
-      await auth.setAddresses(addressService.userAddresses);
+
+      if (deleted) {
+        await _refreshAddresses(auth, addressService);
+        if (context.mounted) {
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Address deleted successfully')),
+          );
+        }
+      } else if (context.mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Could not delete address. Try again.')),
+        );
+      }
     }
   }
 
@@ -318,7 +338,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
       addressId: id,
       addressDocumentId: documentId,
     );
-    await auth.setAddresses(addressService.userAddresses);
+    await _refreshAddresses(auth, addressService);
   }
 }
 
@@ -542,7 +562,8 @@ class _AddressFormState extends State<AddressForm> {
   bool isDefault = false;
   double? _selectedLat;
   double? _selectedLng;
-  bool _showMap = false; // Whether user chose to use map
+  bool _showMap =
+      false; // Map pin is optional but helps riders find the exact stop.
 
   double _toRadians(double degrees) => degrees * math.pi / 180;
 
@@ -561,6 +582,9 @@ class _AddressFormState extends State<AddressForm> {
       text: widget.address?.deliveryInstructions ?? '',
     );
     isDefault = widget.address?.isDefault ?? false;
+    _selectedLat = widget.address?.gpsLat;
+    _selectedLng = widget.address?.gpsLng;
+    _showMap = _selectedLat != null && _selectedLng != null;
   }
 
   @override
@@ -593,173 +617,181 @@ class _AddressFormState extends State<AddressForm> {
             ),
             const SizedBox(height: AppSizes.md),
 
-            // Location method choice
-            if (!_showMap) ...[
-              Text(
-                'How would you like to set your location?',
-                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSizes.md),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                border: Border.all(color: AppColors.grey200),
               ),
-              const SizedBox(height: AppSizes.sm),
-              Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _showMap = true),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(Icons.map_outlined, color: AppColors.primary, size: 28),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Use Map',
-                              style: AppTextStyles.labelMedium.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Search or pin location',
-                              style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary, fontSize: 10),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+                  Row(
+                    children: [
+                      const Icon(
+                        Iconsax.location,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: AppSizes.xs),
+                      Expanded(
+                        child: Text(
+                          'Address details come first',
+                          style: AppTextStyles.labelMedium.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSizes.xs),
+                  Text(
+                    'Use the area, building name, and a nearby landmark. Add a map pin only if you want extra precision for the rider.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
                     ),
                   ),
-                  const SizedBox(width: AppSizes.sm),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        // Skip map, just fill in text fields manually
-                        // Focus the address field
+                  const SizedBox(height: AppSizes.sm),
+                  if (!_showMap)
+                    OutlinedButton.icon(
+                      onPressed: () => setState(() => _showMap = true),
+                      icon: const Icon(Icons.map_outlined, size: 18),
+                      label: const Text('Add map pin (optional)'),
+                    )
+                  else ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Pin your exact drop-off point',
+                          style: AppTextStyles.labelMedium.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => setState(() => _showMap = false),
+                          child: const Text('Hide map'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSizes.xs),
+                    Text(
+                      'Search, drag, or use GPS. The address preview updates automatically as you move the map.',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSizes.sm),
+                    MapLocationPicker(
+                      initialLat: _selectedLat ?? widget.address?.gpsLat,
+                      initialLng: _selectedLng ?? widget.address?.gpsLng,
+                      onLocationSelected: (result) async {
+                        final messenger = ScaffoldMessenger.of(context);
+
+                        setState(() {
+                          _selectedLat = result.latitude;
+                          _selectedLng = result.longitude;
+                          if ((result.address ?? '').trim().isNotEmpty) {
+                            addressLineController.text = result.address!.trim();
+                          }
+                          if ((result.city ?? '').trim().isNotEmpty) {
+                            cityController.text = result.city!.trim();
+                          }
+                        });
+
+                        try {
+                          final position =
+                              await Geolocator.getLastKnownPosition();
+                          if (position != null && mounted) {
+                            final distanceMeters = Geolocator.distanceBetween(
+                              position.latitude,
+                              position.longitude,
+                              result.latitude,
+                              result.longitude,
+                            );
+                            final distanceKm = distanceMeters / 1000;
+                            if (distanceKm > 3) {
+                              if (!mounted) return;
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'This pin is ${distanceKm.toStringAsFixed(1)} km from your current phone location. Please double-check it.',
+                                  ),
+                                  backgroundColor: Colors.orange,
+                                  duration: const Duration(seconds: 4),
+                                ),
+                              );
+                            }
+                          }
+                        } catch (_) {
+                          // GPS not available — skip distance check
+                        }
+
+                        if (mounted) {
+                          final dLat = _toRadians(
+                            result.latitude - AppConstants.serviceAreaCenterLat,
+                          );
+                          final dLng = _toRadians(
+                            result.longitude -
+                                AppConstants.serviceAreaCenterLng,
+                          );
+                          final a =
+                              math.sin(dLat / 2) * math.sin(dLat / 2) +
+                              math.cos(
+                                    _toRadians(
+                                      AppConstants.serviceAreaCenterLat,
+                                    ),
+                                  ) *
+                                  math.cos(_toRadians(result.latitude)) *
+                                  math.sin(dLng / 2) *
+                                  math.sin(dLng / 2);
+                          final c =
+                              2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+                          final serviceDistKm = 6371.0 * c;
+                          if (serviceDistKm >
+                              AppConstants.serviceAreaRadiusKm) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'This location is outside our delivery zone '
+                                  '(${serviceDistKm.toStringAsFixed(1)} km from Kampala center). '
+                                  'We currently deliver within ${AppConstants.serviceAreaRadiusKm.toInt()} km.',
+                                ),
+                                backgroundColor: AppColors.error,
+                                duration: const Duration(seconds: 5),
+                              ),
+                            );
+                          }
+                        }
                       },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    if (_selectedLat != null && _selectedLng != null) ...[
+                      const SizedBox(height: AppSizes.sm),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSizes.sm),
                         decoration: BoxDecoration(
-                          color: AppColors.grey100,
-                          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                          border: Border.all(color: AppColors.grey200),
+                          color: AppColors.primary.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusSm,
+                          ),
                         ),
-                        child: Column(
-                          children: [
-                            Icon(Icons.edit_outlined, color: AppColors.textSecondary, size: 28),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Type Address',
-                              style: AppTextStyles.labelMedium.copyWith(
-                                color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Enter address manually',
-                              style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary, fontSize: 10),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+                        child: Text(
+                          'Pinned coordinates: ${_selectedLat!.toStringAsFixed(5)}, ${_selectedLng!.toStringAsFixed(5)}',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.primaryDark,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                    ],
+                  ],
                 ],
               ),
-              const SizedBox(height: AppSizes.md),
-            ] else ...[
-              // Map picker (shown after user chooses "Use Map")
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Pin your location', style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w600)),
-                  GestureDetector(
-                    onTap: () => setState(() => _showMap = false),
-                    child: Text('Type instead', style: AppTextStyles.caption.copyWith(color: AppColors.primary)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSizes.sm),
-              MapLocationPicker(
-                initialLat: widget.address?.gpsLat,
-                initialLng: widget.address?.gpsLng,
-                onLocationSelected: (result) async {
-                  setState(() {
-                    _selectedLat = result.latitude;
-                    _selectedLng = result.longitude;
-                    if (result.address != null && addressLineController.text.isEmpty) {
-                      addressLineController.text = result.address!;
-                    }
-                    if (result.city != null && cityController.text.isEmpty) {
-                      cityController.text = result.city!;
-                    }
-                  });
-
-                  // Check distance from current location
-                  try {
-                    final position = await Geolocator.getLastKnownPosition();
-                    if (position != null && mounted) {
-                      final distanceMeters = Geolocator.distanceBetween(
-                        position.latitude, position.longitude,
-                        result.latitude, result.longitude,
-                      );
-                      final distanceKm = distanceMeters / 1000;
-                      if (distanceKm > 3) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'This location is ${distanceKm.toStringAsFixed(1)} km from your current position. Are you sure?',
-                            ),
-                            backgroundColor: Colors.orange,
-                            duration: const Duration(seconds: 4),
-                            action: SnackBarAction(
-                              label: 'OK',
-                              textColor: Colors.white,
-                              onPressed: () {},
-                            ),
-                          ),
-                        );
-                      }
-                    }
-                  } catch (_) {
-                    // GPS not available — skip distance check
-                  }
-
-                  // Service area boundary check
-                  if (mounted) {
-                    final dLat = _toRadians(result.latitude - AppConstants.serviceAreaCenterLat);
-                    final dLng = _toRadians(result.longitude - AppConstants.serviceAreaCenterLng);
-                    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-                        math.cos(_toRadians(AppConstants.serviceAreaCenterLat)) *
-                        math.cos(_toRadians(result.latitude)) *
-                        math.sin(dLng / 2) * math.sin(dLng / 2);
-                    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-                    final serviceDistKm = 6371.0 * c;
-                    if (serviceDistKm > AppConstants.serviceAreaRadiusKm) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'This location is outside our delivery zone '
-                            '(${serviceDistKm.toStringAsFixed(1)} km from Kampala center). '
-                            'We currently deliver within ${AppConstants.serviceAreaRadiusKm.toInt()} km.',
-                          ),
-                          backgroundColor: AppColors.error,
-                          duration: const Duration(seconds: 5),
-                        ),
-                      );
-                    }
-                  }
-                },
-              ),
-              const SizedBox(height: AppSizes.md),
-            ],
+            ),
+            const SizedBox(height: AppSizes.md),
 
             _buildInputField(
               controller: labelController,
@@ -769,8 +801,8 @@ class _AddressFormState extends State<AddressForm> {
             const SizedBox(height: AppSizes.md),
             _buildInputField(
               controller: addressLineController,
-              label: 'Address',
-              hint: 'Street, building, apartment',
+              label: 'Area / Building / Road',
+              hint: 'e.g., Ntinda, Sunrise Apartments, House 4',
               maxLines: 2,
             ),
             const SizedBox(height: AppSizes.md),
@@ -783,13 +815,13 @@ class _AddressFormState extends State<AddressForm> {
             _buildInputField(
               controller: landmarkController,
               label: 'Landmark (optional)',
-              hint: 'e.g., Near market, Next to park',
+              hint: 'e.g., Opposite Total Petrol Station',
             ),
             const SizedBox(height: AppSizes.md),
             _buildInputField(
               controller: instructionsController,
               label: 'Delivery Instructions (optional)',
-              hint: 'e.g., Ring the bell twice',
+              hint: 'e.g., Call me when you arrive at the gate',
               maxLines: 2,
             ),
             const SizedBox(height: AppSizes.md),

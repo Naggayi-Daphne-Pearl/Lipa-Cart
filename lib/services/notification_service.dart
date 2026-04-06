@@ -41,11 +41,11 @@ class NotificationService {
   /// Android notification channel for order updates.
   static const AndroidNotificationChannel _orderChannel =
       AndroidNotificationChannel(
-    'lipacart_orders',
-    'Order Updates',
-    description: 'Notifications about your LipaCart orders',
-    importance: Importance.high,
-  );
+        'lipacart_orders',
+        'Order Updates',
+        description: 'Notifications about your LipaCart orders',
+        importance: Importance.high,
+      );
 
   /// Initialize the notification service. Call once after Firebase.initializeApp().
   Future<void> init() async {
@@ -59,7 +59,8 @@ class NotificationService {
     // Create the Android notification channel
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(_orderChannel);
 
     // Initialize local notifications for foreground display
@@ -109,7 +110,8 @@ class NotificationService {
       if (kIsWeb) {
         // Web requires a VAPID key from Firebase Console → Cloud Messaging → Web Push certificates
         return await _messaging!.getToken(
-          vapidKey: 'BMrbqo9Y3Jm9LPgvapCjKgbCS75GRDH78147SmrRSI6StsTqMi2xudsdljV4UG9P0Ypmz4hffrXYzwZUQ1ClDpQ',
+          vapidKey:
+              'BMrbqo9Y3Jm9LPgvapCjKgbCS75GRDH78147SmrRSI6StsTqMi2xudsdljV4UG9P0Ypmz4hffrXYzwZUQ1ClDpQ',
         );
       }
       return await _messaging!.getToken();
@@ -122,10 +124,13 @@ class NotificationService {
   /// Register the device token with the backend.
   Future<void> registerTokenWithBackend(String authToken) async {
     final fcmToken = await getToken();
-    if (fcmToken == null) return;
+    if (fcmToken == null) {
+      debugPrint('[notifications] No FCM token available to register');
+      return;
+    }
 
     try {
-      await http.post(
+      final response = await http.post(
         Uri.parse('${AppConstants.apiUrl}/user/register-device'),
         headers: {
           'Content-Type': 'application/json',
@@ -133,6 +138,15 @@ class NotificationService {
         },
         body: jsonEncode({'fcm_token': fcmToken}),
       );
+
+      if (response.statusCode == 200) {
+        debugPrint('[notifications] Device token registered with backend');
+      } else {
+        debugPrint(
+          '[notifications] Device token registration failed: '
+          '${response.statusCode} ${response.body}',
+        );
+      }
     } catch (e) {
       debugPrint('[notifications] Failed to register device token: $e');
     }
@@ -142,7 +156,7 @@ class NotificationService {
   void listenForTokenRefresh(String authToken) {
     _messaging?.onTokenRefresh.listen((newToken) async {
       try {
-        await http.post(
+        final response = await http.post(
           Uri.parse('${AppConstants.apiUrl}/user/register-device'),
           headers: {
             'Content-Type': 'application/json',
@@ -150,6 +164,13 @@ class NotificationService {
           },
           body: jsonEncode({'fcm_token': newToken}),
         );
+
+        if (response.statusCode != 200) {
+          debugPrint(
+            '[notifications] Refreshed token registration failed: '
+            '${response.statusCode} ${response.body}',
+          );
+        }
       } catch (e) {
         debugPrint('[notifications] Failed to re-register refreshed token: $e');
       }
@@ -165,7 +186,10 @@ class NotificationService {
       debugPrint('[notifications] *** FOREGROUND WEB MESSAGE RECEIVED ***');
       debugPrint('[notifications] Title: ${notification.title}');
       debugPrint('[notifications] Body: ${notification.body}');
-      _showWebNotification(notification.title ?? 'LipaCart', notification.body ?? '');
+      _showWebNotification(
+        notification.title ?? 'LipaCart',
+        notification.body ?? '',
+      );
     } else {
       _localNotifications.show(
         notification.hashCode,

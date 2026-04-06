@@ -264,7 +264,8 @@ class StrapiService {
         // Strapi v5: fields are directly on data, not nested in attributes
         final shopperData = data['data'];
         if (shopperData is Map<String, dynamic>) {
-          return shopperData['attributes'] as Map<String, dynamic>? ?? shopperData;
+          return shopperData['attributes'] as Map<String, dynamic>? ??
+              shopperData;
         }
         return null;
       }
@@ -351,7 +352,8 @@ class StrapiService {
     final addressRaw = attrs['delivery_address'];
     Address deliveryAddress;
     if (addressRaw is Map<String, dynamic>) {
-      final addrData = (addressRaw.containsKey('data') &&
+      final addrData =
+          (addressRaw.containsKey('data') &&
               addressRaw['data'] is Map<String, dynamic>)
           ? addressRaw['data'] as Map<String, dynamic>
           : addressRaw;
@@ -401,7 +403,8 @@ class StrapiService {
     User? customer;
     final customerData = attrs['customer'];
     if (customerData is Map<String, dynamic>) {
-      final cAttrs = customerData['attributes'] as Map<String, dynamic>? ?? customerData;
+      final cAttrs =
+          customerData['attributes'] as Map<String, dynamic>? ?? customerData;
       customer = User(
         id: (customerData['documentId'] ?? customerData['id'] ?? '').toString(),
         phoneNumber: (cAttrs['phone'] ?? '').toString(),
@@ -415,7 +418,8 @@ class StrapiService {
     String? shopperPhone;
     final shopperData = attrs['shopper'];
     if (shopperData is Map<String, dynamic>) {
-      final sAttrs = shopperData['attributes'] as Map<String, dynamic>? ?? shopperData;
+      final sAttrs =
+          shopperData['attributes'] as Map<String, dynamic>? ?? shopperData;
       shopperName = sAttrs['name'] as String?;
       shopperPhone = sAttrs['phone'] as String?;
     }
@@ -425,7 +429,8 @@ class StrapiService {
     String? riderPhone;
     final riderData = attrs['rider'];
     if (riderData is Map<String, dynamic>) {
-      final rAttrs = riderData['attributes'] as Map<String, dynamic>? ?? riderData;
+      final rAttrs =
+          riderData['attributes'] as Map<String, dynamic>? ?? riderData;
       riderName = rAttrs['name'] as String?;
       riderPhone = rAttrs['phone'] as String?;
     }
@@ -452,9 +457,7 @@ class StrapiService {
       estimatedDelivery: DateTime.tryParse(
         attrs['estimated_delivery'] as String? ?? '',
       ),
-      deliveredAt: DateTime.tryParse(
-        attrs['delivered_at'] as String? ?? '',
-      ),
+      deliveredAt: DateTime.tryParse(attrs['delivered_at'] as String? ?? ''),
       cancellationReason: attrs['cancellation_reason'] as String?,
       paymentMethod: PaymentMethod.values.firstWhere(
         (p) => p.name == (attrs['payment_method'] as String? ?? ''),
@@ -583,10 +586,12 @@ class StrapiService {
   /// Shopper unclaims an order (removes assignment)
   static Future<bool> unclaimOrder(String orderDocumentId, String token) async {
     try {
-      final response = await http.delete(
-        Uri.parse('$_apiUrl/orders/$orderDocumentId/claim'),
-        headers: {'Authorization': 'Bearer $token'},
-      ).timeout(AppConstants.apiTimeout);
+      final response = await http
+          .delete(
+            Uri.parse('$_apiUrl/orders/$orderDocumentId/claim'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(AppConstants.apiTimeout);
       return response.statusCode == 200;
     } catch (e) {
       // ignored
@@ -987,16 +992,36 @@ class StrapiService {
         'vehicle_type': vehicleType,
         'license_number': licenseNumber,
       };
-      if (vehicleMake != null) body['vehicle_make'] = vehicleMake;
-      if (vehiclePlate != null) body['vehicle_plate'] = vehiclePlate;
-      if (licensePhotoUrl != null) body['license_photo_url'] = licensePhotoUrl;
-      if (mobileMoneyProvider != null) body['mobile_money_provider'] = mobileMoneyProvider;
-      if (mobileMoneyNumber != null) body['mobile_money_number'] = mobileMoneyNumber;
-      if (bankName != null) body['bank_name'] = bankName;
-      if (bankAccountName != null) body['bank_account_name'] = bankAccountName;
-      if (bankAccountNumber != null) body['bank_account_number'] = bankAccountNumber;
-      if (emergencyContactName != null) body['emergency_contact_name'] = emergencyContactName;
-      if (emergencyContactPhone != null) body['emergency_contact_phone'] = emergencyContactPhone;
+      if (vehicleMake != null) {
+        body['vehicle_make'] = vehicleMake;
+      }
+      if (vehiclePlate != null) {
+        body['vehicle_plate'] = vehiclePlate;
+      }
+      if (licensePhotoUrl != null) {
+        body['license_photo_url'] = licensePhotoUrl;
+      }
+      if (mobileMoneyProvider != null) {
+        body['mobile_money_provider'] = mobileMoneyProvider;
+      }
+      if (mobileMoneyNumber != null) {
+        body['mobile_money_number'] = mobileMoneyNumber;
+      }
+      if (bankName != null) {
+        body['bank_name'] = bankName;
+      }
+      if (bankAccountName != null) {
+        body['bank_account_name'] = bankAccountName;
+      }
+      if (bankAccountNumber != null) {
+        body['bank_account_number'] = bankAccountNumber;
+      }
+      if (emergencyContactName != null) {
+        body['emergency_contact_name'] = emergencyContactName;
+      }
+      if (emergencyContactPhone != null) {
+        body['emergency_contact_phone'] = emergencyContactPhone;
+      }
 
       final response = await http
           .post(
@@ -1096,6 +1121,15 @@ class StrapiService {
       // ignored
       return false;
     }
+  }
+
+  /// Toggle rider online/offline status
+  static Future<bool> updateRiderStatus(
+    String riderId,
+    bool isOnline,
+    String token,
+  ) async {
+    return updateRiderProfile(riderId, {'is_online': isOnline}, token);
   }
 
   /// Update user profile (name, email)

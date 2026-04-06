@@ -462,7 +462,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           paymentMethod: _selectedPayment,
         );
 
-        await orderService.createOrderWithItems(
+        final backendOrder = await orderService.createOrderWithItems(
           token: authProvider.token!,
           userId: authProvider.user!.id,
           addressId: _selectedAddress!.id,
@@ -474,11 +474,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           paymentMethod: _selectedPayment.name,
         );
 
+        if (backendOrder != null) {
+          orderProvider.syncOrdersFromService(orderService.orders);
+          orderProvider.setCurrentOrder(backendOrder);
+        }
+
         setState(() => _isLoading = false);
 
-        if (localOrder != null && mounted) {
+        final orderForSuccess = backendOrder ?? localOrder;
+        if (orderForSuccess != null && mounted) {
           cartProvider.clearCart();
-          context.push('/customer/order-success', extra: localOrder);
+          context.push('/customer/order-success', extra: orderForSuccess);
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

@@ -104,6 +104,8 @@ class Order {
   final String? riderId;
   final String? riderName;
   final String? riderPhone;
+  final double? riderLatitude;
+  final double? riderLongitude;
   final DateTime createdAt;
   final DateTime? estimatedDelivery;
   final DateTime? deliveredAt;
@@ -133,6 +135,8 @@ class Order {
     this.riderId,
     this.riderName,
     this.riderPhone,
+    this.riderLatitude,
+    this.riderLongitude,
     required this.createdAt,
     this.estimatedDelivery,
     this.deliveredAt,
@@ -175,6 +179,8 @@ class Order {
     String? riderId,
     String? riderName,
     String? riderPhone,
+    double? riderLatitude,
+    double? riderLongitude,
     DateTime? createdAt,
     DateTime? estimatedDelivery,
     DateTime? deliveredAt,
@@ -203,6 +209,8 @@ class Order {
       riderId: riderId ?? this.riderId,
       riderName: riderName ?? this.riderName,
       riderPhone: riderPhone ?? this.riderPhone,
+      riderLatitude: riderLatitude ?? this.riderLatitude,
+      riderLongitude: riderLongitude ?? this.riderLongitude,
       createdAt: createdAt ?? this.createdAt,
       estimatedDelivery: estimatedDelivery ?? this.estimatedDelivery,
       deliveredAt: deliveredAt ?? this.deliveredAt,
@@ -234,6 +242,8 @@ class Order {
       'riderId': riderId,
       'riderName': riderName,
       'riderPhone': riderPhone,
+      'riderLatitude': riderLatitude,
+      'riderLongitude': riderLongitude,
       'createdAt': createdAt.toIso8601String(),
       'estimatedDelivery': estimatedDelivery?.toIso8601String(),
       'deliveredAt': deliveredAt?.toIso8601String(),
@@ -274,6 +284,8 @@ class Order {
       riderId: json['riderId'] as String?,
       riderName: json['riderName'] as String?,
       riderPhone: json['riderPhone'] as String?,
+      riderLatitude: (json['riderLatitude'] as num?)?.toDouble(),
+      riderLongitude: (json['riderLongitude'] as num?)?.toDouble(),
       createdAt: DateTime.parse(json['createdAt'] as String),
       estimatedDelivery: json['estimatedDelivery'] != null
           ? DateTime.parse(json['estimatedDelivery'] as String)

@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
+import '../services/strapi_service.dart';
 import '../core/constants/app_constants.dart';
 import '../services/web_cookie_storage_stub.dart'
     if (dart.library.html) '../services/web_cookie_storage.dart';
@@ -497,7 +498,9 @@ class AuthProvider extends ChangeNotifier {
           shopperId: response['shopper_id']?.toString() ?? _user!.shopperId,
           riderId: response['rider_id']?.toString() ?? _user!.riderId,
           kycStatus: (response['kyc_status'] as String?) ?? _user!.kycStatus,
-          kycRejectionReason: (response['kyc_rejection_reason'] as String?) ?? _user!.kycRejectionReason,
+          kycRejectionReason:
+              (response['kyc_rejection_reason'] as String?) ??
+              _user!.kycRejectionReason,
         );
       }
 
@@ -563,6 +566,27 @@ class AuthProvider extends ChangeNotifier {
   /// Logout and clear stored session
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
+
+    try {
+      if (_token != null && _user != null) {
+        if (_user!.role == UserRole.shopper && _user!.shopperId != null) {
+          await StrapiService.updateShopperStatus(
+            _user!.shopperId!,
+            false,
+            _token!,
+          );
+        } else if (_user!.role == UserRole.rider && _user!.riderId != null) {
+          await StrapiService.updateRiderStatus(
+            _user!.riderId!,
+            false,
+            _token!,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[auth] Failed to set worker offline during logout: $e');
+    }
+
     await _deleteToken();
     await prefs.remove(AppConstants.userKey);
 

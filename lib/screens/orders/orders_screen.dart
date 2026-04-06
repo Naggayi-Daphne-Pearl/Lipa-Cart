@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
@@ -28,6 +30,7 @@ enum OrderTab { active, delivered, cancelled }
 class _OrdersScreenState extends State<OrdersScreen> {
   bool _isLoadingOrders = false;
   OrderTab _selectedTab = OrderTab.active;
+  Timer? _pollTimer;
 
   @override
   void initState() {
@@ -35,6 +38,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchOrders();
     });
+    _pollTimer = Timer.periodic(const Duration(seconds: 12), (_) {
+      if (mounted) {
+        _fetchOrders();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchOrders() async {
@@ -82,7 +96,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     // Filter orders by tab
     final activeOrders = orderProvider.orders
-        .where((o) => o.status != OrderStatus.cancelled && o.status != OrderStatus.delivered)
+        .where(
+          (o) =>
+              o.status != OrderStatus.cancelled &&
+              o.status != OrderStatus.delivered,
+        )
         .toList();
     final deliveredOrders = orderProvider.orders
         .where((o) => o.status == OrderStatus.delivered)
@@ -99,138 +117,143 @@ class _OrdersScreenState extends State<OrdersScreen> {
           _fetchOrders();
         }),
         child: ResponsiveContainer(
-        child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: _fetchOrders,
-            child: _isLoadingOrders && orderProvider.orders.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const AppLoadingIndicator(),
-                        const SizedBox(height: AppSizes.md),
-                        Text(
-                          'Loading orders...',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSizes.lg,
-                            AppSizes.sm,
-                            AppSizes.lg,
-                            AppSizes.sm,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  GestureDetector(
-                                    onTap: () {
-                                      if (Navigator.of(context).canPop()) {
-                                        Navigator.pop(context);
-                                      } else {
-                                        GoRouter.of(context).go('/customer/home');
-                                      }
-                                    },
-                                    child: const Icon(Iconsax.arrow_left, size: 24),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    'My Orders',
-                                    style: AppTextStyles.h3.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 22,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Tab Bar
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: context.horizontalPadding,
-                          ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: AppColors.grey200,
-                                  width: 1,
-                                ),
-                              ),
+          child: SafeArea(
+            child: RefreshIndicator(
+              onRefresh: _fetchOrders,
+              child: _isLoadingOrders && orderProvider.orders.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const AppLoadingIndicator(),
+                          const SizedBox(height: AppSizes.md),
+                          Text(
+                            'Loading orders...',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
                             ),
-                            child: Row(
+                          ),
+                        ],
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSizes.lg,
+                              AppSizes.sm,
+                              AppSizes.lg,
+                              AppSizes.sm,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: _buildTabButton(
-                                    context,
-                                    activeOrders.isNotEmpty
-                                        ? 'Active (${activeOrders.length})'
-                                        : 'Active',
-                                    OrderTab.active,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: _buildTabButton(
-                                    context,
-                                    deliveredOrders.isNotEmpty
-                                        ? 'Delivered (${deliveredOrders.length})'
-                                        : 'Delivered',
-                                    OrderTab.delivered,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: _buildTabButton(
-                                    context,
-                                    cancelledOrders.isNotEmpty
-                                        ? 'Cancelled (${cancelledOrders.length})'
-                                        : 'Cancelled',
-                                    OrderTab.cancelled,
-                                  ),
+                                Row(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () {
+                                        if (Navigator.of(context).canPop()) {
+                                          Navigator.pop(context);
+                                        } else {
+                                          GoRouter.of(
+                                            context,
+                                          ).go('/customer/home');
+                                        }
+                                      },
+                                      child: const Icon(
+                                        Iconsax.arrow_left,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'My Orders',
+                                      style: AppTextStyles.h3.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 22,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-                        ),
 
-                        SizedBox(
-                          height: context.responsive<double>(
-                            mobile: AppSizes.md,
-                            tablet: AppSizes.lg,
-                            desktop: AppSizes.lg,
+                          // Tab Bar
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: context.horizontalPadding,
+                            ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: AppColors.grey200,
+                                    width: 1,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildTabButton(
+                                      context,
+                                      activeOrders.isNotEmpty
+                                          ? 'Active (${activeOrders.length})'
+                                          : 'Active',
+                                      OrderTab.active,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _buildTabButton(
+                                      context,
+                                      deliveredOrders.isNotEmpty
+                                          ? 'Delivered (${deliveredOrders.length})'
+                                          : 'Delivered',
+                                      OrderTab.delivered,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _buildTabButton(
+                                      context,
+                                      cancelledOrders.isNotEmpty
+                                          ? 'Cancelled (${cancelledOrders.length})'
+                                          : 'Cancelled',
+                                      OrderTab.cancelled,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
 
-                        // Orders List
-                        if (_selectedTab == OrderTab.active)
-                          _buildOrdersList(context, activeOrders)
-                        else if (_selectedTab == OrderTab.delivered)
-                          _buildOrdersList(context, deliveredOrders)
-                        else
-                          _buildOrdersList(context, cancelledOrders),
+                          SizedBox(
+                            height: context.responsive<double>(
+                              mobile: AppSizes.md,
+                              tablet: AppSizes.lg,
+                              desktop: AppSizes.lg,
+                            ),
+                          ),
 
-                        const SizedBox(height: 100),
-                      ],
+                          // Orders List
+                          if (_selectedTab == OrderTab.active)
+                            _buildOrdersList(context, activeOrders)
+                          else if (_selectedTab == OrderTab.delivered)
+                            _buildOrdersList(context, deliveredOrders)
+                          else
+                            _buildOrdersList(context, cancelledOrders),
+
+                          const SizedBox(height: 100),
+                        ],
+                      ),
                     ),
-                  ),
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -383,7 +406,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ),
 
                     // Rate badge for unrated delivered orders
-                    if (order.status == OrderStatus.delivered && !order.hasBeenRated) ...[
+                    if (order.status == OrderStatus.delivered &&
+                        !order.hasBeenRated) ...[
                       const SizedBox(height: AppSizes.sm),
                       GestureDetector(
                         onTap: () {
@@ -391,22 +415,38 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           context.push('/customer/order-rating', extra: order);
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryOrange.withValues(alpha: 0.1),
+                            color: AppColors.primaryOrange.withValues(
+                              alpha: 0.1,
+                            ),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.primaryOrange.withValues(alpha: 0.3)),
+                            border: Border.all(
+                              color: AppColors.primaryOrange.withValues(
+                                alpha: 0.3,
+                              ),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.star_rounded, size: 16, color: AppColors.primaryOrange),
-                              const SizedBox(width: 6),
-                              Text('Rate this order', style: TextStyle(
+                              Icon(
+                                Icons.star_rounded,
+                                size: 16,
                                 color: AppColors.primaryOrange,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              )),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Rate this order',
+                                style: TextStyle(
+                                  color: AppColors.primaryOrange,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -463,7 +503,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
       case OrderStatus.confirmed:
         return (const Color(0xFFE3F2FD), const Color(0xFF1976D2), 'Confirmed');
       case OrderStatus.shopperAssigned:
-        return (const Color(0xFFE0F2F1), const Color(0xFF00897B), 'Shopper Assigned');
+        return (
+          const Color(0xFFE0F2F1),
+          const Color(0xFF00897B),
+          'Shopper Assigned',
+        );
       case OrderStatus.shopping:
         return (const Color(0xFFE3F2FD), const Color(0xFF1976D2), 'Shopping');
       case OrderStatus.readyForDelivery:

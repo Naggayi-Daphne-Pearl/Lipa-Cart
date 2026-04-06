@@ -205,7 +205,7 @@ class AddressService extends ChangeNotifier {
         headers: {'Authorization': 'Bearer $token'},
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         _addresses.removeWhere((a) => a.id == addressId);
         if (_defaultAddress?.id == addressId) {
           _defaultAddress = _addresses.isNotEmpty ? _addresses.first : null;
@@ -213,6 +213,8 @@ class AddressService extends ChangeNotifier {
         notifyListeners();
         return true;
       }
+      _error = 'Failed to delete address';
+      notifyListeners();
       return false;
     } catch (e) {
       _error = 'Error deleting address: $e';

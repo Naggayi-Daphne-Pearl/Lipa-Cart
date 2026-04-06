@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import '../../models/order.dart';
 import '../../models/cart_item.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/shopper_provider.dart';
+import '../../services/order_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/app_loading_indicator.dart';
@@ -18,16 +21,14 @@ class _ChecklistItem {
   final TextEditingController priceController;
   final TextEditingController notesController;
 
-  _ChecklistItem({
-    required this.cartItem,
-    this.actualPrice,
-  })  : found = cartItem.found ?? false,
-        priceController = TextEditingController(
-          text: (cartItem.actualPrice ?? actualPrice)?.toStringAsFixed(0) ?? '',
-        ),
-        notesController = TextEditingController(
-          text: cartItem.shopperNotes ?? '',
-        );
+  _ChecklistItem({required this.cartItem, this.actualPrice})
+    : found = cartItem.found ?? false,
+      priceController = TextEditingController(
+        text: (cartItem.actualPrice ?? actualPrice)?.toStringAsFixed(0) ?? '',
+      ),
+      notesController = TextEditingController(
+        text: cartItem.shopperNotes ?? '',
+      );
 
   void dispose() {
     priceController.dispose();
@@ -45,29 +46,137 @@ class ShoppingChecklistScreen extends StatefulWidget {
 }
 
 class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
+  late Order _currentOrder;
   late List<_ChecklistItem> _items;
   bool _isSaving = false;
   bool _hasStartedShopping = false;
+  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
-    _items = widget.order.items.map((item) => _ChecklistItem(
-      cartItem: item,
-      actualPrice: item.product.price,
-    )).toList();
+    _currentOrder = widget.order;
+    _items = _currentOrder.items
+        .map(
+          (item) =>
+              _ChecklistItem(cartItem: item, actualPrice: item.product.price),
+        )
+        .toList();
 
-    // Check if order is already in shopping or completed status
-    _hasStartedShopping = widget.order.status == OrderStatus.shopping ||
-        widget.order.status == OrderStatus.readyForDelivery;
+    _hasStartedShopping =
+        _currentOrder.status == OrderStatus.shopping ||
+        _currentOrder.status == OrderStatus.readyForDelivery;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _refreshOrder(showFeedback: false);
+      }
+    });
+
+    _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted && !_isSaving) {
+        _refreshOrder();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     for (final item in _items) {
       item.dispose();
     }
     super.dispose();
+  }
+
+  String? _substituteLabel(CartItem item) {
+    final note = item.shopperNotes;
+    if (note == null || !note.startsWith('SUBSTITUTE:')) return null;
+    return note.replaceFirst('SUBSTITUTE: ', '');
+  }
+
+  double? _substitutePrice(CartItem item) {
+    final note = item.shopperNotes;
+    if (note == null) return null;
+    final match = RegExp(r'UGX\s*([\d,]+)').firstMatch(note);
+    if (match == null) return null;
+    return double.tryParse(match.group(1)!.replaceAll(',', ''));
+  }
+
+  Future<void> _refreshOrder({bool showFeedback = true}) async {
+    final auth = context.read<AuthProvider>();
+    final orderService = context.read<OrderService>();
+    if (auth.token == null) return;
+
+    final success = await orderService.getOrder(
+      auth.token!,
+      _currentOrder.documentId ?? _currentOrder.id,
+    );
+    if (!success || orderService.currentOrder == null || !mounted) return;
+
+    _syncItemsFromOrder(orderService.currentOrder!, showFeedback: showFeedback);
+  }
+
+  void _syncItemsFromOrder(Order latestOrder, {bool showFeedback = true}) {
+    Map<String, dynamic>? feedback;
+
+    for (final latestItem in latestOrder.items) {
+      final index = _items.indexWhere(
+        (item) => item.cartItem.id == latestItem.id,
+      );
+      if (index == -1) continue;
+
+      final localItem = _items[index];
+      final previousApproval = localItem.cartItem.substitutionApproved;
+      final nextApproval = latestItem.substitutionApproved;
+
+      localItem.cartItem.found = latestItem.found;
+      localItem.cartItem.actualPrice = latestItem.actualPrice;
+      localItem.cartItem.shopperNotes = latestItem.shopperNotes;
+      localItem.cartItem.substitutionApproved = nextApproval;
+      localItem.found = latestItem.found ?? localItem.found;
+      localItem.actualPrice = latestItem.actualPrice ?? localItem.actualPrice;
+
+      final latestNotes = latestItem.shopperNotes ?? '';
+      if (localItem.notesController.text != latestNotes) {
+        localItem.notesController.text = latestNotes;
+      }
+
+      if (latestItem.actualPrice != null) {
+        final formattedPrice = latestItem.actualPrice!.toStringAsFixed(0);
+        if (localItem.priceController.text != formattedPrice) {
+          localItem.priceController.text = formattedPrice;
+        }
+      }
+
+      if (showFeedback &&
+          previousApproval != nextApproval &&
+          nextApproval != null) {
+        final label = _substituteLabel(latestItem) ?? latestItem.product.name;
+        feedback = {
+          'message': nextApproval
+              ? 'Customer accepted $label. You can continue with the replacement.'
+              : 'Customer rejected the substitute for ${latestItem.product.name}.',
+          'color': nextApproval ? AppColors.success : AppColors.error,
+        };
+      }
+    }
+
+    setState(() {
+      _currentOrder = latestOrder;
+      _hasStartedShopping =
+          latestOrder.status == OrderStatus.shopping ||
+          latestOrder.status == OrderStatus.readyForDelivery;
+    });
+
+    if (feedback != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(feedback['message'] as String),
+          backgroundColor: feedback['color'] as Color,
+        ),
+      );
+    }
   }
 
   int get _foundCount => _items.where((i) => i.found).length;
@@ -119,7 +228,9 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
         if (price == null || price <= 0) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Please enter a valid price for ${item.cartItem.product.name}'),
+              content: Text(
+                'Please enter a valid price for ${item.cartItem.product.name}',
+              ),
               backgroundColor: Colors.red,
             ),
           );
@@ -135,8 +246,14 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                 '${item.cartItem.product.name} price (${Formatters.formatCurrency(price)}) is much higher than estimated (${Formatters.formatCurrency(item.cartItem.product.price)}). Continue?',
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Review')),
-                ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Continue')),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Review'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Continue'),
+                ),
               ],
             ),
           );
@@ -146,6 +263,7 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
     }
 
     // Confirm with the shopper
+    if (!mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -189,14 +307,19 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
     }).toList();
 
     // 1. Save item updates — abort if this fails
-    final itemsUpdated = await shopper.updateOrderItems(auth.token!, itemUpdates);
+    final itemsUpdated = await shopper.updateOrderItems(
+      auth.token!,
+      itemUpdates,
+    );
 
     if (!itemsUpdated) {
       setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(shopper.error ?? 'Failed to save item updates. Please try again.'),
+            content: Text(
+              shopper.error ?? 'Failed to save item updates. Please try again.',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -246,14 +369,30 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                   color: AppColors.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.person, color: AppColors.primary, size: 28),
+                child: const Icon(
+                  Icons.person,
+                  color: AppColors.primary,
+                  size: 28,
+                ),
               ),
               const SizedBox(height: 12),
-              Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text(role, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+              Text(
+                role,
+                style: TextStyle(color: Colors.grey[600], fontSize: 13),
+              ),
               const SizedBox(height: 4),
-              Text(phone, style: TextStyle(color: Colors.grey[500], fontSize: 14)),
+              Text(
+                phone,
+                style: TextStyle(color: Colors.grey[500], fontSize: 14),
+              ),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
@@ -264,7 +403,11 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                       launchUrl(Uri(scheme: 'tel', path: phone));
                     } catch (_) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('$phone copied — open your phone app to call')),
+                        SnackBar(
+                          content: Text(
+                            '$phone copied — open your phone app to call',
+                          ),
+                        ),
                       );
                     }
                   },
@@ -274,7 +417,9 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -294,11 +439,18 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Order #${widget.order.orderNumber}'),
+        title: Text('Order #${_currentOrder.orderNumber}'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/shopper/active-tasks'),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh order',
+            onPressed: _isSaving ? null : () => _refreshOrder(),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -334,7 +486,10 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                 Expanded(
                   child: Text(
                     widget.order.customer!.name ?? 'Unknown',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
                 if (widget.order.customer!.phoneNumber.isNotEmpty) ...[
@@ -345,7 +500,10 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                       widget.order.customer!.phoneNumber,
                     ),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
@@ -370,11 +528,19 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () {
-                      final phone = widget.order.customer!.phoneNumber.replaceAll('+', '');
-                      launchUrl(Uri.parse('https://wa.me/$phone?text=Hi%2C%20I%27m%20shopping%20your%20LipaCart%20order'));
+                      final phone = widget.order.customer!.phoneNumber
+                          .replaceAll('+', '');
+                      launchUrl(
+                        Uri.parse(
+                          'https://wa.me/$phone?text=Hi%2C%20I%27m%20shopping%20your%20LipaCart%20order',
+                        ),
+                      );
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF25D366).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
@@ -428,7 +594,9 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
               value: _progress,
               minHeight: 10,
               backgroundColor: AppColors.grey200,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.primary,
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -457,6 +625,15 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
   Widget _buildItemCard(_ChecklistItem item) {
     final product = item.cartItem.product;
     final estimatedLineTotal = product.price * item.cartItem.quantity;
+    final substituteLabel = _substituteLabel(item.cartItem);
+    final substituteApproved = item.cartItem.substitutionApproved;
+    final approvedSubstitute =
+        substituteLabel != null && substituteApproved == true;
+    final pendingSubstitute =
+        substituteLabel != null && substituteApproved == null;
+    final rejectedSubstitute =
+        substituteLabel != null && substituteApproved == false;
+    final displayName = approvedSubstitute ? substituteLabel : product.name;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -482,9 +659,13 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                     height: 32,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: item.found ? AppColors.primary : Colors.transparent,
+                      color: item.found
+                          ? AppColors.primary
+                          : Colors.transparent,
                       border: Border.all(
-                        color: item.found ? AppColors.primary : AppColors.grey300,
+                        color: item.found
+                            ? AppColors.primary
+                            : AppColors.grey300,
                         width: 2,
                       ),
                     ),
@@ -500,19 +681,32 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        product.name,
+                        displayName,
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 15,
-                          decoration: item.found ? null : null,
-                          color: item.found ? AppColors.black : AppColors.black,
+                          color: AppColors.black,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${item.cartItem.quantity} ${product.unit}  ~  ${Formatters.formatCurrency(estimatedLineTotal)}',
+                        approvedSubstitute
+                            ? 'Replacing ${product.name}'
+                            : '${item.cartItem.quantity} ${product.unit}  ~  ${Formatters.formatCurrency(estimatedLineTotal)}',
                         style: TextStyle(color: Colors.grey[600], fontSize: 13),
                       ),
+                      if (approvedSubstitute)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '${item.cartItem.quantity} ${product.unit}  •  approved by customer',
+                            style: const TextStyle(
+                              color: AppColors.success,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       if (item.cartItem.specialInstructions != null &&
                           item.cartItem.specialInstructions!.isNotEmpty)
                         Padding(
@@ -537,7 +731,10 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                       controller: item.priceController,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Price',
                         labelStyle: const TextStyle(fontSize: 11),
@@ -563,54 +760,156 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
             ),
             // Shopper notes field
             Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: TextField(
-            controller: item.notesController,
-            maxLines: 1,
-            style: const TextStyle(fontSize: 13),
-            decoration: InputDecoration(
-              hintText: item.found
-                  ? 'Add note (e.g. different brand)'
-                  : 'Why not found? (e.g. out of stock)',
-              hintStyle: TextStyle(fontSize: 12, color: Colors.grey[400]),
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 10,
-              ),
-              prefixIcon: Icon(
-                Icons.note_alt_outlined,
-                size: 18,
-                color: Colors.grey[400],
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.grey200),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.grey200),
+              padding: const EdgeInsets.only(top: 8),
+              child: TextField(
+                controller: item.notesController,
+                maxLines: 1,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: item.found
+                      ? 'Add note (e.g. different brand)'
+                      : 'Why not found? (e.g. out of stock)',
+                  hintStyle: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.note_alt_outlined,
+                    size: 18,
+                    color: Colors.grey[400],
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.grey200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.grey200),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-            // Suggest Substitute button (shown when item not found)
+            if (substituteLabel != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: approvedSubstitute
+                        ? AppColors.success.withValues(alpha: 0.08)
+                        : rejectedSubstitute
+                        ? AppColors.error.withValues(alpha: 0.08)
+                        : AppColors.accent.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: approvedSubstitute
+                          ? AppColors.success.withValues(alpha: 0.35)
+                          : rejectedSubstitute
+                          ? AppColors.error.withValues(alpha: 0.35)
+                          : AppColors.accent.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        approvedSubstitute
+                            ? Icons.check_circle
+                            : rejectedSubstitute
+                            ? Icons.cancel
+                            : Icons.access_time,
+                        size: 18,
+                        color: approvedSubstitute
+                            ? AppColors.success
+                            : rejectedSubstitute
+                            ? AppColors.error
+                            : AppColors.accent,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          approvedSubstitute
+                              ? 'Customer allowed this substitute. Replace the original item with $substituteLabel and continue shopping.'
+                              : rejectedSubstitute
+                              ? 'Customer rejected this substitute. Suggest another option or leave the item unavailable.'
+                              : 'Waiting for customer approval for $substituteLabel.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: approvedSubstitute
+                                ? AppColors.success
+                                : rejectedSubstitute
+                                ? AppColors.error
+                                : AppColors.accent,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            // Suggest/continue substitute action
             if (!item.found)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showSubstituteDialog(item),
-                    icon: const Icon(Icons.swap_horiz, size: 16),
-                    label: const Text('Suggest Substitute'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.accent,
-                      side: BorderSide(color: AppColors.accent.withValues(alpha: 0.5)),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
+                  child: approvedSubstitute
+                      ? ElevatedButton.icon(
+                          onPressed: () {
+                            final approvedPrice = _substitutePrice(
+                              item.cartItem,
+                            );
+                            setState(() {
+                              item.found = true;
+                              item.cartItem.found = true;
+                              if (approvedPrice != null) {
+                                item.actualPrice = approvedPrice;
+                                item.cartItem.actualPrice = approvedPrice;
+                                item.priceController.text = approvedPrice
+                                    .toStringAsFixed(0);
+                              }
+                            });
+                          },
+                          icon: const Icon(Icons.check_circle, size: 16),
+                          label: const Text(
+                            'Customer allowed substitute — continue',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        )
+                      : OutlinedButton.icon(
+                          onPressed: pendingSubstitute
+                              ? null
+                              : () => _showSubstituteDialog(item),
+                          icon: const Icon(Icons.swap_horiz, size: 16),
+                          label: Text(
+                            rejectedSubstitute
+                                ? 'Suggest Another Substitute'
+                                : pendingSubstitute
+                                ? 'Awaiting Customer Response'
+                                : 'Suggest Substitute',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.accent,
+                            side: BorderSide(
+                              color: AppColors.accent.withValues(alpha: 0.5),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
                 ),
               ),
           ],
@@ -648,7 +947,9 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
               decoration: InputDecoration(
                 labelText: 'Substitute item name',
                 hintText: 'e.g. Brand X Milk instead',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -658,7 +959,9 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
               decoration: InputDecoration(
                 labelText: 'Price (UGX)',
                 prefixText: 'UGX ',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
           ],
@@ -669,22 +972,65 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final name = substituteController.text.trim();
               if (name.isEmpty) return;
 
               Navigator.pop(ctx);
 
-              // Save substitute info in the notes field
               final price = priceController.text.trim();
-              final note = 'SUBSTITUTE: $name${price.isNotEmpty ? ' (UGX $price)' : ''}';
+              final parsedPrice = double.tryParse(price);
+              final note =
+                  'SUBSTITUTE: $name${price.isNotEmpty ? ' (UGX $price)' : ''}';
+
               setState(() {
+                item.found = false;
+                item.actualPrice = parsedPrice;
                 item.notesController.text = note;
+                item.cartItem.found = false;
+                item.cartItem.actualPrice = parsedPrice;
+                item.cartItem.shopperNotes = note;
+                item.cartItem.substitutionApproved = null;
               });
 
+              final auth = context.read<AuthProvider>();
+              final shopper = context.read<ShopperProvider>();
+              final token = auth.token;
+
+              if (token != null) {
+                final success = await shopper.updateOrderItems(token, [
+                  {
+                    'documentId': item.cartItem.id,
+                    'found': false,
+                    if (parsedPrice != null) 'actual_price': parsedPrice,
+                    'shopper_notes': note,
+                  },
+                ]);
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? 'Substitute suggested and customer notified immediately.'
+                          : (shopper.error ??
+                                'Failed to send substitute suggestion.'),
+                    ),
+                    backgroundColor: success
+                        ? AppColors.accent
+                        : AppColors.error,
+                  ),
+                );
+                return;
+              }
+
+              if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Substitute suggested: $name'),
+                const SnackBar(
+                  content: Text(
+                    'Substitute saved locally. Sign in again if syncing fails.',
+                  ),
                   backgroundColor: AppColors.accent,
                 ),
               );
@@ -714,7 +1060,7 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
         ],
       ),
       child: SafeArea(
-        child: widget.order.status == OrderStatus.readyForDelivery
+        child: _currentOrder.status == OrderStatus.readyForDelivery
             ? SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -724,7 +1070,9 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                   label: const Text('Shopping Complete — Awaiting Pickup'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
-                    disabledBackgroundColor: Colors.green.withValues(alpha: 0.3),
+                    disabledBackgroundColor: Colors.green.withValues(
+                      alpha: 0.3,
+                    ),
                     disabledForegroundColor: Colors.green,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
@@ -762,9 +1110,7 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                   icon: _isSaving
                       ? const AppLoadingIndicator.small(color: Colors.white)
                       : const Icon(Icons.shopping_cart),
-                  label: Text(
-                    _isSaving ? 'Starting...' : 'Start Shopping',
-                  ),
+                  label: Text(_isSaving ? 'Starting...' : 'Start Shopping'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accent,
                     foregroundColor: Colors.white,

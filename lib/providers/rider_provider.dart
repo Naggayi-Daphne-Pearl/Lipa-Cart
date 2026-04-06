@@ -24,7 +24,10 @@ class RiderProvider extends ChangeNotifier {
   // Summary stats
   int get totalReviews => _riderProfile?['total_ratings'] ?? 0;
   double get averageRating => (_riderProfile?['rating'] ?? 0).toDouble();
-  int get completedOrders => _riderProfile?['total_deliveries_completed'] ?? _riderProfile?['total_orders_completed'] ?? 0;
+  int get completedOrders =>
+      _riderProfile?['total_deliveries_completed'] ??
+      _riderProfile?['total_orders_completed'] ??
+      0;
   double get totalEarnings =>
       (_riderProfile?['total_earnings'] ?? 0).toDouble();
   bool get isOnline => _riderProfile?['is_online'] ?? false;
@@ -89,7 +92,10 @@ class RiderProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _activeDeliveries = await StrapiService.getActiveDeliveries(token, riderId);
+      _activeDeliveries = await StrapiService.getActiveDeliveries(
+        token,
+        riderId,
+      );
       _isLoading = false;
       notifyListeners();
       return true;
@@ -108,7 +114,10 @@ class RiderProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _completedDeliveries = await StrapiService.getCompletedDeliveries(token, riderId);
+      _completedDeliveries = await StrapiService.getCompletedDeliveries(
+        token,
+        riderId,
+      );
       _isLoading = false;
       notifyListeners();
       return true;
@@ -129,7 +138,9 @@ class RiderProvider extends ChangeNotifier {
     try {
       final result = await StrapiService.claimDelivery(orderId, token);
       if (result != null) {
-        _availableDeliveries.removeWhere((o) => o.id == orderId || o.documentId == orderId);
+        _availableDeliveries.removeWhere(
+          (o) => o.id == orderId || o.documentId == orderId,
+        );
         await fetchActiveDeliveries(token, riderId);
         notifyListeners();
         return true;
@@ -151,7 +162,11 @@ class RiderProvider extends ChangeNotifier {
     String riderId,
   ) async {
     try {
-      final result = await StrapiService.updateRiderOrderStatus(orderId, 'in_transit', token);
+      final result = await StrapiService.updateRiderOrderStatus(
+        orderId,
+        'in_transit',
+        token,
+      );
       if (result != null) {
         await fetchActiveDeliveries(token, riderId);
         notifyListeners();
@@ -183,7 +198,9 @@ class RiderProvider extends ChangeNotifier {
         );
       }
       final result = await StrapiService.updateRiderOrderStatus(
-        orderId, 'delivered', token,
+        orderId,
+        'delivered',
+        token,
         deliveryProofUrl: proofUrl,
       );
       if (result != null) {
@@ -208,10 +225,21 @@ class RiderProvider extends ChangeNotifier {
     bool online,
   ) async {
     try {
-      _riderProfile?['is_online'] = online;
+      final success = await StrapiService.updateRiderStatus(
+        riderId,
+        online,
+        token,
+      );
+
+      if (success) {
+        _riderProfile?['is_online'] = online;
+        notifyListeners();
+        return true;
+      }
+
+      _error = 'Failed to update online status';
       notifyListeners();
-      // TODO: Implement API call to update online status
-      return true;
+      return false;
     } catch (e) {
       _error = 'Error: $e';
       notifyListeners();

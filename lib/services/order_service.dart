@@ -118,6 +118,7 @@ class OrderService extends ChangeNotifier {
         found: itemAttrs['found'] as bool?,
         actualPrice: (itemAttrs['actual_price'] as num?)?.toDouble(),
         shopperNotes: itemAttrs['shopper_notes'] as String?,
+        substitutionApproved: itemAttrs['substitution_approved'] as bool?,
       );
     }).toList();
 
@@ -200,15 +201,13 @@ class OrderService extends ChangeNotifier {
             if (customerData.containsKey('data') &&
                 customerData['data'] is Map<String, dynamic>) {
               customerMap = customerData['data'];
-              final attrs =
-                  customerMap['attributes'] as Map<String, dynamic>?;
+              final attrs = customerMap['attributes'] as Map<String, dynamic>?;
               if (attrs != null) {
                 customerMap = {...customerMap, ...attrs};
               }
             } else {
               // Flat format - check if it has attributes
-              final attrs =
-                  customerData['attributes'] as Map<String, dynamic>?;
+              final attrs = customerData['attributes'] as Map<String, dynamic>?;
               if (attrs != null) {
                 customerMap = {...customerData, ...attrs};
               } else {
@@ -227,7 +226,8 @@ class OrderService extends ChangeNotifier {
       String? shopperName;
       String? shopperPhone;
       if (shopperData is Map<String, dynamic>) {
-        final sAttrs = shopperData['attributes'] as Map<String, dynamic>? ?? shopperData;
+        final sAttrs =
+            shopperData['attributes'] as Map<String, dynamic>? ?? shopperData;
         shopperName = sAttrs['name'] as String?;
         shopperPhone = sAttrs['phone'] as String?;
       }
@@ -236,10 +236,33 @@ class OrderService extends ChangeNotifier {
       final riderData = attributes['rider'];
       String? riderName;
       String? riderPhone;
+      double? riderLatitude;
+      double? riderLongitude;
       if (riderData is Map<String, dynamic>) {
-        final rAttrs = riderData['attributes'] as Map<String, dynamic>? ?? riderData;
+        final rAttrs =
+            riderData['attributes'] as Map<String, dynamic>? ?? riderData;
         riderName = rAttrs['name'] as String?;
         riderPhone = rAttrs['phone'] as String?;
+
+        final riderProfileData =
+            (rAttrs['rider']?['data'] as Map<String, dynamic>?) ??
+            (rAttrs['rider'] as Map<String, dynamic>?);
+        if (riderProfileData != null) {
+          final riderProfileAttrs =
+              riderProfileData['attributes'] as Map<String, dynamic>? ??
+              riderProfileData;
+
+          double? parseCoordinate(dynamic value) {
+            if (value is num) return value.toDouble();
+            if (value is String) return double.tryParse(value);
+            return null;
+          }
+
+          riderLatitude = parseCoordinate(riderProfileAttrs['current_gps_lat']);
+          riderLongitude = parseCoordinate(
+            riderProfileAttrs['current_gps_lng'],
+          );
+        }
       }
 
       return Order(
@@ -259,6 +282,8 @@ class OrderService extends ChangeNotifier {
         shopperPhone: shopperPhone,
         riderName: riderName,
         riderPhone: riderPhone,
+        riderLatitude: riderLatitude,
+        riderLongitude: riderLongitude,
         createdAt:
             DateTime.tryParse(attributes['createdAt'] as String? ?? '') ??
             DateTime.now(),
@@ -287,7 +312,7 @@ class OrderService extends ChangeNotifier {
     try {
       // Strapi v5 syntax: populate order_items and delivery_address
       final url =
-          '$baseUrl/api/orders?filters[customer][\$eq]=$userId&populate[0]=order_items&populate[1]=delivery_address&populate[2]=customer&sort[0]=createdAt:desc';
+          '$baseUrl/api/orders?filters[customer][\$eq]=$userId&populate[0]=order_items&populate[1]=delivery_address&populate[2]=customer&populate[3]=shopper&populate[4]=rider&sort[0]=createdAt:desc';
 
       final response = await http.get(
         Uri.parse(url),
@@ -385,7 +410,7 @@ class OrderService extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse(
-          '$baseUrl/api/orders/$orderId?populate[0]=order_items&populate[1]=delivery_address&populate[2]=customer',
+          '$baseUrl/api/orders/$orderId?populate[0]=order_items&populate[1]=delivery_address&populate[2]=customer&populate[3]=shopper&populate[4]=rider',
         ),
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -393,6 +418,17 @@ class OrderService extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         _currentOrder = _fromStrapi(data['data']);
+
+        final orderKey = _currentOrder!.documentId ?? _currentOrder!.id;
+        final existingIndex = _orders.indexWhere(
+          (o) => (o.documentId ?? o.id) == orderKey,
+        );
+        if (existingIndex >= 0) {
+          _orders[existingIndex] = _currentOrder!;
+        } else {
+          _orders.insert(0, _currentOrder!);
+        }
+
         _isLoading = false;
         notifyListeners();
         return true;
@@ -404,6 +440,31 @@ class OrderService extends ChangeNotifier {
     } catch (e) {
       _error = 'Error fetching order: $e';
       _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> respondToSubstitution(
+    String token,
+    String orderItemId,
+    bool approved,
+  ) async {
+    try {
+      final response = await http.patch(
+        Uri.parse(
+          '$baseUrl/api/order-items/$orderItemId/substitution-response',
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'approved': approved}),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      _error = 'Error responding to substitution: $e';
       notifyListeners();
       return false;
     }
@@ -518,7 +579,11 @@ class OrderService extends ChangeNotifier {
   }
 
   /// Cancel order
-  Future<bool> cancelOrder(String token, String orderId, {String? reason}) async {
+  Future<bool> cancelOrder(
+    String token,
+    String orderId, {
+    String? reason,
+  }) async {
     try {
       final response = await http.put(
         Uri.parse('$baseUrl/api/orders/$orderId'),
@@ -530,7 +595,8 @@ class OrderService extends ChangeNotifier {
           'data': {
             'status': 'cancelled',
             'cancelled_at': DateTime.now().toIso8601String(),
-            if (reason != null && reason.isNotEmpty) 'cancellation_reason': reason,
+            if (reason != null && reason.isNotEmpty)
+              'cancellation_reason': reason,
           },
         }),
       );

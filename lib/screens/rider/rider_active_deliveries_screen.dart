@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +7,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/rider_provider.dart';
@@ -14,6 +16,7 @@ import '../../models/user.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
+import '../../services/strapi_service.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/rider_button.dart';
 
@@ -28,6 +31,9 @@ class RiderActiveDeliveriesScreen extends StatefulWidget {
 class _RiderActiveDeliveriesScreenState
     extends State<RiderActiveDeliveriesScreen> {
   static const Color _brandColor = AppColors.accent;
+  StreamSubscription<Position>? _locationSubscription;
+  Position? _lastSyncedPosition;
+  DateTime? _lastLocationSyncAt;
 
   @override
   void initState() {
@@ -35,6 +41,12 @@ class _RiderActiveDeliveriesScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _validateRoleAndLoad();
     });
+  }
+
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    super.dispose();
   }
 
   void _validateRoleAndLoad() {
@@ -46,8 +58,8 @@ class _RiderActiveDeliveriesScreenState
           authProvider.user?.role == UserRole.admin
               ? '/admin/dashboard'
               : authProvider.user?.role == UserRole.shopper
-                  ? '/shopper/home'
-                  : '/customer/home',
+              ? '/shopper/home'
+              : '/customer/home',
         );
       });
       return;
@@ -58,6 +70,10 @@ class _RiderActiveDeliveriesScreenState
     final userDocId = authProvider.user?.documentId ?? authProvider.user?.id;
     if (token != null && userDocId != null) {
       riderProvider.fetchActiveDeliveries(token, userDocId);
+      final riderId = authProvider.user?.riderId;
+      if (riderId != null) {
+        _startLocationTracking(token, riderId);
+      }
     }
   }
 
@@ -68,6 +84,80 @@ class _RiderActiveDeliveriesScreenState
     final userDocId = auth.user?.documentId ?? auth.user?.id;
     if (token != null && userDocId != null) {
       await rider.fetchActiveDeliveries(token, userDocId);
+      final riderId = auth.user?.riderId;
+      if (riderId != null) {
+        await _startLocationTracking(token, riderId);
+      }
+    }
+  }
+
+  Future<void> _startLocationTracking(String token, String riderId) async {
+    if (_locationSubscription != null) return;
+
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return;
+    }
+
+    try {
+      final currentPosition = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+        ),
+      );
+      await _syncRiderLocation(token, riderId, currentPosition, force: true);
+    } catch (_) {
+      // Ignore one-off GPS failures.
+    }
+
+    _locationSubscription =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.bestForNavigation,
+            distanceFilter: 20,
+          ),
+        ).listen((position) {
+          _syncRiderLocation(token, riderId, position);
+        });
+  }
+
+  Future<void> _syncRiderLocation(
+    String token,
+    String riderId,
+    Position position, {
+    bool force = false,
+  }) async {
+    final now = DateTime.now();
+    if (!force && _lastSyncedPosition != null && _lastLocationSyncAt != null) {
+      final distanceMoved = Geolocator.distanceBetween(
+        _lastSyncedPosition!.latitude,
+        _lastSyncedPosition!.longitude,
+        position.latitude,
+        position.longitude,
+      );
+      final secondsSinceLastSync = now
+          .difference(_lastLocationSyncAt!)
+          .inSeconds;
+      if (distanceMoved < 15 && secondsSinceLastSync < 10) {
+        return;
+      }
+    }
+
+    final success = await StrapiService.updateRiderProfile(riderId, {
+      'current_gps_lat': position.latitude,
+      'current_gps_lng': position.longitude,
+    }, token);
+
+    if (success) {
+      _lastSyncedPosition = position;
+      _lastLocationSyncAt = now;
     }
   }
 
@@ -122,8 +212,7 @@ class _RiderActiveDeliveriesScreenState
                       color: AppColors.accentSoft,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Iconsax.truck,
-                        size: 48, color: _brandColor),
+                    child: Icon(Iconsax.truck, size: 48, color: _brandColor),
                   ),
                   const SizedBox(height: AppSizes.md),
                   const Text(
@@ -148,8 +237,7 @@ class _RiderActiveDeliveriesScreenState
                     icon: Iconsax.truck_fast,
                     width: 280,
                     height: 44,
-                    onPressed: () =>
-                        context.go('/rider/available-deliveries'),
+                    onPressed: () => context.go('/rider/available-deliveries'),
                   ),
                 ],
               ),
@@ -225,8 +313,7 @@ class _RiderActiveDeliveriesScreenState
             // Delivery address
             Row(
               children: [
-                Icon(Iconsax.location,
-                    size: 16, color: AppColors.textTertiary),
+                Icon(Iconsax.location, size: 16, color: AppColors.textTertiary),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
@@ -242,7 +329,8 @@ class _RiderActiveDeliveriesScreenState
               ],
             ),
             // Mini map preview
-            if (order.deliveryAddress.latitude != 0 && order.deliveryAddress.longitude != 0)
+            if (order.deliveryAddress.latitude != 0 &&
+                order.deliveryAddress.longitude != 0)
               Padding(
                 padding: const EdgeInsets.only(top: AppSizes.sm),
                 child: ClipRRect(
@@ -261,7 +349,8 @@ class _RiderActiveDeliveriesScreenState
                         ),
                         children: [
                           TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                           ),
                           MarkerLayer(
                             markers: [
@@ -290,8 +379,7 @@ class _RiderActiveDeliveriesScreenState
             // Items summary
             Row(
               children: [
-                Icon(Iconsax.box_1,
-                    size: 16, color: AppColors.textTertiary),
+                Icon(Iconsax.box_1, size: 16, color: AppColors.textTertiary),
                 const SizedBox(width: 4),
                 Text(
                   '$itemCount items',
@@ -320,7 +408,10 @@ class _RiderActiveDeliveriesScreenState
                   child: OutlinedButton.icon(
                     onPressed: () => _openPickupNavigation(order),
                     icon: const Icon(Icons.store, size: 16),
-                    label: const Text('Pickup Location', overflow: TextOverflow.ellipsis),
+                    label: const Text(
+                      'Pickup Location',
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.deepPurple,
                       side: const BorderSide(color: Colors.deepPurple),
@@ -336,7 +427,10 @@ class _RiderActiveDeliveriesScreenState
                   child: OutlinedButton.icon(
                     onPressed: () => _openNavigation(order),
                     icon: const Icon(Iconsax.gps, size: 16),
-                    label: const Text('Delivery Location', overflow: TextOverflow.ellipsis),
+                    label: const Text(
+                      'Delivery Location',
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.info,
                       side: const BorderSide(color: AppColors.info),
@@ -370,7 +464,9 @@ class _RiderActiveDeliveriesScreenState
                     if (success && mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: const Text('Order picked up — delivering now!'),
+                          content: const Text(
+                            'Order picked up — delivering now!',
+                          ),
                           backgroundColor: AppColors.info,
                         ),
                       );
@@ -388,16 +484,26 @@ class _RiderActiveDeliveriesScreenState
                     decoration: BoxDecoration(
                       color: AppColors.warning.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                      border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Iconsax.money_recive, color: AppColors.warning, size: 20),
+                        const Icon(
+                          Iconsax.money_recive,
+                          color: AppColors.warning,
+                          size: 20,
+                        ),
                         const SizedBox(width: AppSizes.sm),
                         Expanded(
                           child: Text(
                             'Collect ${Formatters.formatCurrency(order.total)} cash before completing',
-                            style: const TextStyle(color: AppColors.warning, fontSize: 13, fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                              color: AppColors.warning,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ],
@@ -409,9 +515,11 @@ class _RiderActiveDeliveriesScreenState
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   icon: const Icon(Iconsax.camera, size: 18),
-                  label: Text(order.paymentMethod == PaymentMethod.cashOnDelivery
-                      ? 'Cash Collected — Take Photo'
-                      : 'Take Photo & Complete'),
+                  label: Text(
+                    order.paymentMethod == PaymentMethod.cashOnDelivery
+                        ? 'Cash Collected — Take Photo'
+                        : 'Take Photo & Complete',
+                  ),
                   onPressed: () => _showDeliveryProofDialog(context, order),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.success,
@@ -424,13 +532,16 @@ class _RiderActiveDeliveriesScreenState
               ),
             ],
             // Call buttons row
-            if ((order.customer != null && order.customer!.phoneNumber.isNotEmpty) ||
+            if ((order.customer != null &&
+                    order.customer!.phoneNumber.isNotEmpty) ||
                 (order.shopperName != null && order.shopperPhone != null)) ...[
               const SizedBox(height: AppSizes.sm),
               Row(
                 children: [
                   // Call Shopper
-                  if (order.shopperName != null && order.shopperPhone != null && order.shopperPhone!.isNotEmpty)
+                  if (order.shopperName != null &&
+                      order.shopperPhone != null &&
+                      order.shopperPhone!.isNotEmpty)
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () => _showCallDialog(
@@ -439,12 +550,17 @@ class _RiderActiveDeliveriesScreenState
                           order.shopperPhone!,
                         ),
                         icon: const Icon(Iconsax.shopping_bag, size: 16),
-                        label: const Text('Shopper', overflow: TextOverflow.ellipsis),
+                        label: const Text(
+                          'Shopper',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.info,
                           side: BorderSide(color: AppColors.info),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusSm,
+                            ),
                           ),
                         ),
                       ),
@@ -452,7 +568,8 @@ class _RiderActiveDeliveriesScreenState
                   if (order.shopperName != null && order.customer != null)
                     const SizedBox(width: AppSizes.xs),
                   // Call Customer
-                  if (order.customer != null && order.customer!.phoneNumber.isNotEmpty)
+                  if (order.customer != null &&
+                      order.customer!.phoneNumber.isNotEmpty)
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () => _showCallDialog(
@@ -461,12 +578,17 @@ class _RiderActiveDeliveriesScreenState
                           order.customer!.phoneNumber,
                         ),
                         icon: const Icon(Iconsax.call, size: 16),
-                        label: const Text('Customer', overflow: TextOverflow.ellipsis),
+                        label: const Text(
+                          'Customer',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.accent,
                           side: BorderSide(color: AppColors.accent),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusSm,
+                            ),
                           ),
                         ),
                       ),
@@ -528,12 +650,16 @@ class _RiderActiveDeliveriesScreenState
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Text('Delivery Proof'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Take a photo of the delivered order at the customer\'s door for verification.'),
+              const Text(
+                'Take a photo of the delivered order at the customer\'s door for verification.',
+              ),
               const SizedBox(height: 16),
               if (proofPhoto != null && proofBytes != null)
                 Container(
@@ -558,8 +684,15 @@ class _RiderActiveDeliveriesScreenState
                           }),
                           child: Container(
                             padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                            child: const Icon(Icons.close, size: 16, color: Colors.white),
+                            decoration: const BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              size: 16,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -570,7 +703,10 @@ class _RiderActiveDeliveriesScreenState
                 GestureDetector(
                   onTap: () async {
                     final picker = ImagePicker();
-                    final photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+                    final photo = await picker.pickImage(
+                      source: ImageSource.camera,
+                      imageQuality: 80,
+                    );
                     if (photo != null) {
                       final bytes = await photo.readAsBytes();
                       setDialogState(() {
@@ -585,14 +721,27 @@ class _RiderActiveDeliveriesScreenState
                     decoration: BoxDecoration(
                       color: AppColors.grey100,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.grey300, style: BorderStyle.solid),
+                      border: Border.all(
+                        color: AppColors.grey300,
+                        style: BorderStyle.solid,
+                      ),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Iconsax.camera, size: 36, color: AppColors.grey500),
+                        Icon(
+                          Iconsax.camera,
+                          size: 36,
+                          color: AppColors.grey500,
+                        ),
                         const SizedBox(height: 8),
-                        Text('Tap to take photo', style: TextStyle(color: AppColors.grey500, fontSize: 13)),
+                        Text(
+                          'Tap to take photo',
+                          style: TextStyle(
+                            color: AppColors.grey500,
+                            fontSize: 13,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -602,9 +751,16 @@ class _RiderActiveDeliveriesScreenState
                 const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
                     SizedBox(width: 12),
-                    Text('Uploading photo & completing...', style: TextStyle(fontSize: 13)),
+                    Text(
+                      'Uploading photo & completing...',
+                      style: TextStyle(fontSize: 13),
+                    ),
                   ],
                 ),
               ],
@@ -632,20 +788,27 @@ class _RiderActiveDeliveriesScreenState
                       if (success && mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Delivery completed with proof photo!'),
+                            content: Text(
+                              'Delivery completed with proof photo!',
+                            ),
                             backgroundColor: AppColors.success,
                           ),
                         );
                       } else if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(rider.error ?? 'Failed to complete delivery'),
+                            content: Text(
+                              rider.error ?? 'Failed to complete delivery',
+                            ),
                             backgroundColor: AppColors.error,
                           ),
                         );
                       }
                     },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Complete Delivery'),
             ),
           ],
@@ -671,12 +834,25 @@ class _RiderActiveDeliveriesScreenState
                   color: AppColors.accent.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.person, color: AppColors.accent, size: 24),
+                child: const Icon(
+                  Icons.person,
+                  color: AppColors.accent,
+                  size: 24,
+                ),
               ),
               const SizedBox(height: 12),
-              Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text(role, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+              Text(
+                role,
+                style: TextStyle(color: Colors.grey[600], fontSize: 13),
+              ),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
@@ -691,7 +867,9 @@ class _RiderActiveDeliveriesScreenState
                     backgroundColor: AppColors.accent,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),

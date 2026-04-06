@@ -36,9 +36,13 @@ Future<void> main() async {
 
       // Initialize Firebase if configured (skip gracefully in dev without config)
       if (DefaultFirebaseOptions.isConfigured) {
-        await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform,
-        );
+        if (Firebase.apps.isEmpty) {
+          await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform,
+          );
+        } else {
+          Firebase.app();
+        }
         await NotificationService().init();
       }
 
@@ -53,7 +57,8 @@ Future<void> main() async {
         );
 
         // Allow landscape on tablets (shortestSide >= 600), portrait-only on phones
-        final shortestSide = PlatformDispatcher.instance.views.first.physicalSize.shortestSide /
+        final shortestSide =
+            PlatformDispatcher.instance.views.first.physicalSize.shortestSide /
             PlatformDispatcher.instance.views.first.devicePixelRatio;
         if (shortestSide < 600) {
           SystemChrome.setPreferredOrientations([
@@ -78,10 +83,7 @@ Future<void> main() async {
           return;
         }
         FlutterError.presentError(details);
-        Sentry.captureException(
-          details.exception,
-          stackTrace: details.stack,
-        );
+        Sentry.captureException(details.exception, stackTrace: details.stack);
       };
 
       // Capture async errors (uncaught exceptions outside Flutter framework)
@@ -113,27 +115,59 @@ class _LipaCartAppState extends State<LipaCartApp> {
   }
 
   /// Route notification taps to the correct screen based on payload data.
-  void _handleNotificationTap(Map<String, dynamic> data) {
+  Future<void> _handleNotificationTap(Map<String, dynamic> data) async {
     final router = _router;
     if (router == null) return;
 
+    final route = data['route'] as String?;
     final type = data['type'] as String? ?? '';
+    final orderId = data['orderId']?.toString();
+
+    Future<bool> openLatestCustomerOrder() async {
+      if (orderId == null || orderId.isEmpty) return false;
+
+      final navContext = router.routerDelegate.navigatorKey.currentContext;
+      if (navContext == null) return false;
+
+      final auth = Provider.of<AuthProvider>(navContext, listen: false);
+      final orderService = Provider.of<OrderService>(navContext, listen: false);
+      if (auth.token == null) return false;
+
+      final success = await orderService.getOrder(auth.token!, orderId);
+      final latestOrder = orderService.currentOrder;
+      if (success && latestOrder != null) {
+        router.go('/customer/order-tracking', extra: latestOrder);
+        return true;
+      }
+
+      return false;
+    }
+
+    if (type == 'order_status' || type == 'substitute_suggestion') {
+      final openedLatest = await openLatestCustomerOrder();
+      if (openedLatest) return;
+    }
+
+    if (route != null && route.isNotEmpty) {
+      router.go(route);
+      return;
+    }
 
     switch (type) {
       case 'order_status':
-        // Customer: go to orders screen (user taps into specific order from there)
+      case 'substitute_suggestion':
         router.go('/customer/orders');
         break;
+      case 'substitute_response':
+        router.go('/shopper/active-tasks');
+        break;
       case 'new_task':
-        // Shopper: go to available tasks
         router.go('/shopper/available-tasks');
         break;
       case 'new_delivery':
-        // Rider: go to available deliveries
         router.go('/rider/available-deliveries');
         break;
       default:
-        // Fallback: go to home
         router.go('/customer/home');
     }
   }

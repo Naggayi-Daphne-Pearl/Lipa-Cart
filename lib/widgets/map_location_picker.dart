@@ -31,12 +31,14 @@ class MapPickerResult {
   final double longitude;
   final String? address;
   final String? city;
+  final double? accuracyMeters;
 
   MapPickerResult({
     required this.latitude,
     required this.longitude,
     this.address,
     this.city,
+    this.accuracyMeters,
   });
 }
 
@@ -46,13 +48,18 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = false;
   bool _isSearching = false;
+  bool _isLocatingUser = false;
   String? _addressPreview;
+  double? _gpsAccuracyMeters;
   List<_SearchResult> _searchResults = [];
-  Timer? _debounce;
+  Timer? _searchDebounce;
+  Timer? _mapMoveDebounce;
 
   // Default to Kampala, Uganda
   static const _defaultLat = 0.3476;
   static const _defaultLng = 32.5825;
+  static const _goodAccuracyMeters = 25.0;
+  static const _weakAccuracyMeters = 80.0;
 
   @override
   void initState() {
@@ -61,12 +68,21 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
       widget.initialLat ?? _defaultLat,
       widget.initialLng ?? _defaultLng,
     );
+
+    if (widget.initialLat == null || widget.initialLng == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _tryCenterOnCurrentLocation();
+      });
+    } else {
+      _reverseGeocode(_center);
+    }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _debounce?.cancel();
+    _searchDebounce?.cancel();
+    _mapMoveDebounce?.cancel();
     super.dispose();
   }
 
@@ -84,21 +100,28 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
       final url = Uri.parse(
         'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(query)}&countrycodes=ug,ke&limit=5&addressdetails=1',
       );
-      final response = await http.get(url, headers: {
-        'User-Agent': 'LipaCart/1.0',
-      });
+      final response = await http.get(
+        url,
+        headers: {'User-Agent': 'LipaCart/1.0'},
+      );
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
         setState(() {
-          _searchResults = data.map((item) => _SearchResult(
-            displayName: item['display_name'] as String,
-            lat: double.parse(item['lat'] as String),
-            lng: double.parse(item['lon'] as String),
-            city: (item['address'] as Map<String, dynamic>?)?['city'] ??
-                (item['address'] as Map<String, dynamic>?)?['town'] ??
-                (item['address'] as Map<String, dynamic>?)?['village'] ?? '',
-          )).toList();
+          _searchResults = data
+              .map(
+                (item) => _SearchResult(
+                  displayName: item['display_name'] as String,
+                  lat: double.parse(item['lat'] as String),
+                  lng: double.parse(item['lon'] as String),
+                  city:
+                      (item['address'] as Map<String, dynamic>?)?['city'] ??
+                      (item['address'] as Map<String, dynamic>?)?['town'] ??
+                      (item['address'] as Map<String, dynamic>?)?['village'] ??
+                      '',
+                ),
+              )
+              .toList();
         });
       }
     } catch (_) {
@@ -109,10 +132,137 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
   }
 
   void _onSearchChanged(String query) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
       _searchPlaces(query);
     });
+  }
+
+  void _scheduleReverseGeocode(LatLng position) {
+    _mapMoveDebounce?.cancel();
+    _mapMoveDebounce = Timer(const Duration(milliseconds: 700), () {
+      if (mounted) {
+        _reverseGeocode(position);
+      }
+    });
+  }
+
+  Future<LocationPermission> _ensureLocationPermission() async {
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    return permission;
+  }
+
+  Future<Position?> _getBestCurrentPosition() async {
+    Position? bestPosition;
+
+    for (var attempt = 0; attempt < 3; attempt++) {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+          distanceFilter: 0,
+          timeLimit: Duration(seconds: 12),
+        ),
+      );
+
+      if (bestPosition == null || position.accuracy < bestPosition.accuracy) {
+        bestPosition = position;
+      }
+
+      if (bestPosition.accuracy <= _goodAccuracyMeters) {
+        break;
+      }
+
+      if (attempt < 2) {
+        await Future.delayed(const Duration(milliseconds: 900));
+      }
+    }
+
+    return bestPosition;
+  }
+
+  Future<void> _tryCenterOnCurrentLocation({bool showFeedback = false}) async {
+    if (mounted) {
+      setState(() => _isLocatingUser = true);
+    }
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (showFeedback && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please turn on device location services first.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      final permission = await _ensureLocationPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.unableToDetermine) {
+        if (showFeedback && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Location permission is needed for precise GPS pinning.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      final position = await _getBestCurrentPosition();
+      if (position == null || !mounted) return;
+
+      final newCenter = LatLng(position.latitude, position.longitude);
+      setState(() {
+        _center = newCenter;
+        _gpsAccuracyMeters = position.accuracy;
+      });
+
+      _mapController.move(
+        newCenter,
+        position.accuracy <= _goodAccuracyMeters ? 18 : 17,
+      );
+      await _reverseGeocode(newCenter, accuracyMeters: position.accuracy);
+
+      if (showFeedback && mounted) {
+        final accuracyText = position.accuracy.isFinite
+            ? position.accuracy.toStringAsFixed(0)
+            : 'unknown';
+        final isWeak = position.accuracy > _weakAccuracyMeters;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isWeak
+                  ? 'GPS accuracy is only about ±$accuracyText m. Zoom in and drag the pin to your exact gate/building.'
+                  : 'Location captured with about ±$accuracyText m accuracy.',
+            ),
+            backgroundColor: isWeak ? Colors.orange : AppColors.primary,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (_) {
+      if (showFeedback && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not get a precise GPS fix right now.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLocatingUser = false);
+      }
+    }
   }
 
   void _selectSearchResult(_SearchResult result) {
@@ -125,49 +275,65 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
     });
     _mapController.move(newCenter, 17);
 
-    widget.onLocationSelected(MapPickerResult(
-      latitude: result.lat,
-      longitude: result.lng,
-      address: result.displayName,
-      city: result.city,
-    ));
+    widget.onLocationSelected(
+      MapPickerResult(
+        latitude: result.lat,
+        longitude: result.lng,
+        address: result.displayName,
+        city: result.city,
+      ),
+    );
 
     FocusScope.of(context).unfocus();
   }
 
-  Future<void> _reverseGeocode(LatLng position) async {
-    setState(() => _isLoading = true);
+  Future<void> _reverseGeocode(
+    LatLng position, {
+    double? accuracyMeters,
+  }) async {
+    setState(() {
+      _isLoading = true;
+      _gpsAccuracyMeters = accuracyMeters;
+    });
 
     try {
       final url = Uri.parse(
         'https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.latitude}&lon=${position.longitude}&zoom=18&addressdetails=1',
       );
-      final response = await http.get(url, headers: {
-        'User-Agent': 'LipaCart/1.0',
-      });
+      final response = await http.get(
+        url,
+        headers: {'User-Agent': 'LipaCart/1.0'},
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final displayName = data['display_name'] as String?;
         final address = data['address'] as Map<String, dynamic>?;
-        final city = address?['city'] ?? address?['town'] ?? address?['village'] ?? '';
+        final city =
+            address?['city'] ?? address?['town'] ?? address?['village'] ?? '';
 
         setState(() {
           _addressPreview = displayName;
         });
 
-        widget.onLocationSelected(MapPickerResult(
-          latitude: position.latitude,
-          longitude: position.longitude,
-          address: displayName,
-          city: city,
-        ));
+        widget.onLocationSelected(
+          MapPickerResult(
+            latitude: position.latitude,
+            longitude: position.longitude,
+            address: displayName,
+            city: city,
+            accuracyMeters: accuracyMeters,
+          ),
+        );
       }
     } catch (_) {
-      widget.onLocationSelected(MapPickerResult(
-        latitude: position.latitude,
-        longitude: position.longitude,
-      ));
+      widget.onLocationSelected(
+        MapPickerResult(
+          latitude: position.latitude,
+          longitude: position.longitude,
+          accuracyMeters: accuracyMeters,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -185,7 +351,11 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
           decoration: InputDecoration(
             hintText: 'Search location (e.g. Nakasero Market)',
             hintStyle: TextStyle(fontSize: 13, color: Colors.grey[400]),
-            prefixIcon: Icon(Iconsax.search_normal_1, size: 18, color: Colors.grey[500]),
+            prefixIcon: Icon(
+              Iconsax.search_normal_1,
+              size: 18,
+              color: Colors.grey[500],
+            ),
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
                     icon: const Icon(Icons.clear, size: 18),
@@ -195,15 +365,22 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
                     },
                   )
                 : (_isSearching
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-                      )
-                    : null),
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : null),
             filled: true,
             fillColor: Colors.grey[50],
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: Colors.grey[300]!),
@@ -214,7 +391,10 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              borderSide: const BorderSide(
+                color: AppColors.primary,
+                width: 1.5,
+              ),
             ),
           ),
         ),
@@ -227,23 +407,35 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 2)),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
               ],
             ),
             child: ListView.separated(
               shrinkWrap: true,
               padding: EdgeInsets.zero,
               itemCount: _searchResults.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey[200]),
+              separatorBuilder: (_, __) =>
+                  Divider(height: 1, color: Colors.grey[200]),
               itemBuilder: (context, index) {
                 final result = _searchResults[index];
                 return InkWell(
                   onTap: () => _selectSearchResult(result),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     child: Row(
                       children: [
-                        Icon(Iconsax.location, size: 16, color: AppColors.primary),
+                        Icon(
+                          Iconsax.location,
+                          size: 16,
+                          color: AppColors.primary,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -277,16 +469,19 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
                 mapController: _mapController,
                 options: MapOptions(
                   initialCenter: _center,
-                  initialZoom: 15,
+                  initialZoom: 17,
                   onPositionChanged: (position, hasGesture) {
-                    if (hasGesture && position.center != null) {
-                      setState(() => _center = position.center!);
+                    if (hasGesture) {
+                      final center = position.center;
+                      setState(() => _center = center);
+                      _scheduleReverseGeocode(center);
                     }
                   },
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.lipacart.app',
                   ),
                 ],
@@ -296,7 +491,11 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
               const Center(
                 child: Padding(
                   padding: EdgeInsets.only(bottom: 36),
-                  child: Icon(Iconsax.location5, size: 36, color: AppColors.error),
+                  child: Icon(
+                    Iconsax.location5,
+                    size: 36,
+                    color: AppColors.error,
+                  ),
                 ),
               ),
 
@@ -323,7 +522,10 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
                         )
                       : const Icon(Icons.check, color: Colors.white, size: 20),
                 ),
@@ -335,51 +537,24 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
                 left: 12,
                 child: FloatingActionButton.small(
                   heroTag: 'myLocation',
-                  tooltip: 'Use my location',
-                  onPressed: () async {
-                    try {
-                      LocationPermission permission = await Geolocator.checkPermission();
-                      if (permission == LocationPermission.denied) {
-                        permission = await Geolocator.requestPermission();
-                        if (permission == LocationPermission.denied) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Location permission denied')),
-                            );
-                          }
-                          return;
-                        }
-                      }
-                      if (permission == LocationPermission.deniedForever) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Location permissions permanently denied. Enable in Settings.')),
-                          );
-                        }
-                        return;
-                      }
-
-                      final position = await Geolocator.getCurrentPosition(
-                        locationSettings: const LocationSettings(
-                          accuracy: LocationAccuracy.high,
-                        ),
-                      );
-
-                      final newCenter = LatLng(position.latitude, position.longitude);
-                      setState(() => _center = newCenter);
-                      _mapController.move(newCenter, 17);
-                      _reverseGeocode(newCenter);
-                    } catch (e) {
-                      if (mounted) {
-                        final msg = e.toString();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Could not get location: ${msg.length > 50 ? msg.substring(0, 50) : msg}')),
-                        );
-                      }
-                    }
-                  },
+                  tooltip: 'Use my exact GPS location',
+                  onPressed: () =>
+                      _tryCenterOnCurrentLocation(showFeedback: true),
                   backgroundColor: Colors.white,
-                  child: const Icon(Icons.my_location, color: AppColors.primary, size: 20),
+                  child: _isLocatingUser
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.my_location,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                 ),
               ),
             ],
@@ -395,11 +570,17 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.15),
+              ),
             ),
             child: Row(
               children: [
-                const Icon(Iconsax.location, size: 16, color: AppColors.primary),
+                const Icon(
+                  Iconsax.location,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -414,9 +595,37 @@ class _MapLocationPickerState extends State<MapLocationPicker> {
           ),
         ],
 
+        if (_gpsAccuracyMeters != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color:
+                  (_gpsAccuracyMeters! > _weakAccuracyMeters
+                          ? Colors.orange
+                          : AppColors.primary)
+                      .withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _gpsAccuracyMeters! > _weakAccuracyMeters
+                  ? 'Current GPS accuracy is weak: about ±${_gpsAccuracyMeters!.toStringAsFixed(0)} m. Move outdoors or drag the pin manually for a better result.'
+                  : 'GPS accuracy: about ±${_gpsAccuracyMeters!.toStringAsFixed(0)} m.',
+              style: TextStyle(
+                fontSize: 11,
+                color: _gpsAccuracyMeters! > _weakAccuracyMeters
+                    ? Colors.orange.shade900
+                    : AppColors.primaryDark,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+
         const SizedBox(height: 4),
         Text(
-          'Search a place, use GPS, or drag the map — then tap ✓',
+          'For the best precision, tap GPS, wait for the accuracy message, then zoom in and place the pin on your exact gate or building.',
           style: TextStyle(fontSize: 11, color: Colors.grey[500]),
           textAlign: TextAlign.center,
         ),

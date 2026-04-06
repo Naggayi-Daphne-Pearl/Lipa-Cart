@@ -8,6 +8,7 @@ class CartItem {
   bool? found;
   double? actualPrice;
   String? shopperNotes;
+  bool? substitutionApproved;
 
   CartItem({
     required this.id,
@@ -17,6 +18,7 @@ class CartItem {
     this.found,
     this.actualPrice,
     this.shopperNotes,
+    this.substitutionApproved,
   });
 
   double get totalPrice => product.price * quantity;
@@ -29,6 +31,7 @@ class CartItem {
     bool? found,
     double? actualPrice,
     String? shopperNotes,
+    bool? substitutionApproved,
   }) {
     return CartItem(
       id: id ?? this.id,
@@ -38,6 +41,7 @@ class CartItem {
       found: found ?? this.found,
       actualPrice: actualPrice ?? this.actualPrice,
       shopperNotes: shopperNotes ?? this.shopperNotes,
+      substitutionApproved: substitutionApproved ?? this.substitutionApproved,
     );
   }
 
@@ -50,6 +54,8 @@ class CartItem {
       if (found != null) 'found': found,
       if (actualPrice != null) 'actualPrice': actualPrice,
       if (shopperNotes != null) 'shopperNotes': shopperNotes,
+      if (substitutionApproved != null)
+        'substitutionApproved': substitutionApproved,
     };
   }
 
@@ -62,6 +68,7 @@ class CartItem {
       found: json['found'] as bool?,
       actualPrice: (json['actualPrice'] as num?)?.toDouble(),
       shopperNotes: json['shopperNotes'] as String?,
+      substitutionApproved: json['substitutionApproved'] as bool?,
     );
   }
 }
