@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
+import '../../core/utils/formatters.dart';
 import '../../models/shopping_list.dart';
 import '../../providers/shopping_list_provider.dart';
 import '../../providers/cart_provider.dart';
@@ -22,6 +23,8 @@ class ShoppingListsScreen extends StatefulWidget {
 }
 
 class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
+  final _searchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -38,9 +41,42 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  double _estimateListValue(ShoppingList list) {
+    return list.items.fold<double>(0, (sum, item) {
+      final budget = item.budgetAmount ?? 0;
+      final pricedAmount = (item.unitPrice ?? 0) * item.quantity;
+      return sum + (budget > 0 ? budget : pricedAmount);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final provider = context.watch<ShoppingListProvider>();
     final authProvider = context.watch<AuthProvider>();
+    final searchQuery = _searchController.text.trim().toLowerCase();
+    final visibleLists = searchQuery.isEmpty
+        ? provider.lists
+        : provider.lists.where((list) {
+            final matchesList = list.name.toLowerCase().contains(searchQuery) ||
+                (list.description?.toLowerCase().contains(searchQuery) ?? false);
+            final matchesItems = list.items.any(
+              (item) => item.name.toLowerCase().contains(searchQuery),
+            );
+            return matchesList || matchesItems;
+          }).toList();
+    final visibleItemCount = visibleLists.fold<int>(
+      0,
+      (sum, list) => sum + list.totalItems,
+    );
+    final visibleEstimatedTotal = visibleLists.fold<double>(
+      0,
+      (sum, list) => sum + _estimateListValue(list),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -89,7 +125,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                             ),
                           ),
                           Text(
-                            '${provider.lists.length} lists',
+                            '${visibleLists.length} ${searchQuery.isEmpty ? 'lists' : 'matches'}',
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.textSecondary,
                             ),
@@ -101,21 +137,112 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                 ),
               ),
 
+              if (authProvider.isAuthenticated && provider.lists.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSizes.lg,
+                    0,
+                    AppSizes.lg,
+                    AppSizes.md,
+                  ),
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _searchController,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          hintText: 'Search lists or items',
+                          prefixIcon: const Icon(Iconsax.search_normal),
+                          suffixIcon: searchQuery.isEmpty
+                              ? null
+                              : IconButton(
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {});
+                                  },
+                                  icon: const Icon(Iconsax.close_circle),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSizes.sm),
+                      Wrap(
+                        spacing: AppSizes.sm,
+                        runSpacing: AppSizes.sm,
+                        children: [
+                          _buildInsightChip(
+                            icon: Iconsax.note_1,
+                            label: '${visibleLists.length} lists',
+                          ),
+                          _buildInsightChip(
+                            icon: Iconsax.box,
+                            label: '$visibleItemCount items',
+                          ),
+                          _buildInsightChip(
+                            icon: Iconsax.wallet_2,
+                            label: Formatters.formatCurrency(visibleEstimatedTotal),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSizes.sm),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _buildQuickTemplateChip(
+                              label: 'Weekly',
+                              emoji: '🛒',
+                              items: [
+                                ShoppingListItem(id: 'wk_bread', name: 'Bread', unitPrice: 4000),
+                                ShoppingListItem(id: 'wk_milk', name: 'Milk', unitPrice: 5000),
+                                ShoppingListItem(id: 'wk_eggs', name: 'Eggs', unitPrice: 6000),
+                              ],
+                            ),
+                            const SizedBox(width: AppSizes.sm),
+                            _buildQuickTemplateChip(
+                              label: 'Meal Prep',
+                              emoji: '🥗',
+                              items: [
+                                ShoppingListItem(id: 'mp_chicken', name: 'Chicken Breast', unitPrice: 18000),
+                                ShoppingListItem(id: 'mp_rice', name: 'Rice', unitPrice: 8000),
+                                ShoppingListItem(id: 'mp_veg', name: 'Mixed Vegetables', unitPrice: 7000),
+                              ],
+                            ),
+                            const SizedBox(width: AppSizes.sm),
+                            _buildQuickTemplateChip(
+                              label: 'BBQ',
+                              emoji: '🔥',
+                              items: [
+                                ShoppingListItem(id: 'bbq_beef', name: 'Beef', unitPrice: 22000),
+                                ShoppingListItem(id: 'bbq_soda', name: 'Soda', unitPrice: 2000),
+                                ShoppingListItem(id: 'bbq_charcoal', name: 'Charcoal', unitPrice: 6000),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // Lists
               Expanded(
                 child: !authProvider.isAuthenticated
                     ? _buildUnauthenticatedState()
                     : provider.isLoading
-                    ? const AppLoadingPage()
+                    ? const AppLoadingPage(
+                        message: 'Loading your shopping lists...',
+                      )
                     : provider.lists.isEmpty
                     ? _buildEmptyState()
+                    : visibleLists.isEmpty
+                    ? _buildNoSearchResults()
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppSizes.lg,
                         ),
-                        itemCount: provider.lists.length,
+                        itemCount: visibleLists.length,
                         itemBuilder: (context, index) {
-                          final list = provider.lists[index];
+                          final list = visibleLists[index];
                           return _buildListCard(list);
                         },
                       ),
@@ -141,8 +268,88 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     );
   }
 
+  Widget _buildInsightChip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        border: Border.all(color: AppColors.grey200),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.primary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickTemplateChip({
+    required String label,
+    required String emoji,
+    required List<ShoppingListItem> items,
+  }) {
+    return GestureDetector(
+      onTap: () => _showCreateListSheet(
+        context,
+        templateName: label,
+        templateItems: items,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.cardGreen,
+          borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+          border: Border.all(color: AppColors.primaryMuted),
+        ),
+        child: Text(
+          '$emoji $label',
+          style: AppTextStyles.labelSmall.copyWith(
+            color: AppColors.primaryDark,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoSearchResults() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSizes.xl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Iconsax.search_status, size: 48, color: AppColors.grey400),
+            const SizedBox(height: AppSizes.md),
+            Text(
+              'No matching lists found',
+              style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: AppSizes.xs),
+            Text(
+              'Try a different keyword or create a new quick list from the templates above.',
+              style: AppTextStyles.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildListCard(ShoppingList list) {
     final color = _parseColor(list.color);
+    final estimatedValue = _estimateListValue(list);
 
     return GestureDetector(
       onTap: () =>
@@ -233,17 +440,32 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Iconsax.shopping_bag, color: color, size: 16),
-                        const SizedBox(width: AppSizes.xs),
-                        Text(
-                          '${list.totalItems} item${list.totalItems != 1 ? 's' : ''}',
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        Row(
+                          children: [
+                            Icon(Iconsax.shopping_bag, color: color, size: 16),
+                            const SizedBox(width: AppSizes.xs),
+                            Text(
+                              '${list.totalItems} item${list.totalItems != 1 ? 's' : ''}',
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
+                        if (estimatedValue > 0) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Est. ${Formatters.formatCurrency(estimatedValue)}',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primaryDark,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -808,7 +1030,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                                       isPremium: isPremium,
                                       authToken: authToken,
                                     );
-                                if (!mounted) return;
+                                if (!context.mounted) return;
                                 if (didCreate) {
                                   // Add template items if provided
                                   if (templateItems != null &&
@@ -846,11 +1068,11 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                                       // Continue anyway - list was created successfully
                                     }
                                   }
-                                  if (mounted) {
+                                  if (context.mounted) {
                                     Navigator.of(context).pop();
                                   }
                                 } else {
-                                  if (mounted) {
+                                  if (context.mounted) {
                                     Navigator.of(context).pop();
                                     _showFreeTierLimitDialog(context);
                                   }
@@ -1079,7 +1301,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                           list.id,
                           authToken: authToken,
                         );
-                        if (!mounted) return;
+                        if (!context.mounted) return;
                         Navigator.pop(context);
 
                         // Show success message
@@ -1097,7 +1319,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                           ),
                         );
                       } catch (_) {
-                        if (!mounted) return;
+                        if (!context.mounted) return;
                         setDialogState(() => isDeleting = false);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -1313,12 +1535,12 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                               authToken: authToken,
                             );
 
-                        if (!mounted) return;
+                        if (!context.mounted) return;
                         if (didUpdate) {
                           Navigator.pop(context);
                         }
                       } catch (_) {
-                        if (!mounted) return;
+                        if (!context.mounted || !mounted) return;
                         Navigator.pop(context);
                         ScaffoldMessenger.of(this.context).showSnackBar(
                           const SnackBar(

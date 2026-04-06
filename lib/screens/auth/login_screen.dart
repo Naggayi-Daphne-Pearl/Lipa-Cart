@@ -72,14 +72,22 @@ class _LoginScreenState extends State<LoginScreen> {
           await _handlePostLogin(authProvider);
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No saved session. Please log in with phone number first.'), backgroundColor: AppColors.warning),
+            const SnackBar(
+              content: Text(
+                'No saved session. Please log in with phone number first.',
+              ),
+              backgroundColor: AppColors.warning,
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Biometric authentication failed'), backgroundColor: AppColors.error),
+          const SnackBar(
+            content: Text('Biometric authentication failed'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -164,15 +172,9 @@ class _LoginScreenState extends State<LoginScreen> {
     return Row(
       children: [
         // Left brand panel
-        Expanded(
-          flex: 5,
-          child: _buildBrandPanel(),
-        ),
+        Expanded(flex: 5, child: _buildBrandPanel()),
         // Right form panel
-        Expanded(
-          flex: 5,
-          child: _buildDesktopFormPanel(),
-        ),
+        Expanded(flex: 5, child: _buildDesktopFormPanel()),
       ],
     );
   }
@@ -184,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF0D6B3A),
+            AppColors.primaryDark,
             AppColors.primary,
             AppColors.primaryLight,
           ],
@@ -193,9 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Stack(
         children: [
           // Subtle circle pattern overlay
-          Positioned.fill(
-            child: CustomPaint(painter: _CirclePatternPainter()),
-          ),
+          Positioned.fill(child: CustomPaint(painter: _CirclePatternPainter())),
           // Content
           Padding(
             padding: const EdgeInsets.all(48),
@@ -205,49 +205,40 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Logo
                 SvgPicture.asset(
                   'assets/images/logos/logo-on-green-1.svg',
-                  height: 32,
+                  height: 36,
                 ),
                 const Spacer(),
                 // Headline
-                const Text(
+                Text(
                   'Fresh groceries,\ndelivered fast.',
-                  style: TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    height: 1.15,
-                    letterSpacing: -0.5,
-                  ),
+                  style: AppTextStyles.heroTitle,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Get quality produce from local markets\ndelivered right to your doorstep in Kampala.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white.withValues(alpha: 0.8),
-                    height: 1.6,
-                  ),
+                  style: AppTextStyles.heroBody,
                 ),
                 const SizedBox(height: 40),
                 // Trust signals
                 Row(
                   children: [
                     _buildTrustBadge(
-                        Iconsax.people, '10,000+', 'Happy customers'),
+                      Iconsax.people,
+                      '10,000+',
+                      'Happy customers',
+                    ),
                     const SizedBox(width: 32),
                     _buildTrustBadge(Iconsax.star_1, '4.8', 'App rating'),
                     const SizedBox(width: 32),
-                    _buildTrustBadge(
-                        Iconsax.timer_1, '30 min', 'Avg delivery'),
+                    _buildTrustBadge(Iconsax.timer_1, '30 min', 'Avg delivery'),
                   ],
                 ),
                 const Spacer(flex: 1),
                 // Footer
                 Text(
                   '${DateTime.now().year} LipaCart. All rights reserved.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.4),
+                  style: AppTextStyles.heroMeta.copyWith(
+                    color: const Color(0x73FFFFFF),
                   ),
                 ),
               ],
@@ -264,27 +255,69 @@ class _LoginScreenState extends State<LoginScreen> {
       children: [
         Row(
           children: [
-            Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 16),
+            Icon(icon, color: const Color(0xB3FFFFFF), size: 16),
             const SizedBox(width: 6),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
+            Text(value, style: AppTextStyles.heroMetric),
           ],
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white.withValues(alpha: 0.6),
-          ),
-        ),
+        Text(label, style: AppTextStyles.heroMeta),
       ],
+    );
+  }
+
+  Widget _buildAuthValueChip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        border: Border.all(color: AppColors.primaryMuted),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.primaryDark),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.primaryDark,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAuthTrustNote({
+    required IconData icon,
+    required String message,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.grey100,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: AppColors.primaryDark),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -310,8 +343,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: () => context.push('/signup'),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.primary,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                       side: const BorderSide(color: AppColors.primary),
@@ -352,11 +387,7 @@ class _LoginScreenState extends State<LoginScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFE8F5E9),
-            Color(0xFFF1F8E9),
-            Color(0xFFFAFAFA),
-          ],
+          colors: [Color(0xFFE8F5E9), Color(0xFFF1F8E9), Color(0xFFFAFAFA)],
           stops: [0.0, 0.4, 1.0],
         ),
       ),
@@ -371,20 +402,36 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // ─── Shared form content ────────────────────────────────────────
   Widget _buildFormContent({required bool isDesktop}) {
+    final headerGap = isDesktop ? AppSizes.xl : AppSizes.lg;
+    final cardPadding = isDesktop ? AppSizes.lg : AppSizes.md;
+    final phoneHelperText = isDesktop ? 'Uganda mobile number' : null;
+    final authBenefits = _usePassword
+        ? const [
+            {'icon': Iconsax.truck_fast, 'label': 'Track orders'},
+            {'icon': Iconsax.location, 'label': 'Save addresses'},
+            {'icon': Iconsax.clipboard_text, 'label': 'Faster checkout'},
+          ]
+        : const [
+            {'icon': Iconsax.shield_tick, 'label': 'Secure OTP'},
+            {'icon': Iconsax.timer_1, 'label': 'Quick access'},
+            {'icon': Iconsax.lock, 'label': 'No password'},
+          ];
+
     return Form(
       key: _formKey,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       child: Column(
-        crossAxisAlignment:
-            isDesktop ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
+        crossAxisAlignment: isDesktop
+            ? CrossAxisAlignment.stretch
+            : CrossAxisAlignment.center,
         children: [
           if (!isDesktop) ...[
-            const SizedBox(height: AppSizes.xxl),
+            const SizedBox(height: AppSizes.lg),
             SvgPicture.asset(
               'assets/images/logos/logo-on-white.svg',
-              height: 36,
+              height: 32,
             ),
-            const SizedBox(height: AppSizes.xl),
+            const SizedBox(height: AppSizes.lg),
           ],
           // Welcome text
           Text(
@@ -397,23 +444,38 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: AppSizes.xs),
           Text(
             _usePassword
-                ? 'Sign in to get fresh groceries delivered'
-                : 'We\'ll send a verification code to your phone',
+                ? 'Track orders, save addresses, and check out faster.'
+                : 'Secure OTP sign in — we\'ll text a 6-digit code to your phone.',
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.textSecondary,
             ),
             textAlign: isDesktop ? TextAlign.left : TextAlign.center,
           ),
-          const SizedBox(height: AppSizes.xl),
+          const SizedBox(height: AppSizes.md),
+          Wrap(
+            alignment: isDesktop ? WrapAlignment.start : WrapAlignment.center,
+            spacing: AppSizes.sm,
+            runSpacing: AppSizes.sm,
+            children: authBenefits
+                .map(
+                  (benefit) => _buildAuthValueChip(
+                    icon: benefit['icon'] as IconData,
+                    label: benefit['label'] as String,
+                  ),
+                )
+                .toList(),
+          ),
+          SizedBox(height: headerGap),
 
           // Form card
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(AppSizes.lg),
+            padding: EdgeInsets.all(cardPadding),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(
-                  isDesktop ? AppSizes.radiusMd : AppSizes.radiusLg),
+                isDesktop ? AppSizes.radiusMd : AppSizes.radiusLg,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: AppColors.primary.withValues(alpha: 0.06),
@@ -449,11 +511,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       : AppTextStyles.bodyLarge,
                   decoration: InputDecoration(
                     hintText: '7XX XXX XXX',
-                    helperText: 'Uganda mobile number',
+                    helperText: phoneHelperText,
                     helperStyle: AppTextStyles.caption,
                     contentPadding: isDesktop
                         ? const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12)
+                            horizontal: 12,
+                            vertical: 12,
+                          )
                         : null,
                     prefixIcon: Container(
                       padding: const EdgeInsets.symmetric(
@@ -470,21 +534,21 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(width: 8),
                           Text(
                             '+256',
-                            style: (isDesktop
-                                    ? AppTextStyles.bodyMedium
-                                    : AppTextStyles.bodyLarge)
-                                .copyWith(
-                              color: AppColors.primaryDark,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style:
+                                (isDesktop
+                                        ? AppTextStyles.bodyMedium
+                                        : AppTextStyles.bodyLarge)
+                                    .copyWith(
+                                      color: AppColors.primaryDark,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                           ),
                           const SizedBox(width: 10),
                           Container(
                             width: 1.5,
                             height: 24,
                             decoration: BoxDecoration(
-                              color:
-                                  AppColors.primary.withValues(alpha: 0.2),
+                              color: AppColors.primary.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(1),
                             ),
                           ),
@@ -509,8 +573,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     validator: (value) {
-                      if (_usePassword &&
-                          (value == null || value.isEmpty)) {
+                      if (_usePassword && (value == null || value.isEmpty)) {
                         return 'Password is required';
                       }
                       return null;
@@ -522,7 +585,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: 'Enter your password',
                       contentPadding: isDesktop
                           ? const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 12)
+                              horizontal: 12,
+                              vertical: 12,
+                            )
                           : null,
                       prefixIcon: const Icon(
                         Iconsax.lock,
@@ -553,10 +618,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         padding: const EdgeInsets.symmetric(
                           vertical: AppSizes.xs,
                         ),
-                        minimumSize: const Size(
-                          AppSizes.touchTargetMin,
-                          36,
-                        ),
+                        minimumSize: const Size(AppSizes.touchTargetMin, 36),
                       ),
                       child: Text(
                         'Forgot password?',
@@ -568,12 +630,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ],
-                SizedBox(
-                  height: _usePassword ? AppSizes.md : AppSizes.lg,
-                ),
+                SizedBox(height: _usePassword ? AppSizes.md : AppSizes.lg),
                 // Login button
                 CustomButton(
-                  text: _usePassword ? 'Sign In' : 'Send Code',
+                  text: _usePassword
+                      ? 'Sign In To Continue'
+                      : 'Send Verification Code',
                   isLoading: _isLoading,
                   onPressed: _login,
                   height: isDesktop
@@ -586,11 +648,22 @@ class _LoginScreenState extends State<LoginScreen> {
                   Center(
                     child: IconButton(
                       onPressed: _authenticateWithBiometrics,
-                      icon: const Icon(Icons.fingerprint, size: 40, color: AppColors.primary),
+                      icon: const Icon(
+                        Icons.fingerprint,
+                        size: 40,
+                        color: AppColors.primary,
+                      ),
                       tooltip: 'Sign in with biometrics',
                     ),
                   ),
                 ],
+                const SizedBox(height: AppSizes.md),
+                _buildAuthTrustNote(
+                  icon: _usePassword ? Iconsax.shield_tick : Iconsax.sms,
+                  message: _usePassword
+                      ? 'Secure sign in to manage your orders, saved addresses, and shopping history.'
+                      : 'We\'ll text a secure code to this phone so you can sign in without a password.',
+                ),
               ],
             ),
           ),
@@ -748,10 +821,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (token != null && user != null && user.addresses.isEmpty) {
         final addressService = context.read<AddressService>();
         final customerId = user.customerId ?? user.id;
-        final success =
-            await addressService.fetchAddresses(token, customerId);
+        final success = await addressService.fetchAddresses(token, customerId);
+        if (!mounted) return;
         if (success) {
           await authProvider.setAddresses(addressService.userAddresses);
+          if (!mounted) return;
         }
       }
 

@@ -31,9 +31,10 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.easeOut),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeOut));
     _scaleAnimation = Tween<double>(begin: 0.7, end: 1).animate(
       CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
     );
@@ -103,10 +104,7 @@ class _SplashScreenState extends State<SplashScreen>
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFFFDF8),
-                Color(0xFFF7F2E8),
-              ],
+              colors: [Color(0xFFFFFDF8), Color(0xFFF7F2E8)],
             ),
           ),
           child: Center(
@@ -129,14 +127,19 @@ class _SplashScreenState extends State<SplashScreen>
                               height: 120,
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFF1B7F4E), Color(0xFF15874B)],
+                                  colors: [
+                                    Color(0xFF1B7F4E),
+                                    Color(0xFF15874B),
+                                  ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(32),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.primary.withValues(alpha: _pulseAnimation.value),
+                                    color: AppColors.primary.withValues(
+                                      alpha: _pulseAnimation.value,
+                                    ),
                                     blurRadius: 40,
                                     spreadRadius: 8,
                                   ),
@@ -155,18 +158,31 @@ class _SplashScreenState extends State<SplashScreen>
                         const SizedBox(height: 28),
                         Text(
                           AppConstants.appName,
-                          style: AppTextStyles.h2.copyWith(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.5,
-                          ),
+                          style: AppTextStyles.screenTitle,
                         ),
                         const SizedBox(height: 6),
                         Text(
                           'Fresh Groceries Delivered',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
-                            letterSpacing: 0.3,
+                          style: AppTextStyles.screenSubtitle.copyWith(
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primarySoft,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            'Preparing your fresh picks...',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primaryDark,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                         // No spinner — just the pulsing logo glow

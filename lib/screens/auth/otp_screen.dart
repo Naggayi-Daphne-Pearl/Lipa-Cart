@@ -135,14 +135,8 @@ class _OtpScreenState extends State<OtpScreen> {
   Widget _buildDesktopLayout() {
     return Row(
       children: [
-        Expanded(
-          flex: 5,
-          child: _buildBrandPanel(),
-        ),
-        Expanded(
-          flex: 5,
-          child: _buildDesktopFormPanel(),
-        ),
+        Expanded(flex: 5, child: _buildBrandPanel()),
+        Expanded(flex: 5, child: _buildDesktopFormPanel()),
       ],
     );
   }
@@ -154,7 +148,7 @@ class _OtpScreenState extends State<OtpScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF0D6B3A),
+            AppColors.primaryDark,
             AppColors.primary,
             AppColors.primaryLight,
           ],
@@ -162,9 +156,7 @@ class _OtpScreenState extends State<OtpScreen> {
       ),
       child: Stack(
         children: [
-          Positioned.fill(
-            child: CustomPaint(painter: _CirclePatternPainter()),
-          ),
+          Positioned.fill(child: CustomPaint(painter: _CirclePatternPainter())),
           Padding(
             padding: const EdgeInsets.all(48),
             child: Column(
@@ -172,33 +164,26 @@ class _OtpScreenState extends State<OtpScreen> {
               children: [
                 SvgPicture.asset(
                   'assets/images/logos/logo-on-green-1.svg',
-                  height: 32,
+                  height: 36,
                 ),
                 const Spacer(),
-                const Text(
+                Text(
                   'Almost there!\nVerify your number.',
-                  style: TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    height: 1.15,
-                    letterSpacing: -0.5,
-                  ),
+                  style: AppTextStyles.heroTitle,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'We sent a verification code to your phone.\nEnter it below to continue.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white.withValues(alpha: 0.8),
-                    height: 1.6,
-                  ),
+                  style: AppTextStyles.heroBody,
                 ),
                 const SizedBox(height: 40),
                 Row(
                   children: [
                     _buildTrustBadge(
-                        Iconsax.shield_tick, 'Secure', 'Verification'),
+                      Iconsax.shield_tick,
+                      'Secure',
+                      'Verification',
+                    ),
                     const SizedBox(width: 32),
                     _buildTrustBadge(Iconsax.timer_1, '60s', 'Auto-resend'),
                     const SizedBox(width: 32),
@@ -208,9 +193,8 @@ class _OtpScreenState extends State<OtpScreen> {
                 const Spacer(flex: 1),
                 Text(
                   '${DateTime.now().year} LipaCart. All rights reserved.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.4),
+                  style: AppTextStyles.heroMeta.copyWith(
+                    color: const Color(0x73FFFFFF),
                   ),
                 ),
               ],
@@ -227,26 +211,13 @@ class _OtpScreenState extends State<OtpScreen> {
       children: [
         Row(
           children: [
-            Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 16),
+            Icon(icon, color: const Color(0xB3FFFFFF), size: 16),
             const SizedBox(width: 6),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
+            Text(value, style: AppTextStyles.heroMetric),
           ],
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white.withValues(alpha: 0.6),
-          ),
-        ),
+        Text(label, style: AppTextStyles.heroMeta),
       ],
     );
   }
@@ -292,8 +263,10 @@ class _OtpScreenState extends State<OtpScreen> {
                   onPressed: () => context.go('/login'),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.primary,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                       side: const BorderSide(color: AppColors.primary),
@@ -371,8 +344,9 @@ class _OtpScreenState extends State<OtpScreen> {
   // ─── Shared form content ────────────────────────────────────────
   Widget _buildFormContent({required bool isDesktop}) {
     return Column(
-      crossAxisAlignment:
-          isDesktop ? CrossAxisAlignment.stretch : CrossAxisAlignment.start,
+      crossAxisAlignment: isDesktop
+          ? CrossAxisAlignment.stretch
+          : CrossAxisAlignment.start,
       children: [
         if (!isDesktop) const SizedBox(height: AppSizes.lg),
         Text(
@@ -408,7 +382,8 @@ class _OtpScreenState extends State<OtpScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(
-                isDesktop ? AppSizes.radiusMd : AppSizes.radiusLg),
+              isDesktop ? AppSizes.radiusMd : AppSizes.radiusLg,
+            ),
             boxShadow: [
               BoxShadow(
                 color: AppColors.primary.withValues(alpha: 0.06),
@@ -484,11 +459,7 @@ class _OtpScreenState extends State<OtpScreen> {
           ),
           child: Row(
             children: [
-              const Icon(
-                Iconsax.info_circle,
-                color: AppColors.info,
-                size: 20,
-              ),
+              const Icon(Iconsax.info_circle, color: AppColors.info, size: 20),
               const SizedBox(width: AppSizes.sm),
               Expanded(
                 child: Text(
@@ -547,8 +518,7 @@ class _OtpScreenState extends State<OtpScreen> {
       if (token != null && user != null && user.addresses.isEmpty) {
         final addressService = context.read<AddressService>();
         final customerId = user.customerId ?? user.id;
-        final success =
-            await addressService.fetchAddresses(token, customerId);
+        final success = await addressService.fetchAddresses(token, customerId);
         if (success) {
           await authProvider.setAddresses(addressService.userAddresses);
         }

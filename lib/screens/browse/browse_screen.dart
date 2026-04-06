@@ -97,8 +97,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                 ),
                 child: Text(
                   'Browse Products',
-                  style: AppTextStyles.h3.copyWith(
-                    fontWeight: FontWeight.w800,
+                  style: AppTextStyles.screenTitle.copyWith(
                     fontSize: context.responsive<double>(
                       mobile: 26.0,
                       tablet: 30.0,
@@ -283,9 +282,23 @@ class _BrowseScreenState extends State<BrowseScreen> {
                           value: 'name',
                           child: Row(
                             children: [
-                              Icon(Iconsax.text, size: 16, color: _sortBy == 'name' ? AppColors.primary : AppColors.textSecondary),
+                              Icon(
+                                Iconsax.text,
+                                size: 16,
+                                color: _sortBy == 'name'
+                                    ? AppColors.primary
+                                    : AppColors.textSecondary,
+                              ),
                               const SizedBox(width: 8),
-                              Text('Name', style: TextStyle(color: _sortBy == 'name' ? AppColors.primary : AppColors.textPrimary)),
+                              Text(
+                                'Name',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: _sortBy == 'name'
+                                      ? AppColors.primary
+                                      : AppColors.textPrimary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -293,9 +306,23 @@ class _BrowseScreenState extends State<BrowseScreen> {
                           value: 'price_low',
                           child: Row(
                             children: [
-                              Icon(Iconsax.arrow_down, size: 16, color: _sortBy == 'price_low' ? AppColors.primary : AppColors.textSecondary),
+                              Icon(
+                                Iconsax.arrow_down,
+                                size: 16,
+                                color: _sortBy == 'price_low'
+                                    ? AppColors.primary
+                                    : AppColors.textSecondary,
+                              ),
                               const SizedBox(width: 8),
-                              Text('Price: Low to High', style: TextStyle(color: _sortBy == 'price_low' ? AppColors.primary : AppColors.textPrimary)),
+                              Text(
+                                'Price: Low to High',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: _sortBy == 'price_low'
+                                      ? AppColors.primary
+                                      : AppColors.textPrimary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -303,27 +330,54 @@ class _BrowseScreenState extends State<BrowseScreen> {
                           value: 'price_high',
                           child: Row(
                             children: [
-                              Icon(Iconsax.arrow_up_1, size: 16, color: _sortBy == 'price_high' ? AppColors.primary : AppColors.textSecondary),
+                              Icon(
+                                Iconsax.arrow_up_1,
+                                size: 16,
+                                color: _sortBy == 'price_high'
+                                    ? AppColors.primary
+                                    : AppColors.textSecondary,
+                              ),
                               const SizedBox(width: 8),
-                              Text('Price: High to Low', style: TextStyle(color: _sortBy == 'price_high' ? AppColors.primary : AppColors.textPrimary)),
+                              Text(
+                                'Price: High to Low',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: _sortBy == 'price_high'
+                                      ? AppColors.primary
+                                      : AppColors.textPrimary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ],
                           ),
                         ),
                       ],
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
                           border: Border.all(color: AppColors.grey200),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Iconsax.sort, size: 16, color: AppColors.textSecondary),
+                            Icon(
+                              Iconsax.sort,
+                              size: 16,
+                              color: AppColors.textSecondary,
+                            ),
                             const SizedBox(width: 6),
                             Text(
-                              _sortBy == 'name' ? 'Name' : _sortBy == 'price_low' ? 'Price ↑' : 'Price ↓',
+                              _sortBy == 'name'
+                                  ? 'Name'
+                                  : _sortBy == 'price_low'
+                                  ? 'Price ↑'
+                                  : 'Price ↓',
                               style: AppTextStyles.caption.copyWith(
                                 color: AppColors.textSecondary,
                                 fontWeight: FontWeight.w500,
@@ -656,9 +710,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
                         Expanded(
                           child: Text(
                             Formatters.formatCurrency(product.price),
-                            style: AppTextStyles.labelLarge.copyWith(
+                            style: AppTextStyles.priceMedium.copyWith(
                               color: AppColors.primary,
-                              fontWeight: FontWeight.w800,
                               fontSize: context.responsive<double>(
                                 mobile: 14.0,
                                 tablet: 17.0,

@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/constants/app_sizes.dart';
-import '../core/utils/responsive.dart';
-import '../core/utils/formatters.dart';
 import '../providers/cart_provider.dart';
 import 'home/home_screen.dart';
 import 'browse/browse_screen.dart';
@@ -55,7 +52,6 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final cartProvider = context.watch<CartProvider>();
-    final isDesktopOrTablet = context.isTablet || context.isDesktop;
 
     return PopScope(
       canPop: false,
@@ -73,65 +69,62 @@ class _MainShellState extends State<MainShell> {
           decoration: const BoxDecoration(
             gradient: AppColors.elegantBgGradient,
           ),
-          child: IndexedStack(
-            index: _getStackIndex(),
-            children: _screens,
-          ),
+          child: IndexedStack(index: _getStackIndex(), children: _screens),
         ),
         // Bottom navigation for all screens
         bottomNavigationBar: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(AppSizes.radiusXl),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.black.withValues(alpha: 0.05),
-                      blurRadius: 20,
-                      offset: const Offset(0, -4),
-                    ),
-                  ],
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSizes.xs,
-                      vertical: AppSizes.md,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildNavItem(
-                          icon: Iconsax.home_2,
-                          activeIcon: Iconsax.home_15,
-                          label: 'Home',
-                          index: 0,
-                        ),
-                        _buildNavItem(
-                          icon: Iconsax.search_normal,
-                          activeIcon: Iconsax.search_normal_1,
-                          label: 'Browse',
-                          index: 1,
-                        ),
-                        _buildNavItem(
-                          icon: Iconsax.clipboard_text,
-                          activeIcon: Iconsax.clipboard_text,
-                          label: 'Lists',
-                          index: 2,
-                        ),
-                        _buildCartNavItem(cartProvider.itemCount),
-                        _buildNavItem(
-                          icon: Iconsax.user,
-                          activeIcon: Iconsax.user,
-                          label: 'Profile',
-                          index: 4,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSizes.radiusXl),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withValues(alpha: 0.05),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
               ),
+            ],
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSizes.xs,
+                vertical: AppSizes.md,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(
+                    icon: Iconsax.home_2,
+                    activeIcon: Iconsax.home_15,
+                    label: 'Home',
+                    index: 0,
+                  ),
+                  _buildNavItem(
+                    icon: Iconsax.search_normal,
+                    activeIcon: Iconsax.search_normal_1,
+                    label: 'Browse',
+                    index: 1,
+                  ),
+                  _buildNavItem(
+                    icon: Iconsax.clipboard_text,
+                    activeIcon: Iconsax.clipboard_text,
+                    label: 'Lists',
+                    index: 2,
+                  ),
+                  _buildCartNavItem(cartProvider.itemCount),
+                  _buildNavItem(
+                    icon: Iconsax.user,
+                    activeIcon: Iconsax.user,
+                    label: 'Profile',
+                    index: 4,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -147,24 +140,34 @@ class _MainShellState extends State<MainShell> {
     return GestureDetector(
       onTap: () => _onNavTap(index),
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isSelected ? activeIcon : icon,
-            color: isSelected ? AppColors.accent : AppColors.grey400,
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppTextStyles.caption.copyWith(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accentSoft : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+          border: isSelected
+              ? Border.all(color: AppColors.accent.withValues(alpha: 0.15))
+              : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
               color: isSelected ? AppColors.accent : AppColors.grey400,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              fontSize: 11,
+              size: 24,
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: AppTextStyles.navLabel.copyWith(
+                color: isSelected ? AppColors.accent : AppColors.grey400,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -210,15 +213,13 @@ class _MainShellState extends State<MainShell> {
           const SizedBox(height: 4),
           Text(
             'Cart',
-            style: AppTextStyles.caption.copyWith(
+            style: AppTextStyles.navLabel.copyWith(
               color: AppColors.grey400,
               fontWeight: FontWeight.w400,
-              fontSize: 11,
             ),
           ),
         ],
       ),
     );
   }
-
 }

@@ -152,6 +152,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (_isLoadingProfile) return;
 
     final authProvider = context.read<AuthProvider>();
+    final addressService = context.read<AddressService>();
+    final orderProvider = context.read<OrderProvider>();
+    final orderService = context.read<OrderService>();
     final token = authProvider.token;
     final user = authProvider.user;
 
@@ -164,7 +167,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final refreshedUser = authProvider.user;
       if (refreshedUser == null) return;
 
-      final addressService = context.read<AddressService>();
       final customerId = refreshedUser.customerId ?? refreshedUser.id;
       final addressSuccess = await addressService.fetchAddresses(
         token,
@@ -174,9 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await authProvider.setAddresses(addressService.userAddresses);
       }
 
-      final orderProvider = context.read<OrderProvider>();
       if (orderProvider.orders.isEmpty) {
-        final orderService = context.read<OrderService>();
         final ordersSuccess = await orderService.fetchOrders(
           token,
           refreshedUser.id,
@@ -269,8 +269,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               Text(
                                 'Welcome ${user?.name?.split(' ')[0] ?? 'User'}!',
-                                style: AppTextStyles.h3.copyWith(
-                                  fontWeight: FontWeight.w800,
+                                style: AppTextStyles.screenTitle.copyWith(
                                   fontSize: context.responsive<double>(
                                     mobile: 26.0,
                                     tablet: 30.0,
@@ -609,7 +608,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: AppSizes.lg),
           Text(
             'Welcome to LipaCart',
-            style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w800),
+            style: AppTextStyles.screenTitle.copyWith(fontSize: 24),
           ),
           const SizedBox(height: 8),
           Text(
@@ -1108,6 +1107,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             }),
                           );
 
+                          if (!ctx.mounted) {
+                            return;
+                          }
                           Navigator.pop(ctx);
 
                           if (response.statusCode == 200 && context.mounted) {
@@ -1120,8 +1122,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             );
                             await LogoutHelper.logoutAndClear(context);
-                            if (context.mounted)
-                              GoRouter.of(context).go('/customer/home');
+                            if (!context.mounted) {
+                              return;
+                            }
+                            GoRouter.of(context).go('/customer/home');
                           } else if (context.mounted) {
                             final data = jsonDecode(response.body);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -1135,7 +1139,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             );
                           }
                         } catch (_) {
-                          Navigator.pop(ctx);
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                          }
                         }
                       }
                     },
@@ -1218,20 +1224,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   headers: {'Authorization': 'Bearer $token'},
                 );
 
-                if (context.mounted)
+                if (context.mounted) {
                   Navigator.of(context).pop(); // dismiss loading
+                }
 
                 if (response.statusCode == 200 && context.mounted) {
                   await LogoutHelper.logoutAndClear(context);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Account deleted successfully'),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
-                    GoRouter.of(context).go('/customer/home');
+                  if (!context.mounted) {
+                    return;
                   }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Account deleted successfully'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                  GoRouter.of(context).go('/customer/home');
                 } else if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(

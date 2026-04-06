@@ -192,14 +192,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget _buildDesktopLayout() {
     return Row(
       children: [
-        Expanded(
-          flex: 5,
-          child: _buildBrandPanel(),
-        ),
-        Expanded(
-          flex: 5,
-          child: _buildDesktopFormPanel(),
-        ),
+        Expanded(flex: 5, child: _buildBrandPanel()),
+        Expanded(flex: 5, child: _buildDesktopFormPanel()),
       ],
     );
   }
@@ -211,7 +205,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF0D6B3A),
+            AppColors.primaryDark,
             AppColors.primary,
             AppColors.primaryLight,
           ],
@@ -219,9 +213,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ),
       child: Stack(
         children: [
-          Positioned.fill(
-            child: CustomPaint(painter: _CirclePatternPainter()),
-          ),
+          Positioned.fill(child: CustomPaint(painter: _CirclePatternPainter())),
           Padding(
             padding: const EdgeInsets.all(48),
             child: Column(
@@ -229,33 +221,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               children: [
                 SvgPicture.asset(
                   'assets/images/logos/logo-on-green-1.svg',
-                  height: 32,
+                  height: 36,
                 ),
                 const Spacer(),
-                const Text(
-                  'Secure your\naccount.',
-                  style: TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    height: 1.15,
-                    letterSpacing: -0.5,
-                  ),
-                ),
+                Text('Secure your\naccount.', style: AppTextStyles.heroTitle),
                 const SizedBox(height: 16),
                 Text(
                   'Reset your password in a few easy steps.\nWe\'ll get you back to shopping in no time.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white.withValues(alpha: 0.8),
-                    height: 1.6,
-                  ),
+                  style: AppTextStyles.heroBody,
                 ),
                 const SizedBox(height: 40),
                 Row(
                   children: [
                     _buildTrustBadge(
-                        Iconsax.shield_tick, 'Secure', 'End-to-end'),
+                      Iconsax.shield_tick,
+                      'Secure',
+                      'End-to-end',
+                    ),
                     const SizedBox(width: 32),
                     _buildTrustBadge(Iconsax.timer_1, '< 2 min', 'To reset'),
                     const SizedBox(width: 32),
@@ -265,9 +247,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 const Spacer(flex: 1),
                 Text(
                   '${DateTime.now().year} LipaCart. All rights reserved.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.4),
+                  style: AppTextStyles.heroMeta.copyWith(
+                    color: const Color(0x73FFFFFF),
                   ),
                 ),
               ],
@@ -284,26 +265,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       children: [
         Row(
           children: [
-            Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 16),
+            Icon(icon, color: const Color(0xB3FFFFFF), size: 16),
             const SizedBox(width: 6),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
+            Text(value, style: AppTextStyles.heroMetric),
           ],
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white.withValues(alpha: 0.6),
-          ),
-        ),
+        Text(label, style: AppTextStyles.heroMeta),
       ],
     );
   }
@@ -330,8 +298,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   onPressed: () => context.go('/login'),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.primary,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                       side: const BorderSide(color: AppColors.primary),
@@ -372,11 +342,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFE8F5E9),
-            Color(0xFFF1F8E9),
-            Color(0xFFFAFAFA),
-          ],
+          colors: [Color(0xFFE8F5E9), Color(0xFFF1F8E9), Color(0xFFFAFAFA)],
           stops: [0.0, 0.4, 1.0],
         ),
       ),
@@ -401,9 +367,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             // Content
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.lg,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
                 child: _buildFormContent(isDesktop: false),
               ),
             ),
@@ -416,15 +380,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   // ─── Shared form content ────────────────────────────────────────
   Widget _buildFormContent({required bool isDesktop}) {
     return Column(
-      crossAxisAlignment:
-          isDesktop ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
+      crossAxisAlignment: isDesktop
+          ? CrossAxisAlignment.stretch
+          : CrossAxisAlignment.center,
       children: [
         if (!isDesktop) ...[
           const SizedBox(height: AppSizes.md),
-          SvgPicture.asset(
-            'assets/images/logos/logo-on-white.svg',
-            height: 32,
-          ),
+          SvgPicture.asset('assets/images/logos/logo-on-white.svg', height: 32),
           const SizedBox(height: AppSizes.xl),
         ],
         // Step indicator
@@ -437,7 +399,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(
-                isDesktop ? AppSizes.radiusMd : AppSizes.radiusLg),
+              isDesktop ? AppSizes.radiusMd : AppSizes.radiusLg,
+            ),
             boxShadow: [
               BoxShadow(
                 color: AppColors.primary.withValues(alpha: 0.06),
@@ -470,9 +433,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     AppSizes.touchTargetMin,
                     AppSizes.touchTargetMin,
                   ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSizes.sm,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm),
                 ),
                 child: Text(
                   'Sign In',
@@ -523,8 +484,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             color: isCompleted
                 ? AppColors.primary
                 : isActive
-                    ? AppColors.primary
-                    : AppColors.grey200,
+                ? AppColors.primary
+                : AppColors.grey200,
           ),
           child: Center(
             child: isCompleted
@@ -532,8 +493,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 : Text(
                     '${stepIndex + 1}',
                     style: AppTextStyles.labelMedium.copyWith(
-                      color:
-                          isActive ? Colors.white : AppColors.textSecondary,
+                      color: isActive ? Colors.white : AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -580,9 +540,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           Center(
             child: Text(
               'Reset Password',
-              style: AppTextStyles.h3.copyWith(
-                color: AppColors.primaryDark,
-              ),
+              style: AppTextStyles.h3.copyWith(color: AppColors.primaryDark),
             ),
           ),
           const SizedBox(height: AppSizes.xs),
@@ -613,7 +571,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ],
             validator: Validators.validatePhoneNumber,
             autovalidateMode: AutovalidateMode.onUserInteraction,
-            style: isDesktop ? AppTextStyles.bodyMedium : AppTextStyles.bodyLarge,
+            style: isDesktop
+                ? AppTextStyles.bodyMedium
+                : AppTextStyles.bodyLarge,
             decoration: InputDecoration(
               hintText: '7XX XXX XXX',
               helperText: 'Uganda mobile number',
@@ -622,9 +582,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ? const EdgeInsets.symmetric(horizontal: 12, vertical: 12)
                   : null,
               prefixIcon: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.md,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -636,13 +594,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     const SizedBox(width: 8),
                     Text(
                       '+256',
-                      style: (isDesktop
-                              ? AppTextStyles.bodyMedium
-                              : AppTextStyles.bodyLarge)
-                          .copyWith(
-                        color: AppColors.primaryDark,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style:
+                          (isDesktop
+                                  ? AppTextStyles.bodyMedium
+                                  : AppTextStyles.bodyLarge)
+                              .copyWith(
+                                color: AppColors.primaryDark,
+                                fontWeight: FontWeight.w600,
+                              ),
                     ),
                     const SizedBox(width: 10),
                     Container(
@@ -684,18 +643,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             color: AppColors.accentSoft,
             borderRadius: BorderRadius.circular(16),
           ),
-          child: const Icon(
-            Iconsax.sms,
-            color: AppColors.accent,
-            size: 28,
-          ),
+          child: const Icon(Iconsax.sms, color: AppColors.accent, size: 28),
         ),
         const SizedBox(height: AppSizes.md),
         Text(
           'Enter Verification Code',
-          style: AppTextStyles.h3.copyWith(
-            color: AppColors.primaryDark,
-          ),
+          style: AppTextStyles.h3.copyWith(color: AppColors.primaryDark),
         ),
         const SizedBox(height: AppSizes.xs),
         Text(
@@ -752,9 +705,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           text: 'Verify Code',
           isLoading: _isLoading,
           onPressed: _verifyOtp,
-          height: isDesktop
-              ? AppSizes.buttonHeightMd
-              : AppSizes.buttonHeightLg,
+          height: isDesktop ? AppSizes.buttonHeightMd : AppSizes.buttonHeightLg,
         ),
       ],
     );
@@ -786,9 +737,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           Center(
             child: Text(
               'Create New Password',
-              style: AppTextStyles.h3.copyWith(
-                color: AppColors.primaryDark,
-              ),
+              style: AppTextStyles.h3.copyWith(color: AppColors.primaryDark),
             ),
           ),
           const SizedBox(height: AppSizes.xs),
@@ -822,7 +771,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               }
               return null;
             },
-            style: isDesktop ? AppTextStyles.bodyMedium : AppTextStyles.bodyLarge,
+            style: isDesktop
+                ? AppTextStyles.bodyMedium
+                : AppTextStyles.bodyLarge,
             decoration: InputDecoration(
               hintText: 'Enter new password',
               contentPadding: isDesktop
@@ -868,7 +819,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               }
               return null;
             },
-            style: isDesktop ? AppTextStyles.bodyMedium : AppTextStyles.bodyLarge,
+            style: isDesktop
+                ? AppTextStyles.bodyMedium
+                : AppTextStyles.bodyLarge,
             decoration: InputDecoration(
               hintText: 'Confirm new password',
               contentPadding: isDesktop

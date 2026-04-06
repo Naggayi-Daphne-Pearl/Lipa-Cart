@@ -6,15 +6,15 @@ class AppColors {
   // Primary Colors - Brand Green
   static const Color primary = Color(0xFF15874B);
   static const Color primaryLight = Color(0xFF2A9E5E);
-  static const Color primaryDark = Color(0xFF106B3C);
+  static const Color primaryDark = Color(0xFF234D3F);
   static const Color primarySoft = Color(0xFFE3F5EC);
   static const Color primaryMuted = Color(0xFFC7EBDA);
 
   // Accent Colors - Brand Orange for CTAs
-  static const Color accent = Color(0xFFEA7702);
-  static const Color accentLight = Color(0xFFFF9429);
-  static const Color accentSoft = Color(0xFFFFF3E5);
-  static const Color accentMuted = Color(0xFFFFE4C4);
+  static const Color accent = Color(0xFFF89227);
+  static const Color accentLight = Color(0xFFFFA947);
+  static const Color accentSoft = Color(0xFFFFF4E8);
+  static const Color accentMuted = Color(0xFFFFE6C8);
 
   // Warm Neutral Colors (Cream/Beige tones)
   static const Color white = Color(0xFFFFFFFF);
@@ -57,22 +57,22 @@ class AppColors {
   // Status Colors
   static const Color success = Color(0xFF15874B);
   static const Color error = Color(0xFFDC3545);
-  static const Color warning = Color(0xFFEA7702);
+  static const Color warning = accent;
   static const Color info = Color(0xFF0D6EFD);
 
   // Category Colors
   static const Color vegetables = Color(0xFF15874B);
-  static const Color fruits = Color(0xFFEA7702);
+  static const Color fruits = accent;
   static const Color meat = Color(0xFFDC3545);
   static const Color dairy = Color(0xFF0D6EFD);
   static const Color bakery = Color(0xFFD4A574);
   static const Color beverages = Color(0xFF9B7BB8);
-  static const Color snacks = Color(0xFFEA7702);
+  static const Color snacks = accent;
   static const Color eggs = Color(0xFFB8A88A);
   static const Color oils = Color(0xFF15874B);
 
   // Favorite/Heart Colors
-  static const Color heartActive = Color(0xFFEA7702);
+  static const Color heartActive = accent;
   static const Color heartInactive = Color(0xFFDDD9D3);
 
   // Gradients
@@ -108,28 +108,28 @@ class AppColors {
 
   // Shadows (Very subtle for elegant feel)
   static List<BoxShadow> get shadowSm => [
-        BoxShadow(
-          color: black.withValues(alpha: 0.03),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
-        ),
-      ];
+    BoxShadow(
+      color: black.withValues(alpha: 0.03),
+      blurRadius: 8,
+      offset: const Offset(0, 2),
+    ),
+  ];
 
   static List<BoxShadow> get shadowMd => [
-        BoxShadow(
-          color: black.withValues(alpha: 0.05),
-          blurRadius: 16,
-          offset: const Offset(0, 4),
-        ),
-      ];
+    BoxShadow(
+      color: black.withValues(alpha: 0.05),
+      blurRadius: 16,
+      offset: const Offset(0, 4),
+    ),
+  ];
 
   static List<BoxShadow> get shadowLg => [
-        BoxShadow(
-          color: black.withValues(alpha: 0.07),
-          blurRadius: 24,
-          offset: const Offset(0, 8),
-        ),
-      ];
+    BoxShadow(
+      color: black.withValues(alpha: 0.07),
+      blurRadius: 24,
+      offset: const Offset(0, 8),
+    ),
+  ];
 
   // No shadow for flat design
   static List<BoxShadow> get shadowNone => [];

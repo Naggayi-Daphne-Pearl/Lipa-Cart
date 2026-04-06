@@ -49,7 +49,9 @@ class _HomeScreenState extends State<HomeScreen> {
       final productProvider = context.read<ProductProvider>();
       await productProvider.loadProducts();
       if (mounted) {
-        context.read<RecipeProvider>().loadRecipes(products: productProvider.products);
+        context.read<RecipeProvider>().loadRecipes(
+          products: productProvider.products,
+        );
       }
       _fetchUnreadCount();
     });
@@ -59,10 +61,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final token = context.read<AuthProvider>().token;
     if (token == null) return;
     try {
-      final response = await http.get(
-        Uri.parse('${AppConstants.apiUrl}/notifications/mine?pageSize=1'),
-        headers: {'Authorization': 'Bearer $token'},
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(
+            Uri.parse('${AppConstants.apiUrl}/notifications/mine?pageSize=1'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200 && mounted) {
         final body = jsonDecode(response.body);
         setState(() {
@@ -91,7 +95,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Color _getProductBgColor(String categoryName) => Formatters.getProductBgColor(categoryName);
+  Color _getProductBgColor(String categoryName) =>
+      Formatters.getProductBgColor(categoryName);
 
   @override
   Widget build(BuildContext context) {
@@ -225,12 +230,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                             minHeight: 18,
                                           ),
                                           child: Text(
-                                            _unreadNotifications > 9 ? '9+' : '$_unreadNotifications',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                            _unreadNotifications > 9
+                                                ? '9+'
+                                                : '$_unreadNotifications',
+                                            style: AppTextStyles.labelSmall
+                                                .copyWith(
+                                                  color: Colors.white,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
                                             textAlign: TextAlign.center,
                                           ),
                                         ),
@@ -308,11 +316,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   .first ??
                                               'there',
                                         ),
-                                        style: AppTextStyles.h5.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                          color: AppColors.textPrimary,
-                                          fontSize: 20,
-                                        ),
+                                        style: AppTextStyles.sectionTitle
+                                            .copyWith(fontSize: 20),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
@@ -469,27 +474,43 @@ class _HomeScreenState extends State<HomeScreen> {
                                   children: [
                                     _buildBannerCard(
                                       title: 'SPECIAL OFFER',
-                                      subtitle: 'Fresh Groceries\nUp to 30% OFF',
+                                      subtitle:
+                                          'Fresh Groceries\nUp to 30% OFF',
                                       cta: 'Shop Now',
-                                      gradient: const [Color(0xFFFFE8CC), Color(0xFFFFD699), Color(0xFFFFB347)],
+                                      gradient: const [
+                                        Color(0xFFFFE8CC),
+                                        Color(0xFFFFD699),
+                                        Color(0xFFFFB347),
+                                      ],
                                       shadowColor: const Color(0xFFFF8C42),
-                                      onTap: () => context.go('/customer/categories'),
+                                      onTap: () =>
+                                          context.go('/customer/categories'),
                                     ),
                                     _buildBannerCard(
                                       title: 'WEEKLY DEALS',
                                       subtitle: 'Fresh Fruits &\nVegetables',
                                       cta: 'Browse Deals',
-                                      gradient: const [Color(0xFFE8F5E9), Color(0xFFC8E6C9), Color(0xFF81C784)],
+                                      gradient: const [
+                                        Color(0xFFE8F5E9),
+                                        Color(0xFFC8E6C9),
+                                        Color(0xFF81C784),
+                                      ],
                                       shadowColor: const Color(0xFF4CAF50),
-                                      onTap: () => context.go('/customer/categories'),
+                                      onTap: () =>
+                                          context.go('/customer/categories'),
                                     ),
                                     _buildBannerCard(
                                       title: 'FREE DELIVERY',
                                       subtitle: 'Orders above\nUGX 50,000',
                                       cta: 'Order Now',
-                                      gradient: const [Color(0xFFE3F2FD), Color(0xFFBBDEFB), Color(0xFF64B5F6)],
+                                      gradient: const [
+                                        Color(0xFFE3F2FD),
+                                        Color(0xFFBBDEFB),
+                                        Color(0xFF64B5F6),
+                                      ],
                                       shadowColor: const Color(0xFF2196F3),
-                                      onTap: () => context.go('/customer/categories'),
+                                      onTap: () =>
+                                          context.go('/customer/categories'),
                                     ),
                                   ],
                                 ),
@@ -509,7 +530,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-
                       ],
                     ),
                   ),
@@ -544,17 +564,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Featured category spotlight
                 if (productProvider.categories.length >= 2)
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.horizontalPadding,
+                    ),
                     child: Row(
                       children: [
                         Expanded(
                           child: GestureDetector(
-                            onTap: () => context.push('/customer/category', extra: productProvider.categories[0]),
+                            onTap: () => context.push(
+                              '/customer/category',
+                              extra: productProvider.categories[0],
+                            ),
                             child: Container(
                               height: 100,
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
+                                  colors: [
+                                    Color(0xFFE8F5E9),
+                                    Color(0xFFC8E6C9),
+                                  ],
                                 ),
                                 borderRadius: BorderRadius.circular(16),
                               ),
@@ -563,17 +591,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Iconsax.heart5, color: AppColors.primary, size: 24),
+                                  const Icon(
+                                    Iconsax.heart5,
+                                    color: AppColors.primary,
+                                    size: 24,
+                                  ),
                                   const SizedBox(height: 8),
                                   Text(
                                     productProvider.categories[0].name,
-                                    style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w700),
+                                    style: AppTextStyles.labelMedium.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
                                     'Shop fresh',
-                                    style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -583,12 +620,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: AppSizes.md),
                         Expanded(
                           child: GestureDetector(
-                            onTap: () => context.push('/customer/category', extra: productProvider.categories[1]),
+                            onTap: () => context.push(
+                              '/customer/category',
+                              extra: productProvider.categories[1],
+                            ),
                             child: Container(
                               height: 100,
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFFFFF3E0), Color(0xFFFFE0B2)],
+                                  colors: [
+                                    Color(0xFFFFF3E0),
+                                    Color(0xFFFFE0B2),
+                                  ],
                                 ),
                                 borderRadius: BorderRadius.circular(16),
                               ),
@@ -597,17 +640,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Iconsax.flash_1, color: AppColors.accent, size: 24),
+                                  const Icon(
+                                    Iconsax.flash_1,
+                                    color: AppColors.accent,
+                                    size: 24,
+                                  ),
                                   const SizedBox(height: 8),
                                   Text(
                                     productProvider.categories[1].name,
-                                    style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w700),
+                                    style: AppTextStyles.labelMedium.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
                                     'Top picks',
-                                    style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -641,44 +693,64 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Padding(
-                            padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
-                            child: _buildSectionHeader('Reorder', onSeeAll: () => context.go('/customer/orders')),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: context.horizontalPadding,
+                            ),
+                            child: _buildSectionHeader(
+                              'Reorder',
+                              onSeeAll: () => context.go('/customer/orders'),
+                            ),
                           ),
                           const SizedBox(height: AppSizes.sm),
                           SizedBox(
                             height: 80,
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
-                              padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: context.horizontalPadding,
+                              ),
                               itemCount: recentOrders.length,
                               itemBuilder: (context, index) {
                                 final order = recentOrders[index];
                                 return GestureDetector(
                                   onTap: () {
-                                    final cartProvider = context.read<CartProvider>();
+                                    final cartProvider = context
+                                        .read<CartProvider>();
                                     for (final item in order.items) {
-                                      cartProvider.addToCart(item.product, quantity: item.quantity);
+                                      cartProvider.addToCart(
+                                        item.product,
+                                        quantity: item.quantity,
+                                      );
                                     }
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('${order.items.length} items added to cart'),
+                                        content: Text(
+                                          '${order.items.length} items added to cart',
+                                        ),
                                         backgroundColor: AppColors.success,
                                         action: SnackBarAction(
                                           label: 'Checkout',
                                           textColor: Colors.white,
-                                          onPressed: () => context.go('/customer/checkout'),
+                                          onPressed: () =>
+                                              context.go('/customer/checkout'),
                                         ),
                                       ),
                                     );
                                   },
                                   child: Container(
                                     width: 220,
-                                    margin: const EdgeInsets.only(right: AppSizes.md),
+                                    margin: const EdgeInsets.only(
+                                      right: AppSizes.md,
+                                    ),
                                     padding: const EdgeInsets.all(AppSizes.sm),
                                     decoration: BoxDecoration(
                                       color: AppColors.surface,
-                                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                                      border: Border.all(color: AppColors.grey200),
+                                      borderRadius: BorderRadius.circular(
+                                        AppSizes.radiusMd,
+                                      ),
+                                      border: Border.all(
+                                        color: AppColors.grey200,
+                                      ),
                                     ),
                                     child: Row(
                                       children: [
@@ -687,31 +759,53 @@ class _HomeScreenState extends State<HomeScreen> {
                                           height: 48,
                                           decoration: BoxDecoration(
                                             color: AppColors.primarySoft,
-                                            borderRadius: BorderRadius.circular(10),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
                                           ),
-                                          child: const Icon(Iconsax.refresh_2, color: AppColors.primary, size: 22),
+                                          child: const Icon(
+                                            Iconsax.refresh_2,
+                                            color: AppColors.primary,
+                                            size: 22,
+                                          ),
                                         ),
                                         const SizedBox(width: AppSizes.sm),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: [
                                               Text(
                                                 '#${order.orderNumber}',
-                                                style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w600),
+                                                style: AppTextStyles.labelSmall
+                                                    .copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                               Text(
                                                 '${order.items.length} items • ${Formatters.formatCurrency(order.total)}',
-                                                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                                                style: AppTextStyles.caption
+                                                    .copyWith(
+                                                      color: AppColors
+                                                          .textSecondary,
+                                                    ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                               Text(
                                                 'Tap to reorder',
-                                                style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w500, fontSize: 11),
+                                                style: AppTextStyles.caption
+                                                    .copyWith(
+                                                      color: AppColors.primary,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      fontSize: 11,
+                                                    ),
                                               ),
                                             ],
                                           ),
@@ -800,11 +894,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(height: AppSizes.sm),
                                 Text(
                                   'My Lists',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF2C2C2C),
-                                  ),
+                                  style: AppTextStyles.cardTitle,
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
@@ -873,14 +963,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: AppSizes.sm),
-                                Text(
-                                  'Recipes',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF2C2C2C),
-                                  ),
-                                ),
+                                Text('Recipes', style: AppTextStyles.cardTitle),
                                 const SizedBox(height: 2),
                                 Text(
                                   'Shop ingredients',
@@ -904,10 +987,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Your Lists', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                      Text('Your Lists', style: AppTextStyles.sectionTitle),
                       GestureDetector(
                         onTap: () => context.go('/customer/shopping-lists'),
-                        child: Text('See All', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 14)),
+                        child: Text(
+                          'See All',
+                          style: AppTextStyles.labelLarge.copyWith(
+                            color: AppColors.primary,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -926,29 +1014,55 @@ class _HomeScreenState extends State<HomeScreen> {
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                              border: Border.all(
+                                color: AppColors.primary.withValues(
+                                  alpha: 0.15,
+                                ),
+                              ),
                             ),
                             child: Row(
                               children: [
                                 Container(
-                                  width: 44, height: 44,
+                                  width: 44,
+                                  height: 44,
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.1,
+                                    ),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: const Icon(Iconsax.clipboard_text, color: AppColors.primary, size: 22),
+                                  child: const Icon(
+                                    Iconsax.clipboard_text,
+                                    color: AppColors.primary,
+                                    size: 22,
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
-                                const Expanded(
+                                Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text('Start your grocery list', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                                      Text('Plan your shopping and order in one tap', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                                      Text(
+                                        'Start your grocery list',
+                                        style: AppTextStyles.bodyMedium
+                                            .copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.textPrimary,
+                                            ),
+                                      ),
+                                      Text(
+                                        'Plan your shopping and order in one tap',
+                                        style: AppTextStyles.cardSubtitle,
+                                      ),
                                     ],
                                   ),
                                 ),
-                                const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                                const Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 16,
+                                  color: Colors.grey,
+                                ),
                               ],
                             ),
                           ),
@@ -964,9 +1078,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemCount: lists.length,
                         itemBuilder: (context, index) {
                           final list = lists[index];
-                          final color = Color(int.parse('FF${list.color.replaceAll('#', '')}', radix: 16));
+                          final color = Color(
+                            int.parse(
+                              'FF${list.color.replaceAll('#', '')}',
+                              radix: 16,
+                            ),
+                          );
                           return GestureDetector(
-                            onTap: () => context.push('/customer/shopping-list-detail', extra: list.id),
+                            onTap: () => context.push(
+                              '/customer/shopping-list-detail',
+                              extra: list.id,
+                            ),
                             child: Container(
                               width: 180,
                               margin: const EdgeInsets.only(right: 12),
@@ -974,19 +1096,27 @@ class _HomeScreenState extends State<HomeScreen> {
                               decoration: BoxDecoration(
                                 color: color.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: color.withValues(alpha: 0.2)),
+                                border: Border.all(
+                                  color: color.withValues(alpha: 0.2),
+                                ),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
                                     children: [
-                                      Text(list.emoji ?? '🛒', style: const TextStyle(fontSize: 22)),
+                                      Text(
+                                        list.emoji ?? '🛒',
+                                        style: const TextStyle(fontSize: 22),
+                                      ),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
                                           list.name,
-                                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                          style: AppTextStyles.labelLarge
+                                              .copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -995,19 +1125,34 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   const Spacer(),
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
                                         '${list.totalItems} items',
-                                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.textSecondary,
+                                        ),
                                       ),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: color,
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                         ),
-                                        child: const Text('Shop', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                                        child: Text(
+                                          'Shop',
+                                          style: AppTextStyles.labelSmall
+                                              .copyWith(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -1201,26 +1346,37 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.white.withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(
-                title,
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFEA7702), letterSpacing: 0.5),
-              ),
+              child: Text(title, style: AppTextStyles.overlineAccent),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF2C2C2C), height: 1.2),
+              style: AppTextStyles.h3.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 10),
             GestureDetector(
               onTap: onTap,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFF1B7F4E), Color(0xFF15874B)]),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1B7F4E), Color(0xFF15874B)],
+                  ),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: Text(cta, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+                child: Text(
+                  cta,
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
           ],
@@ -1229,30 +1385,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPageIndicator({required bool isActive}) {
-    return Container(
-      width: isActive ? 24 : 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: isActive ? AppColors.accent : AppColors.grey300,
-        borderRadius: BorderRadius.circular(4),
-      ),
-    );
-  }
-
   Widget _buildSectionHeader(String title, {VoidCallback? onSeeAll}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF2C2C2C),
-            letterSpacing: -0.5,
-          ),
-        ),
+        Text(title, style: AppTextStyles.sectionTitle.copyWith(fontSize: 22)),
         if (onSeeAll != null)
           GestureDetector(
             onTap: onSeeAll,
@@ -1320,11 +1457,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: CachedNetworkImage(
                     imageUrl: product.image,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => const Center(
-                      child: AppLoadingIndicator.small(),
-                    ),
-                    errorWidget: (context, url, error) => const Padding(
-                      padding: EdgeInsets.all(8.0),
+                    placeholder: (context, url) =>
+                        const Center(child: AppLoadingIndicator.small()),
+                    errorWidget: (context, url, error) => Padding(
+                      padding: const EdgeInsets.all(8.0),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
@@ -1338,9 +1474,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           SizedBox(height: 2),
                           Text(
                             'No image',
-                            style: TextStyle(
+                            style: AppTextStyles.caption.copyWith(
                               fontSize: 9,
-                              color: Color(0xFFB8B3AB),
+                              color: const Color(0xFFB8B3AB),
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1369,20 +1505,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Text(
                           product.name,
-                          style: const TextStyle(
-                            fontSize: 14,
+                          style: AppTextStyles.labelLarge.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF2C2C2C),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           'per ${product.unit}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF6B7280),
-                          ),
+                          style: AppTextStyles.caption,
                         ),
                       ],
                     ),
@@ -1392,10 +1523,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Text(
                           Formatters.formatCurrency(product.price),
-                          style: const TextStyle(
+                          style: AppTextStyles.priceMedium.copyWith(
                             fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFFFF8C42),
+                            color: AppColors.accent,
                           ),
                         ),
                         GestureDetector(
@@ -1497,9 +1627,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Container(
                         color: AppColors.grey100,
-                        child: const Center(
-                          child: AppLoadingIndicator.small(),
-                        ),
+                        child: const Center(child: AppLoadingIndicator.small()),
                       ),
                       errorWidget: (context, url, error) => Container(
                         color: AppColors.grey100,

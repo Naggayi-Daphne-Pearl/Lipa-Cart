@@ -23,9 +23,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late AnimationController _iconAnimationController;
   late Animation<double> _iconScaleAnimation;
 
-  /// Total pages: 4 feature pages + 1 role selection page
-  static const int _featurePageCount = 4;
-  static const int _totalPageCount = 5;
+  /// Total pages: 3 feature pages + 1 role selection page
+  static const int _featurePageCount = 3;
+  static const int _totalPageCount = 4;
 
   final List<OnboardingItem> _items = [
     OnboardingItem(
@@ -42,30 +42,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       mainIcon: Iconsax.shopping_bag,
     ),
     OnboardingItem(
-      title: 'Personalised Grocery Lists',
+      title: 'Plan Smarter, Shop Easier',
       description:
-          'Create custom shopping lists with detailed descriptions, budget amounts, and special instructions for each item.',
+          'Build quick lists and let trusted personal shoppers pick the best items with care and attention.',
       colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
       sceneIcons: [
         SceneIcon(Iconsax.tick_circle, 0.18, 0.22, 24, Color(0xFF81C784)),
-        SceneIcon(Iconsax.tick_circle, 0.25, 0.38, 20, Color(0xFF81C784)),
-        SceneIcon(Iconsax.edit_2, 0.75, 0.20, 26, Color(0xFFFFD54F)),
-        SceneIcon(Iconsax.money_2, 0.72, 0.60, 22, Color(0xFFFF5722)),
+        SceneIcon(Iconsax.edit_2, 0.74, 0.18, 24, Color(0xFFFFD54F)),
+        SceneIcon(Iconsax.people, 0.22, 0.62, 22, Color(0xFF42A5F5)),
+        SceneIcon(Iconsax.verify, 0.76, 0.58, 20, Color(0xFF81C784)),
       ],
       mainIcon: Iconsax.clipboard_text,
-    ),
-    OnboardingItem(
-      title: 'Personal Shoppers',
-      description:
-          'Our trusted personal shoppers handpick the best quality items for your order with care and attention.',
-      colors: [Color(0xFFE65100), Color(0xFFFF9800)],
-      sceneIcons: [
-        SceneIcon(Iconsax.bag_2, 0.18, 0.25, 28, Color(0xFF4CAF50)),
-        SceneIcon(Iconsax.star_1, 0.75, 0.18, 24, Color(0xFFFFD54F)),
-        SceneIcon(Iconsax.verify, 0.22, 0.62, 22, Color(0xFF81C784)),
-        SceneIcon(Iconsax.heart, 0.78, 0.58, 20, Color(0xFFFF8A80)),
-      ],
-      mainIcon: Iconsax.people,
     ),
     OnboardingItem(
       title: 'Fast Delivery',
@@ -232,9 +219,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         Text(
                           isRoleSelectionPage
                               ? 'Almost there!'
-                              : 'Step ${_currentPage + 1} of $_featurePageCount',
+                              : 'Quick tour ${_currentPage + 1} of $_featurePageCount',
                           style: AppTextStyles.caption.copyWith(
-                            color: AppColors.textSecondary.withValues(alpha: 0.8),
+                            color: AppColors.textSecondary.withValues(
+                              alpha: 0.8,
+                            ),
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
                             letterSpacing: 0.4,
@@ -279,9 +268,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                   );
                                 },
                                 style: OutlinedButton.styleFrom(
-                                  side: BorderSide(
-                                    color: AppColors.grey300,
-                                  ),
+                                  side: BorderSide(color: AppColors.grey300),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(
                                       AppSizes.radiusFull,
@@ -311,35 +298,38 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                 ),
                               ),
                             ),
-                          if (_currentPage > 0) const SizedBox(width: AppSizes.md),
+                          if (_currentPage > 0)
+                            const SizedBox(width: AppSizes.md),
                           Expanded(
                             child: ElevatedButton(
                               onPressed: _nextPage,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1B7F4E),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: AppSizes.md,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    AppSizes.radiusFull,
+                              style:
+                                  ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF1B7F4E),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: AppSizes.md,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        AppSizes.radiusFull,
+                                      ),
+                                    ),
+                                    elevation: 6,
+                                    shadowColor: const Color(
+                                      0xFF1B7F4E,
+                                    ).withValues(alpha: 0.5),
+                                  ).copyWith(
+                                    overlayColor: WidgetStateProperty.all(
+                                      Colors.white.withValues(alpha: 0.2),
+                                    ),
                                   ),
-                                ),
-                                elevation: 6,
-                                shadowColor: const Color(0xFF1B7F4E)
-                                    .withValues(alpha: 0.5),
-                              ).copyWith(
-                                  overlayColor: WidgetStateProperty.all(
-                                  Colors.white.withValues(alpha: 0.2),
-                                ),
-                              ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
                                     _currentPage == _featurePageCount - 1
-                                        ? 'Get Started'
+                                        ? 'Continue'
                                         : 'Next',
                                     style: AppTextStyles.labelLarge.copyWith(
                                       color: Colors.white,
@@ -359,14 +349,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
   }
 
   // ── Feature page with rich illustration ──────────────────────────
@@ -393,12 +383,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 // Title
                 Text(
                   item.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
+                  style: AppTextStyles.screenTitle.copyWith(
                     fontSize: 30,
                     letterSpacing: -0.8,
-                    height: 1.2,
-                    color: Color(0xFF2C2C2C),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -408,11 +395,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
                   child: Text(
                     item.description,
-                    style: const TextStyle(
-                      color: Color(0xFF6B7280),
-                      height: 1.7,
+                    style: AppTextStyles.screenSubtitle.copyWith(
                       fontSize: 16,
-                      fontWeight: FontWeight.w400,
+                      height: 1.7,
                       letterSpacing: 0.2,
                     ),
                     textAlign: TextAlign.center,
@@ -547,24 +532,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         ),
                       ),
                       const SizedBox(height: 24),
-                      const Text(
+                      Text(
                         'What brings you here?',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 28,
-                          letterSpacing: -0.5,
-                          color: Color(0xFF2C2C2C),
-                        ),
+                        style: AppTextStyles.screenTitle,
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 10),
                       Text(
                         'Choose how you\'d like to use LipaCart. This helps us tailor the experience just for you.',
-                        style: TextStyle(
-                          color: const Color(0xFF6B7280),
-                          fontSize: 15,
-                          height: 1.5,
-                        ),
+                        style: AppTextStyles.screenSubtitle,
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -575,7 +551,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 _RoleCard(
                   icon: Iconsax.shopping_cart,
                   title: 'I want to shop',
-                  subtitle: 'Browse groceries, place orders, and get them delivered to your door.',
+                  subtitle:
+                      'Browse groceries, place orders, and get them delivered to your door.',
                   gradientColors: const [Color(0xFF1B7F4E), Color(0xFF2ECC71)],
                   onTap: () => _completeOnboarding(role: 'customer'),
                 ),
@@ -583,7 +560,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 _RoleCard(
                   icon: Iconsax.bag_happy,
                   title: 'I want to be a Shopper',
-                  subtitle: 'Earn money by picking and packing grocery orders for customers.',
+                  subtitle:
+                      'Earn money by picking and packing grocery orders for customers.',
                   gradientColors: const [Color(0xFF1565C0), Color(0xFF42A5F5)],
                   onTap: () => _completeOnboarding(role: 'shopper'),
                 ),
@@ -591,7 +569,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 _RoleCard(
                   icon: Iconsax.truck_fast,
                   title: 'I want to be a Rider',
-                  subtitle: 'Deliver orders on your boda boda and earn on your own schedule.',
+                  subtitle:
+                      'Deliver orders on your boda boda and earn on your own schedule.',
                   gradientColors: const [Color(0xFFE65100), Color(0xFFFF9800)],
                   onTap: () => _completeOnboarding(role: 'rider'),
                 ),
@@ -626,10 +605,7 @@ class _FloatingIcon extends StatelessWidget {
       decoration: BoxDecoration(
         color: gradientColors[0].withValues(alpha: 0.9),
         shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.white,
-          width: 2,
-        ),
+        border: Border.all(color: Colors.white, width: 2),
         boxShadow: [
           BoxShadow(
             color: gradientColors[0].withValues(alpha: 0.3),
@@ -712,32 +688,14 @@ class _RoleCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        color: Color(0xFF2C2C2C),
-                      ),
-                    ),
+                    Text(title, style: AppTextStyles.cardTitle),
                     const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: Color(0xFF6B7280),
-                        fontSize: 13,
-                        height: 1.4,
-                      ),
-                    ),
+                    Text(subtitle, style: AppTextStyles.cardSubtitle),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(
-                Iconsax.arrow_right_3,
-                size: 20,
-                color: gradientColors[0],
-              ),
+              Icon(Iconsax.arrow_right_3, size: 20, color: gradientColors[0]),
             ],
           ),
         ),

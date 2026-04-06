@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -144,7 +145,7 @@ class _SignupScreenState extends State<SignupScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF0D6B3A),
+            AppColors.primaryDark,
             AppColors.primary,
             AppColors.primaryLight,
           ],
@@ -160,27 +161,17 @@ class _SignupScreenState extends State<SignupScreen> {
               children: [
                 SvgPicture.asset(
                   'assets/images/logos/logo-on-green-1.svg',
-                  height: 32,
+                  height: 36,
                 ),
                 const Spacer(),
-                const Text(
+                Text(
                   'Join the\nLipaCart family.',
-                  style: TextStyle(
-                    fontSize: 40,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    height: 1.15,
-                    letterSpacing: -0.5,
-                  ),
+                  style: AppTextStyles.heroTitle,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Sign up as a customer, shopper, or rider\nand be part of Kampala\'s freshest delivery network.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white.withValues(alpha: 0.8),
-                    height: 1.6,
-                  ),
+                  style: AppTextStyles.heroBody,
                 ),
                 const SizedBox(height: 40),
                 Row(
@@ -199,9 +190,8 @@ class _SignupScreenState extends State<SignupScreen> {
                 const Spacer(flex: 1),
                 Text(
                   '${DateTime.now().year} LipaCart. All rights reserved.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.4),
+                  style: AppTextStyles.heroMeta.copyWith(
+                    color: const Color(0x73FFFFFF),
                   ),
                 ),
               ],
@@ -218,27 +208,96 @@ class _SignupScreenState extends State<SignupScreen> {
       children: [
         Row(
           children: [
-            Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 16),
+            Icon(icon, color: const Color(0xB3FFFFFF), size: 16),
             const SizedBox(width: 6),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
+            Text(value, style: AppTextStyles.heroMetric),
           ],
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white.withValues(alpha: 0.6),
-          ),
-        ),
+        Text(label, style: AppTextStyles.heroMeta),
       ],
+    );
+  }
+
+  Widget _buildSignupValueChip({
+    required IconData icon,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        border: Border.all(color: AppColors.primaryMuted),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.primaryDark),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.primaryDark,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoleGuidanceCard() {
+    final isCustomer = _selectedRole == 'customer';
+    final isShopper = _selectedRole == 'shopper';
+
+    final message = isCustomer
+        ? 'Best for grocery orders, saved addresses, and email receipts.'
+        : isShopper
+        ? 'Great for earning by picking and packing customer orders.'
+        : 'Ideal for delivering orders and earning on your own schedule.';
+
+    final icon = isCustomer
+        ? Iconsax.shopping_bag
+        : isShopper
+        ? Iconsax.bag_happy
+        : Iconsax.truck_fast;
+
+    final accent = isCustomer
+        ? AppColors.primaryDark
+        : isShopper
+        ? AppColors.info
+        : AppColors.accent;
+
+    final background = isCustomer
+        ? AppColors.primarySoft
+        : isShopper
+        ? AppColors.cardBlue
+        : AppColors.accentSoft;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: accent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -349,6 +408,16 @@ class _SignupScreenState extends State<SignupScreen> {
 
   // ─── Shared form content ────────────────────────────────────────
   Widget _buildFormContent({required bool isDesktop}) {
+    final headerGap = isDesktop ? AppSizes.xl : AppSizes.lg;
+    final cardPadding = isDesktop ? AppSizes.lg : AppSizes.md;
+    final fieldGap = isDesktop ? AppSizes.lg : AppSizes.md;
+    final phoneHelperText = isDesktop ? 'Uganda mobile number' : null;
+    const signupBenefits = [
+      {'icon': Iconsax.truck_fast, 'label': 'Track orders'},
+      {'icon': Iconsax.location, 'label': 'Save addresses'},
+      {'icon': Iconsax.clipboard_text, 'label': 'Reuse lists'},
+    ];
+
     return Form(
       key: _formKey,
       autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -358,12 +427,12 @@ class _SignupScreenState extends State<SignupScreen> {
             : CrossAxisAlignment.center,
         children: [
           if (!isDesktop) ...[
-            const SizedBox(height: AppSizes.md),
+            const SizedBox(height: AppSizes.sm),
             SvgPicture.asset(
               'assets/images/logos/logo-on-white.svg',
-              height: 36,
+              height: 32,
             ),
-            const SizedBox(height: AppSizes.xl),
+            const SizedBox(height: AppSizes.lg),
           ],
           // Welcome text
           Text(
@@ -375,17 +444,31 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
           const SizedBox(height: AppSizes.xs),
           Text(
-            'Sign up to get fresh groceries delivered',
+            'Save addresses, reuse shopping lists, and track every order in one place.',
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.textSecondary,
             ),
             textAlign: isDesktop ? TextAlign.left : TextAlign.center,
           ),
-          const SizedBox(height: AppSizes.xl),
+          const SizedBox(height: AppSizes.md),
+          Wrap(
+            alignment: isDesktop ? WrapAlignment.start : WrapAlignment.center,
+            spacing: AppSizes.sm,
+            runSpacing: AppSizes.sm,
+            children: signupBenefits
+                .map(
+                  (benefit) => _buildSignupValueChip(
+                    icon: benefit['icon'] as IconData,
+                    label: benefit['label'] as String,
+                  ),
+                )
+                .toList(),
+          ),
+          SizedBox(height: headerGap),
           // Form card
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(AppSizes.lg),
+            padding: EdgeInsets.all(cardPadding),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(
@@ -411,37 +494,89 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSizes.sm),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _RoleChip(
-                        label: 'Customer',
-                        icon: Iconsax.shopping_bag,
-                        isSelected: _selectedRole == 'customer',
-                        onTap: () => setState(() => _selectedRole = 'customer'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _RoleChip(
-                        label: 'Shopper',
-                        icon: Iconsax.bag_happy,
-                        isSelected: _selectedRole == 'shopper',
-                        onTap: () => setState(() => _selectedRole = 'shopper'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _RoleChip(
-                        label: 'Rider',
-                        icon: Iconsax.truck_fast,
-                        isSelected: _selectedRole == 'rider',
-                        onTap: () => setState(() => _selectedRole = 'rider'),
-                      ),
-                    ),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final useCompactWrap =
+                        !isDesktop && constraints.maxWidth < 380;
+
+                    if (useCompactWrap) {
+                      final chipWidth = (constraints.maxWidth - 10) / 2;
+                      return Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          SizedBox(
+                            width: chipWidth,
+                            child: _RoleChip(
+                              label: 'Customer',
+                              icon: Iconsax.shopping_bag,
+                              isSelected: _selectedRole == 'customer',
+                              onTap: () =>
+                                  setState(() => _selectedRole = 'customer'),
+                            ),
+                          ),
+                          SizedBox(
+                            width: chipWidth,
+                            child: _RoleChip(
+                              label: 'Shopper',
+                              icon: Iconsax.bag_happy,
+                              isSelected: _selectedRole == 'shopper',
+                              onTap: () =>
+                                  setState(() => _selectedRole = 'shopper'),
+                            ),
+                          ),
+                          SizedBox(
+                            width: chipWidth,
+                            child: _RoleChip(
+                              label: 'Rider',
+                              icon: Iconsax.truck_fast,
+                              isSelected: _selectedRole == 'rider',
+                              onTap: () =>
+                                  setState(() => _selectedRole = 'rider'),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _RoleChip(
+                            label: 'Customer',
+                            icon: Iconsax.shopping_bag,
+                            isSelected: _selectedRole == 'customer',
+                            onTap: () =>
+                                setState(() => _selectedRole = 'customer'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _RoleChip(
+                            label: 'Shopper',
+                            icon: Iconsax.bag_happy,
+                            isSelected: _selectedRole == 'shopper',
+                            onTap: () =>
+                                setState(() => _selectedRole = 'shopper'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _RoleChip(
+                            label: 'Rider',
+                            icon: Iconsax.truck_fast,
+                            isSelected: _selectedRole == 'rider',
+                            onTap: () =>
+                                setState(() => _selectedRole = 'rider'),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
-                const SizedBox(height: AppSizes.lg),
+                SizedBox(height: fieldGap),
+                _buildRoleGuidanceCard(),
+                SizedBox(height: fieldGap),
                 // Phone number
                 Text(
                   'Phone Number',
@@ -465,7 +600,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       : AppTextStyles.bodyLarge,
                   decoration: InputDecoration(
                     hintText: '7XX XXX XXX',
-                    helperText: 'Uganda mobile number',
+                    helperText: phoneHelperText,
                     helperStyle: AppTextStyles.caption,
                     contentPadding: isDesktop
                         ? const EdgeInsets.symmetric(
@@ -546,7 +681,9 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: AppSizes.lg),
                 // Email
                 Text(
-                  'Email',
+                  _selectedRole == 'customer'
+                      ? 'Email for receipts'
+                      : 'Email (optional)',
                   style: AppTextStyles.labelLarge.copyWith(
                     color: AppColors.textPrimary,
                     fontSize: isDesktop ? 13 : null,
@@ -574,8 +711,11 @@ class _SignupScreenState extends State<SignupScreen> {
                       : AppTextStyles.bodyLarge,
                   decoration: InputDecoration(
                     hintText: _selectedRole == 'customer'
-                        ? 'john@example.com'
+                        ? 'Where we send receipts and updates'
                         : 'john@example.com (optional)',
+                    helperText: _selectedRole == 'customer'
+                        ? 'We only use this for receipts and order updates.'
+                        : null,
                     contentPadding: isDesktop
                         ? const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -742,12 +882,43 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: AppSizes.lg),
                 // Sign up button
                 CustomButton(
-                  text: 'Sign Up',
+                  text: 'Create My Account',
                   isLoading: _isLoading,
                   onPressed: _signup,
                   height: isDesktop
                       ? AppSizes.buttonHeightMd
                       : AppSizes.buttonHeightLg,
+                ),
+                const SizedBox(height: AppSizes.md),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.grey100,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Iconsax.shield_tick,
+                        size: 16,
+                        color: AppColors.primaryDark,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _selectedRole == 'customer'
+                              ? 'Protected sign-up — we only use your email for receipts and important order updates.'
+                              : 'Protected sign-up — we only use your details for account setup and important updates.',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -805,6 +976,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       color: AppColors.primary,
                       fontWeight: FontWeight.w500,
                     ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => context.push('/terms-of-service'),
                   ),
                   const TextSpan(text: ' and '),
                   TextSpan(
@@ -813,6 +986,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       color: AppColors.primary,
                       fontWeight: FontWeight.w500,
                     ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => context.push('/privacy-policy'),
                   ),
                 ],
               ),

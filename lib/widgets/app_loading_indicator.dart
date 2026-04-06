@@ -17,18 +17,12 @@ class AppLoadingIndicator extends StatelessWidget {
   });
 
   /// Small inline loader (e.g. inside buttons, list items)
-  const AppLoadingIndicator.small({
-    super.key,
-    this.color,
-    this.message,
-  }) : size = 24;
+  const AppLoadingIndicator.small({super.key, this.color, this.message})
+    : size = 24;
 
   /// Full-page centered loader with optional message
-  const AppLoadingIndicator.page({
-    super.key,
-    this.color,
-    this.message,
-  }) : size = 48;
+  const AppLoadingIndicator.page({super.key, this.color, this.message})
+    : size = 48;
 
   @override
   Widget build(BuildContext context) {
@@ -37,9 +31,7 @@ class AppLoadingIndicator extends StatelessWidget {
       height: size,
       child: CircularProgressIndicator(
         strokeWidth: size <= 24 ? 2.5 : 3.0,
-        valueColor: AlwaysStoppedAnimation<Color>(
-          color ?? AppColors.primary,
-        ),
+        valueColor: AlwaysStoppedAnimation<Color>(color ?? AppColors.primary),
       ),
     );
 
@@ -52,9 +44,7 @@ class AppLoadingIndicator extends StatelessWidget {
         const SizedBox(height: 16),
         Text(
           message!,
-          style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textSecondary,
-          ),
+          style: AppTextStyles.screenSubtitle.copyWith(fontSize: 13),
           textAlign: TextAlign.center,
         ),
       ],
@@ -72,7 +62,9 @@ class AppLoadingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: AppLoadingIndicator.page(message: message),
+      child: AppLoadingIndicator.page(
+        message: message ?? 'Preparing your fresh picks...',
+      ),
     );
   }
 }
