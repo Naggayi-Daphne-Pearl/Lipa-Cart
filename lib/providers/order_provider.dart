@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/order.dart';
 import '../models/cart_item.dart';
+import '../models/product.dart';
 import '../models/user.dart';
 import '../core/constants/app_constants.dart';
 
@@ -39,6 +40,27 @@ class OrderProvider extends ChangeNotifier {
             o.status == OrderStatus.cancelled,
       )
       .toList();
+
+  List<Product> get frequentlyOrderedProducts {
+    final counts = <String, int>{};
+    final productById = <String, Product>{};
+
+    for (final order in pastOrders) {
+      for (final item in order.items) {
+        final productId = item.product.id;
+        counts[productId] = (counts[productId] ?? 0) + item.quantity.toInt();
+        productById[productId] = item.product;
+      }
+    }
+
+    final sortedProductIds = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return sortedProductIds
+        .map((entry) => productById[entry.key]!)
+        .take(4)
+        .toList();
+  }
 
   Future<void> _bootstrap() async {
     if (_didBootstrap) return;

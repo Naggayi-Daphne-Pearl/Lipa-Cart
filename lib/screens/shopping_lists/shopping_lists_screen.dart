@@ -235,11 +235,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                   Expanded(
                     child: Row(
                       children: [
-                        Icon(
-                          Iconsax.shopping_bag,
-                          color: color,
-                          size: 16,
-                        ),
+                        Icon(Iconsax.shopping_bag, color: color, size: 16),
                         const SizedBox(width: AppSizes.xs),
                         Text(
                           '${list.totalItems} item${list.totalItems != 1 ? 's' : ''}',
@@ -359,16 +355,44 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
             ),
             const SizedBox(height: AppSizes.xl),
             // Templates section
-            Text('Or start from a template', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary)),
+            Text(
+              'Or start from a template',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
             const SizedBox(height: AppSizes.md),
             Wrap(
               spacing: AppSizes.sm,
               runSpacing: AppSizes.sm,
               alignment: WrapAlignment.center,
               children: [
-                _buildTemplatePill('🛒 Weekly Essentials', ['Milk', 'Bread', 'Eggs', 'Rice', 'Cooking Oil', 'Sugar', 'Tea', 'Tomatoes', 'Onions']),
-                _buildTemplatePill('🎉 Party Supplies', ['Sodas', 'Juice', 'Chips', 'Cake', 'Paper Plates', 'Napkins']),
-                _buildTemplatePill('👶 Baby Needs', ['Baby Formula', 'Diapers', 'Baby Wipes', 'Baby Food', 'Baby Cereal']),
+                _buildTemplatePill('🛒 Weekly Essentials', [
+                  'Milk',
+                  'Bread',
+                  'Eggs',
+                  'Rice',
+                  'Cooking Oil',
+                  'Sugar',
+                  'Tea',
+                  'Tomatoes',
+                  'Onions',
+                ]),
+                _buildTemplatePill('🎉 Party Supplies', [
+                  'Sodas',
+                  'Juice',
+                  'Chips',
+                  'Cake',
+                  'Paper Plates',
+                  'Napkins',
+                ]),
+                _buildTemplatePill('👶 Baby Needs', [
+                  'Baby Formula',
+                  'Diapers',
+                  'Baby Wipes',
+                  'Baby Food',
+                  'Baby Cereal',
+                ]),
               ],
             ),
           ],
@@ -381,8 +405,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     return GestureDetector(
       onTap: () {
         final name = label.replaceAll(RegExp(r'[^\w\s]'), '').trim();
-        final description = items.join(', ');
-        _showCreateListSheet(context, templateName: name, templateDescription: description);
+        _showCreateListSheet(context, templateName: name, templateItems: items);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -391,7 +414,10 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
           borderRadius: BorderRadius.circular(AppSizes.radiusFull),
           border: Border.all(color: AppColors.grey300),
         ),
-        child: Text(label, style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w500)),
+        child: Text(
+          label,
+          style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w500),
+        ),
       ),
     );
   }
@@ -463,7 +489,12 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     );
   }
 
-  void _showCreateListSheet(BuildContext context, {String? templateName, String? templateDescription}) {
+  void _showCreateListSheet(
+    BuildContext context, {
+    String? templateName,
+    String? templateDescription,
+    List<String>? templateItems,
+  }) {
     final shoppingListProvider = context.read<ShoppingListProvider>();
     final authProvider = context.read<AuthProvider>();
     final isPremium = authProvider.user?.isPremium ?? false;
@@ -474,9 +505,12 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
     }
 
     final nameController = TextEditingController(text: templateName ?? '');
-    final descController = TextEditingController(text: templateDescription ?? '');
+    final descController = TextEditingController(
+      text: templateDescription ?? '',
+    );
     String selectedEmoji = '🛒';
     String selectedColor = ShoppingListProvider.listColors[0];
+    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -484,6 +518,9 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setSheetState) => Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.9,
+          ),
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
@@ -653,43 +690,87 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () async {
-                      if (nameController.text.isNotEmpty) {
-                        try {
-                          final didCreate = await context
-                              .read<ShoppingListProvider>()
-                              .createList(
-                                name: nameController.text,
-                                description: descController.text.isEmpty
-                                    ? null
-                                    : descController.text,
-                                emoji: selectedEmoji,
-                                color: selectedColor,
-                                isPremium: isPremium,
-                                authToken: authToken,
-                              );
-                          if (!mounted) return;
-                          if (didCreate) {
-                            Navigator.pop(context);
-                          } else {
-                            Navigator.pop(context);
-                            _showFreeTierLimitDialog(context);
-                          }
-                        } catch (e) {
-                          debugPrint('ERROR: Failed to create shopping list: $e');
-                          if (!mounted) return;
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(this.context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Failed to create list: ${e.toString()}',
-                              ),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                        }
-                      }
-                    },
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            if (nameController.text.isNotEmpty) {
+                              setSheetState(() => isSubmitting = true);
+                              try {
+                                final didCreate = await context
+                                    .read<ShoppingListProvider>()
+                                    .createList(
+                                      name: nameController.text,
+                                      description: descController.text.isEmpty
+                                          ? null
+                                          : descController.text,
+                                      emoji: selectedEmoji,
+                                      color: selectedColor,
+                                      isPremium: isPremium,
+                                      authToken: authToken,
+                                    );
+                                if (!mounted) return;
+                                if (didCreate) {
+                                  // Add template items if provided
+                                  if (templateItems != null &&
+                                      templateItems.isNotEmpty) {
+                                    final provider = context
+                                        .read<ShoppingListProvider>();
+                                    final newList = provider.lists.firstWhere(
+                                      (list) =>
+                                          list.name == nameController.text,
+                                      orElse: () => provider.lists.first,
+                                    );
+
+                                    try {
+                                      for (final itemName in templateItems) {
+                                        final item = ShoppingListItem(
+                                          id: '${DateTime.now().millisecondsSinceEpoch}_${itemName.hashCode}',
+                                          name: itemName.trim(),
+                                          quantity: 1,
+                                        );
+                                        await provider.addItemToList(
+                                          newList.id,
+                                          item,
+                                          authToken: authToken,
+                                        );
+                                      }
+                                    } catch (e) {
+                                      debugPrint(
+                                        'Warning: Failed to add some template items: $e',
+                                      );
+                                      // Continue anyway - list was created successfully
+                                    }
+                                  }
+                                  if (mounted) {
+                                    Navigator.of(context).pop();
+                                  }
+                                } else {
+                                  if (mounted) {
+                                    Navigator.of(context).pop();
+                                    _showFreeTierLimitDialog(context);
+                                  }
+                                }
+                              } catch (e) {
+                                debugPrint(
+                                  'ERROR: Failed to create shopping list: $e',
+                                );
+                                if (!mounted) return;
+                                if (mounted) {
+                                  setSheetState(() => isSubmitting = false);
+                                  ScaffoldMessenger.of(
+                                    this.context,
+                                  ).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Failed to create list: ${e.toString()}',
+                                      ),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                }
+                              }
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -700,13 +781,38 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                       ),
                     ),
-                    child: Text(
-                      'Create List',
-                      style: AppTextStyles.labelLarge.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: isSubmitting
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSizes.sm),
+                              Text(
+                                'Creating...',
+                                style: AppTextStyles.labelLarge.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            'Create List',
+                            style: AppTextStyles.labelLarge.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: AppSizes.md),
@@ -835,69 +941,92 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
   }
 
   void _confirmDeleteList(ShoppingList list) {
+    bool isDeleting = false;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-        ),
-        title: const Text('Delete List?'),
-        content: Text(
-          'Are you sure you want to delete "${list.name}"? This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: AppTextStyles.labelMedium.copyWith(
-                color: AppColors.textSecondary,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+          ),
+          title: const Text('Delete List?'),
+          content: Text(
+            'Are you sure you want to delete "${list.name}"? This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                final authToken = context.read<AuthProvider>().token;
-                await context.read<ShoppingListProvider>().deleteList(
-                  list.id,
-                  authToken: authToken,
-                );
-                if (!mounted) return;
-                Navigator.pop(context);
+            TextButton(
+              onPressed: isDeleting
+                  ? null
+                  : () async {
+                      setDialogState(() => isDeleting = true);
+                      try {
+                        final authToken = context.read<AuthProvider>().token;
+                        await context.read<ShoppingListProvider>().deleteList(
+                          list.id,
+                          authToken: authToken,
+                        );
+                        if (!mounted) return;
+                        Navigator.pop(context);
 
-                // Show success message
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Deleted "${list.name}"'),
-                    backgroundColor: AppColors.error,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        // Show success message
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Deleted "${list.name}"'),
+                            backgroundColor: AppColors.error,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                AppSizes.radiusMd,
+                              ),
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      } catch (_) {
+                        if (!mounted) return;
+                        setDialogState(() => isDeleting = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Failed to delete list. Please try again.',
+                            ),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                      }
+                    },
+              child: isDeleting
+                  ? const SizedBox(
+                      width: 80,
+                      height: 24,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.error,
+                          ),
+                        ),
+                      ),
+                    )
+                  : const Text(
+                      'Delete',
+                      style: TextStyle(
+                        color: AppColors.error,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              } catch (_) {
-                if (!mounted) return;
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Failed to delete list. Please try again.'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              }
-            },
-            child: const Text(
-              'Delete',
-              style: TextStyle(
-                color: AppColors.error,
-                fontWeight: FontWeight.w600,
-              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -46,6 +46,108 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return parts[0][0].toUpperCase();
   }
 
+  Widget _buildWalletInfoCard() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+      child: Container(
+        padding: EdgeInsets.all(
+          context.responsive<double>(
+            mobile: AppSizes.lg,
+            tablet: AppSizes.xl,
+            desktop: 20.0,
+          ),
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(
+            context.responsive<double>(
+              mobile: AppSizes.radiusLg,
+              tablet: AppSizes.radiusXl,
+              desktop: 16.0,
+            ),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              ),
+              child: Icon(
+                Iconsax.discount_circle,
+                color: AppColors.primary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: AppSizes.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Savings tips',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'No wallet balance is available yet. Try these simple ways to save on your next order:',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textPrimary,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildTipBadge('Apply promo codes'),
+                      _buildTipBadge('Reach free delivery'),
+                      _buildTipBadge('Choose local produce'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTipBadge(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSizes.sm,
+        vertical: AppSizes.xs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+      ),
+      child: Text(
+        text,
+        style: AppTextStyles.labelSmall.copyWith(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   Future<void> _loadProfileData() async {
     if (_isLoadingProfile) return;
 
@@ -111,130 +213,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (isGuest) ...[
                   _buildGuestHeader(context),
                 ] else ...[
-                // Header Greeting
-                Padding(
-                  padding: EdgeInsets.all(
-                    context.responsive<double>(
-                      mobile: AppSizes.lg,
-                      tablet: AppSizes.xl,
-                      desktop: 24.0,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      // Avatar with initials
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: AppColors.primarySoft,
-                          shape: BoxShape.circle,
-                        ),
-                        child: user?.profileImage != null && user!.profileImage!.isNotEmpty
-                            ? ClipOval(
-                                child: Image.network(
-                                  user.profileImage!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Center(
-                                      child: Text(
-                                        _getInitials(user.name),
-                                        style: AppTextStyles.h4.copyWith(
-                                          color: AppColors.primary,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              )
-                            : Center(
-                                child: Text(
-                                  _getInitials(user?.name),
-                                  style: AppTextStyles.h4.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                      ),
-                      const SizedBox(width: AppSizes.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Welcome ${user?.name?.split(' ')[0] ?? 'User'}!',
-                              style: AppTextStyles.h3.copyWith(
-                                fontWeight: FontWeight.w800,
-                                fontSize: context.responsive<double>(
-                                  mobile: 26.0,
-                                  tablet: 30.0,
-                                  desktop: 34.0,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              user?.email ?? user?.phoneNumber ?? 'No email',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.accent,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Wallet/Balance Section
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.horizontalPadding,
-                  ),
-                  child: Container(
+                  // Header Greeting
+                  Padding(
                     padding: EdgeInsets.all(
                       context.responsive<double>(
                         mobile: AppSizes.lg,
                         tablet: AppSizes.xl,
-                        desktop: 20.0,
+                        desktop: 24.0,
                       ),
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(
-                        context.responsive<double>(
-                          mobile: AppSizes.radiusLg,
-                          tablet: AppSizes.radiusXl,
-                          desktop: 16.0,
-                        ),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
                     ),
                     child: Row(
                       children: [
+                        // Avatar with initials
                         Container(
-                          width: 48,
-                          height: 48,
+                          width: 64,
+                          height: 64,
                           decoration: BoxDecoration(
                             color: AppColors.primarySoft,
-                            borderRadius: BorderRadius.circular(
-                              AppSizes.radiusMd,
-                            ),
+                            shape: BoxShape.circle,
                           ),
-                          child: Icon(
-                            Iconsax.wallet_2,
-                            color: AppColors.primary,
-                            size: 24,
-                          ),
+                          child:
+                              user?.profileImage != null &&
+                                  user!.profileImage!.isNotEmpty
+                              ? ClipOval(
+                                  child: Image.network(
+                                    user.profileImage!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Center(
+                                        child: Text(
+                                          _getInitials(user.name),
+                                          style: AppTextStyles.h4.copyWith(
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                )
+                              : Center(
+                                  child: Text(
+                                    _getInitials(user?.name),
+                                    style: AppTextStyles.h4.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
                         ),
                         const SizedBox(width: AppSizes.md),
                         Expanded(
@@ -242,16 +268,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Lipa Cart balance',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.textSecondary,
+                                'Welcome ${user?.name?.split(' ')[0] ?? 'User'}!',
+                                style: AppTextStyles.h3.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: context.responsive<double>(
+                                    mobile: 26.0,
+                                    tablet: 30.0,
+                                    desktop: 34.0,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'UGX 0',
-                                style: AppTextStyles.h5.copyWith(
-                                  fontWeight: FontWeight.w700,
+                                user?.email ?? user?.phoneNumber ?? 'No email',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.accent,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
@@ -260,205 +292,150 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                   ),
-                ),
 
-                SizedBox(
-                  height: context.responsive<double>(
-                    mobile: AppSizes.lg,
-                    tablet: AppSizes.xl,
-                    desktop: AppSizes.xl,
-                  ),
-                ),
+                  _buildWalletInfoCard(),
 
-                // Quick Action Buttons
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.horizontalPadding,
-                  ),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: context.isDesktop ? 400 : double.infinity,
+                  SizedBox(
+                    height: context.responsive<double>(
+                      mobile: AppSizes.lg,
+                      tablet: AppSizes.xl,
+                      desktop: AppSizes.xl,
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              launchUrl(Uri.parse('mailto:daphnepearl101@gmail.com?subject=Help%20Request'));
-                            },
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: context.responsive<double>(
-                                  mobile: AppSizes.md,
-                                  tablet: AppSizes.lg,
-                                  desktop: AppSizes.lg,
-                                ),
-                                vertical: AppSizes.md,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.accent,
-                                borderRadius: BorderRadius.circular(
-                                  AppSizes.radiusLg,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Iconsax.message,
-                                    color: Colors.white,
-                                    size: 20,
+                  ),
+
+                  // Quick Action Buttons
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.horizontalPadding,
+                    ),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: context.isDesktop ? 400 : double.infinity,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                launchUrl(
+                                  Uri.parse(
+                                    'mailto:daphnepearl101@gmail.com?subject=Help%20Request',
                                   ),
-                                  const SizedBox(width: AppSizes.sm),
-                                  Text(
-                                    'Live Chat',
-                                    style: AppTextStyles.labelMedium.copyWith(
+                                );
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: context.responsive<double>(
+                                    mobile: AppSizes.md,
+                                    tablet: AppSizes.lg,
+                                    desktop: AppSizes.lg,
+                                  ),
+                                  vertical: AppSizes.md,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accent,
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusLg,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Iconsax.message,
                                       color: Colors.white,
-                                      fontWeight: FontWeight.w600,
+                                      size: 20,
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: AppSizes.sm),
+                                    Text(
+                                      'Live Chat',
+                                      style: AppTextStyles.labelMedium.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: AppSizes.md),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              launchUrl(Uri.parse('https://wa.me/256785796401?text=Hi%20LipaCart%2C%20I%20need%20help'));
-                            },
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: context.responsive<double>(
-                                  mobile: AppSizes.md,
-                                  tablet: AppSizes.lg,
-                                  desktop: AppSizes.lg,
+                          const SizedBox(width: AppSizes.md),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                launchUrl(
+                                  Uri.parse(
+                                    'https://wa.me/256785796401?text=Hi%20LipaCart%2C%20I%20need%20help',
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: context.responsive<double>(
+                                    mobile: AppSizes.md,
+                                    tablet: AppSizes.lg,
+                                    desktop: AppSizes.lg,
+                                  ),
+                                  vertical: AppSizes.md,
                                 ),
-                                vertical: AppSizes.md,
-                              ),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: const Color(0xFF25D366),
-                                  width: 1.5,
-                                ),
-                                borderRadius: BorderRadius.circular(
-                                  AppSizes.radiusLg,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Iconsax.send_2,
+                                decoration: BoxDecoration(
+                                  border: Border.all(
                                     color: const Color(0xFF25D366),
-                                    size: 20,
+                                    width: 1.5,
                                   ),
-                                  const SizedBox(width: AppSizes.sm),
-                                  Text(
-                                    'WhatsApp',
-                                    style: AppTextStyles.labelMedium.copyWith(
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusLg,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Iconsax.send_2,
                                       color: const Color(0xFF25D366),
-                                      fontWeight: FontWeight.w600,
+                                      size: 20,
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: AppSizes.sm),
+                                    Text(
+                                      'WhatsApp',
+                                      style: AppTextStyles.labelMedium.copyWith(
+                                        color: const Color(0xFF25D366),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
-                SizedBox(
-                  height: context.responsive<double>(
-                    mobile: AppSizes.lg,
-                    tablet: AppSizes.xl,
-                    desktop: AppSizes.xl,
-                  ),
-                ),
-
-                // Help & Support Section
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.horizontalPadding,
-                  ),
-                  child: _buildMenuSection(context, 'Need Assistance?', [
-                    _MenuItem(
-                      icon: Iconsax.info_circle,
-                      title: 'Help & Support',
-                      onTap: () => context.push('/customer/help'),
+                  SizedBox(
+                    height: context.responsive<double>(
+                      mobile: AppSizes.lg,
+                      tablet: AppSizes.xl,
+                      desktop: AppSizes.xl,
                     ),
-                    _MenuItem(
-                      icon: Iconsax.setting_2,
-                      title: 'App Settings',
-                      onTap: () => context.push('/customer/settings'),
-                    ),
-                  ]),
-                ),
-
-                SizedBox(
-                  height: context.responsive<double>(
-                    mobile: AppSizes.lg,
-                    tablet: AppSizes.xl,
-                    desktop: AppSizes.xl,
                   ),
-                ),
 
-                // My Lipa Cart & My Settings Sections
-                if (context.isDesktop)
+                  // Help & Support Section
                   Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: context.horizontalPadding,
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: _buildMenuSection(context, 'My Lipa Cart', [
-                            _MenuItem(
-                              icon: Iconsax.receipt,
-                              title: 'Orders',
-                              onTap: () => context.go('/customer/orders'),
-                            ),
-                            _MenuItem(
-                              icon: Iconsax.star,
-                              title: 'Ratings & Reviews',
-                              onTap: () => context.go('/customer/ratings-reviews'),
-                            ),
-                          ]),
-                        ),
-                        const SizedBox(width: AppSizes.lg),
-                        Expanded(
-                          child: _buildMenuSection(context, 'My Settings', [
-                            _MenuItem(
-                              icon: Iconsax.location,
-                              title: 'Addresses',
-                              onTap: () => context.go('/customer/addresses'),
-                            ),
-                          ]),
-                        ),
-                      ],
-                    ),
-                  )
-                else ...[
-                  // Mobile: vertical layout
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: context.horizontalPadding,
-                    ),
-                    child: _buildMenuSection(context, 'My Lipa Cart', [
+                    child: _buildMenuSection(context, 'Need Assistance?', [
                       _MenuItem(
-                        icon: Iconsax.receipt,
-                        title: 'Orders',
-                        onTap: () => context.go('/customer/orders'),
+                        icon: Iconsax.info_circle,
+                        title: 'Help & Support',
+                        onTap: () => context.push('/customer/help'),
                       ),
                       _MenuItem(
-                        icon: Iconsax.star,
-                        title: 'Ratings & Reviews',
-                        onTap: () => context.go('/customer/ratings-reviews'),
+                        icon: Iconsax.setting_2,
+                        title: 'App Settings',
+                        onTap: () => context.push('/customer/settings'),
                       ),
                     ]),
                   ),
@@ -471,68 +448,133 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
 
+                  // My Lipa Cart & My Settings Sections
+                  if (context.isDesktop)
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.horizontalPadding,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _buildMenuSection(context, 'My Lipa Cart', [
+                              _MenuItem(
+                                icon: Iconsax.receipt,
+                                title: 'Orders',
+                                onTap: () => context.go('/customer/orders'),
+                              ),
+                              _MenuItem(
+                                icon: Iconsax.star,
+                                title: 'Ratings & Reviews',
+                                onTap: () =>
+                                    context.go('/customer/ratings-reviews'),
+                              ),
+                            ]),
+                          ),
+                          const SizedBox(width: AppSizes.lg),
+                          Expanded(
+                            child: _buildMenuSection(context, 'My Settings', [
+                              _MenuItem(
+                                icon: Iconsax.location,
+                                title: 'Addresses',
+                                onTap: () => context.go('/customer/addresses'),
+                              ),
+                            ]),
+                          ),
+                        ],
+                      ),
+                    )
+                  else ...[
+                    // Mobile: vertical layout
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.horizontalPadding,
+                      ),
+                      child: _buildMenuSection(context, 'My Lipa Cart', [
+                        _MenuItem(
+                          icon: Iconsax.receipt,
+                          title: 'Orders',
+                          onTap: () => context.go('/customer/orders'),
+                        ),
+                        _MenuItem(
+                          icon: Iconsax.star,
+                          title: 'Ratings & Reviews',
+                          onTap: () => context.go('/customer/ratings-reviews'),
+                        ),
+                      ]),
+                    ),
+
+                    SizedBox(
+                      height: context.responsive<double>(
+                        mobile: AppSizes.lg,
+                        tablet: AppSizes.xl,
+                        desktop: AppSizes.xl,
+                      ),
+                    ),
+
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: context.horizontalPadding,
+                      ),
+                      child: _buildMenuSection(context, 'My Settings', [
+                        _MenuItem(
+                          icon: Iconsax.location,
+                          title: 'Addresses',
+                          onTap: () => context.go('/customer/addresses'),
+                        ),
+                        _MenuItem(
+                          icon: Iconsax.card,
+                          title: 'Payment Methods',
+                          onTap: () => _showPaymentMethodsSheet(context),
+                        ),
+                        _MenuItem(
+                          icon: Iconsax.call,
+                          title: 'Change Phone Number',
+                          onTap: () => _showChangePhoneDialog(context),
+                        ),
+                        _MenuItem(
+                          icon: Iconsax.trash,
+                          title: 'Delete Account',
+                          onTap: () => _showDeleteAccountDialog(context),
+                        ),
+                      ]),
+                    ),
+                  ],
+
+                  SizedBox(
+                    height: context.responsive<double>(
+                      mobile: AppSizes.lg,
+                      tablet: AppSizes.xl,
+                      desktop: AppSizes.xl,
+                    ),
+                  ),
+
+                  // Logout Button
                   Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: context.horizontalPadding,
                     ),
-                    child: _buildMenuSection(context, 'My Settings', [
-                      _MenuItem(
-                        icon: Iconsax.location,
-                        title: 'Addresses',
-                        onTap: () => context.go('/customer/addresses'),
-                      ),
-                      _MenuItem(
-                        icon: Iconsax.card,
-                        title: 'Payment Methods',
-                        onTap: () => _showPaymentMethodsSheet(context),
-                      ),
-                      _MenuItem(
-                        icon: Iconsax.call,
-                        title: 'Change Phone Number',
-                        onTap: () => _showChangePhoneDialog(context),
-                      ),
-                      _MenuItem(
-                        icon: Iconsax.trash,
-                        title: 'Delete Account',
-                        onTap: () => _showDeleteAccountDialog(context),
-                      ),
-                    ]),
-                  ),
-                ],
-
-                SizedBox(
-                  height: context.responsive<double>(
-                    mobile: AppSizes.lg,
-                    tablet: AppSizes.xl,
-                    desktop: AppSizes.xl,
-                  ),
-                ),
-
-                // Logout Button
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.horizontalPadding,
-                  ),
-                  child: Center(
-                    child: TextButton(
-                      onPressed: () async {
-                        await LogoutHelper.logoutAndClear(context);
-                        if (context.mounted) {
-                          GoRouter.of(context).go('/customer/home');
-                        }
-                      },
-                      child: Text(
-                        'Logout',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.error,
-                          fontWeight: FontWeight.w600,
+                    child: Center(
+                      child: TextButton(
+                        onPressed: () async {
+                          await LogoutHelper.logoutAndClear(context);
+                          if (context.mounted) {
+                            GoRouter.of(context).go('/customer/home');
+                          }
+                        },
+                        child: Text(
+                          'Logout',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 100),
+                  const SizedBox(height: 100),
                 ], // end else (authenticated)
               ],
             ),
@@ -562,18 +604,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               color: AppColors.primarySoft,
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Iconsax.user,
-              size: 40,
-              color: AppColors.primary,
-            ),
+            child: Icon(Iconsax.user, size: 40, color: AppColors.primary),
           ),
           const SizedBox(height: AppSizes.lg),
           Text(
             'Welcome to LipaCart',
-            style: AppTextStyles.h3.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Text(
@@ -654,17 +690,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             child: Column(
               children: [
-                Icon(
-                  Iconsax.money_recive,
-                  color: AppColors.primary,
-                  size: 32,
-                ),
+                Icon(Iconsax.money_recive, color: AppColors.primary, size: 32),
                 const SizedBox(height: AppSizes.md),
                 Text(
                   'Earn with LipaCart',
-                  style: AppTextStyles.h5.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -688,7 +718,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           side: BorderSide(color: AppColors.primary),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusMd,
+                            ),
                           ),
                         ),
                       ),
@@ -704,7 +736,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           side: BorderSide(color: AppColors.primaryOrange),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusMd,
+                            ),
                           ),
                         ),
                       ),
@@ -884,8 +918,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Center(
                 child: Container(
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(color: AppColors.grey300, borderRadius: BorderRadius.circular(2)),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.grey300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
               const SizedBox(height: AppSizes.lg),
@@ -914,7 +952,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: AppSizes.lg),
               Text(
                 'Your default payment method is used at checkout. Full payment integration with MTN MoMo and Airtel Money coming soon.',
-                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: AppSizes.md),
             ],
@@ -933,7 +973,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Container(
-        width: 44, height: 44,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
           color: AppColors.primarySoft,
           borderRadius: BorderRadius.circular(10),
@@ -941,7 +982,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Icon(icon, color: AppColors.primary, size: 22),
       ),
       title: Text(title, style: AppTextStyles.labelMedium),
-      subtitle: Text(subtitle, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+      subtitle: Text(
+        subtitle,
+        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+      ),
       trailing: isDefault
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -949,7 +993,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: AppColors.primarySoft,
                 borderRadius: BorderRadius.circular(AppSizes.radiusSm),
               ),
-              child: Text('Default', style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+              child: Text(
+                'Default',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             )
           : null,
     );
@@ -966,13 +1016,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Text('Change Phone Number'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (!otpSent) ...[
-                const Text('Enter your new phone number. We\'ll send an OTP to verify it.'),
+                const Text(
+                  'Enter your new phone number. We\'ll send an OTP to verify it.',
+                ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: phoneController,
@@ -980,7 +1034,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   decoration: InputDecoration(
                     prefixText: '+256 ',
                     hintText: '7XXXXXXXX',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ] else ...[
@@ -992,7 +1048,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   maxLength: 6,
                   decoration: InputDecoration(
                     hintText: '6-digit OTP',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ],
@@ -1019,7 +1077,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         try {
                           await http.post(
                             Uri.parse('${AppConstants.apiUrl}/otp/send'),
-                            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': 'Bearer $token',
+                            },
                             body: jsonEncode({'phone': phone}),
                           );
                           setDialogState(() {
@@ -1034,23 +1095,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         final phone = '+256${phoneController.text.trim()}';
                         try {
                           final response = await http.post(
-                            Uri.parse('${AppConstants.apiUrl}/user/change-phone'),
-                            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-                            body: jsonEncode({'new_phone': phone, 'otp': otpController.text.trim()}),
+                            Uri.parse(
+                              '${AppConstants.apiUrl}/user/change-phone',
+                            ),
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': 'Bearer $token',
+                            },
+                            body: jsonEncode({
+                              'new_phone': phone,
+                              'otp': otpController.text.trim(),
+                            }),
                           );
 
                           Navigator.pop(ctx);
 
                           if (response.statusCode == 200 && context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Phone number updated! Please log in again.'), backgroundColor: AppColors.success),
+                              const SnackBar(
+                                content: Text(
+                                  'Phone number updated! Please log in again.',
+                                ),
+                                backgroundColor: AppColors.success,
+                              ),
                             );
                             await LogoutHelper.logoutAndClear(context);
-                            if (context.mounted) GoRouter.of(context).go('/customer/home');
+                            if (context.mounted)
+                              GoRouter.of(context).go('/customer/home');
                           } else if (context.mounted) {
                             final data = jsonDecode(response.body);
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(data['error']?['message'] ?? 'Failed to change phone'), backgroundColor: AppColors.error),
+                              SnackBar(
+                                content: Text(
+                                  data['error']?['message'] ??
+                                      'Failed to change phone',
+                                ),
+                                backgroundColor: AppColors.error,
+                              ),
                             );
                           }
                         } catch (_) {
@@ -1058,9 +1139,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         }
                       }
                     },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
               child: isLoading
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : Text(otpSent ? 'Verify & Change' : 'Send OTP'),
             ),
           ],
@@ -1109,7 +1200,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         padding: EdgeInsets.all(24),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
-                          children: [CircularProgressIndicator(), SizedBox(height: 16), Text('Deleting account...')],
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text('Deleting account...'),
+                          ],
                         ),
                       ),
                     ),
@@ -1123,26 +1218,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   headers: {'Authorization': 'Bearer $token'},
                 );
 
-                if (context.mounted) Navigator.of(context).pop(); // dismiss loading
+                if (context.mounted)
+                  Navigator.of(context).pop(); // dismiss loading
 
                 if (response.statusCode == 200 && context.mounted) {
                   await LogoutHelper.logoutAndClear(context);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Account deleted successfully'), backgroundColor: AppColors.success),
+                      const SnackBar(
+                        content: Text('Account deleted successfully'),
+                        backgroundColor: AppColors.success,
+                      ),
                     );
                     GoRouter.of(context).go('/customer/home');
                   }
                 } else if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Failed to delete account'), backgroundColor: AppColors.error),
+                    const SnackBar(
+                      content: Text('Failed to delete account'),
+                      backgroundColor: AppColors.error,
+                    ),
                   );
                 }
               } catch (_) {
                 if (context.mounted) Navigator.of(context).pop();
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Delete Account'),
           ),
         ],

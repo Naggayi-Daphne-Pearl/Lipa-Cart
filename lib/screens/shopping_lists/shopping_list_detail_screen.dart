@@ -13,6 +13,7 @@ import '../../providers/shopping_list_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/order_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
 
@@ -36,6 +37,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
   Widget build(BuildContext context) {
     final listProvider = context.watch<ShoppingListProvider>();
     final cartProvider = context.watch<CartProvider>();
+    final orderProvider = context.watch<OrderProvider>();
     final authToken = context.watch<AuthProvider>().token;
     final list = listProvider.getListById(widget.listId);
 
@@ -47,6 +49,11 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
     }
 
     final color = _parseColor(list.color);
+    final pastSuggestions = orderProvider.frequentlyOrderedProducts.where((
+      product,
+    ) {
+      return list.items.every((item) => item.linkedProduct?.id != product.id);
+    }).toList();
     final uncheckedItems = list.items.where((i) => !i.isChecked).toList();
     final checkedItems = list.items.where((i) => i.isChecked).toList();
     final actionableItems = uncheckedItems;
@@ -193,101 +200,125 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                   : RefreshIndicator(
                       onRefresh: () async {
                         final auth = context.read<AuthProvider>();
-                        await context.read<ShoppingListProvider>().loadLists(authToken: auth.token);
+                        await context.read<ShoppingListProvider>().loadLists(
+                          authToken: auth.token,
+                        );
                       },
                       child: ListView(
-                      padding: const EdgeInsets.all(AppSizes.lg),
-                      children: [
-                        // Shopping cart stats header
-                        Container(
-                          padding: const EdgeInsets.all(AppSizes.md),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(
-                              AppSizes.radiusMd,
+                        padding: const EdgeInsets.all(AppSizes.lg),
+                        children: [
+                          if (pastSuggestions.isNotEmpty) ...[
+                            _buildSuggestionSection(
+                              pastSuggestions,
+                              list,
+                              color,
+                              authToken,
                             ),
-                            border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Iconsax.bag_2,
-                                    color: AppColors.primary,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: AppSizes.sm),
-                                  Expanded(
-                                    child: Text(
-                                      '${actionableItems.length} item${actionableItems.length != 1 ? 's' : ''} ready for order',
-                                      style: AppTextStyles.labelMedium.copyWith(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                            const SizedBox(height: AppSizes.lg),
+                          ],
+                          // Shopping cart stats header
+                          Container(
+                            padding: const EdgeInsets.all(AppSizes.md),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(
+                                AppSizes.radiusMd,
                               ),
-                              // Estimated total cost
-                              if (estimatedTotal > 0) ...[
-                                const SizedBox(height: 4),
+                              border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Row(
                                   children: [
-                                    Icon(Iconsax.wallet_2, color: AppColors.primary, size: 18),
+                                    Icon(
+                                      Iconsax.bag_2,
+                                      color: AppColors.primary,
+                                      size: 18,
+                                    ),
                                     const SizedBox(width: AppSizes.sm),
-                                    Text(
-                                      'Estimated: ${Formatters.formatCurrency(estimatedTotal)}',
-                                      style: AppTextStyles.labelMedium.copyWith(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w600,
+                                    Expanded(
+                                      child: Text(
+                                        '${actionableItems.length} item${actionableItems.length != 1 ? 's' : ''} ready for order',
+                                        style: AppTextStyles.labelMedium
+                                            .copyWith(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
                                       ),
                                     ),
                                   ],
                                 ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: AppSizes.lg),
-
-                        // All items — unchecked first, then checked
-                        ...[...uncheckedItems, ...checkedItems].map(
-                          (item) => _buildItemCard(item, list, color, authToken),
-                        ),
-                        if (checkedItems.isNotEmpty) ...[
-                          const SizedBox(height: AppSizes.sm),
-                          GestureDetector(
-                            onTap: () => listProvider.clearCheckedItems(
-                              widget.listId,
-                              authToken: authToken,
-                            ),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Iconsax.trash, size: 16, color: AppColors.error),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Clear ${checkedItems.length} checked item${checkedItems.length != 1 ? 's' : ''}',
-                                    style: AppTextStyles.labelSmall.copyWith(
-                                      color: AppColors.error,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                // Estimated total cost
+                                if (estimatedTotal > 0) ...[
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Iconsax.wallet_2,
+                                        color: AppColors.primary,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: AppSizes.sm),
+                                      Text(
+                                        'Estimated: ${Formatters.formatCurrency(estimatedTotal)}',
+                                        style: AppTextStyles.labelMedium
+                                            .copyWith(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
+                                    ],
                                   ),
                                 ],
-                              ),
+                              ],
                             ),
                           ),
+                          const SizedBox(height: AppSizes.lg),
+
+                          // All items — unchecked first, then checked
+                          ...[...uncheckedItems, ...checkedItems].map(
+                            (item) =>
+                                _buildItemCard(item, list, color, authToken),
+                          ),
+                          if (checkedItems.isNotEmpty) ...[
+                            const SizedBox(height: AppSizes.sm),
+                            GestureDetector(
+                              onTap: () => listProvider.clearCheckedItems(
+                                widget.listId,
+                                authToken: authToken,
+                              ),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Iconsax.trash,
+                                      size: 16,
+                                      color: AppColors.error,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Clear ${checkedItems.length} checked item${checkedItems.length != 1 ? 's' : ''}',
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        color: AppColors.error,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 100),
                         ],
-                        const SizedBox(height: 100),
-                      ],
+                      ),
                     ),
-                  ),
             ),
           ],
         ),
@@ -296,85 +327,107 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
         onPressed: () => _showAddOptions(list, color),
         backgroundColor: color,
         icon: const Icon(Iconsax.add, color: Colors.white),
-        label: const Text('Add Item', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-      ),
-      bottomNavigationBar: actionableItems.isEmpty ? null : Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg, vertical: AppSizes.sm),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
+        label: const Text(
+          'Add Item',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
-        child: SafeArea(
-          child: Row(
-            children: [
-              // Estimated total
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+      bottomNavigationBar: actionableItems.isEmpty
+          ? null
+          : Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSizes.lg,
+                vertical: AppSizes.sm,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: Row(
                   children: [
-                    Text(
-                      '${actionableItems.length} items',
-                      style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                    // Estimated total
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${actionableItems.length} items',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          Text(
+                            Formatters.formatCurrency(estimatedTotal),
+                            style: AppTextStyles.labelLarge.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    Text(
-                      Formatters.formatCurrency(estimatedTotal),
-                      style: AppTextStyles.labelLarge.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w700,
+                    // Add to Cart
+                    GestureDetector(
+                      onTap: () => _addAllToCart(list, cartProvider),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.grey100,
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Iconsax.bag_2, size: 18),
+                            const SizedBox(width: 6),
+                            Text('Cart', style: AppTextStyles.labelMedium),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSizes.sm),
+                    // Order Now
+                    GestureDetector(
+                      onTap: () => _orderList(list, cartProvider),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                        ),
+                        child: Text(
+                          'Order Now',
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              // Add to Cart
-              GestureDetector(
-                onTap: () => _addAllToCart(list, cartProvider),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.grey100,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Iconsax.bag_2, size: 18),
-                      const SizedBox(width: 6),
-                      Text('Cart', style: AppTextStyles.labelMedium),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSizes.sm),
-              // Order Now
-              GestureDetector(
-                onTap: () => _orderList(list, cartProvider),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  ),
-                  child: Text(
-                    'Order Now',
-                    style: AppTextStyles.labelMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
@@ -390,69 +443,99 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
         cartProvider.isInCart(item.linkedProduct!.id);
 
     return Dismissible(
-        key: Key(item.id),
-        direction: DismissDirection.endToStart,
-        background: Container(
-          margin: const EdgeInsets.only(bottom: AppSizes.sm),
-          decoration: BoxDecoration(
-            color: AppColors.error,
-            borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+      key: Key(item.id),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (_) async {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+            ),
+            title: const Text('Remove item?'),
+            content: Text('Remove "${item.name}" from ${list.name}?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text(
+                  'Remove',
+                  style: TextStyle(color: AppColors.error),
+                ),
+              ),
+            ],
           ),
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: 20),
-          child: const Icon(Icons.delete_outline, color: Colors.white),
+        );
+        return confirmed ?? false;
+      },
+      background: Container(
+        margin: const EdgeInsets.only(bottom: AppSizes.sm),
+        decoration: BoxDecoration(
+          color: AppColors.error,
+          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
         ),
-        onDismissed: (_) {
-          context.read<ShoppingListProvider>().removeItemFromList(
-            list.id,
-            item.id,
-            authToken: authToken,
-          );
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${item.name} removed'),
-              duration: const Duration(seconds: 2),
-              action: SnackBarAction(label: 'Undo', onPressed: () {
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        child: const Icon(Icons.delete_outline, color: Colors.white),
+      ),
+      onDismissed: (_) {
+        context.read<ShoppingListProvider>().removeItemFromList(
+          list.id,
+          item.id,
+          authToken: authToken,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${item.name} removed'),
+            duration: const Duration(seconds: 2),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () {
                 context.read<ShoppingListProvider>().addItemToList(
                   list.id,
                   item,
                   authToken: authToken,
                 );
-              }),
+              },
             ),
-          );
-        },
-        child: Container(
-          margin: const EdgeInsets.only(bottom: AppSizes.sm),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-            boxShadow: AppColors.shadowSm,
           ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  const SizedBox(width: AppSizes.sm),
-                  // Product image
-                  if (item.linkedProduct != null && item.linkedProduct!.image.isNotEmpty) ...[
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        item.linkedProduct!.image,
-                        width: 44,
-                        height: 44,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                      ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSizes.sm),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+          boxShadow: AppColors.shadowSm,
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const SizedBox(width: AppSizes.sm),
+                // Product image
+                if (item.linkedProduct != null &&
+                    item.linkedProduct!.image.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      item.linkedProduct!.image,
+                      width: 44,
+                      height: 44,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                     ),
-                    const SizedBox(width: 8),
-                  ],
-                  // Item info — tap to edit
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => _showEditItemDialog(item, list, color),
-                      child: Padding(
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                // Item info — tap to edit
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _showEditItemDialog(item, list, color),
+                    child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppSizes.md,
                         vertical: AppSizes.sm,
@@ -561,119 +644,289 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                       ),
                     ),
                   ),
-                  ),
-                  // Quantity controls
-                  if (!item.isChecked)
-                    Padding(
-                      padding: const EdgeInsets.only(right: AppSizes.sm),
-                      child: Row(
-                        children: [
-                          _buildQuantityButton(
-                            icon: Iconsax.minus,
-                            onTap: () {
-                              if (item.quantity > 1) {
-                                context
-                                    .read<ShoppingListProvider>()
-                                    .updateItemQuantity(
-                                      list.id,
-                                      item.id,
-                                      item.quantity - 1,
-                                      authToken: authToken,
-                                    );
-                              }
-                            },
-                          ),
-                          Container(
-                            width: 32,
-                            alignment: Alignment.center,
-                            child: Text(
-                              '${item.quantity}',
-                              style: AppTextStyles.labelMedium.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          _buildQuantityButton(
-                            icon: Iconsax.add,
-                            onTap: () {
+                ),
+                // Quantity controls
+                if (!item.isChecked)
+                  Padding(
+                    padding: const EdgeInsets.only(right: AppSizes.sm),
+                    child: Row(
+                      children: [
+                        _buildQuantityButton(
+                          icon: Iconsax.minus,
+                          onTap: () async {
+                            if (item.quantity > 1) {
                               context
                                   .read<ShoppingListProvider>()
                                   .updateItemQuantity(
                                     list.id,
                                     item.id,
-                                    item.quantity + 1,
+                                    item.quantity - 1,
                                     authToken: authToken,
                                   );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-              // Add to Cart button for items with a linked product
-              if (!item.isChecked && item.linkedProduct != null)
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(
-                        color: AppColors.grey200.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ),
-                  child: GestureDetector(
-                    onTap: () {
-                      if (isInCart) {
-                        cartProvider.removeFromCart(item.linkedProduct!.id);
-                      } else {
-                        cartProvider.addToCart(
-                          item.linkedProduct!,
-                          quantity: item.quantity.toDouble(),
-                        );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '${item.name} (x${item.quantity}) added to cart',
-                            ),
-                            backgroundColor: AppColors.success,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                AppSizes.radiusMd,
-                              ),
-                            ),
-                            duration: const Duration(seconds: 1),
-                          ),
-                        );
-                      }
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: AppSizes.sm),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            isInCart ? Iconsax.tick_circle5 : Iconsax.bag_2,
-                            size: 16,
-                            color: isInCart ? AppColors.success : color,
-                          ),
-                          const SizedBox(width: AppSizes.xs),
-                          Text(
-                            isInCart ? 'In Cart' : 'Add to Cart',
-                            style: AppTextStyles.labelSmall.copyWith(
-                              color: isInCart ? AppColors.success : color,
+                            } else {
+                              final shouldRemove = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppSizes.radiusLg,
+                                    ),
+                                  ),
+                                  title: const Text('Remove item?'),
+                                  content: Text(
+                                    'Remove "${item.name}" from ${list.name}?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(true),
+                                      child: const Text(
+                                        'Remove',
+                                        style: TextStyle(
+                                          color: AppColors.error,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (shouldRemove == true) {
+                                context
+                                    .read<ShoppingListProvider>()
+                                    .removeItemFromList(
+                                      list.id,
+                                      item.id,
+                                      authToken: authToken,
+                                    );
+                              }
+                            }
+                          },
+                        ),
+                        Container(
+                          width: 32,
+                          alignment: Alignment.center,
+                          child: Text(
+                            '${item.quantity}',
+                            style: AppTextStyles.labelMedium.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ],
+                        ),
+                        _buildQuantityButton(
+                          icon: Iconsax.add,
+                          onTap: () {
+                            context
+                                .read<ShoppingListProvider>()
+                                .updateItemQuantity(
+                                  list.id,
+                                  item.id,
+                                  item.quantity + 1,
+                                  authToken: authToken,
+                                );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            // Add to Cart button for items with a linked product
+            if (!item.isChecked && item.linkedProduct != null)
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(
+                      color: AppColors.grey200.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+                child: GestureDetector(
+                  onTap: () {
+                    if (isInCart) {
+                      cartProvider.removeFromCart(item.linkedProduct!.id);
+                    } else {
+                      cartProvider.addToCart(
+                        item.linkedProduct!,
+                        quantity: item.quantity.toDouble(),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '${item.name} (x${item.quantity}) added to cart',
+                          ),
+                          backgroundColor: AppColors.success,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusMd,
+                            ),
+                          ),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSizes.sm),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isInCart ? Iconsax.tick_circle5 : Iconsax.bag_2,
+                          size: 16,
+                          color: isInCart ? AppColors.success : color,
+                        ),
+                        const SizedBox(width: AppSizes.xs),
+                        Text(
+                          isInCart ? 'In Cart' : 'Add to Cart',
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: isInCart ? AppColors.success : color,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSuggestionSection(
+    List<Product> suggestions,
+    ShoppingList list,
+    Color color,
+    String? authToken,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Suggested from your recent orders',
+          style: AppTextStyles.labelLarge.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: AppSizes.sm),
+        SizedBox(
+          height: 212,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: suggestions.length,
+            separatorBuilder: (_, __) => const SizedBox(width: AppSizes.md),
+            itemBuilder: (context, index) {
+              final product = suggestions[index];
+              return _buildSuggestionCard(product, list, color, authToken);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSuggestionCard(
+    Product product,
+    ShoppingList list,
+    Color color,
+    String? authToken,
+  ) {
+    return Container(
+      width: 220,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+        boxShadow: AppColors.shadowSm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 220,
+            height: 80,
+            decoration: BoxDecoration(
+              color: AppColors.grey100,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppSizes.radiusLg),
+              ),
+            ),
+            child: const Center(
+              child: Icon(
+                Iconsax.shopping_bag,
+                size: 32,
+                color: AppColors.grey400,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(AppSizes.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name,
+                  style: AppTextStyles.labelMedium.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSizes.xs),
+                Text(
+                  Formatters.formatCurrency(product.price),
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: AppSizes.sm),
+                GestureDetector(
+                  onTap: () async {
+                    await context.read<ShoppingListProvider>().addProductToList(
+                      list.id,
+                      product,
+                      authToken: authToken,
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${product.name} added to ${list.name}'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Add to list',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
+      ),
     );
   }
 
@@ -937,17 +1190,28 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 title: const Text('Share via WhatsApp'),
                 onTap: () {
                   Navigator.pop(context);
-                  final items = list.items.asMap().entries.map((e) {
-                    final i = e.value;
-                    final qty = i.quantity % 1 == 0 ? i.quantity.toInt().toString() : i.quantity.toString();
-                    final unit = i.unit != null ? ' ${i.unit}' : '';
-                    return '${e.key + 1}. ${i.name} — $qty$unit';
-                  }).join('\n');
+                  final items = list.items
+                      .asMap()
+                      .entries
+                      .map((e) {
+                        final i = e.value;
+                        final qty = i.quantity % 1 == 0
+                            ? i.quantity.toInt().toString()
+                            : i.quantity.toString();
+                        final unit = i.unit != null ? ' ${i.unit}' : '';
+                        return '${e.key + 1}. ${i.name} — $qty$unit';
+                      })
+                      .join('\n');
                   final checked = list.items.where((i) => i.isChecked).length;
                   final total = list.items.length;
                   final progress = total > 0 ? '($checked/$total done)\n' : '';
-                  final text = '🛒 *${list.name}*\n$progress\n$items\n\n— Shared via *LipaCart*\n📲 lipacart.com';
-                  launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(text)}'));
+                  final text =
+                      '🛒 *${list.name}*\n$progress\n$items\n\n— Shared via *LipaCart*\n📲 lipacart.com';
+                  launchUrl(
+                    Uri.parse(
+                      'https://wa.me/?text=${Uri.encodeComponent(text)}',
+                    ),
+                  );
                 },
               ),
               ListTile(
@@ -1228,9 +1492,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
           final products = query.isEmpty
               ? productProvider.products.take(20).toList()
               : productProvider.products
-                  .where((p) => p.name.toLowerCase().contains(query))
-                  .take(20)
-                  .toList();
+                    .where((p) => p.name.toLowerCase().contains(query))
+                    .take(20)
+                    .toList();
 
           return Container(
             height: MediaQuery.of(ctx).size.height * 0.75,
@@ -1257,7 +1521,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                     children: [
                       Text(
                         'Add from Catalog',
-                        style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700),
+                        style: AppTextStyles.h5.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       TextField(
@@ -1265,7 +1531,10 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                         autofocus: true,
                         decoration: InputDecoration(
                           hintText: 'Search products...',
-                          prefixIcon: Icon(Iconsax.search_normal_1, color: color),
+                          prefixIcon: Icon(
+                            Iconsax.search_normal_1,
+                            color: color,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: AppColors.grey300),
@@ -1274,7 +1543,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: color, width: 2),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                          ),
                         ),
                         onChanged: (_) => setModalState(() {}),
                       ),
@@ -1286,7 +1557,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                   child: products.isEmpty
                       ? Center(
                           child: Text(
-                            query.isEmpty ? 'Loading products...' : 'No products found',
+                            query.isEmpty
+                                ? 'Loading products...'
+                                : 'No products found',
                             style: TextStyle(color: Colors.grey[500]),
                           ),
                         )
@@ -1309,9 +1582,15 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                           height: 48,
                                           decoration: BoxDecoration(
                                             color: color.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
-                                          child: Icon(Iconsax.box_1, color: color, size: 24),
+                                          child: Icon(
+                                            Iconsax.box_1,
+                                            color: color,
+                                            size: 24,
+                                          ),
                                         ),
                                       ),
                                     )
@@ -1322,23 +1601,40 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                         color: color.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: Icon(Iconsax.box_1, color: color, size: 24),
+                                      child: Icon(
+                                        Iconsax.box_1,
+                                        color: color,
+                                        size: 24,
+                                      ),
                                     ),
-                              title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                              title: Text(
+                                product.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                               subtitle: Text(
                                 Formatters.formatCurrency(product.price),
-                                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                               trailing: IconButton(
                                 icon: Icon(Iconsax.add_circle, color: color),
                                 onPressed: () {
                                   // Show description dialog before adding
-                                  final noteController = TextEditingController();
-                                  final qtyController = TextEditingController(text: '1');
+                                  final noteController =
+                                      TextEditingController();
+                                  final qtyController = TextEditingController(
+                                    text: '1',
+                                  );
                                   showDialog(
                                     context: ctx,
                                     builder: (dialogCtx) => AlertDialog(
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
                                       title: Text('Add ${product.name}'),
                                       content: Column(
                                         mainAxisSize: MainAxisSize.min,
@@ -1348,54 +1644,91 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                             keyboardType: TextInputType.number,
                                             decoration: InputDecoration(
                                               labelText: 'Quantity',
-                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 10,
+                                                  ),
                                             ),
                                           ),
                                           const SizedBox(height: 12),
                                           TextField(
                                             controller: noteController,
                                             maxLines: 2,
-                                            textCapitalization: TextCapitalization.sentences,
+                                            textCapitalization:
+                                                TextCapitalization.sentences,
                                             decoration: InputDecoration(
                                               labelText: 'Note (optional)',
-                                              hintText: 'e.g. ripe ones, yellow, 1kg pack...',
-                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                              hintText:
+                                                  'e.g. ripe ones, yellow, 1kg pack...',
+                                              border: OutlineInputBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 10,
+                                                  ),
                                             ),
                                           ),
                                         ],
                                       ),
                                       actions: [
                                         TextButton(
-                                          onPressed: () => Navigator.pop(dialogCtx),
+                                          onPressed: () =>
+                                              Navigator.pop(dialogCtx),
                                           child: const Text('Cancel'),
                                         ),
                                         ElevatedButton(
                                           onPressed: () {
                                             Navigator.pop(dialogCtx);
-                                            final qty = int.tryParse(qtyController.text) ?? 1;
-                                            final note = noteController.text.trim();
+                                            final qty =
+                                                int.tryParse(
+                                                  qtyController.text,
+                                                ) ??
+                                                1;
+                                            final note = noteController.text
+                                                .trim();
                                             final item = ShoppingListItem(
-                                              id: DateTime.now().millisecondsSinceEpoch.toString(),
+                                              id: DateTime.now()
+                                                  .millisecondsSinceEpoch
+                                                  .toString(),
                                               name: product.name,
                                               quantity: qty,
                                               unit: product.unit,
                                               unitPrice: product.price,
-                                              description: note.isNotEmpty ? note : null,
+                                              description: note.isNotEmpty
+                                                  ? note
+                                                  : null,
                                               linkedProduct: product,
                                             );
-                                            context.read<ShoppingListProvider>().addItemToList(
-                                              list.id,
-                                              item,
-                                              authToken: context.read<AuthProvider>().token,
-                                            );
+                                            context
+                                                .read<ShoppingListProvider>()
+                                                .addItemToList(
+                                                  list.id,
+                                                  item,
+                                                  authToken: context
+                                                      .read<AuthProvider>()
+                                                      .token,
+                                                );
                                             setModalState(() {});
-                                            ScaffoldMessenger.of(context).showSnackBar(
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
                                               SnackBar(
-                                                content: Text('${product.name} added to list'),
-                                                duration: const Duration(seconds: 1),
-                                                backgroundColor: AppColors.success,
+                                                content: Text(
+                                                  '${product.name} added to list',
+                                                ),
+                                                duration: const Duration(
+                                                  seconds: 1,
+                                                ),
+                                                backgroundColor:
+                                                    AppColors.success,
                                               ),
                                             );
                                           },
@@ -1434,7 +1767,10 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Add Item', style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Add Item',
+                style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700),
+              ),
               const SizedBox(height: 20),
               ListTile(
                 leading: Container(
@@ -1446,7 +1782,10 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                   ),
                   child: Icon(Iconsax.edit_2, color: color),
                 ),
-                title: const Text('Custom Item', style: TextStyle(fontWeight: FontWeight.w600)),
+                title: const Text(
+                  'Custom Item',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
                 subtitle: const Text('Type in any item you need'),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -1464,7 +1803,10 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                   ),
                   child: Icon(Iconsax.search_normal_1, color: color),
                 ),
-                title: const Text('From Catalog', style: TextStyle(fontWeight: FontWeight.w600)),
+                title: const Text(
+                  'From Catalog',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
                 subtitle: const Text('Browse products with prices'),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -1750,8 +2092,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 showDialog(
                   context: context,
                   barrierDismissible: false,
-                  builder: (_) =>
-                      const AppLoadingPage(),
+                  builder: (_) => const AppLoadingPage(),
                 );
 
                 try {
@@ -1819,7 +2160,11 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
     );
   }
 
-  void _showEditItemDialog(ShoppingListItem item, ShoppingList list, Color color) {
+  void _showEditItemDialog(
+    ShoppingListItem item,
+    ShoppingList list,
+    Color color,
+  ) {
     final nameController = TextEditingController(text: item.name);
     final qtyController = TextEditingController(text: '${item.quantity}');
     final noteController = TextEditingController(text: item.description ?? '');
@@ -1847,8 +2192,13 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 textCapitalization: TextCapitalization.words,
                 decoration: InputDecoration(
                   labelText: 'Item Name',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -1860,8 +2210,13 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         labelText: 'Qty',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                       ),
                     ),
                   ),
@@ -1874,8 +2229,13 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                       decoration: InputDecoration(
                         labelText: 'Price (UGX)',
                         prefixText: 'UGX ',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                       ),
                     ),
                   ),
@@ -1889,8 +2249,13 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 decoration: InputDecoration(
                   labelText: 'Note',
                   hintText: 'e.g. ripe ones, yellow, 1kg pack...',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                 ),
               ),
             ],
@@ -1925,8 +2290,16 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 linkedProduct: item.linkedProduct,
                 isChecked: item.isChecked,
               );
-              provider.removeItemFromList(list.id, item.id, authToken: authToken);
-              provider.addItemToList(list.id, updatedItem, authToken: authToken);
+              provider.removeItemFromList(
+                list.id,
+                item.id,
+                authToken: authToken,
+              );
+              provider.addItemToList(
+                list.id,
+                updatedItem,
+                authToken: authToken,
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: color,
