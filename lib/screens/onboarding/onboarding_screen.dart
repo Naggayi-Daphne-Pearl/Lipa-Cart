@@ -34,9 +34,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           'Browse through a wide selection of fresh produce, meat, dairy, and pantry essentials from local markets.',
       colors: [Color(0xFF2E7D32), Color(0xFF66BB6A)],
       sceneIcons: [
-        SceneIcon(Iconsax.shop, 0.15, 0.20, 36, Colors.white70),
+        SceneIcon(Iconsax.shop, 0.15, 0.20, 36, Color(0xFF4CAF50)),
         SceneIcon(Iconsax.weight, 0.70, 0.15, 28, Color(0xFFFF6B6B)),
-        SceneIcon(Iconsax.milk, 0.80, 0.55, 24, Colors.white70),
+        SceneIcon(Iconsax.milk, 0.80, 0.55, 24, Color(0xFF2196F3)),
         SceneIcon(Iconsax.coffee, 0.20, 0.65, 22, Color(0xFFFFD93D)),
       ],
       mainIcon: Iconsax.shopping_bag,
@@ -50,7 +50,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         SceneIcon(Iconsax.tick_circle, 0.18, 0.22, 24, Color(0xFF81C784)),
         SceneIcon(Iconsax.tick_circle, 0.25, 0.38, 20, Color(0xFF81C784)),
         SceneIcon(Iconsax.edit_2, 0.75, 0.20, 26, Color(0xFFFFD54F)),
-        SceneIcon(Iconsax.money_2, 0.72, 0.60, 22, Colors.white60),
+        SceneIcon(Iconsax.money_2, 0.72, 0.60, 22, Color(0xFFFF5722)),
       ],
       mainIcon: Iconsax.clipboard_text,
     ),
@@ -60,7 +60,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           'Our trusted personal shoppers handpick the best quality items for your order with care and attention.',
       colors: [Color(0xFFE65100), Color(0xFFFF9800)],
       sceneIcons: [
-        SceneIcon(Iconsax.bag_2, 0.18, 0.25, 28, Colors.white70),
+        SceneIcon(Iconsax.bag_2, 0.18, 0.25, 28, Color(0xFF4CAF50)),
         SceneIcon(Iconsax.star_1, 0.75, 0.18, 24, Color(0xFFFFD54F)),
         SceneIcon(Iconsax.verify, 0.22, 0.62, 22, Color(0xFF81C784)),
         SceneIcon(Iconsax.heart, 0.78, 0.58, 20, Color(0xFFFF8A80)),
@@ -75,8 +75,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       sceneIcons: [
         SceneIcon(Iconsax.location, 0.20, 0.22, 26, Color(0xFFFF5252)),
         SceneIcon(Iconsax.timer_1, 0.76, 0.18, 24, Color(0xFFFFD54F)),
-        SceneIcon(Iconsax.box_1, 0.22, 0.62, 22, Colors.white60),
-        SceneIcon(Iconsax.map, 0.75, 0.58, 20, Colors.white54),
+        SceneIcon(Iconsax.box_1, 0.22, 0.62, 22, Color(0xFF4CAF50)),
+        SceneIcon(Iconsax.map, 0.75, 0.58, 20, Color(0xFFFF9800)),
       ],
       mainIcon: Iconsax.truck_fast,
     ),
@@ -157,18 +157,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSizes.lg,
-                  vertical: AppSizes.md,
+                  vertical: AppSizes.sm,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: Colors.white.withValues(alpha: 0.95),
                   border: Border(
-                    bottom: BorderSide(color: AppColors.grey200, width: 0.5),
+                    bottom: BorderSide(color: AppColors.grey100, width: 0.75),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 8,
+                      offset: const Offset(0, 1),
                     ),
                   ],
                 ),
@@ -180,21 +180,20 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       height: 25,
                       fit: BoxFit.contain,
                     ),
-                    TextButton.icon(
+                    TextButton(
                       onPressed: _completeOnboarding,
-                      icon: const Icon(Iconsax.arrow_right_3, size: 14),
-                      label: Text(
-                        'Skip',
-                        style: AppTextStyles.labelMedium.copyWith(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.textSecondary,
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppSizes.sm,
                           vertical: AppSizes.xs,
+                        ),
+                      ),
+                      child: Text(
+                        'Skip intro',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -235,9 +234,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               ? 'Almost there!'
                               : 'Step ${_currentPage + 1} of $_featurePageCount',
                           style: AppTextStyles.caption.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.textSecondary.withValues(alpha: 0.8),
                             fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
+                            fontSize: 13,
+                            letterSpacing: 0.4,
                           ),
                         ),
                       ],
@@ -265,15 +265,57 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       ),
                     ),
                     const SizedBox(height: AppSizes.xxl),
-                    // Next / Get Started button (hidden on role selection page)
+                    // Back / Next buttons
                     if (!isRoleSelectionPage)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: _nextPage,
-                          style:
-                              ElevatedButton.styleFrom(
+                      Row(
+                        children: [
+                          if (_currentPage > 0)
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  _pageController.previousPage(
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                  );
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: AppColors.grey300,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppSizes.radiusFull,
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: AppSizes.md,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Iconsax.arrow_left_3,
+                                      size: 20,
+                                      color: Color(0xFF374151),
+                                    ),
+                                    const SizedBox(width: AppSizes.sm),
+                                    Text(
+                                      'Back',
+                                      style: AppTextStyles.labelLarge.copyWith(
+                                        color: const Color(0xFF374151),
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          if (_currentPage > 0) const SizedBox(width: AppSizes.md),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _nextPage,
+                              style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF1B7F4E),
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
@@ -285,43 +327,46 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                   ),
                                 ),
                                 elevation: 6,
-                                shadowColor: const Color(
-                                  0xFF1B7F4E,
-                                ).withValues(alpha: 0.5),
+                                shadowColor: const Color(0xFF1B7F4E)
+                                    .withValues(alpha: 0.5),
                               ).copyWith(
-                                overlayColor: WidgetStateProperty.all(
+                                  overlayColor: WidgetStateProperty.all(
                                   Colors.white.withValues(alpha: 0.2),
                                 ),
                               ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Next',
-                                style: AppTextStyles.labelLarge.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 17,
-                                ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _currentPage == _featurePageCount - 1
+                                        ? 'Get Started'
+                                        : 'Next',
+                                    style: AppTextStyles.labelLarge.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 17,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSizes.sm),
+                                  const Icon(
+                                    Iconsax.arrow_right_3,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: AppSizes.sm),
-                              const Icon(
-                                Iconsax.arrow_right_3,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   // ── Feature page with rich illustration ──────────────────────────
@@ -333,18 +378,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSizes.xl,
-              vertical: AppSizes.lg,
+              vertical: AppSizes.md,
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const SizedBox(height: AppSizes.lg),
+                const SizedBox(height: AppSizes.md),
                 // Rich scene illustration
                 Transform.scale(
                   scale: _iconScaleAnimation.value,
                   child: _buildSceneIllustration(item),
                 ),
-                const SizedBox(height: 48),
+                const SizedBox(height: 32),
                 // Title
                 Text(
                   item.title,
@@ -514,7 +559,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Choose how you\'d like to use LipaCart',
+                        'Choose how you\'d like to use LipaCart. This helps us tailor the experience just for you.',
                         style: TextStyle(
                           color: const Color(0xFF6B7280),
                           fontSize: 15,
@@ -579,17 +624,21 @@ class _FloatingIcon extends StatelessWidget {
       width: size + 20,
       height: size + 20,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: gradientColors[0].withValues(alpha: 0.9),
         shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.white,
+          width: 2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: gradientColors[0].withValues(alpha: 0.15),
+            color: gradientColors[0].withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Icon(icon, size: size, color: color),
+      child: Icon(icon, size: size, color: Colors.white),
     );
   }
 }

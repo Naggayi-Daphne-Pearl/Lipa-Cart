@@ -38,6 +38,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // Guest checkout fields
   late final TextEditingController _guestNameController;
   late final TextEditingController _guestPhoneController;
+  late final TextEditingController _guestEmailController;
   late final TextEditingController _guestAddressController;
   late final TextEditingController _guestCityController;
   late final TextEditingController _guestPasswordController;
@@ -56,6 +57,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     super.initState();
     _guestNameController = TextEditingController();
     _guestPhoneController = TextEditingController();
+    _guestEmailController = TextEditingController();
     _guestAddressController = TextEditingController();
     _guestCityController = TextEditingController();
     _guestPasswordController = TextEditingController();
@@ -102,6 +104,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void dispose() {
     _guestNameController.dispose();
     _guestPhoneController.dispose();
+    _guestEmailController.dispose();
     _guestAddressController.dispose();
     _guestCityController.dispose();
     _guestPasswordController.dispose();
@@ -113,13 +116,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   /// Haversine formula — returns distance in km between two GPS points.
-  double _haversineDistance(double lat1, double lng1, double lat2, double lng2) {
+  double _haversineDistance(
+    double lat1,
+    double lng1,
+    double lat2,
+    double lng2,
+  ) {
     const earthRadiusKm = 6371.0;
     final dLat = _toRadians(lat2 - lat1);
     final dLng = _toRadians(lng2 - lng1);
-    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_toRadians(lat1)) * math.cos(_toRadians(lat2)) *
-        math.sin(dLng / 2) * math.sin(dLng / 2);
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(lat1)) *
+            math.cos(_toRadians(lat2)) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
     final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return earthRadiusKm * c;
   }
@@ -159,6 +170,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Phone number must be exactly 9 digits'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        // Validate email
+        final emailText = _guestEmailController.text.trim();
+        if (emailText.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please enter an email address'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+        if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+\b').hasMatch(emailText)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please enter a valid email address'),
               backgroundColor: AppColors.error,
             ),
           );
@@ -218,6 +252,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           phoneNumber: '+256$phoneText',
           password: password,
           name: nameText,
+          email: _guestEmailController.text.trim(),
         );
 
         if (!signupSuccess) {
@@ -389,7 +424,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
 
         // Service area validation — check if address is within delivery zone
-        if (_selectedAddress!.latitude != 0.0 && _selectedAddress!.longitude != 0.0) {
+        if (_selectedAddress!.latitude != 0.0 &&
+            _selectedAddress!.longitude != 0.0) {
           final distanceKm = _haversineDistance(
             _selectedAddress!.latitude,
             _selectedAddress!.longitude,
@@ -481,7 +517,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Iconsax.arrow_left),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              GoRouter.of(context).go('/customer/home');
+            }
+          },
         ),
         title: const Text('Checkout'),
       ),
@@ -1038,6 +1080,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           decoration: InputDecoration(
             hintText: 'Your full name',
             labelText: 'Name (required)',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSizes.md),
+        // Email field
+        TextField(
+          controller: _guestEmailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: InputDecoration(
+            hintText: 'john@example.com',
+            labelText: 'Email (required)',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppSizes.radiusSm),
             ),

@@ -131,14 +131,8 @@ class _SignupScreenState extends State<SignupScreen> {
   Widget _buildDesktopLayout() {
     return Row(
       children: [
-        Expanded(
-          flex: 5,
-          child: _buildBrandPanel(),
-        ),
-        Expanded(
-          flex: 5,
-          child: _buildDesktopFormPanel(),
-        ),
+        Expanded(flex: 5, child: _buildBrandPanel()),
+        Expanded(flex: 5, child: _buildDesktopFormPanel()),
       ],
     );
   }
@@ -158,9 +152,7 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
       child: Stack(
         children: [
-          Positioned.fill(
-            child: CustomPaint(painter: _CirclePatternPainter()),
-          ),
+          Positioned.fill(child: CustomPaint(painter: _CirclePatternPainter())),
           Padding(
             padding: const EdgeInsets.all(48),
             child: Column(
@@ -194,12 +186,14 @@ class _SignupScreenState extends State<SignupScreen> {
                 Row(
                   children: [
                     _buildTrustBadge(
-                        Iconsax.people, '10,000+', 'Happy customers'),
+                      Iconsax.people,
+                      '10,000+',
+                      'Happy customers',
+                    ),
                     const SizedBox(width: 32),
                     _buildTrustBadge(Iconsax.star_1, '4.8', 'App rating'),
                     const SizedBox(width: 32),
-                    _buildTrustBadge(
-                        Iconsax.timer_1, '30 min', 'Avg delivery'),
+                    _buildTrustBadge(Iconsax.timer_1, '30 min', 'Avg delivery'),
                   ],
                 ),
                 const Spacer(flex: 1),
@@ -268,14 +262,14 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(width: 8),
                 TextButton(
                   onPressed: () {
-                    context.canPop()
-                        ? context.pop()
-                        : context.go('/login');
+                    context.canPop() ? context.pop() : context.go('/login');
                   },
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.primary,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                       side: const BorderSide(color: AppColors.primary),
@@ -316,11 +310,7 @@ class _SignupScreenState extends State<SignupScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFE8F5E9),
-            Color(0xFFF1F8E9),
-            Color(0xFFFAFAFA),
-          ],
+          colors: [Color(0xFFE8F5E9), Color(0xFFF1F8E9), Color(0xFFFAFAFA)],
           stops: [0.0, 0.4, 1.0],
         ),
       ),
@@ -338,9 +328,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   IconButton(
                     icon: const Icon(Iconsax.arrow_left),
                     onPressed: () {
-                      context.canPop()
-                          ? context.pop()
-                          : context.go('/login');
+                      context.canPop() ? context.pop() : context.go('/login');
                     },
                   ),
                 ],
@@ -349,9 +337,7 @@ class _SignupScreenState extends State<SignupScreen> {
             // Content
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.lg,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: AppSizes.lg),
                 child: _buildFormContent(isDesktop: false),
               ),
             ),
@@ -367,8 +353,9 @@ class _SignupScreenState extends State<SignupScreen> {
       key: _formKey,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       child: Column(
-        crossAxisAlignment:
-            isDesktop ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
+        crossAxisAlignment: isDesktop
+            ? CrossAxisAlignment.stretch
+            : CrossAxisAlignment.center,
         children: [
           if (!isDesktop) ...[
             const SizedBox(height: AppSizes.md),
@@ -402,7 +389,8 @@ class _SignupScreenState extends State<SignupScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(
-                  isDesktop ? AppSizes.radiusMd : AppSizes.radiusLg),
+                isDesktop ? AppSizes.radiusMd : AppSizes.radiusLg,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: AppColors.primary.withValues(alpha: 0.06),
@@ -430,9 +418,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         label: 'Customer',
                         icon: Iconsax.shopping_bag,
                         isSelected: _selectedRole == 'customer',
-                        onTap: () => setState(
-                          () => _selectedRole = 'customer',
-                        ),
+                        onTap: () => setState(() => _selectedRole = 'customer'),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -441,9 +427,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         label: 'Shopper',
                         icon: Iconsax.bag_happy,
                         isSelected: _selectedRole == 'shopper',
-                        onTap: () => setState(
-                          () => _selectedRole = 'shopper',
-                        ),
+                        onTap: () => setState(() => _selectedRole = 'shopper'),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -452,9 +436,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         label: 'Rider',
                         icon: Iconsax.truck_fast,
                         isSelected: _selectedRole == 'rider',
-                        onTap: () => setState(
-                          () => _selectedRole = 'rider',
-                        ),
+                        onTap: () => setState(() => _selectedRole = 'rider'),
                       ),
                     ),
                   ],
@@ -487,7 +469,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     helperStyle: AppTextStyles.caption,
                     contentPadding: isDesktop
                         ? const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12)
+                            horizontal: 12,
+                            vertical: 12,
+                          )
                         : null,
                     prefixIcon: Container(
                       padding: const EdgeInsets.symmetric(
@@ -504,21 +488,21 @@ class _SignupScreenState extends State<SignupScreen> {
                           const SizedBox(width: 8),
                           Text(
                             '+256',
-                            style: (isDesktop
-                                    ? AppTextStyles.bodyMedium
-                                    : AppTextStyles.bodyLarge)
-                                .copyWith(
-                              color: AppColors.primaryDark,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style:
+                                (isDesktop
+                                        ? AppTextStyles.bodyMedium
+                                        : AppTextStyles.bodyLarge)
+                                    .copyWith(
+                                      color: AppColors.primaryDark,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                           ),
                           const SizedBox(width: 10),
                           Container(
                             width: 1.5,
                             height: 24,
                             decoration: BoxDecoration(
-                              color:
-                                  AppColors.primary.withValues(alpha: 0.2),
+                              color: AppColors.primary.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(1),
                             ),
                           ),
@@ -548,7 +532,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     hintText: 'John Doe (optional)',
                     contentPadding: isDesktop
                         ? const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12)
+                            horizontal: 12,
+                            vertical: 12,
+                          )
                         : null,
                     prefixIcon: const Icon(
                       Iconsax.user,
@@ -571,6 +557,11 @@ class _SignupScreenState extends State<SignupScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
+                    if (_selectedRole == 'customer') {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Email is required for customers';
+                      }
+                    }
                     if (value != null && value.isNotEmpty) {
                       if (!value.contains('@') || !value.contains('.')) {
                         return 'Enter a valid email';
@@ -582,10 +573,14 @@ class _SignupScreenState extends State<SignupScreen> {
                       ? AppTextStyles.bodyMedium
                       : AppTextStyles.bodyLarge,
                   decoration: InputDecoration(
-                    hintText: 'john@example.com (optional)',
+                    hintText: _selectedRole == 'customer'
+                        ? 'john@example.com'
+                        : 'john@example.com (optional)',
                     contentPadding: isDesktop
                         ? const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12)
+                            horizontal: 12,
+                            vertical: 12,
+                          )
                         : null,
                     prefixIcon: const Icon(
                       Iconsax.sms,
@@ -608,7 +603,9 @@ class _SignupScreenState extends State<SignupScreen> {
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   onChanged: (value) {
-                    setState(() => _passwordStrength = _calcPasswordStrength(value));
+                    setState(
+                      () => _passwordStrength = _calcPasswordStrength(value),
+                    );
                   },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -626,7 +623,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     hintText: 'Minimum 6 characters',
                     contentPadding: isDesktop
                         ? const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12)
+                            horizontal: 12,
+                            vertical: 12,
+                          )
                         : null,
                     prefixIcon: const Icon(
                       Iconsax.lock,
@@ -662,8 +661,8 @@ class _SignupScreenState extends State<SignupScreen> {
                         _passwordStrength < 0.3
                             ? AppColors.error
                             : _passwordStrength < 0.6
-                                ? AppColors.warning
-                                : AppColors.success,
+                            ? AppColors.warning
+                            : AppColors.success,
                       ),
                     ),
                   ),
@@ -672,16 +671,16 @@ class _SignupScreenState extends State<SignupScreen> {
                     _passwordStrength < 0.3
                         ? 'Weak'
                         : _passwordStrength < 0.6
-                            ? 'Fair'
-                            : _passwordStrength < 0.8
-                                ? 'Good'
-                                : 'Strong',
+                        ? 'Fair'
+                        : _passwordStrength < 0.8
+                        ? 'Good'
+                        : 'Strong',
                     style: AppTextStyles.caption.copyWith(
                       color: _passwordStrength < 0.3
                           ? AppColors.error
                           : _passwordStrength < 0.6
-                              ? AppColors.warning
-                              : AppColors.success,
+                          ? AppColors.warning
+                          : AppColors.success,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -715,7 +714,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     hintText: 'Re-enter your password',
                     contentPadding: isDesktop
                         ? const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12)
+                            horizontal: 12,
+                            vertical: 12,
+                          )
                         : null,
                     prefixIcon: const Icon(
                       Iconsax.lock,
@@ -765,9 +766,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 TextButton(
                   onPressed: () {
-                    context.canPop()
-                        ? context.pop()
-                        : context.go('/login');
+                    context.canPop() ? context.pop() : context.go('/login');
                   },
                   style: TextButton.styleFrom(
                     minimumSize: const Size(
