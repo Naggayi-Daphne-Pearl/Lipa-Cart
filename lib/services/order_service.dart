@@ -177,7 +177,7 @@ class OrderService extends ChangeNotifier {
     try {
       final attributes = (data['attributes'] as Map<String, dynamic>?) ?? data;
 
-      final rawId = data['id'] ?? data['documentId'];
+      final rawId = data['documentId'] ?? data['id'];
       final documentId = data['documentId'] as String?;
 
       final orderNumber =
@@ -271,6 +271,7 @@ class OrderService extends ChangeNotifier {
         cancellationReason: attributes['cancellation_reason'] as String?,
         paymentMethod: PaymentMethod.mobileMoney,
         isPaid: false,
+        deliveryProofUrl: attributes['delivery_proof_url'] as String?,
       );
     } catch (e) {
       rethrow;

@@ -930,9 +930,14 @@ class StrapiService {
   static Future<Map<String, dynamic>?> updateRiderOrderStatus(
     String orderDocumentId,
     String status,
-    String token,
-  ) async {
+    String token, {
+    String? deliveryProofUrl,
+  }) async {
     try {
+      final body = <String, dynamic>{'status': status};
+      if (deliveryProofUrl != null) {
+        body['delivery_proof_url'] = deliveryProofUrl;
+      }
       final response = await http
           .patch(
             Uri.parse('$_apiUrl/orders/$orderDocumentId/rider-status'),
@@ -940,7 +945,7 @@ class StrapiService {
               'Authorization': 'Bearer $token',
               'Content-Type': 'application/json',
             },
-            body: json.encode({'status': status}),
+            body: json.encode(body),
           )
           .timeout(AppConstants.apiTimeout);
 

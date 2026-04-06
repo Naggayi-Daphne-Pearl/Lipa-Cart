@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -519,6 +520,8 @@ class _RiderActiveDeliveriesScreenState
 
   void _showDeliveryProofDialog(BuildContext context, Order order) {
     XFile? proofPhoto;
+    Uint8List? proofBytes;
+    bool isUploading = false;
 
     showDialog(
       context: context,
@@ -532,27 +535,31 @@ class _RiderActiveDeliveriesScreenState
             children: [
               const Text('Take a photo of the delivered order at the customer\'s door for verification.'),
               const SizedBox(height: 16),
-              if (proofPhoto != null)
+              if (proofPhoto != null && proofBytes != null)
                 Container(
-                  height: 160,
+                  height: 200,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: AppColors.grey100,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.success, width: 2),
                   ),
+                  clipBehavior: Clip.antiAlias,
                   child: Stack(
+                    fit: StackFit.expand,
                     children: [
-                      Center(child: Icon(Iconsax.tick_circle5, color: AppColors.success, size: 48)),
+                      Image.memory(proofBytes!, fit: BoxFit.cover),
                       Positioned(
                         top: 8,
                         right: 8,
                         child: GestureDetector(
-                          onTap: () => setDialogState(() => proofPhoto = null),
+                          onTap: () => setDialogState(() {
+                            proofPhoto = null;
+                            proofBytes = null;
+                          }),
                           child: Container(
                             padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(color: AppColors.grey200, shape: BoxShape.circle),
-                            child: const Icon(Icons.close, size: 16),
+                            decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                            child: const Icon(Icons.close, size: 16, color: Colors.white),
                           ),
                         ),
                       ),
@@ -565,7 +572,11 @@ class _RiderActiveDeliveriesScreenState
                     final picker = ImagePicker();
                     final photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 80);
                     if (photo != null) {
-                      setDialogState(() => proofPhoto = photo);
+                      final bytes = await photo.readAsBytes();
+                      setDialogState(() {
+                        proofPhoto = photo;
+                        proofBytes = bytes;
+                      });
                     }
                   },
                   child: Container(
@@ -586,31 +597,50 @@ class _RiderActiveDeliveriesScreenState
                     ),
                   ),
                 ),
+              if (isUploading) ...[
+                const SizedBox(height: 16),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                    SizedBox(width: 12),
+                    Text('Uploading photo & completing...', style: TextStyle(fontSize: 13)),
+                  ],
+                ),
+              ],
             ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: isUploading ? null : () => Navigator.pop(ctx),
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: proofPhoto == null
+              onPressed: proofPhoto == null || isUploading
                   ? null
                   : () async {
-                      Navigator.pop(ctx);
-                      // Complete delivery (photo URL would be uploaded in production)
+                      setDialogState(() => isUploading = true);
                       final auth = context.read<AuthProvider>();
                       final rider = context.read<RiderProvider>();
                       final success = await rider.completeDelivery(
                         auth.token!,
                         order.documentId ?? order.id,
                         auth.user!.documentId ?? auth.user!.id,
+                        proofPhotoBytes: proofBytes,
                       );
+                      if (ctx.mounted) Navigator.pop(ctx);
                       if (success && mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Delivery completed with proof photo!'),
                             backgroundColor: AppColors.success,
+                          ),
+                        );
+                      } else if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(rider.error ?? 'Failed to complete delivery'),
+                            backgroundColor: AppColors.error,
                           ),
                         );
                       }

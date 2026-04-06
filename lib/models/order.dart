@@ -112,6 +112,7 @@ class Order {
   final bool isPaid;
   final Rating? rating;
   final bool hasBeenRated;
+  final String? deliveryProofUrl;
 
   Order({
     required this.id,
@@ -140,6 +141,7 @@ class Order {
     this.isPaid = false,
     this.rating,
     this.hasBeenRated = false,
+    this.deliveryProofUrl,
   });
 
   int get itemCount {
@@ -181,6 +183,7 @@ class Order {
     bool? isPaid,
     Rating? rating,
     bool? hasBeenRated,
+    String? deliveryProofUrl,
   }) {
     return Order(
       id: id ?? this.id,
@@ -208,6 +211,7 @@ class Order {
       isPaid: isPaid ?? this.isPaid,
       rating: rating ?? this.rating,
       hasBeenRated: hasBeenRated ?? this.hasBeenRated,
+      deliveryProofUrl: deliveryProofUrl ?? this.deliveryProofUrl,
     );
   }
 
@@ -238,6 +242,7 @@ class Order {
       'isPaid': isPaid,
       'rating': rating?.toJson(),
       'hasBeenRated': hasBeenRated,
+      'deliveryProofUrl': deliveryProofUrl,
     };
   }
 
@@ -286,6 +291,7 @@ class Order {
           ? Rating.fromJson(json['rating'] as Map<String, dynamic>)
           : null,
       hasBeenRated: json['hasBeenRated'] as bool? ?? false,
+      deliveryProofUrl: json['deliveryProofUrl'] as String?,
     );
   }
 }

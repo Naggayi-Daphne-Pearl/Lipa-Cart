@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/order.dart';
+import '../services/imgbb_service.dart';
 import '../services/strapi_service.dart';
 
 class RiderProvider extends ChangeNotifier {
@@ -170,10 +171,21 @@ class RiderProvider extends ChangeNotifier {
   Future<bool> completeDelivery(
     String token,
     String orderId,
-    String riderId,
-  ) async {
+    String riderId, {
+    Uint8List? proofPhotoBytes,
+  }) async {
     try {
-      final result = await StrapiService.updateRiderOrderStatus(orderId, 'delivered', token);
+      String? proofUrl;
+      if (proofPhotoBytes != null) {
+        proofUrl = await ImgBBService.uploadImageBytes(
+          proofPhotoBytes,
+          'delivery_proof_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        );
+      }
+      final result = await StrapiService.updateRiderOrderStatus(
+        orderId, 'delivered', token,
+        deliveryProofUrl: proofUrl,
+      );
       if (result != null) {
         await fetchActiveDeliveries(token, riderId);
         notifyListeners();

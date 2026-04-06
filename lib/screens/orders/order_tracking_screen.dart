@@ -1032,6 +1032,68 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                   const SizedBox(height: AppSizes.lg),
                 ],
 
+                // Delivery proof photo
+                if (order.status == OrderStatus.delivered && order.deliveryProofUrl != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(AppSizes.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Iconsax.camera, color: AppColors.success, size: 20),
+                            const SizedBox(width: AppSizes.sm),
+                            Text('Delivery Proof', style: AppTextStyles.h5),
+                          ],
+                        ),
+                        const SizedBox(height: AppSizes.sm),
+                        Text(
+                          'Photo taken by rider at delivery',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                        ),
+                        const SizedBox(height: AppSizes.md),
+                        GestureDetector(
+                          onTap: () => _showFullScreenPhoto(context, order.deliveryProofUrl!),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                            child: Image.network(
+                              order.deliveryProofUrl!,
+                              height: 200,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  height: 200,
+                                  color: AppColors.grey100,
+                                  child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                height: 100,
+                                color: AppColors.grey100,
+                                child: const Center(child: Text('Photo unavailable')),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.lg),
+                ],
+
                 // Reorder button for delivered orders
                 if (order.status == OrderStatus.delivered) ...[
                   SizedBox(
@@ -1118,6 +1180,33 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
           ),
         ),
       ),
+      ),
+    );
+  }
+
+  void _showFullScreenPhoto(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: Image.network(url, fit: BoxFit.contain),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                onPressed: () => Navigator.pop(ctx),
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
