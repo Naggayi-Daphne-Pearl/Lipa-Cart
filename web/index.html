@@ -191,10 +191,6 @@
   </div>
 
   <script>
-    // The value below is injected by flutter build, do not touch.
-    var serviceWorkerVersion = null;
-
-    // Helper for Flutter to show browser notifications when app is in foreground
     function showBrowserNotification(title, body) {
       if (typeof Notification === 'undefined') return;
 
@@ -208,51 +204,21 @@
         });
       }
     }
-  </script>
 
-  <!-- This script adds the flutter initialization JS code -->
-  <script src="flutter.js" defer></script>
-
-  <script>
-    window.addEventListener('load', async function() {
+    window.addEventListener('flutter-first-frame', function() {
       var loader = document.querySelector('.loading');
+      if (loader) loader.remove();
+    });
+
+    window.addEventListener('load', function() {
       var status = document.getElementById('loading-status');
       var dots = document.getElementById('loading-dots');
       var retryButton = document.getElementById('retry-load');
-      var appStarted = false;
-      var userAgent = window.navigator.userAgent || '';
-      var isIOSBrowser = /iPad|iPhone|iPod/.test(userAgent) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      var isSafariBrowser = /Safari/.test(userAgent) &&
-        !/Chrome|CriOS|Chromium|Edg|OPR|Firefox|FxiOS/.test(userAgent);
-      var isWebKitBrowser = isIOSBrowser || isSafariBrowser;
 
       function showRetryState(message) {
-        if (appStarted) return;
         if (status) status.textContent = message;
         if (dots) dots.style.display = 'none';
         if (retryButton) retryButton.style.display = 'inline-flex';
-      }
-
-      async function clearStaleFlutterCaches() {
-        if (!('serviceWorker' in navigator)) return;
-        try {
-          var registrations = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(registrations.map(function(registration) {
-            return registration.unregister();
-          }));
-
-          if ('caches' in window) {
-            var keys = await caches.keys();
-            await Promise.all(keys.filter(function(key) {
-              return key.indexOf('flutter') !== -1 || key.indexOf('workbox') !== -1;
-            }).map(function(key) {
-              return caches.delete(key);
-            }));
-          }
-        } catch (error) {
-          console.warn('Could not clear stale service workers:', error);
-        }
       }
 
       if (retryButton) {
@@ -261,33 +227,12 @@
         });
       }
 
-      if (isWebKitBrowser) {
-        await clearStaleFlutterCaches();
-      }
-
-      try {
-        _flutter.loader.load({
-          onEntrypointLoaded: async function(engineInitializer) {
-            try {
-              var appRunner = await engineInitializer.initializeEngine();
-              await appRunner.runApp();
-              appStarted = true;
-              if (loader) loader.remove();
-            } catch (error) {
-              console.error('Flutter app failed to start:', error);
-              showRetryState('Still loading in Safari? Tap retry.');
-            }
-          }
-        });
-      } catch (error) {
-        console.error('Flutter bootstrap failed:', error);
-        showRetryState('Couldn\'t start the app. Please retry.');
-      }
-
       setTimeout(function() {
-        showRetryState('Still loading in Safari? Tap retry.');
-      }, 14000);
+        showRetryState('Still loading? Tap retry or refresh the page.');
+      }, 15000);
     });
   </script>
+
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -44,66 +44,68 @@ Future<void> _bootstrapBackgroundServices() async {
   }
 }
 
+Future<void> _runAppBootstrap() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Only set system UI overlay and orientations on mobile
+  if (!kIsWeb) {
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+    );
+
+    // Allow landscape on tablets (shortestSide >= 600), portrait-only on phones
+    final shortestSide =
+        PlatformDispatcher.instance.views.first.physicalSize.shortestSide /
+        PlatformDispatcher.instance.views.first.devicePixelRatio;
+    if (shortestSide < 600) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    }
+  }
+
+  // Prevent GoRouter empty-stack assertion on web back button
+  GoRouter.optionURLReflectsImperativeAPIs = true;
+
+  // Capture Flutter framework errors to Sentry
+  FlutterError.onError = (FlutterErrorDetails details) {
+    final message = details.exception.toString();
+    if (message.contains('currentConfiguration.isNotEmpty') ||
+        message.contains('popped the last page') ||
+        message.contains('!_debugLocked') ||
+        message.contains('Duplicate GlobalKey')) {
+      return;
+    }
+    FlutterError.presentError(details);
+    Sentry.captureException(details.exception, stackTrace: details.stack);
+  };
+
+  // Capture async errors (uncaught exceptions outside Flutter framework)
+  PlatformDispatcher.instance.onError = (error, stack) {
+    Sentry.captureException(error, stackTrace: stack);
+    return true;
+  };
+
+  runApp(const LipaCartApp());
+  unawaited(_bootstrapBackgroundServices());
+}
+
 Future<void> main() async {
-  await SentryFlutter.init(
-    (options) {
-      options.dsn = AppConfig.sentryDsn;
-      options.tracesSampleRate = 0.2;
-      options.environment = AppConfig.sentryEnvironment;
-    },
-    appRunner: () async {
-      WidgetsFlutterBinding.ensureInitialized();
+  if (kIsWeb || AppConfig.sentryDsn.isEmpty) {
+    await _runAppBootstrap();
+    return;
+  }
 
-      // Only set system UI overlay and orientations on mobile
-      if (!kIsWeb) {
-        SystemChrome.setSystemUIOverlayStyle(
-          const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.dark,
-            statusBarBrightness: Brightness.light,
-          ),
-        );
-
-        // Allow landscape on tablets (shortestSide >= 600), portrait-only on phones
-        final shortestSide =
-            PlatformDispatcher.instance.views.first.physicalSize.shortestSide /
-            PlatformDispatcher.instance.views.first.devicePixelRatio;
-        if (shortestSide < 600) {
-          SystemChrome.setPreferredOrientations([
-            DeviceOrientation.portraitUp,
-            DeviceOrientation.portraitDown,
-          ]);
-        }
-      }
-
-      // Prevent GoRouter empty-stack assertion on web back button
-      GoRouter.optionURLReflectsImperativeAPIs = true;
-
-      // Capture Flutter framework errors to Sentry
-      FlutterError.onError = (FlutterErrorDetails details) {
-        // Suppress GoRouter/Navigator assertions caused by web back button
-        // popping the last route (empty stack, locked navigator, duplicate keys)
-        final message = details.exception.toString();
-        if (message.contains('currentConfiguration.isNotEmpty') ||
-            message.contains('popped the last page') ||
-            message.contains('!_debugLocked') ||
-            message.contains('Duplicate GlobalKey')) {
-          return;
-        }
-        FlutterError.presentError(details);
-        Sentry.captureException(details.exception, stackTrace: details.stack);
-      };
-
-      // Capture async errors (uncaught exceptions outside Flutter framework)
-      PlatformDispatcher.instance.onError = (error, stack) {
-        Sentry.captureException(error, stackTrace: stack);
-        return true;
-      };
-
-      runApp(const LipaCartApp());
-      unawaited(_bootstrapBackgroundServices());
-    },
-  );
+  await SentryFlutter.init((options) {
+    options.dsn = AppConfig.sentryDsn;
+    options.tracesSampleRate = 0.2;
+    options.environment = AppConfig.sentryEnvironment;
+  }, appRunner: _runAppBootstrap);
 }
 
 class LipaCartApp extends StatefulWidget {
