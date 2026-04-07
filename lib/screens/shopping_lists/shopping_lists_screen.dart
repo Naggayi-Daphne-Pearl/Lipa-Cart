@@ -12,6 +12,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/desktop_top_nav_bar.dart';
 
 class ShoppingListsScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -91,6 +92,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const DesktopTopNavBar(activeSection: 'lists'),
               // Header
               Padding(
                 padding: const EdgeInsets.all(AppSizes.lg),

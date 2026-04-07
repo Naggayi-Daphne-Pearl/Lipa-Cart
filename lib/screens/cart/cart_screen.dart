@@ -7,11 +7,13 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/responsive.dart';
 import '../../models/cart_item.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/desktop_top_nav_bar.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -38,7 +40,8 @@ class CartScreen extends StatelessWidget {
     }
   }
 
-  Color _getProductBgColor(String categoryName) => Formatters.getProductBgColor(categoryName);
+  Color _getProductBgColor(String categoryName) =>
+      Formatters.getProductBgColor(categoryName);
 
   @override
   Widget build(BuildContext context) {
@@ -53,272 +56,523 @@ class CartScreen extends StatelessWidget {
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
         child: SafeArea(
-          child: cartProvider.isEmpty
-              ? _buildEmptyCart(context)
-              : Column(
-                  children: [
-                    // Header
-                    Padding(
-                      padding: const EdgeInsets.all(AppSizes.lg),
-                      child: Row(
+          child: Column(
+            children: [
+              const DesktopTopNavBar(activeSection: 'cart'),
+              Expanded(
+                child: context.isDesktop
+                    ? _buildDesktopCartLayout(
+                        context,
+                        cartProvider,
+                        deliveryProgress,
+                        amountToFreeDelivery,
+                      )
+                    : cartProvider.isEmpty
+                    ? _buildEmptyCart(context)
+                    : Column(
                         children: [
-                          GestureDetector(
-                            onTap: () {
-                              if (Navigator.of(context).canPop()) {
-                                Navigator.pop(context);
-                              } else {
-                                GoRouter.of(context).go('/customer/home');
-                              }
-                            },
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(
-                                  AppSizes.radiusMd,
-                                ),
-                                border: Border.all(
-                                  color: AppColors.grey200,
-                                  width: 1,
-                                ),
-                              ),
-                              child: const Icon(Iconsax.arrow_left, size: 20),
-                            ),
-                          ),
-                          const SizedBox(width: AppSizes.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          Padding(
+                            padding: const EdgeInsets.all(AppSizes.lg),
+                            child: Row(
                               children: [
-                                Text(
-                                  'Cart',
-                                  style: AppTextStyles.h3.copyWith(
-                                    fontWeight: FontWeight.w700,
+                                GestureDetector(
+                                  onTap: () {
+                                    if (Navigator.of(context).canPop()) {
+                                      Navigator.pop(context);
+                                    } else {
+                                      GoRouter.of(context).go('/customer/home');
+                                    }
+                                  },
+                                  child: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surface,
+                                      borderRadius: BorderRadius.circular(
+                                        AppSizes.radiusMd,
+                                      ),
+                                      border: Border.all(
+                                        color: AppColors.grey200,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Iconsax.arrow_left,
+                                      size: 20,
+                                    ),
                                   ),
                                 ),
-                                Text(
-                                  '${cartProvider.itemCount} items in your cart',
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () =>
-                                _showClearCartDialog(context, cartProvider),
-                            child: Text(
-                              'Clear All',
-                              style: AppTextStyles.labelMedium.copyWith(
-                                color: AppColors.accent,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Cart items
-                    Expanded(
-                      child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSizes.lg,
-                        ),
-                        itemCount: cartProvider.items.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: AppSizes.md),
-                        itemBuilder: (context, index) {
-                          final item = cartProvider.items[index];
-                          return _buildCartItem(context, item, cartProvider);
-                        },
-                      ),
-                    ),
-
-                    // Free delivery progress
-                    if (amountToFreeDelivery > 0)
-                      Container(
-                        margin: const EdgeInsets.all(AppSizes.lg),
-                        padding: const EdgeInsets.all(AppSizes.md),
-                        decoration: BoxDecoration(
-                          color: AppColors.primarySoft,
-                          borderRadius: BorderRadius.circular(
-                            AppSizes.radiusMd,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Iconsax.truck_fast,
-                                  color: AppColors.primary,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: AppSizes.sm),
+                                const SizedBox(width: AppSizes.md),
                                 Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Cart',
+                                        style: AppTextStyles.h3.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${cartProvider.itemCount} items in your cart',
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () => _showClearCartDialog(
+                                    context,
+                                    cartProvider,
+                                  ),
                                   child: Text(
-                                    deliveryProgress > 0.8
-                                        ? '🎉 Almost there! Just ${Formatters.formatCurrency(amountToFreeDelivery)} more for free delivery'
-                                        : 'Add ${Formatters.formatCurrency(amountToFreeDelivery)} more for free delivery',
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      color: AppColors.primary,
-                                      fontWeight: deliveryProgress > 0.8 ? FontWeight.w700 : FontWeight.w500,
+                                    'Clear All',
+                                    style: AppTextStyles.labelMedium.copyWith(
+                                      color: AppColors.accent,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: AppSizes.sm),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(
-                                AppSizes.radiusFull,
+                          ),
+                          Expanded(
+                            child: ListView.separated(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSizes.lg,
                               ),
-                              child: LinearProgressIndicator(
-                                value: deliveryProgress,
-                                backgroundColor: AppColors.primary.withValues(
-                                  alpha: 0.2,
-                                ),
-                                valueColor: const AlwaysStoppedAnimation<Color>(
-                                  AppColors.primary,
-                                ),
-                                minHeight: 6,
+                              itemCount: cartProvider.items.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: AppSizes.md),
+                              itemBuilder: (context, index) {
+                                final item = cartProvider.items[index];
+                                return _buildCartItem(
+                                  context,
+                                  item,
+                                  cartProvider,
+                                );
+                              },
+                            ),
+                          ),
+                          if (amountToFreeDelivery > 0)
+                            Padding(
+                              padding: const EdgeInsets.all(AppSizes.lg),
+                              child: _buildFreeDeliveryBanner(
+                                deliveryProgress,
+                                amountToFreeDelivery,
                               ),
                             ),
-                          ],
+                          Container(
+                            padding: const EdgeInsets.all(AppSizes.lg),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(AppSizes.radiusXl),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.black.withValues(
+                                    alpha: 0.05,
+                                  ),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, -4),
+                                ),
+                              ],
+                            ),
+                            child: SafeArea(
+                              top: false,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildSummaryRow(
+                                    'Subtotal',
+                                    Formatters.formatCurrency(
+                                      cartProvider.subtotal,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppSizes.sm),
+                                  _buildSummaryRow(
+                                    'Service Fee',
+                                    Formatters.formatCurrency(
+                                      cartProvider.serviceFee,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppSizes.sm),
+                                  _buildSummaryRow(
+                                    'Delivery',
+                                    cartProvider.subtotal >=
+                                            _freeDeliveryThreshold
+                                        ? 'FREE'
+                                        : Formatters.formatCurrency(
+                                            cartProvider.deliveryFee,
+                                          ),
+                                    isFree:
+                                        cartProvider.subtotal >=
+                                        _freeDeliveryThreshold,
+                                  ),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: AppSizes.md,
+                                    ),
+                                    child: Divider(color: AppColors.grey200),
+                                  ),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Total',
+                                        style: AppTextStyles.h5.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Text(
+                                        Formatters.formatCurrency(
+                                          cartProvider.total,
+                                        ),
+                                        style: AppTextStyles.h4.copyWith(
+                                          color: AppColors.accent,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: AppSizes.lg),
+                                  GestureDetector(
+                                    onTap: () =>
+                                        _handleProceedToCheckout(context),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: AppSizes.md,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.accent,
+                                        borderRadius: BorderRadius.circular(
+                                          AppSizes.radiusFull,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Iconsax.card,
+                                            color: Colors.white,
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: AppSizes.sm),
+                                          Text(
+                                            'Proceed to Checkout',
+                                            style: AppTextStyles.labelLarge
+                                                .copyWith(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                          const SizedBox(width: AppSizes.xs),
+                                          Icon(
+                                            Iconsax.arrow_right_3,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSizes.lg,
+                              0,
+                              AppSizes.lg,
+                              AppSizes.lg,
+                            ),
+                            child: TextButton.icon(
+                              onPressed: () => GoRouter.of(
+                                context,
+                              ).go('/customer/categories'),
+                              icon: const Icon(Iconsax.arrow_left_2, size: 16),
+                              label: const Text('Continue Shopping'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                                minimumSize: const Size(double.infinity, 44),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopCartLayout(
+    BuildContext context,
+    CartProvider cartProvider,
+    double deliveryProgress,
+    double amountToFreeDelivery,
+  ) {
+    if (cartProvider.isEmpty) {
+      return _buildEmptyCart(context);
+    }
+
+    return ResponsiveContainer(
+      maxWidth: 1440,
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              context.horizontalPadding,
+              AppSizes.lg,
+              context.horizontalPadding,
+              AppSizes.lg,
+            ),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.pop(context);
+                    } else {
+                      GoRouter.of(context).go('/customer/home');
+                    }
+                  },
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      border: Border.all(color: AppColors.grey200, width: 1),
+                    ),
+                    child: const Icon(Iconsax.arrow_left, size: 20),
+                  ),
+                ),
+                const SizedBox(width: AppSizes.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Your cart',
+                        style: AppTextStyles.h3.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-
-                    // Order summary
-                    Container(
+                      Text(
+                        '${cartProvider.itemCount} items ready for checkout',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => _showClearCartDialog(context, cartProvider),
+                  icon: const Icon(Iconsax.trash, size: 16),
+                  label: const Text('Clear all'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.accent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                context.horizontalPadding,
+                0,
+                context.horizontalPadding,
+                AppSizes.xl,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 7,
+                    child: ListView(
+                      children: [
+                        if (amountToFreeDelivery > 0) ...[
+                          _buildFreeDeliveryBanner(
+                            deliveryProgress,
+                            amountToFreeDelivery,
+                          ),
+                          const SizedBox(height: AppSizes.lg),
+                        ],
+                        ...cartProvider.items.map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: AppSizes.md),
+                            child: _buildCartItem(context, item, cartProvider),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSizes.xl),
+                  SizedBox(
+                    width: 360,
+                    child: Container(
                       padding: const EdgeInsets.all(AppSizes.lg),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(AppSizes.radiusXl),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, -4),
-                          ),
-                        ],
+                        borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+                        boxShadow: AppColors.shadowSm,
                       ),
-                      child: SafeArea(
-                        top: false,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildSummaryRow(
-                              'Subtotal',
-                              Formatters.formatCurrency(cartProvider.subtotal),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Order summary',
+                            style: AppTextStyles.h5.copyWith(
+                              fontWeight: FontWeight.w700,
                             ),
-                            const SizedBox(height: AppSizes.sm),
-                            _buildSummaryRow(
-                              'Service Fee',
-                              Formatters.formatCurrency(
-                                cartProvider.serviceFee,
-                              ),
-                            ),
-                            const SizedBox(height: AppSizes.sm),
-                            _buildSummaryRow(
-                              'Delivery',
-                              cartProvider.subtotal >= _freeDeliveryThreshold
-                                  ? 'FREE'
-                                  : Formatters.formatCurrency(
-                                      cartProvider.deliveryFee,
-                                    ),
-                              isFree:
-                                  cartProvider.subtotal >=
-                                  _freeDeliveryThreshold,
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(
-                                vertical: AppSizes.md,
-                              ),
-                              child: Divider(color: AppColors.grey200),
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Total',
-                                  style: AppTextStyles.h5.copyWith(
-                                    fontWeight: FontWeight.w600,
+                          ),
+                          const SizedBox(height: AppSizes.md),
+                          _buildSummaryRow(
+                            'Subtotal',
+                            Formatters.formatCurrency(cartProvider.subtotal),
+                          ),
+                          const SizedBox(height: AppSizes.sm),
+                          _buildSummaryRow(
+                            'Service Fee',
+                            Formatters.formatCurrency(cartProvider.serviceFee),
+                          ),
+                          const SizedBox(height: AppSizes.sm),
+                          _buildSummaryRow(
+                            'Delivery',
+                            cartProvider.subtotal >= _freeDeliveryThreshold
+                                ? 'FREE'
+                                : Formatters.formatCurrency(
+                                    cartProvider.deliveryFee,
                                   ),
-                                ),
-                                Text(
-                                  Formatters.formatCurrency(cartProvider.total),
-                                  style: AppTextStyles.h4.copyWith(
-                                    color: AppColors.accent,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
+                            isFree:
+                                cartProvider.subtotal >= _freeDeliveryThreshold,
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.md,
                             ),
-                            const SizedBox(height: AppSizes.lg),
-                            GestureDetector(
-                              onTap: () => _handleProceedToCheckout(context),
-                              child: Container(
-                                width: double.infinity,
+                            child: Divider(color: AppColors.grey200),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Total',
+                                style: AppTextStyles.h5.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                Formatters.formatCurrency(cartProvider.total),
+                                style: AppTextStyles.h4.copyWith(
+                                  color: AppColors.accent,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSizes.lg),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () =>
+                                  _handleProceedToCheckout(context),
+                              icon: const Icon(Iconsax.card),
+                              label: const Text('Proceed to Checkout'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.accent,
+                                foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: AppSizes.md,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.accent,
-                                  borderRadius: BorderRadius.circular(
-                                    AppSizes.radiusFull,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Iconsax.card,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: AppSizes.sm),
-                                    Text(
-                                      'Proceed to Checkout',
-                                      style: AppTextStyles.labelLarge.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSizes.xs),
-                                    Icon(
-                                      Iconsax.arrow_right_3,
-                                      color: Colors.white,
-                                      size: 18,
-                                    ),
-                                  ],
-                                ),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: AppSizes.sm),
+                          SizedBox(
+                            width: double.infinity,
+                            child: TextButton.icon(
+                              onPressed: () => GoRouter.of(
+                                context,
+                              ).go('/customer/categories'),
+                              icon: const Icon(Iconsax.arrow_left_2, size: 16),
+                              label: const Text('Continue Shopping'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    // Continue Shopping button
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(AppSizes.lg, 0, AppSizes.lg, AppSizes.lg),
-                      child: TextButton.icon(
-                        onPressed: () => GoRouter.of(context).go('/customer/categories'),
-                        icon: const Icon(Iconsax.arrow_left_2, size: 16),
-                        label: const Text('Continue Shopping'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          minimumSize: const Size(double.infinity, 44),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFreeDeliveryBanner(
+    double deliveryProgress,
+    double amountToFreeDelivery,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(AppSizes.md),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(Iconsax.truck_fast, color: AppColors.primary, size: 20),
+              const SizedBox(width: AppSizes.sm),
+              Expanded(
+                child: Text(
+                  deliveryProgress > 0.8
+                      ? '🎉 Almost there! Just ${Formatters.formatCurrency(amountToFreeDelivery)} more for free delivery'
+                      : 'Add ${Formatters.formatCurrency(amountToFreeDelivery)} more for free delivery',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: deliveryProgress > 0.8
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                  ),
                 ),
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSizes.sm),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+            child: LinearProgressIndicator(
+              value: deliveryProgress,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.primary,
+              ),
+              minHeight: 6,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -350,9 +604,8 @@ class CartScreen extends StatelessWidget {
               child: CachedNetworkImage(
                 imageUrl: item.product.image,
                 fit: BoxFit.contain,
-                placeholder: (context, url) => const Center(
-                  child: AppLoadingIndicator.small(),
-                ),
+                placeholder: (context, url) =>
+                    const Center(child: AppLoadingIndicator.small()),
                 errorWidget: (context, url, error) =>
                     Icon(Iconsax.image, color: AppColors.grey400),
               ),
@@ -620,13 +873,32 @@ class _GuestOrSignInSheet extends StatelessWidget {
           Text('Proceed to Checkout', style: AppTextStyles.h4),
           const SizedBox(height: AppSizes.md),
           Text(
-            'Sign in to save order history and track deliveries',
+            'Sign in to save order history and track deliveries, or continue as a guest and only share delivery details at checkout.',
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: AppSizes.lg),
-          // Sign In button
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                context.go(
+                  '/customer/checkout?guest=true',
+                  extra: {'guest': true},
+                );
+              },
+              icon: const Icon(Iconsax.location),
+              label: const Text('Continue as Guest'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.primary),
+                padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSizes.sm),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(

@@ -1,6 +1,8 @@
 import 'product.dart';
 
 class ShoppingListItem {
+  static const Object _unset = Object();
+
   final String id;
   final String name;
   final String? description; // Personal notes/preferences for the item
@@ -26,23 +28,31 @@ class ShoppingListItem {
   ShoppingListItem copyWith({
     String? id,
     String? name,
-    String? description,
+    Object? description = _unset,
     int? quantity,
-    String? unit,
-    double? unitPrice,
-    double? budgetAmount,
-    Product? linkedProduct,
+    Object? unit = _unset,
+    Object? unitPrice = _unset,
+    Object? budgetAmount = _unset,
+    Object? linkedProduct = _unset,
     bool? isChecked,
   }) {
     return ShoppingListItem(
       id: id ?? this.id,
       name: name ?? this.name,
-      description: description ?? this.description,
+      description: identical(description, _unset)
+          ? this.description
+          : description as String?,
       quantity: quantity ?? this.quantity,
-      unit: unit ?? this.unit,
-      unitPrice: unitPrice ?? this.unitPrice,
-      budgetAmount: budgetAmount ?? this.budgetAmount,
-      linkedProduct: linkedProduct ?? this.linkedProduct,
+      unit: identical(unit, _unset) ? this.unit : unit as String?,
+      unitPrice: identical(unitPrice, _unset)
+          ? this.unitPrice
+          : unitPrice as double?,
+      budgetAmount: identical(budgetAmount, _unset)
+          ? this.budgetAmount
+          : budgetAmount as double?,
+      linkedProduct: identical(linkedProduct, _unset)
+          ? this.linkedProduct
+          : linkedProduct as Product?,
       isChecked: isChecked ?? this.isChecked,
     );
   }

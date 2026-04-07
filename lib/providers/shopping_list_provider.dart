@@ -128,7 +128,9 @@ class ShoppingListProvider extends ChangeNotifier {
     }
 
     try {
-      debugPrint('DEBUG: Creating shopping list - name: $name, authToken: ${authToken.substring(0, 20)}...');
+      debugPrint(
+        'DEBUG: Creating shopping list - name: $name, authToken: ${authToken.substring(0, 20)}...',
+      );
       final newList = await StrapiService.createShoppingList(
         name: name,
         description: description,
@@ -137,7 +139,9 @@ class ShoppingListProvider extends ChangeNotifier {
         authToken: authToken,
       );
 
-      debugPrint('DEBUG: Shopping list created successfully - ID: ${newList.id}');
+      debugPrint(
+        'DEBUG: Shopping list created successfully - ID: ${newList.id}',
+      );
       _lists.insert(0, newList);
       await _persistLists();
       notifyListeners();
@@ -358,6 +362,32 @@ class ShoppingListProvider extends ChangeNotifier {
       final updatedItems = list.items.map((item) {
         if (item.id == itemId) {
           return item.copyWith(quantity: quantity);
+        }
+        return item;
+      }).toList();
+      final updatedList = list.copyWith(
+        items: updatedItems,
+        updatedAt: DateTime.now(),
+      );
+      _lists[listIndex] = updatedList;
+      await _persistLists();
+      notifyListeners();
+      await _syncListItemsToBackend(list: updatedList, authToken: authToken);
+    }
+  }
+
+  Future<void> updateItem(
+    String listId,
+    String itemId,
+    ShoppingListItem updatedItem, {
+    String? authToken,
+  }) async {
+    final listIndex = _lists.indexWhere((l) => l.id == listId);
+    if (listIndex != -1) {
+      final list = _lists[listIndex];
+      final updatedItems = list.items.map((item) {
+        if (item.id == itemId) {
+          return updatedItem.copyWith(id: item.id);
         }
         return item;
       }).toList();

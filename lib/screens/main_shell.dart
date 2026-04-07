@@ -7,6 +7,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/constants/app_sizes.dart';
 import '../providers/cart_provider.dart';
+import '../core/utils/responsive.dart';
 import 'home/home_screen.dart';
 import 'browse/browse_screen.dart';
 import 'shopping_lists/shopping_lists_screen.dart';
@@ -71,60 +72,61 @@ class _MainShellState extends State<MainShell> {
           ),
           child: IndexedStack(index: _getStackIndex(), children: _screens),
         ),
-        // Bottom navigation for all screens
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(AppSizes.radiusXl),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.black.withValues(alpha: 0.05),
-                blurRadius: 20,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSizes.xs,
-                vertical: AppSizes.md,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildNavItem(
-                    icon: Iconsax.home_2,
-                    activeIcon: Iconsax.home_15,
-                    label: 'Home',
-                    index: 0,
+        bottomNavigationBar: context.isMobile
+            ? Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(AppSizes.radiusXl),
                   ),
-                  _buildNavItem(
-                    icon: Iconsax.search_normal,
-                    activeIcon: Iconsax.search_normal_1,
-                    label: 'Browse',
-                    index: 1,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.black.withValues(alpha: 0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSizes.xs,
+                      vertical: AppSizes.md,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildNavItem(
+                          icon: Iconsax.home_2,
+                          activeIcon: Iconsax.home_15,
+                          label: 'Home',
+                          index: 0,
+                        ),
+                        _buildNavItem(
+                          icon: Iconsax.search_normal,
+                          activeIcon: Iconsax.search_normal_1,
+                          label: 'Browse',
+                          index: 1,
+                        ),
+                        _buildNavItem(
+                          icon: Iconsax.clipboard_text,
+                          activeIcon: Iconsax.clipboard_text,
+                          label: 'Lists',
+                          index: 2,
+                        ),
+                        _buildCartNavItem(cartProvider.itemCount),
+                        _buildNavItem(
+                          icon: Iconsax.user,
+                          activeIcon: Iconsax.user,
+                          label: 'Profile',
+                          index: 4,
+                        ),
+                      ],
+                    ),
                   ),
-                  _buildNavItem(
-                    icon: Iconsax.clipboard_text,
-                    activeIcon: Iconsax.clipboard_text,
-                    label: 'Lists',
-                    index: 2,
-                  ),
-                  _buildCartNavItem(cartProvider.itemCount),
-                  _buildNavItem(
-                    icon: Iconsax.user,
-                    activeIcon: Iconsax.user,
-                    label: 'Profile',
-                    index: 4,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+                ),
+              )
+            : null,
       ),
     );
   }

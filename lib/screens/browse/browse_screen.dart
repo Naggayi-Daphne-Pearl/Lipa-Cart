@@ -12,6 +12,7 @@ import '../../models/product.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/desktop_top_nav_bar.dart';
 
 class BrowseScreen extends StatefulWidget {
   const BrowseScreen({super.key});
@@ -83,6 +84,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const DesktopTopNavBar(activeSection: 'shop'),
               // Title
               Padding(
                 padding: EdgeInsets.fromLTRB(

@@ -12,6 +12,7 @@ import '../../providers/recipe_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/desktop_top_nav_bar.dart';
 
 class RecipesScreen extends StatefulWidget {
   const RecipesScreen({super.key});
@@ -78,6 +79,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const DesktopTopNavBar(activeSection: 'recipes'),
                 // Header
                 Padding(
                   padding: EdgeInsets.all(

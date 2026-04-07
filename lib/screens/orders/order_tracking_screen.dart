@@ -11,6 +11,7 @@ import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../services/order_service.dart';
+import '../../services/delivery_route_service.dart';
 import '../../widgets/error_boundary.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../core/theme/app_colors.dart';
@@ -29,18 +30,52 @@ class OrderTrackingScreen extends StatefulWidget {
   State<OrderTrackingScreen> createState() => _OrderTrackingScreenState();
 }
 
-class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
+class _OrderTrackingScreenState extends State<OrderTrackingScreen>
+    with SingleTickerProviderStateMixin {
+  final DeliveryRouteService _deliveryRouteService = DeliveryRouteService();
+  final MapController _trackingMapController = MapController();
+
+  late final AnimationController _riderAnimationController;
   late Order order;
   late final Timer? _pollTimer;
+  List<LatLng> _routePoints = const [];
+  double? _routeDistanceKm;
+  Duration? _routeDuration;
+  bool _isEstimatedRoute = false;
+  String? _routeSourceLabel;
+  String? _lastRouteSignature;
+  LatLng? _displayRiderPoint;
+  LatLng? _animationStartPoint;
+  LatLng? _animationEndPoint;
+  bool _isTrackingMapReady = false;
 
   @override
   void initState() {
     super.initState();
+    _riderAnimationController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 1200),
+        )..addListener(() {
+          final start = _animationStartPoint;
+          final end = _animationEndPoint;
+          if (!mounted || start == null || end == null) return;
+
+          final t = Curves.easeInOut.transform(_riderAnimationController.value);
+          final latitude =
+              start.latitude + ((end.latitude - start.latitude) * t);
+          final longitude =
+              start.longitude + ((end.longitude - start.longitude) * t);
+
+          setState(() {
+            _displayRiderPoint = LatLng(latitude, longitude);
+          });
+        });
     order = widget.order;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _refreshOrder();
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await _updateTrackingRoute(order);
+      await _refreshOrder();
     });
     // Auto-refresh every 8 seconds for active orders
     if (!order.isDelivered && !order.isCancelled) {
@@ -56,6 +91,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _riderAnimationController.dispose();
     super.dispose();
   }
 
@@ -69,12 +105,138 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
       order.documentId ?? order.id,
     );
     if (success && orderService.currentOrder != null && mounted) {
-      setState(() => order = orderService.currentOrder!);
+      final refreshedOrder = orderService.currentOrder!;
+      setState(() => order = refreshedOrder);
+      await _updateTrackingRoute(refreshedOrder);
       // Stop polling if order is now complete
       if (order.isDelivered || order.isCancelled) {
         _pollTimer?.cancel();
       }
     }
+  }
+
+  Future<void> _updateTrackingRoute(Order currentOrder) async {
+    final isTrackable =
+        currentOrder.status == OrderStatus.riderAssigned ||
+        currentOrder.status == OrderStatus.inTransit;
+    final hasClientLocation =
+        currentOrder.deliveryAddress.latitude != 0 &&
+        currentOrder.deliveryAddress.longitude != 0;
+    final hasRiderLocation =
+        currentOrder.riderLatitude != null &&
+        currentOrder.riderLongitude != null &&
+        currentOrder.riderLatitude != 0 &&
+        currentOrder.riderLongitude != 0;
+
+    if (!isTrackable || !hasClientLocation || !hasRiderLocation) {
+      if (!mounted) return;
+      _riderAnimationController.stop();
+      setState(() {
+        _routePoints = const [];
+        _routeDistanceKm = null;
+        _routeDuration = null;
+        _isEstimatedRoute = false;
+        _routeSourceLabel = null;
+        _lastRouteSignature = null;
+        _displayRiderPoint = null;
+        _animationStartPoint = null;
+        _animationEndPoint = null;
+      });
+      return;
+    }
+
+    final riderPoint = LatLng(
+      currentOrder.riderLatitude!,
+      currentOrder.riderLongitude!,
+    );
+    final clientPoint = LatLng(
+      currentOrder.deliveryAddress.latitude,
+      currentOrder.deliveryAddress.longitude,
+    );
+
+    final routeSignature =
+        '${riderPoint.latitude.toStringAsFixed(5)},${riderPoint.longitude.toStringAsFixed(5)}|'
+        '${clientPoint.latitude.toStringAsFixed(5)},${clientPoint.longitude.toStringAsFixed(5)}';
+
+    _syncDisplayedRiderPoint(riderPoint);
+
+    if (routeSignature == _lastRouteSignature && _routePoints.isNotEmpty) {
+      return;
+    }
+
+    final route = await _deliveryRouteService.getRoute(
+      riderPoint: riderPoint,
+      clientPoint: clientPoint,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _lastRouteSignature = routeSignature;
+      _routePoints = route.points;
+      _routeDistanceKm = route.distanceKm;
+      _routeDuration = route.duration;
+      _isEstimatedRoute = route.isEstimated;
+      _routeSourceLabel = route.sourceLabel;
+    });
+
+    _fitTrackingRoute(
+      clientPoint: clientPoint,
+      riderPoint: _displayRiderPoint ?? riderPoint,
+      routePoints: route.points,
+    );
+  }
+
+  void _syncDisplayedRiderPoint(LatLng newPoint) {
+    if (_displayRiderPoint == null) {
+      setState(() {
+        _displayRiderPoint = newPoint;
+      });
+      return;
+    }
+
+    final hasMoved =
+        (_displayRiderPoint!.latitude - newPoint.latitude).abs() > 0.00001 ||
+        (_displayRiderPoint!.longitude - newPoint.longitude).abs() > 0.00001;
+
+    if (!hasMoved) {
+      _displayRiderPoint = newPoint;
+      return;
+    }
+
+    _animationStartPoint = _displayRiderPoint;
+    _animationEndPoint = newPoint;
+    _riderAnimationController.forward(from: 0);
+  }
+
+  void _fitTrackingRoute({
+    required LatLng clientPoint,
+    LatLng? riderPoint,
+    List<LatLng>? routePoints,
+  }) {
+    if (!_isTrackingMapReady) return;
+
+    final points = routePoints != null && routePoints.length >= 2
+        ? routePoints
+        : <LatLng>[if (riderPoint != null) riderPoint, clientPoint];
+
+    if (points.isEmpty) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_isTrackingMapReady) return;
+
+      if (points.length == 1) {
+        _trackingMapController.move(points.first, 15);
+        return;
+      }
+
+      _trackingMapController.fitCamera(
+        CameraFit.bounds(
+          bounds: LatLngBounds.fromPoints(points),
+          padding: const EdgeInsets.all(36),
+        ),
+      );
+    });
   }
 
   Future<void> _respondToSubstitution(CartItem item, bool approved) async {
@@ -276,14 +438,14 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                   ),
                   const SizedBox(height: AppSizes.lg),
 
-                  // Rider tracking map (shows live rider position when available)
+                  // Rider + client tracking map
                   if ((order.status == OrderStatus.riderAssigned ||
                           order.status == OrderStatus.inTransit) &&
                       order.deliveryAddress.latitude != 0 &&
                       order.deliveryAddress.longitude != 0)
                     Builder(
                       builder: (context) {
-                        final destinationPoint = LatLng(
+                        final clientPoint = LatLng(
                           order.deliveryAddress.latitude,
                           order.deliveryAddress.longitude,
                         );
@@ -292,22 +454,37 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                             order.riderLongitude != null &&
                             order.riderLatitude != 0 &&
                             order.riderLongitude != 0;
-                        final riderPoint = hasRiderLocation
+                        final rawRiderPoint = hasRiderLocation
                             ? LatLng(
                                 order.riderLatitude!,
                                 order.riderLongitude!,
                               )
                             : null;
+                        final riderPoint = hasRiderLocation
+                            ? (_displayRiderPoint ?? rawRiderPoint)
+                            : null;
                         final mapCenter = riderPoint != null
                             ? LatLng(
-                                (riderPoint.latitude +
-                                        destinationPoint.latitude) /
+                                (riderPoint.latitude + clientPoint.latitude) /
                                     2,
-                                (riderPoint.longitude +
-                                        destinationPoint.longitude) /
+                                (riderPoint.longitude + clientPoint.longitude) /
                                     2,
                               )
-                            : destinationPoint;
+                            : clientPoint;
+                        final straightLineDistanceKm = rawRiderPoint != null
+                            ? Distance().as(
+                                LengthUnit.Kilometer,
+                                rawRiderPoint,
+                                clientPoint,
+                              )
+                            : null;
+                        final displayDistanceKm =
+                            _routeDistanceKm ?? straightLineDistanceKm;
+                        final routePoints = riderPoint != null
+                            ? (_routePoints.length >= 2
+                                  ? _routePoints
+                                  : [riderPoint, clientPoint])
+                            : const <LatLng>[];
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: AppSizes.lg),
@@ -338,102 +515,215 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                                     size: 18,
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(
-                                    riderPoint != null
-                                        ? 'Live rider tracking'
-                                        : 'Waiting for rider GPS update',
-                                    style: AppTextStyles.labelMedium.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textPrimary,
+                                  Expanded(
+                                    child: Text(
+                                      riderPoint != null
+                                          ? 'Client and rider locations'
+                                          : 'Client location ready',
+                                      style: AppTextStyles.labelMedium.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textPrimary,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 4),
+                              Text(
+                                riderPoint != null
+                                    ? 'The blue truck is the rider. The red pin marks your delivery location.'
+                                    : 'Your delivery pin is ready. The rider pin appears here once GPS updates are available.',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: AppSizes.sm),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  _buildTrackingLegendItem(
+                                    icon: Icons.local_shipping,
+                                    label: 'Rider',
+                                    color: AppColors.primary,
+                                  ),
+                                  _buildTrackingLegendItem(
+                                    icon: Icons.location_on,
+                                    label: 'Client',
+                                    color: AppColors.error,
+                                  ),
+                                  if (displayDistanceKm != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.info.withValues(
+                                          alpha: 0.08,
+                                        ),
+                                        borderRadius: BorderRadius.circular(
+                                          AppSizes.radiusFull,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '${_formatTrackingDistance(displayDistanceKm)} away',
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.info,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  if (_routeDuration != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.success.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(
+                                          AppSizes.radiusFull,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'ETA ${_formatTrackingEta(_routeDuration!)}',
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.success,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  if (riderPoint != null &&
+                                      _routeSourceLabel != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            (_isEstimatedRoute
+                                                    ? AppColors.warning
+                                                    : AppColors.primary)
+                                                .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(
+                                          AppSizes.radiusFull,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        _routeSourceLabel!,
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: _isEstimatedRoute
+                                              ? AppColors.warning
+                                              : AppColors.primary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
                               const SizedBox(height: AppSizes.sm),
                               SizedBox(
-                                height: 220,
+                                height: 240,
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(
                                     AppSizes.radiusMd,
                                   ),
-                                  child: FlutterMap(
-                                    options: MapOptions(
-                                      initialCenter: mapCenter,
-                                      initialZoom: riderPoint != null
-                                          ? 13.2
-                                          : 14,
-                                      interactionOptions:
-                                          const InteractionOptions(
-                                            flags:
-                                                InteractiveFlag.pinchZoom |
-                                                InteractiveFlag.drag,
-                                          ),
-                                    ),
+                                  child: Stack(
                                     children: [
-                                      TileLayer(
-                                        urlTemplate:
-                                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                        userAgentPackageName:
-                                            'com.lipacart.lipa_cart',
-                                      ),
-                                      if (riderPoint != null)
-                                        PolylineLayer(
-                                          polylines: [
-                                            Polyline(
-                                              points: [
-                                                riderPoint,
-                                                destinationPoint,
-                                              ],
-                                              strokeWidth: 4,
-                                              color: AppColors.primary
-                                                  .withValues(alpha: 0.7),
-                                            ),
-                                          ],
+                                      FlutterMap(
+                                        mapController: _trackingMapController,
+                                        options: MapOptions(
+                                          initialCenter: mapCenter,
+                                          initialZoom: riderPoint != null
+                                              ? _calculateTrackingZoom(
+                                                  riderPoint,
+                                                  clientPoint,
+                                                )
+                                              : 15,
+                                          onMapReady: () {
+                                            _isTrackingMapReady = true;
+                                            _fitTrackingRoute(
+                                              clientPoint: clientPoint,
+                                              riderPoint: riderPoint,
+                                              routePoints: routePoints,
+                                            );
+                                          },
+                                          interactionOptions:
+                                              const InteractionOptions(
+                                                flags:
+                                                    InteractiveFlag.pinchZoom |
+                                                    InteractiveFlag.drag,
+                                              ),
                                         ),
-                                      MarkerLayer(
-                                        markers: [
+                                        children: [
+                                          TileLayer(
+                                            urlTemplate:
+                                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                            userAgentPackageName:
+                                                'com.lipacart.lipa_cart',
+                                          ),
                                           if (riderPoint != null)
-                                            Marker(
-                                              point: riderPoint,
-                                              width: 56,
-                                              height: 56,
-                                              child: Container(
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.primary,
-                                                  shape: BoxShape.circle,
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: AppColors.primary
-                                                          .withValues(
-                                                            alpha: 0.3,
-                                                          ),
-                                                      blurRadius: 10,
-                                                      offset: const Offset(
-                                                        0,
-                                                        2,
-                                                      ),
-                                                    ),
-                                                  ],
+                                            PolylineLayer(
+                                              polylines: [
+                                                Polyline(
+                                                  points: routePoints,
+                                                  strokeWidth: 8,
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.6),
                                                 ),
-                                                child: const Icon(
-                                                  Icons.local_shipping,
-                                                  color: Colors.white,
-                                                  size: 28,
+                                                Polyline(
+                                                  points: routePoints,
+                                                  strokeWidth: 4,
+                                                  color: AppColors.primary
+                                                      .withValues(alpha: 0.75),
+                                                ),
+                                              ],
+                                            ),
+                                          MarkerLayer(
+                                            markers: [
+                                              Marker(
+                                                point: clientPoint,
+                                                width: 88,
+                                                height: 82,
+                                                child: _buildTrackingMarker(
+                                                  label: 'Client',
+                                                  icon: Icons.location_on,
+                                                  color: AppColors.error,
                                                 ),
                                               ),
-                                            ),
-                                          Marker(
-                                            point: destinationPoint,
-                                            width: 42,
-                                            height: 42,
-                                            child: const Icon(
-                                              Iconsax.location5,
-                                              color: AppColors.error,
-                                              size: 36,
-                                            ),
+                                              if (riderPoint != null)
+                                                Marker(
+                                                  point: riderPoint,
+                                                  width: 88,
+                                                  height: 82,
+                                                  child: _buildTrackingMarker(
+                                                    label: 'Rider',
+                                                    icon: Icons.local_shipping,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                ),
+                                            ],
                                           ),
                                         ],
                                       ),
+                                      if (riderPoint != null)
+                                        Positioned(
+                                          top: 12,
+                                          right: 12,
+                                          child: _buildMapActionChip(
+                                            icon: Icons.my_location,
+                                            label: 'Recenter',
+                                            onTap: () => _fitTrackingRoute(
+                                              clientPoint: clientPoint,
+                                              riderPoint: riderPoint,
+                                              routePoints: routePoints,
+                                            ),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),
@@ -441,8 +731,10 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
                               const SizedBox(height: AppSizes.sm),
                               Text(
                                 riderPoint != null
-                                    ? 'The truck icon updates as the rider moves toward your delivery address.'
-                                    : 'The rider has been assigned. Live movement appears here once their GPS updates.',
+                                    ? _isEstimatedRoute
+                                          ? 'Showing an estimated route and ETA while live road data refreshes.'
+                                          : 'Showing the rider’s road route, distance, and ETA to the client location.'
+                                    : 'The rider has been assigned. Once their live GPS updates, the map will show both pins connected by a route line.',
                                 style: AppTextStyles.caption.copyWith(
                                   color: AppColors.textSecondary,
                                 ),
@@ -1718,6 +2010,152 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  double _calculateTrackingZoom(LatLng from, LatLng to) {
+    final distanceKm = Distance().as(LengthUnit.Kilometer, from, to);
+
+    if (distanceKm > 30) return 9.5;
+    if (distanceKm > 15) return 10.5;
+    if (distanceKm > 8) return 11.2;
+    if (distanceKm > 4) return 12.0;
+    if (distanceKm > 2) return 12.8;
+    return 13.8;
+  }
+
+  String _formatTrackingDistance(double distanceKm) {
+    if (distanceKm < 1) {
+      return '${(distanceKm * 1000).round()} m';
+    }
+    return '${distanceKm.toStringAsFixed(distanceKm >= 10 ? 0 : 1)} km';
+  }
+
+  String _formatTrackingEta(Duration duration) {
+    if (duration.inMinutes < 1) {
+      return 'under 1 min';
+    }
+    if (duration.inMinutes < 60) {
+      return '${duration.inMinutes} min';
+    }
+
+    final hours = duration.inHours;
+    final remainingMinutes = duration.inMinutes % 60;
+    if (remainingMinutes == 0) {
+      return '${hours}h';
+    }
+    return '${hours}h ${remainingMinutes}m';
+  }
+
+  Widget _buildTrackingMarker({
+    required String label,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.28),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: Colors.white, size: 20),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMapActionChip({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white,
+      elevation: 2,
+      borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrackingLegendItem({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

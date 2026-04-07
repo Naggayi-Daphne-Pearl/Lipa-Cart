@@ -15,6 +15,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/error_boundary.dart';
+import '../../widgets/desktop_top_nav_bar.dart';
 
 class OrdersScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -141,6 +142,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          const DesktopTopNavBar(activeSection: 'orders'),
                           // Header
                           Padding(
                             padding: const EdgeInsets.fromLTRB(

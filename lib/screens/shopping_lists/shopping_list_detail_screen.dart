@@ -441,6 +441,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
     final isInCart =
         item.linkedProduct != null &&
         cartProvider.isInCart(item.linkedProduct!.id);
+    final hasNote = item.description?.trim().isNotEmpty ?? false;
 
     return Dismissible(
       key: Key(item.id),
@@ -544,6 +545,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: Text(
@@ -554,42 +556,135 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                   ),
                                 ),
                               ),
-                              if (!item.isChecked)
+                              if (!item.isChecked) ...[
+                                const SizedBox(width: 8),
                                 GestureDetector(
                                   onTap: () =>
                                       _showEditDescriptionDialog(item, list),
                                   child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    child: Icon(
-                                      item.description != null &&
-                                              item.description!.isNotEmpty
-                                          ? Iconsax.document_text5
-                                          : Iconsax.document_text,
-                                      size: 16,
-                                      color:
-                                          item.description != null &&
-                                              item.description!.isNotEmpty
-                                          ? color
-                                          : AppColors.grey400,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: hasNote
+                                          ? color.withValues(alpha: 0.12)
+                                          : AppColors.grey100,
+                                      borderRadius: BorderRadius.circular(999),
+                                      border: Border.all(
+                                        color: hasNote
+                                            ? color.withValues(alpha: 0.28)
+                                            : AppColors.grey200,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          hasNote
+                                              ? Icons.edit_note
+                                              : Icons.note_add_outlined,
+                                          size: 16,
+                                          color: hasNote
+                                              ? color
+                                              : AppColors.textSecondary,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          hasNote ? 'Edit note' : 'Add note',
+                                          style: AppTextStyles.labelSmall
+                                              .copyWith(
+                                                color: hasNote
+                                                    ? color
+                                                    : AppColors.textSecondary,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
+                              ],
                             ],
                           ),
-                          if (item.description != null &&
-                              item.description!.isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              item.description!,
-                              style: AppTextStyles.bodySmall.copyWith(
-                                color: AppColors.textSecondary,
-                                fontStyle: FontStyle.italic,
+                          if (hasNote) ...[
+                            const SizedBox(height: 8),
+                            GestureDetector(
+                              onTap: () =>
+                                  _showEditDescriptionDialog(item, list),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(AppSizes.sm),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusMd,
+                                  ),
+                                  border: Border.all(
+                                    color: color.withValues(alpha: 0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      Icons.sticky_note_2_outlined,
+                                      size: 16,
+                                      color: color,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        item.description!,
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          color: AppColors.textPrimary,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ] else if (!item.isChecked) ...[
+                            const SizedBox(height: 8),
+                            GestureDetector(
+                              onTap: () =>
+                                  _showEditDescriptionDialog(item, list),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(AppSizes.sm),
+                                decoration: BoxDecoration(
+                                  color: AppColors.grey50,
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusMd,
+                                  ),
+                                  border: Border.all(color: AppColors.grey200),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.note_alt_outlined,
+                                      size: 16,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Add a note for brand, size, ripeness, or other preferences',
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ],
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 6),
                           Wrap(
                             spacing: 6,
                             children: [
@@ -2156,7 +2251,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
           children: [
             Icon(Iconsax.edit_2, color: color, size: 22),
             const SizedBox(width: 8),
-            const Text('Edit Item'),
+            const Text('Edit item & note'),
           ],
         ),
         content: SingleChildScrollView(
@@ -2175,6 +2270,62 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                     horizontal: 12,
                     vertical: 10,
                   ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: color.withValues(alpha: 0.18)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.edit_note, size: 18, color: color),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Shopping note',
+                          style: AppTextStyles.labelMedium.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: noteController,
+                      minLines: 3,
+                      maxLines: 4,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: InputDecoration(
+                        labelText: 'What should the shopper look for?',
+                        hintText:
+                            'e.g. ripe ones, yellow, 1kg pack, low sugar...',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Add preferences like brand, size, or ripeness so the right item is picked.',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 12),
@@ -2217,23 +2368,6 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: noteController,
-                maxLines: 2,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  labelText: 'Note',
-                  hintText: 'e.g. ripe ones, yellow, 1kg pack...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -2243,36 +2377,30 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
+            onPressed: () async {
               final provider = context.read<ShoppingListProvider>();
               final authToken = context.read<AuthProvider>().token;
               final newName = nameController.text.trim();
               final newQty = int.tryParse(qtyController.text) ?? item.quantity;
               final newNote = noteController.text.trim();
-              final newPrice = double.tryParse(priceController.text);
+              final priceText = priceController.text.trim();
+              final newPrice = priceText.isEmpty
+                  ? null
+                  : double.tryParse(priceText);
 
               if (newName.isEmpty) return;
 
-              // Replace item with updated version
-              final updatedItem = ShoppingListItem(
-                id: item.id,
+              Navigator.pop(ctx);
+
+              final updatedItem = item.copyWith(
                 name: newName,
                 quantity: newQty,
-                unit: item.unit,
-                unitPrice: newPrice ?? item.unitPrice,
-                budgetAmount: item.budgetAmount,
+                unitPrice: newPrice,
                 description: newNote.isNotEmpty ? newNote : null,
-                linkedProduct: item.linkedProduct,
-                isChecked: item.isChecked,
               );
-              provider.removeItemFromList(
+              await provider.updateItem(
                 list.id,
                 item.id,
-                authToken: authToken,
-              );
-              provider.addItemToList(
-                list.id,
                 updatedItem,
                 authToken: authToken,
               );
@@ -2301,51 +2429,64 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
           borderRadius: BorderRadius.circular(AppSizes.radiusLg),
         ),
         title: Text(
-          'Add Notes',
+          (item.description?.trim().isNotEmpty ?? false)
+              ? 'Edit shopping note'
+              : 'Add shopping note',
           style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              item.name,
-              style: AppTextStyles.labelMedium.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: AppSizes.md),
-            TextField(
-              controller: descriptionController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText:
-                    'e.g., "Ripe bananas", "Low fat", "2cm thick slices"...',
-                hintStyle: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textTertiary,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.name,
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
                 ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  borderSide: BorderSide(color: AppColors.grey300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  borderSide: BorderSide(color: color, width: 2),
-                ),
-                contentPadding: const EdgeInsets.all(AppSizes.md),
               ),
-              autofocus: true,
-            ),
-            const SizedBox(height: AppSizes.sm),
-            Text(
-              'Help your shopper get exactly what you want',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textSecondary,
-                fontStyle: FontStyle.italic,
+              const SizedBox(height: AppSizes.xs),
+              Text(
+                'Add preferences like brand, size, ripeness, or pack type.',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: AppSizes.md),
+              TextField(
+                controller: descriptionController,
+                minLines: 3,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  labelText: 'Note for shopper',
+                  hintText:
+                      'e.g., "Ripe bananas", "Low fat", "2cm thick slices"...',
+                  hintStyle: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide(color: AppColors.grey300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderSide: BorderSide(color: color, width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.all(AppSizes.md),
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: AppSizes.sm),
+              Text(
+                'These notes stay visible while shopping so it is easier to pick the right item.',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -2370,7 +2511,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 Navigator.pop(context);
               },
               child: Text(
-                'Remove',
+                'Clear',
                 style: AppTextStyles.labelMedium.copyWith(
                   color: AppColors.error,
                 ),
@@ -2389,7 +2530,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
               Navigator.pop(context);
             },
             child: Text(
-              'Save',
+              'Save note',
               style: AppTextStyles.labelMedium.copyWith(
                 color: color,
                 fontWeight: FontWeight.w600,

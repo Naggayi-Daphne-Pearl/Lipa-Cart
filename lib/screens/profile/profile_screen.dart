@@ -16,6 +16,7 @@ import '../../providers/order_provider.dart';
 import '../../services/address_service.dart';
 import '../../services/order_service.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/desktop_top_nav_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -209,6 +210,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const DesktopTopNavBar(activeSection: 'profile'),
                 // Guest state — show Sign In prompt
                 if (isGuest) ...[
                   _buildGuestHeader(context),

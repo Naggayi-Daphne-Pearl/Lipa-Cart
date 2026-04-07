@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/constants/app_sizes.dart';
+import '../core/utils/responsive.dart';
 import '../providers/cart_provider.dart';
 
 class AppBottomNav extends StatelessWidget {
@@ -36,12 +37,18 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!context.isMobile) {
+      return const SizedBox.shrink();
+    }
+
     final cartProvider = context.watch<CartProvider>();
 
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppSizes.radiusXl)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppSizes.radiusXl),
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColors.black.withValues(alpha: 0.05),
@@ -52,15 +59,42 @@ class AppBottomNav extends StatelessWidget {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: AppSizes.md),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSizes.sm,
+            vertical: AppSizes.md,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildNavItem(context: context, icon: Iconsax.home_2, activeIcon: Iconsax.home_15, label: 'Home', index: 0),
-              _buildNavItem(context: context, icon: Iconsax.search_normal, activeIcon: Iconsax.search_normal_1, label: 'Shop', index: 1),
-              _buildNavItem(context: context, icon: Iconsax.clipboard_text, activeIcon: Iconsax.clipboard_tick, label: 'Lists', index: 2),
+              _buildNavItem(
+                context: context,
+                icon: Iconsax.home_2,
+                activeIcon: Iconsax.home_15,
+                label: 'Home',
+                index: 0,
+              ),
+              _buildNavItem(
+                context: context,
+                icon: Iconsax.search_normal,
+                activeIcon: Iconsax.search_normal_1,
+                label: 'Shop',
+                index: 1,
+              ),
+              _buildNavItem(
+                context: context,
+                icon: Iconsax.clipboard_text,
+                activeIcon: Iconsax.clipboard_tick,
+                label: 'Lists',
+                index: 2,
+              ),
               _buildCartNavItem(context, cartProvider.itemCount),
-              _buildNavItem(context: context, icon: Iconsax.user, activeIcon: Iconsax.user_tick, label: 'Profile', index: 4),
+              _buildNavItem(
+                context: context,
+                icon: Iconsax.user,
+                activeIcon: Iconsax.user_tick,
+                label: 'Profile',
+                index: 4,
+              ),
             ],
           ),
         ),
@@ -129,7 +163,10 @@ class AppBottomNav extends StatelessWidget {
                       color: AppColors.accent,
                       shape: BoxShape.circle,
                     ),
-                    constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
                     child: Text(
                       itemCount > 9 ? '9+' : itemCount.toString(),
                       style: AppTextStyles.caption.copyWith(

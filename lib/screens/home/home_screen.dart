@@ -27,6 +27,7 @@ import '../../providers/shopping_list_provider.dart';
 import '../../widgets/adaptive_product_section.dart';
 import '../../widgets/adaptive_category_section.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/desktop_top_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -117,6 +118,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (context.isDesktop)
+                  const DesktopTopNavBar(activeSection: 'home'),
                 // Hero Section with Gradient Background
                 Container(
                   decoration: const BoxDecoration(
@@ -139,118 +142,59 @@ class _HomeScreenState extends State<HomeScreen> {
                     bottom: false,
                     child: Column(
                       children: [
-                        // Enhanced Header Bar - Desktop optimized
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            context.horizontalPadding,
-                            context.responsive<double>(
-                              mobile: AppSizes.sm,
-                              tablet: AppSizes.md,
-                              desktop: AppSizes.lg,
-                            ),
-                            context.horizontalPadding,
-                            context.responsive<double>(
-                              mobile: AppSizes.xs,
-                              tablet: AppSizes.sm,
-                              desktop: AppSizes.md,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              // App Logo (mobile only) or Greeting (desktop)
-                              if (context.isMobile)
-                                SvgPicture.asset(
-                                  'assets/images/logos/logo-on-white.svg',
-                                  height: context.responsive<double>(
-                                    mobile: 20.0,
-                                    tablet: 24.0,
-                                    desktop: 28.0,
-                                  ),
-                                  fit: BoxFit.contain,
-                                )
-                              else
-                                Text(
-                                  'Hi, ${authProvider.user?.name ?? 'there'}',
-                                  style: AppTextStyles.bodyLarge.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                ),
-
-                              const Spacer(),
-
-                              // Notifications Bell with badge
-                              GestureDetector(
-                                onTap: () async {
-                                  await context.push('/customer/notifications');
-                                  // Refresh count when returning from inbox
-                                  _fetchUnreadCount();
-                                },
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    Container(
-                                      width: 44,
-                                      height: 44,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surface,
-                                        borderRadius: BorderRadius.circular(
-                                          AppSizes.radiusMd,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: 0.06,
-                                            ),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Center(
-                                        child: Icon(
-                                          Iconsax.notification,
-                                          color: AppColors.textPrimary,
-                                          size: 22,
-                                        ),
-                                      ),
-                                    ),
-                                    if (_unreadNotifications > 0)
-                                      Positioned(
-                                        top: -4,
-                                        right: -4,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: const BoxDecoration(
-                                            color: AppColors.error,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          constraints: const BoxConstraints(
-                                            minWidth: 18,
-                                            minHeight: 18,
-                                          ),
-                                          child: Text(
-                                            _unreadNotifications > 9
-                                                ? '9+'
-                                                : '$_unreadNotifications',
-                                            style: AppTextStyles.labelSmall
-                                                .copyWith(
-                                                  color: Colors.white,
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
+                        // Header Bar
+                        if (!context.isDesktop)
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              context.horizontalPadding,
+                              context.responsive<double>(
+                                mobile: AppSizes.sm,
+                                tablet: AppSizes.md,
+                                desktop: AppSizes.lg,
                               ),
-                            ],
+                              context.horizontalPadding,
+                              context.responsive<double>(
+                                mobile: AppSizes.xs,
+                                tablet: AppSizes.sm,
+                                desktop: AppSizes.md,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                if (context.isMobile)
+                                  SvgPicture.asset(
+                                    'assets/images/logos/logo-on-white.svg',
+                                    height: context.responsive<double>(
+                                      mobile: 20.0,
+                                      tablet: 24.0,
+                                      desktop: 28.0,
+                                    ),
+                                    fit: BoxFit.contain,
+                                  )
+                                else
+                                  Text(
+                                    'Hi, ${authProvider.user?.name ?? 'there'}',
+                                    style: AppTextStyles.bodyLarge.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                const Spacer(),
+                                _buildHeaderActionButton(
+                                  context: context,
+                                  icon: Iconsax.notification,
+                                  badgeCount: _unreadNotifications,
+                                  onTap: () async {
+                                    await context.push(
+                                      '/customer/notifications',
+                                    );
+                                    _fetchUnreadCount();
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-
-                        // Mobile greeting section
+                        // Greeting section
                         if (context.isMobile)
                           Padding(
                             padding: EdgeInsets.symmetric(
@@ -334,125 +278,25 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
 
-                        // Enhanced Search Bar
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            context.horizontalPadding,
-                            context.responsive<double>(
-                              mobile: AppSizes.md,
-                              tablet: AppSizes.sm,
-                              desktop: 0.0,
+                        // Search Bar
+                        if (!context.isDesktop)
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              context.horizontalPadding,
+                              context.responsive<double>(
+                                mobile: AppSizes.md,
+                                tablet: AppSizes.sm,
+                                desktop: 0.0,
+                              ),
+                              context.horizontalPadding,
+                              context.responsive<double>(
+                                mobile: AppSizes.sm,
+                                tablet: AppSizes.md,
+                                desktop: AppSizes.lg,
+                              ),
                             ),
-                            context.horizontalPadding,
-                            context.responsive<double>(
-                              mobile: AppSizes.sm,
-                              tablet: AppSizes.md,
-                              desktop: AppSizes.lg,
-                            ),
+                            child: _buildSearchBar(context),
                           ),
-                          child: GestureDetector(
-                            onTap: () {
-                              context.push('/customer/search');
-                            },
-                            child: Container(
-                              height: context.responsive<double>(
-                                mobile: 52.0,
-                                tablet: 56.0,
-                                desktop: 60.0,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(
-                                  AppSizes.radiusFull,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  SizedBox(
-                                    width: context.responsive<double>(
-                                      mobile: AppSizes.md,
-                                      tablet: AppSizes.lg,
-                                      desktop: 20.0,
-                                    ),
-                                  ),
-                                  Icon(
-                                    Iconsax.search_normal,
-                                    color: AppColors.textSecondary,
-                                    size: context.responsive<double>(
-                                      mobile: 22.0,
-                                      tablet: 24.0,
-                                      desktop: 26.0,
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppSizes.md),
-                                  Expanded(
-                                    child: Text(
-                                      'Search products, recipes...',
-                                      style: AppTextStyles.bodyMedium.copyWith(
-                                        color: AppColors.textSecondary,
-                                        fontSize: context.responsive<double>(
-                                          mobile: 14.0,
-                                          tablet: 15.0,
-                                          desktop: 16.0,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    margin: const EdgeInsets.only(right: 6),
-                                    width: context.responsive<double>(
-                                      mobile: 40.0,
-                                      tablet: 44.0,
-                                      desktop: 48.0,
-                                    ),
-                                    height: context.responsive<double>(
-                                      mobile: 40.0,
-                                      tablet: 44.0,
-                                      desktop: 48.0,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFF1B7F4E),
-                                          Color(0xFF15874B),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(
-                                        AppSizes.radiusFull,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.primary.withValues(
-                                            alpha: 0.3,
-                                          ),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Icon(
-                                      Iconsax.setting_4,
-                                      color: Colors.white,
-                                      size: context.responsive<double>(
-                                        mobile: 20.0,
-                                        tablet: 22.0,
-                                        desktop: 24.0,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-
                         // Hero Banner Carousel
                         Padding(
                           padding: EdgeInsets.fromLTRB(
@@ -461,73 +305,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             context.horizontalPadding,
                             AppSizes.sm,
                           ),
-                          child: Column(
-                            children: [
-                              SizedBox(
-                                height: context.responsive(
-                                  mobile: 170.0,
-                                  tablet: 180.0,
-                                  desktop: 190.0,
-                                ),
-                                child: PageView(
-                                  controller: _bannerController,
-                                  children: [
-                                    _buildBannerCard(
-                                      title: 'SPECIAL OFFER',
-                                      subtitle:
-                                          'Fresh Groceries\nUp to 30% OFF',
-                                      cta: 'Shop Now',
-                                      gradient: const [
-                                        Color(0xFFFFE8CC),
-                                        Color(0xFFFFD699),
-                                        Color(0xFFFFB347),
-                                      ],
-                                      shadowColor: const Color(0xFFFF8C42),
-                                      onTap: () =>
-                                          context.push('/customer/categories'),
-                                    ),
-                                    _buildBannerCard(
-                                      title: 'WEEKLY DEALS',
-                                      subtitle: 'Fresh Fruits &\nVegetables',
-                                      cta: 'Browse Deals',
-                                      gradient: const [
-                                        Color(0xFFE8F5E9),
-                                        Color(0xFFC8E6C9),
-                                        Color(0xFF81C784),
-                                      ],
-                                      shadowColor: const Color(0xFF4CAF50),
-                                      onTap: () =>
-                                          context.push('/customer/categories'),
-                                    ),
-                                    _buildBannerCard(
-                                      title: 'FREE DELIVERY',
-                                      subtitle: 'Orders above\nUGX 50,000',
-                                      cta: 'Order Now',
-                                      gradient: const [
-                                        Color(0xFFE3F2FD),
-                                        Color(0xFFBBDEFB),
-                                        Color(0xFF64B5F6),
-                                      ],
-                                      shadowColor: const Color(0xFF2196F3),
-                                      onTap: () =>
-                                          context.push('/customer/categories'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: AppSizes.sm),
-                              SmoothPageIndicator(
-                                controller: _bannerController,
-                                count: 3,
-                                effect: ExpandingDotsEffect(
-                                  dotWidth: 8,
-                                  dotHeight: 8,
-                                  activeDotColor: AppColors.accent,
-                                  dotColor: AppColors.grey300,
-                                  expansionFactor: 3,
-                                ),
-                              ),
-                            ],
+                          child: _buildHeroCarousel(
+                            context,
+                            height: context.responsive(
+                              mobile: 170.0,
+                              tablet: 180.0,
+                              desktop: 190.0,
+                            ),
                           ),
                         ),
                       ],
@@ -1311,6 +1095,232 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Widget _buildHeaderActionButton({
+    required BuildContext context,
+    required IconData icon,
+    required VoidCallback onTap,
+    int badgeCount = 0,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Icon(icon, color: AppColors.textPrimary, size: 22),
+            ),
+          ),
+          if (badgeCount > 0)
+            Positioned(
+              top: -4,
+              right: -4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: AppColors.error,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                child: Text(
+                  badgeCount > 9 ? '9+' : '$badgeCount',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(BuildContext context, {bool compact = false}) {
+    return GestureDetector(
+      onTap: () => context.push('/customer/search'),
+      child: Container(
+        height: compact
+            ? 52
+            : context.responsive<double>(
+                mobile: 52.0,
+                tablet: 56.0,
+                desktop: 60.0,
+              ),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: compact
+                  ? AppSizes.md
+                  : context.responsive<double>(
+                      mobile: AppSizes.md,
+                      tablet: AppSizes.lg,
+                      desktop: 20.0,
+                    ),
+            ),
+            Icon(
+              Iconsax.search_normal,
+              color: AppColors.textSecondary,
+              size: compact
+                  ? 20
+                  : context.responsive<double>(
+                      mobile: 22.0,
+                      tablet: 24.0,
+                      desktop: 26.0,
+                    ),
+            ),
+            const SizedBox(width: AppSizes.md),
+            Expanded(
+              child: Text(
+                'Search products, recipes...',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: compact
+                      ? 14
+                      : context.responsive<double>(
+                          mobile: 14.0,
+                          tablet: 15.0,
+                          desktop: 16.0,
+                        ),
+                ),
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.only(right: 6),
+              width: compact
+                  ? 40
+                  : context.responsive<double>(
+                      mobile: 40.0,
+                      tablet: 44.0,
+                      desktop: 48.0,
+                    ),
+              height: compact
+                  ? 40
+                  : context.responsive<double>(
+                      mobile: 40.0,
+                      tablet: 44.0,
+                      desktop: 48.0,
+                    ),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1B7F4E), Color(0xFF15874B)],
+                ),
+                borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Iconsax.setting_4,
+                color: Colors.white,
+                size: compact
+                    ? 18
+                    : context.responsive<double>(
+                        mobile: 20.0,
+                        tablet: 22.0,
+                        desktop: 24.0,
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroCarousel(BuildContext context, {required double height}) {
+    return Column(
+      children: [
+        SizedBox(
+          height: height,
+          child: PageView(
+            controller: _bannerController,
+            children: [
+              _buildBannerCard(
+                title: 'SPECIAL OFFER',
+                subtitle: 'Fresh Groceries\nUp to 30% OFF',
+                cta: 'Shop Now',
+                gradient: const [
+                  Color(0xFFFFE8CC),
+                  Color(0xFFFFD699),
+                  Color(0xFFFFB347),
+                ],
+                shadowColor: const Color(0xFFFF8C42),
+                onTap: () => context.push('/customer/categories'),
+              ),
+              _buildBannerCard(
+                title: 'WEEKLY DEALS',
+                subtitle: 'Fresh Fruits &\nVegetables',
+                cta: 'Browse Deals',
+                gradient: const [
+                  Color(0xFFE8F5E9),
+                  Color(0xFFC8E6C9),
+                  Color(0xFF81C784),
+                ],
+                shadowColor: const Color(0xFF4CAF50),
+                onTap: () => context.push('/customer/categories'),
+              ),
+              _buildBannerCard(
+                title: 'FREE DELIVERY',
+                subtitle: 'Orders above\nUGX 50,000',
+                cta: 'Order Now',
+                gradient: const [
+                  Color(0xFFE3F2FD),
+                  Color(0xFFBBDEFB),
+                  Color(0xFF64B5F6),
+                ],
+                shadowColor: const Color(0xFF2196F3),
+                onTap: () => context.push('/customer/categories'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSizes.sm),
+        SmoothPageIndicator(
+          controller: _bannerController,
+          count: 3,
+          effect: ExpandingDotsEffect(
+            dotWidth: 8,
+            dotHeight: 8,
+            activeDotColor: AppColors.accent,
+            dotColor: AppColors.grey300,
+            expansionFactor: 3,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildBannerCard({
     required String title,
     required String subtitle,
@@ -1492,43 +1502,49 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Name and unit
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.name,
-                          style: AppTextStyles.labelLarge.copyWith(
-                            fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            product.name,
+                            style: AppTextStyles.labelLarge.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          'per ${product.unit}',
-                          style: AppTextStyles.caption,
-                        ),
-                      ],
+                          const SizedBox(height: 2),
+                          Text(
+                            'per ${product.unit}',
+                            style: AppTextStyles.caption,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                    // Price and add button
+                    const SizedBox(height: 4),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          Formatters.formatCurrency(product.price),
-                          style: AppTextStyles.priceMedium.copyWith(
-                            fontSize: 17,
-                            color: AppColors.accent,
+                        Flexible(
+                          child: Text(
+                            Formatters.formatCurrency(product.price),
+                            style: AppTextStyles.priceMedium.copyWith(
+                              fontSize: 16,
+                              color: AppColors.accent,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 8),
                         GestureDetector(
                           onTap: () {
                             if (isInCart) {
@@ -1553,8 +1569,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             }
                           },
                           child: Container(
-                            width: 36,
-                            height: 36,
+                            width: 34,
+                            height: 34,
                             decoration: BoxDecoration(
                               gradient: isInCart
                                   ? const LinearGradient(
@@ -1722,31 +1738,34 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.all(AppSizes.sm),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          recipe.name,
-                          style: AppTextStyles.labelMedium.copyWith(
-                            fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            recipe.name,
+                            style: AppTextStyles.labelMedium.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          recipe.tags.take(2).join(' • '),
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.textSecondary,
-                            fontSize: 10,
+                          const SizedBox(height: 2),
+                          Text(
+                            recipe.tags.take(2).join(' • '),
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: 10,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
                         Icon(
@@ -1755,12 +1774,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           size: 14,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          '${recipe.ingredients.length} ingredients',
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 10,
+                        Expanded(
+                          child: Text(
+                            '${recipe.ingredients.length} ingredients',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 10,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

@@ -529,6 +529,7 @@ class AddressForm extends StatefulWidget {
   final Address? address;
   final String userId;
   final String token;
+  final bool showHeader;
   final Function(
     String label,
     String addressLine,
@@ -547,6 +548,7 @@ class AddressForm extends StatefulWidget {
     required this.userId,
     required this.token,
     required this.onSave,
+    this.showHeader = true,
   });
 
   @override
@@ -604,18 +606,20 @@ class _AddressFormState extends State<AddressForm> {
         bottom: MediaQuery.of(context).viewInsets.bottom,
         left: AppSizes.md,
         right: AppSizes.md,
-        top: AppSizes.lg,
+        top: widget.showHeader ? AppSizes.lg : AppSizes.sm,
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              widget.address == null ? 'Add Address' : 'Edit Address',
-              style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: AppSizes.md),
+            if (widget.showHeader) ...[
+              Text(
+                widget.address == null ? 'Add Address' : 'Edit Address',
+                style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: AppSizes.md),
+            ],
 
             Container(
               width: double.infinity,

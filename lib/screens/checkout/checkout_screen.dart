@@ -41,16 +41,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   late final TextEditingController _guestEmailController;
   late final TextEditingController _guestAddressController;
   late final TextEditingController _guestCityController;
-  late final TextEditingController _guestPasswordController;
-  late final TextEditingController _guestConfirmPasswordController;
 
   // Authenticated user address fields
   late final TextEditingController _authAddressController;
   late final TextEditingController _authCityController;
   late final TextEditingController _authLandmarkController;
-
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
 
   @override
   void initState() {
@@ -60,8 +55,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _guestEmailController = TextEditingController();
     _guestAddressController = TextEditingController();
     _guestCityController = TextEditingController();
-    _guestPasswordController = TextEditingController();
-    _guestConfirmPasswordController = TextEditingController();
+
+    final preferredAddress = context.read<AddressService>().defaultAddress;
+    if (preferredAddress != null && preferredAddress.id != 0) {
+      _guestAddressController.text = preferredAddress.addressLine;
+      _guestCityController.text = preferredAddress.city;
+    }
+
     _authAddressController = TextEditingController();
     _authCityController = TextEditingController(text: 'Kampala');
     _authLandmarkController = TextEditingController();
@@ -107,8 +107,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _guestEmailController.dispose();
     _guestAddressController.dispose();
     _guestCityController.dispose();
-    _guestPasswordController.dispose();
-    _guestConfirmPasswordController.dispose();
     _authAddressController.dispose();
     _authCityController.dispose();
     _authLandmarkController.dispose();
@@ -144,15 +142,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final cartProvider = context.read<CartProvider>();
 
       if (widget.isGuest) {
-        // Guest checkout flow with signup
         final nameText = _guestNameController.text.trim();
         final phoneText = _guestPhoneController.text.trim();
+        final emailText = _guestEmailController.text.trim();
         final addressText = _guestAddressController.text.trim();
         final cityText = _guestCityController.text.trim();
-        final password = _guestPasswordController.text.trim();
-        final confirmPassword = _guestConfirmPasswordController.text.trim();
 
-        // Validate name
         if (nameText.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -164,7 +159,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           return;
         }
 
-        // Validate phone (9 digits)
         if (phoneText.length != 9 ||
             !RegExp(r'^[0-9]{9}$').hasMatch(phoneText)) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -177,19 +171,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           return;
         }
 
-        // Validate email
-        final emailText = _guestEmailController.text.trim();
-        if (emailText.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please enter an email address'),
-              backgroundColor: AppColors.error,
-            ),
-          );
-          setState(() => _isLoading = false);
-          return;
-        }
-        if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+\b').hasMatch(emailText)) {
+        if (emailText.isNotEmpty &&
+            !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+\b').hasMatch(emailText)) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Please enter a valid email address'),
@@ -200,7 +183,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           return;
         }
 
-        // Validate address
         if (addressText.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -212,202 +194,67 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           return;
         }
 
-        // Validate password
-        if (password.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please enter a password'),
-              backgroundColor: AppColors.error,
-            ),
-          );
-          setState(() => _isLoading = false);
-          return;
-        }
+        final orderProvider = context.read<OrderProvider>();
+        final orderService = context.read<OrderService>();
+        final addressService = context.read<AddressService>();
+        final resolvedCity = cityText.isEmpty ? 'Kampala' : cityText;
 
-        if (password.length < 6) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Password must be at least 6 characters'),
-              backgroundColor: AppColors.error,
-            ),
-          );
-          setState(() => _isLoading = false);
-          return;
-        }
-
-        if (password != confirmPassword) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Passwords do not match'),
-              backgroundColor: AppColors.error,
-            ),
-          );
-          setState(() => _isLoading = false);
-          return;
-        }
-
-        // Step 1: Create account
-        final authProvider = context.read<AuthProvider>();
-        final signupSuccess = await authProvider.signup(
-          phoneNumber: '+256$phoneText',
-          password: password,
-          name: nameText,
-          email: _guestEmailController.text.trim(),
+        await addressService.savePreferredAddress(
+          label: 'Delivery Address',
+          addressLine: addressText,
+          city: resolvedCity,
+          isDefault: true,
         );
 
-        if (!signupSuccess) {
-          setState(() => _isLoading = false);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  authProvider.errorMessage ?? 'Failed to create account',
-                ),
-                backgroundColor: AppColors.error,
-              ),
-            );
-          }
-          return;
-        }
+        final guestAddress = Address(
+          id: 'guest-${DateTime.now().millisecondsSinceEpoch}',
+          label: 'Delivery Address',
+          fullAddress: '$addressText, $resolvedCity',
+          latitude: 0.0,
+          longitude: 0.0,
+          isDefault: true,
+        );
 
-        // Step 2: Save delivery address to user's profile
-        final customerId = authProvider.user?.customerId;
-        final token = authProvider.token;
+        final localOrder = await orderProvider.createOrder(
+          items: cartProvider.items,
+          deliveryAddress: guestAddress,
+          subtotal: cartProvider.subtotal,
+          serviceFee: cartProvider.serviceFee,
+          deliveryFee: cartProvider.deliveryFee,
+          paymentMethod: _selectedPayment,
+        );
 
-        if (customerId != null && token != null) {
-          // Create address in backend
-          final addressResponse = await http.post(
-            Uri.parse('${AppConstants.baseUrl}/api/addresses'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
-            body: jsonEncode({
-              'data': {
-                'customer': customerId,
-                'label': 'My Address',
-                'address_line': addressText,
-                'city': cityText.isEmpty ? 'Kampala' : cityText,
-                'is_default': true,
-                'gps_lat': 0.0,
-                'gps_lng': 0.0,
-              },
-            }),
+        final backendGuestOrder = await orderService.createGuestOrder(
+          guestName: nameText,
+          guestPhone: '+256$phoneText',
+          addressLine: addressText,
+          city: resolvedCity,
+          subtotal: cartProvider.subtotal,
+          serviceFee: cartProvider.serviceFee,
+          deliveryFee: cartProvider.deliveryFee,
+          total: cartProvider.total,
+        );
+
+        setState(() => _isLoading = false);
+
+        final createdOrder = localOrder ?? backendGuestOrder;
+        if (createdOrder != null && mounted) {
+          cartProvider.clearCart();
+          context.push(
+            '/customer/order-success',
+            extra: {'order': createdOrder, 'isGuest': true},
           );
-
-          if (addressResponse.statusCode == 201) {
-            // Parse saved address from backend response and convert to User Address model
-            final addressData = jsonDecode(addressResponse.body)['data'];
-            final backendAddress = addressData['attributes'] ?? addressData;
-
-            final savedAddress = Address(
-              id: (addressData['id'] ?? addressData['documentId'] ?? '0')
-                  .toString(),
-              label: backendAddress['label'] ?? 'My Address',
-              fullAddress:
-                  '${backendAddress['address_line']}, ${backendAddress['city']}',
-              landmark: backendAddress['landmark'],
-              latitude:
-                  (backendAddress['latitude'] ??
-                          backendAddress['gps_lat'] ??
-                          0.0)
-                      .toDouble(),
-              longitude:
-                  (backendAddress['longitude'] ??
-                          backendAddress['gps_lng'] ??
-                          0.0)
-                      .toDouble(),
-              isDefault: backendAddress['is_default'] ?? true,
-            );
-
-            // Step 3: Create order with saved address
-            final orderProvider = context.read<OrderProvider>();
-            final orderService = context.read<OrderService>();
-            final localOrder = await orderProvider.createOrder(
-              items: cartProvider.items,
-              deliveryAddress: savedAddress,
-              subtotal: cartProvider.subtotal,
-              serviceFee: cartProvider.serviceFee,
-              deliveryFee: cartProvider.deliveryFee,
-              paymentMethod: _selectedPayment,
-            );
-
-            await orderService.createOrderWithItems(
-              token: token,
-              userId: authProvider.user!.id,
-              addressId: savedAddress.id,
-              items: cartProvider.items,
-              subtotal: cartProvider.subtotal,
-              serviceFee: cartProvider.serviceFee,
-              deliveryFee: cartProvider.deliveryFee,
-              total: cartProvider.total,
-              paymentMethod: _selectedPayment.name,
-            );
-
-            setState(() => _isLoading = false);
-
-            if (localOrder != null && mounted) {
-              cartProvider.clearCart();
-              context.push('/customer/order-success', extra: localOrder);
-            } else if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    orderProvider.errorMessage ?? 'Failed to place order',
-                  ),
-                  backgroundColor: AppColors.error,
-                ),
-              );
-            }
-          } else {
-            // Fallback: Still try to create order with temporary address
-            final orderProvider = context.read<OrderProvider>();
-            final tempAddress = Address(
-              id: '0',
-              label: 'Delivery Address',
-              fullAddress:
-                  '$addressText${cityText.isNotEmpty ? ', $cityText' : ''}',
-              latitude: 0.0,
-              longitude: 0.0,
-            );
-
-            final localOrder = await orderProvider.createOrder(
-              items: cartProvider.items,
-              deliveryAddress: tempAddress,
-              subtotal: cartProvider.subtotal,
-              serviceFee: cartProvider.serviceFee,
-              deliveryFee: cartProvider.deliveryFee,
-              paymentMethod: _selectedPayment,
-            );
-
-            // Skip backend order creation here because address was not created.
-
-            setState(() => _isLoading = false);
-
-            if (localOrder != null && mounted) {
-              cartProvider.clearCart();
-              context.push('/customer/order-success', extra: localOrder);
-            } else if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    orderProvider.errorMessage ?? 'Failed to place order',
-                  ),
-                  backgroundColor: AppColors.error,
-                ),
-              );
-            }
-          }
-        } else {
-          setState(() => _isLoading = false);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Account created but address could not be saved'),
-                backgroundColor: AppColors.error,
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                orderProvider.errorMessage ??
+                    orderService.error ??
+                    'Failed to place order',
               ),
-            );
-          }
+              backgroundColor: AppColors.error,
+            ),
+          );
         }
       } else {
         // Authenticated checkout flow
@@ -1098,7 +945,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
             hintText: 'john@example.com',
-            labelText: 'Email (required)',
+            labelText: 'Email (optional for receipt)',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppSizes.radiusSm),
             ),
@@ -1119,48 +966,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
         ),
         const SizedBox(height: AppSizes.md),
-        // Password field
-        TextField(
-          controller: _guestPasswordController,
-          obscureText: _obscurePassword,
-          decoration: InputDecoration(
-            hintText: 'At least 6 characters',
-            labelText: 'Password (required)',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-            ),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscurePassword ? Iconsax.eye_slash : Iconsax.eye,
-                color: AppColors.grey400,
-              ),
-              onPressed: () {
-                setState(() => _obscurePassword = !_obscurePassword);
-              },
-            ),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSizes.sm),
+          decoration: BoxDecoration(
+            color: AppColors.primarySoft,
+            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
           ),
-        ),
-        const SizedBox(height: AppSizes.md),
-        // Confirm Password field
-        TextField(
-          controller: _guestConfirmPasswordController,
-          obscureText: _obscureConfirmPassword,
-          decoration: InputDecoration(
-            hintText: 'Re-enter your password',
-            labelText: 'Confirm Password (required)',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-            ),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscureConfirmPassword ? Iconsax.eye_slash : Iconsax.eye,
-                color: AppColors.grey400,
-              ),
-              onPressed: () {
-                setState(
-                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
-                );
-              },
+          child: Text(
+            'No sign-up needed here. Just share your delivery details and place the order naturally.',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
         ),

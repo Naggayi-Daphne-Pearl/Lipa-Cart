@@ -1,20 +1,40 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/address.dart';
 import '../models/user.dart' as user_models;
 import '../core/constants/app_constants.dart';
 
 class AddressService extends ChangeNotifier {
+  AddressService() {
+    loadPreferredAddress();
+  }
+
   static String get baseUrl => AppConstants.baseUrl;
 
   List<Address> _addresses = [];
   Address? _defaultAddress;
+  Address? _preferredAddress;
   bool _isLoading = false;
   String? _error;
+  bool _hasLoadedPreferredAddress = false;
 
   List<Address> get addresses => _addresses;
-  Address? get defaultAddress => _defaultAddress;
+  Address? get defaultAddress {
+    final backendDefault = _defaultAddress;
+    if (backendDefault != null && backendDefault.id != 0) {
+      return backendDefault;
+    }
+    return _preferredAddress;
+  }
+
+  bool get hasSelectedAddress {
+    final selectedAddress = defaultAddress;
+    return selectedAddress != null &&
+        selectedAddress.fullAddress.trim().isNotEmpty;
+  }
+
   bool get isLoading => _isLoading;
   String? get error => _error;
 
@@ -36,6 +56,107 @@ class AddressService extends ChangeNotifier {
       longitude: address.gpsLng ?? 0.0,
       isDefault: address.isDefault,
     );
+  }
+
+  Future<void> loadPreferredAddress() async {
+    if (_hasLoadedPreferredAddress) return;
+    _hasLoadedPreferredAddress = true;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(AppConstants.preferredDeliveryAddressKey);
+      if (saved == null || saved.isEmpty) return;
+
+      final data = jsonDecode(saved) as Map<String, dynamic>;
+      _preferredAddress = Address(
+        id: -1,
+        documentId: 'preferred-address',
+        customerId: 0,
+        label: (data['label'] ?? 'Delivery Address').toString(),
+        addressLine: (data['addressLine'] ?? '').toString(),
+        city: (data['city'] ?? 'Kampala').toString(),
+        landmark: data['landmark'] as String?,
+        deliveryInstructions: data['deliveryInstructions'] as String?,
+        gpsLat: data['gpsLat'] is num
+            ? (data['gpsLat'] as num).toDouble()
+            : double.tryParse(data['gpsLat']?.toString() ?? ''),
+        gpsLng: data['gpsLng'] is num
+            ? (data['gpsLng'] as num).toDouble()
+            : double.tryParse(data['gpsLng']?.toString() ?? ''),
+        isDefault: data['isDefault'] as bool? ?? true,
+        createdAt:
+            DateTime.tryParse(data['createdAt']?.toString() ?? '') ??
+            DateTime.now(),
+      );
+
+      if (_defaultAddress == null || _defaultAddress!.id == 0) {
+        _defaultAddress = _preferredAddress;
+      }
+      notifyListeners();
+    } catch (e) {
+      _error = 'Could not restore saved delivery address';
+      notifyListeners();
+    }
+  }
+
+  Future<void> savePreferredAddress({
+    required String label,
+    required String addressLine,
+    required String city,
+    String? landmark,
+    String? deliveryInstructions,
+    bool isDefault = true,
+    double? gpsLat,
+    double? gpsLng,
+  }) async {
+    final address = Address(
+      id: -1,
+      documentId: 'preferred-address',
+      customerId: 0,
+      label: label,
+      addressLine: addressLine,
+      city: city,
+      landmark: landmark,
+      deliveryInstructions: deliveryInstructions,
+      gpsLat: gpsLat,
+      gpsLng: gpsLng,
+      isDefault: isDefault,
+      createdAt: DateTime.now(),
+    );
+
+    _preferredAddress = address;
+    if (_defaultAddress == null || _defaultAddress!.id == 0) {
+      _defaultAddress = address;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      AppConstants.preferredDeliveryAddressKey,
+      jsonEncode({
+        'label': address.label,
+        'addressLine': address.addressLine,
+        'city': address.city,
+        'landmark': address.landmark,
+        'deliveryInstructions': address.deliveryInstructions,
+        'gpsLat': address.gpsLat,
+        'gpsLng': address.gpsLng,
+        'isDefault': address.isDefault,
+        'createdAt': address.createdAt.toIso8601String(),
+      }),
+    );
+
+    notifyListeners();
+  }
+
+  Future<void> clearPreferredAddress() async {
+    _preferredAddress = null;
+    if (_defaultAddress?.id == -1 || _defaultAddress?.id == 0) {
+      _defaultAddress = null;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(AppConstants.preferredDeliveryAddressKey);
+    notifyListeners();
   }
 
   /// Fetch all addresses for current customer
@@ -60,8 +181,10 @@ class AddressService extends ChangeNotifier {
         );
         _defaultAddress = _addresses.firstWhere(
           (addr) => addr.isDefault,
-          orElse: () =>
-              _addresses.isNotEmpty ? _addresses.first : Address.empty(),
+          orElse: () {
+            if (_addresses.isNotEmpty) return _addresses.first;
+            return _preferredAddress ?? Address.empty();
+          },
         );
         _isLoading = false;
         notifyListeners();

@@ -130,7 +130,10 @@ class RoleBasedRouter {
     );
   }
 
-  static CustomTransitionPage<void> _fadePage(Widget child, GoRouterState state) {
+  static CustomTransitionPage<void> _fadePage(
+    Widget child,
+    GoRouterState state,
+  ) {
     return CustomTransitionPage(
       key: state.pageKey,
       child: child,
@@ -168,7 +171,10 @@ class RoleBasedRouter {
         // After initial load, never go back to splash
         if (isSplash && !isInitial) {
           if (isAuthenticated) {
-            return _homeForRole(userRole, kycStatus: authProvider.user?.kycStatus);
+            return _homeForRole(
+              userRole,
+              kycStatus: authProvider.user?.kycStatus,
+            );
           }
           // Guest: first launch → onboarding, returning → home
           return authProvider.isFirstLaunch ? '/onboarding' : '/customer/home';
@@ -191,8 +197,13 @@ class RoleBasedRouter {
             state.matchedLocation == '/profile-completion' ||
             state.matchedLocation == '/forgot-password';
 
+        final isGuestCheckout =
+            state.matchedLocation.startsWith('/customer/checkout') &&
+            state.uri.queryParameters['guest'] == 'true';
+
         final isCustomerProtectedRoute =
-            state.matchedLocation.startsWith('/customer/checkout') ||
+            (!isGuestCheckout &&
+                state.matchedLocation.startsWith('/customer/checkout')) ||
             state.matchedLocation.startsWith('/customer/orders') ||
             state.matchedLocation.startsWith('/customer/order-tracking') ||
             state.matchedLocation.startsWith('/customer/order-rating') ||
@@ -208,7 +219,10 @@ class RoleBasedRouter {
 
         // Already authenticated, trying to access auth routes → go to role home
         if (isAuthenticated && isAuthRoute) {
-          return _homeForRole(authProvider.user?.role, kycStatus: authProvider.user?.kycStatus);
+          return _homeForRole(
+            authProvider.user?.role,
+            kycStatus: authProvider.user?.kycStatus,
+          );
         }
 
         // === ROLE-BASED ACCESS CONTROL ===
@@ -217,7 +231,10 @@ class RoleBasedRouter {
         // Shopper routes - only accessible by shoppers
         if (state.matchedLocation.startsWith('/shopper/')) {
           if (isAuthenticated && userRole != UserRole.shopper) {
-            return _homeForRole(userRole, kycStatus: authProvider.user?.kycStatus);
+            return _homeForRole(
+              userRole,
+              kycStatus: authProvider.user?.kycStatus,
+            );
           }
 
           // KYC enforcement for shoppers
@@ -249,7 +266,10 @@ class RoleBasedRouter {
         // Rider routes - only accessible by riders
         if (state.matchedLocation.startsWith('/rider/')) {
           if (isAuthenticated && userRole != UserRole.rider) {
-            return _homeForRole(userRole, kycStatus: authProvider.user?.kycStatus);
+            return _homeForRole(
+              userRole,
+              kycStatus: authProvider.user?.kycStatus,
+            );
           }
 
           // KYC enforcement for riders
@@ -281,14 +301,20 @@ class RoleBasedRouter {
         // Admin routes - only accessible by admins
         if (state.matchedLocation.startsWith('/admin/')) {
           if (isAuthenticated && userRole != UserRole.admin) {
-            return _homeForRole(userRole, kycStatus: authProvider.user?.kycStatus);
+            return _homeForRole(
+              userRole,
+              kycStatus: authProvider.user?.kycStatus,
+            );
           }
         }
 
         // Customer-specific protected routes - only for customers
         if (isCustomerProtectedRoute) {
           if (isAuthenticated && userRole != UserRole.customer) {
-            return _homeForRole(userRole, kycStatus: authProvider.user?.kycStatus);
+            return _homeForRole(
+              userRole,
+              kycStatus: authProvider.user?.kycStatus,
+            );
           }
         }
 
@@ -362,11 +388,13 @@ class RoleBasedRouter {
         ),
         GoRoute(
           path: '/customer/search',
-          pageBuilder: (context, state) => _fadePage(_safeBack(const SearchScreen()), state),
+          pageBuilder: (context, state) =>
+              _fadePage(_safeBack(const SearchScreen()), state),
         ),
         GoRoute(
           path: '/customer/categories',
-          pageBuilder: (context, state) => _fadePage(_safeBack(const CategoriesScreen()), state),
+          pageBuilder: (context, state) =>
+              _fadePage(_safeBack(const CategoriesScreen()), state),
         ),
         GoRoute(
           path: '/customer/category',
@@ -407,13 +435,16 @@ class RoleBasedRouter {
         ),
         GoRoute(
           path: '/customer/cart',
-          pageBuilder: (context, state) => _fadePage(_safeBack(const CartScreen()), state),
+          pageBuilder: (context, state) =>
+              _fadePage(_safeBack(const CartScreen()), state),
         ),
         GoRoute(
           path: '/customer/checkout',
           builder: (context, state) {
             final extra = state.extra as Map<String, dynamic>?;
-            final isGuest = extra?['guest'] == true;
+            final isGuest =
+                extra?['guest'] == true ||
+                state.uri.queryParameters['guest'] == 'true';
             return CheckoutScreen(isGuest: isGuest);
           },
         ),
@@ -448,7 +479,8 @@ class RoleBasedRouter {
         ),
         GoRoute(
           path: '/customer/notifications',
-          builder: (context, state) => _safeBack(const NotificationInboxScreen()),
+          builder: (context, state) =>
+              _safeBack(const NotificationInboxScreen()),
         ),
         GoRoute(
           path: '/customer/help',
@@ -536,45 +568,38 @@ class RoleBasedRouter {
         // Admin Routes
         GoRoute(
           path: '/admin/dashboard',
-          builder: (context, state) => AdminShell(
-            child: const AdminDashboardScreen(),
-          ),
+          builder: (context, state) =>
+              AdminShell(child: const AdminDashboardScreen()),
         ),
         GoRoute(
           path: '/admin/products',
-          builder: (context, state) => AdminShell(
-            child: const AdminProductsScreen(),
-          ),
+          builder: (context, state) =>
+              AdminShell(child: const AdminProductsScreen()),
         ),
         GoRoute(
           path: '/admin/users',
-          builder: (context, state) => AdminShell(
-            child: const AdminUsersScreen(),
-          ),
+          builder: (context, state) =>
+              AdminShell(child: const AdminUsersScreen()),
         ),
         GoRoute(
           path: '/admin/orders',
-          builder: (context, state) => AdminShell(
-            child: const AdminOrdersScreen(),
-          ),
+          builder: (context, state) =>
+              AdminShell(child: const AdminOrdersScreen()),
         ),
         GoRoute(
           path: '/admin/analytics',
-          builder: (context, state) => AdminShell(
-            child: const AdminAnalyticsScreen(),
-          ),
+          builder: (context, state) =>
+              AdminShell(child: const AdminAnalyticsScreen()),
         ),
         GoRoute(
           path: '/admin/user-management',
-          builder: (context, state) => AdminShell(
-            child: const AdminUserManagementScreen(),
-          ),
+          builder: (context, state) =>
+              AdminShell(child: const AdminUserManagementScreen()),
         ),
         GoRoute(
           path: '/admin/riders',
-          builder: (context, state) => AdminShell(
-            child: const AdminRidersScreen(),
-          ),
+          builder: (context, state) =>
+              AdminShell(child: const AdminRidersScreen()),
         ),
 
         // Rider Routes

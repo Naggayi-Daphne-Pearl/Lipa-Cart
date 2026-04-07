@@ -17,6 +17,8 @@ class AppConstants {
   static const String onboardingKey = 'onboarding_complete';
   static const String cartKey = 'cart_items';
   static const String addressKey = 'saved_addresses';
+  static const String preferredDeliveryAddressKey =
+      'preferred_delivery_address';
   static const String ordersKey = 'orders_state';
   static const String currentOrderKey = 'current_order';
   static const String shoppingListsKey = 'shopping_lists';

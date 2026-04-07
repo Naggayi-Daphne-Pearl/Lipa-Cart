@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../core/constants/app_sizes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../core/constants/app_sizes.dart';
-import '../../providers/product_provider.dart';
+import '../../core/utils/responsive.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/product_provider.dart';
+import '../../widgets/adaptive_page_scaffold.dart';
 import '../../widgets/product_card.dart';
-import '../../widgets/search_bar_widget.dart';
-import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/product_filter_sheet.dart';
+import '../../widgets/search_bar_widget.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -94,60 +96,101 @@ class _SearchScreenState extends State<SearchScreen> {
     final productProvider = context.watch<ProductProvider>();
     final cartProvider = context.watch<CartProvider>();
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundGrey,
-      bottomNavigationBar: const AppBottomNav(currentIndex: 1),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Iconsax.arrow_left),
-          onPressed: () {
-            productProvider.clearSearch();
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/customer/home');
-            }
-          },
-        ),
-        title: const Text('Search'),
-        actions: [
-          if (_searchController.text.isNotEmpty)
-            IconButton(
-              icon: const Icon(Iconsax.filter),
-              onPressed: () => _showFilterBottomSheet(context, productProvider),
-              tooltip: 'Filters',
-            ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search input
-          Padding(
-            padding: const EdgeInsets.all(AppSizes.md),
-            child: SearchBarWidget(
-              controller: _searchController,
-              autofocus: true,
-              hintText: 'Search for groceries...',
-              onChanged: (value) => productProvider.search(value),
-              onSubmitted: (value) => _addToHistory(value),
-              onClear: () => productProvider.clearSearch(),
-            ),
+    return AdaptivePageScaffold(
+      title: 'Search',
+      subtitle:
+          'Find groceries quickly with a dedicated mobile and desktop search layout.',
+      currentIndex: 1,
+      desktopActiveSection: 'shop',
+      onBack: () {
+        productProvider.clearSearch();
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/customer/home');
+        }
+      },
+      actions: [
+        if (_searchController.text.isNotEmpty)
+          OutlinedButton.icon(
+            onPressed: () => _showFilterBottomSheet(context, productProvider),
+            icon: const Icon(Iconsax.filter, size: 16),
+            label: const Text('Filters'),
           ),
-
-          // Results
-          Expanded(child: _buildContent(productProvider, cartProvider)),
-        ],
+      ],
+      mobileBody: _buildPageBody(
+        context,
+        productProvider,
+        cartProvider,
+        isDesktop: false,
+      ),
+      desktopBody: _buildPageBody(
+        context,
+        productProvider,
+        cartProvider,
+        isDesktop: true,
       ),
     );
   }
 
-  Widget _buildContent(
+  Widget _buildPageBody(
+    BuildContext context,
     ProductProvider productProvider,
-    CartProvider cartProvider,
-  ) {
+    CartProvider cartProvider, {
+    required bool isDesktop,
+  }) {
+    return Column(
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            context.horizontalPadding,
+            0,
+            context.horizontalPadding,
+            AppSizes.md,
+          ),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isDesktop ? 720 : double.infinity,
+              ),
+              child: SearchBarWidget(
+                controller: _searchController,
+                autofocus: true,
+                hintText: 'Search for groceries...',
+                onChanged: (value) {
+                  productProvider.search(value);
+                  setState(() {});
+                },
+                onSubmitted: (value) => _addToHistory(value),
+                onClear: () {
+                  productProvider.clearSearch();
+                  setState(() {});
+                },
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: _buildContent(
+            context,
+            productProvider,
+            cartProvider,
+            isDesktop: isDesktop,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    ProductProvider productProvider,
+    CartProvider cartProvider, {
+    required bool isDesktop,
+  }) {
     if (_searchController.text.isEmpty) {
-      // Show recent searches or popular items
-      return _buildSuggestions(productProvider);
+      return _buildSuggestions(productProvider, isDesktop: isDesktop);
     }
 
     if (productProvider.searchResults.isEmpty) {
@@ -178,12 +221,31 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.all(AppSizes.md),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: AppSizes.md,
-        crossAxisSpacing: AppSizes.md,
-        childAspectRatio: 0.72,
+      padding: EdgeInsets.fromLTRB(
+        context.horizontalPadding,
+        0,
+        context.horizontalPadding,
+        context.responsive<double>(
+          mobile: AppSizes.lg,
+          tablet: AppSizes.xl,
+          desktop: AppSizes.xxl,
+        ),
+      ),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: context.responsive<int>(
+          mobile: 2,
+          tablet: 3,
+          desktop: 4,
+          largeDesktop: 5,
+        ),
+        mainAxisSpacing: isDesktop ? AppSizes.lg : AppSizes.md,
+        crossAxisSpacing: isDesktop ? AppSizes.lg : AppSizes.md,
+        childAspectRatio: context.responsive<double>(
+          mobile: 0.72,
+          tablet: 0.75,
+          desktop: 0.8,
+          largeDesktop: 0.84,
+        ),
       ),
       itemCount: productProvider.searchResults.length,
       itemBuilder: (context, index) {
@@ -218,10 +280,10 @@ class _SearchScreenState extends State<SearchScreen> {
     );
     productProvider.search(term);
     _addToHistory(term);
+    setState(() {});
   }
 
   List<String> _getTrendingSearches(ProductProvider productProvider) {
-    // Derive from featured products + top available products
     final featured = productProvider.featuredProducts
         .take(4)
         .map((p) => p.name);
@@ -233,127 +295,153 @@ class _SearchScreenState extends State<SearchScreen> {
     return combined.take(8).toList();
   }
 
-  Widget _buildSuggestions(ProductProvider productProvider) {
+  Widget _buildSuggestions(
+    ProductProvider productProvider, {
+    bool isDesktop = false,
+  }) {
     final trending = _getTrendingSearches(productProvider);
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSizes.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Recent searches
-          if (_searchHistory.isNotEmpty) ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Recent Searches', style: AppTextStyles.h5),
-                GestureDetector(
-                  onTap: _clearHistory,
-                  child: Text(
-                    'Clear',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.primary,
-                    ),
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_searchHistory.isNotEmpty) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Recent Searches', style: AppTextStyles.h5),
+              GestureDetector(
+                onTap: _clearHistory,
+                child: Text(
+                  'Clear',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.primary,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: AppSizes.sm),
-            ..._searchHistory.map((term) {
-              return ListTile(
-                onTap: () => _performSearch(term, productProvider),
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                leading: const Icon(
-                  Iconsax.clock,
-                  size: 18,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSizes.sm),
+          ..._searchHistory.map((term) {
+            return ListTile(
+              onTap: () => _performSearch(term, productProvider),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              leading: const Icon(
+                Iconsax.clock,
+                size: 18,
+                color: AppColors.textLight,
+              ),
+              title: Text(term, style: AppTextStyles.bodyMedium),
+              trailing: GestureDetector(
+                onTap: () async {
+                  setState(() => _searchHistory.remove(term));
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setStringList(_historyKey, _searchHistory);
+                },
+                child: const Icon(
+                  Iconsax.close_circle,
+                  size: 16,
                   color: AppColors.textLight,
                 ),
-                title: Text(term, style: AppTextStyles.bodyMedium),
-                trailing: GestureDetector(
-                  onTap: () async {
-                    setState(() => _searchHistory.remove(term));
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.setStringList(_historyKey, _searchHistory);
-                  },
-                  child: const Icon(
-                    Iconsax.close_circle,
-                    size: 16,
-                    color: AppColors.textLight,
-                  ),
-                ),
-              );
-            }),
-            const SizedBox(height: AppSizes.lg),
-          ],
-
-          // Trending searches (from actual products)
-          Text('Trending', style: AppTextStyles.h5),
-          const SizedBox(height: AppSizes.md),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: trending.map((term) {
-              return GestureDetector(
-                onTap: () => _performSearch(term, productProvider),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                    border: Border.all(color: AppColors.lightGrey),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Iconsax.trend_up,
-                        size: 14,
-                        color: AppColors.primary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(term, style: AppTextStyles.labelMedium),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: AppSizes.xl),
-          Text('Browse Categories', style: AppTextStyles.h5),
-          const SizedBox(height: AppSizes.md),
-          ...productProvider.categories.map((category) {
-            return ListTile(
-              onTap: () => context.push('/customer/category', extra: category),
-              contentPadding: EdgeInsets.zero,
-              leading: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryOrange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                ),
-                child: const Icon(
-                  Iconsax.category,
-                  color: AppColors.primaryOrange,
-                ),
-              ),
-              title: Text(category.name, style: AppTextStyles.labelMedium),
-              subtitle: Text(
-                '${category.productCount} items',
-                style: AppTextStyles.caption,
-              ),
-              trailing: const Icon(
-                Iconsax.arrow_right_3,
-                size: 20,
-                color: AppColors.textLight,
               ),
             );
           }),
+          const SizedBox(height: AppSizes.lg),
         ],
+        Text('Trending', style: AppTextStyles.h5),
+        const SizedBox(height: AppSizes.md),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: trending.map((term) {
+            return GestureDetector(
+              onTap: () => _performSearch(term, productProvider),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                  border: Border.all(color: AppColors.lightGrey),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Iconsax.trend_up,
+                      size: 14,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(term, style: AppTextStyles.labelMedium),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: AppSizes.xl),
+        Text('Browse Categories', style: AppTextStyles.h5),
+        const SizedBox(height: AppSizes.md),
+        ...productProvider.categories.map((category) {
+          return ListTile(
+            onTap: () => context.push('/customer/category', extra: category),
+            contentPadding: EdgeInsets.zero,
+            leading: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.primaryOrange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+              ),
+              child: const Icon(
+                Iconsax.category,
+                color: AppColors.primaryOrange,
+              ),
+            ),
+            title: Text(category.name, style: AppTextStyles.labelMedium),
+            subtitle: Text(
+              '${category.productCount} items',
+              style: AppTextStyles.caption,
+            ),
+            trailing: const Icon(
+              Iconsax.arrow_right_3,
+              size: 20,
+              color: AppColors.textLight,
+            ),
+          );
+        }),
+      ],
+    );
+
+    if (!isDesktop) {
+      return SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          context.horizontalPadding,
+          0,
+          context.horizontalPadding,
+          AppSizes.xl,
+        ),
+        child: content,
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        context.horizontalPadding,
+        0,
+        context.horizontalPadding,
+        AppSizes.xxl,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(AppSizes.lg),
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+          boxShadow: AppColors.shadowSm,
+        ),
+        child: content,
       ),
     );
   }
