@@ -190,16 +190,14 @@
     </div>
   </div>
 
-  <!-- Firebase SDK for web push notifications -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
-
   <script>
     // The value below is injected by flutter build, do not touch.
     var serviceWorkerVersion = null;
 
     // Helper for Flutter to show browser notifications when app is in foreground
     function showBrowserNotification(title, body) {
+      if (typeof Notification === 'undefined') return;
+
       if (Notification.permission === 'granted') {
         new Notification(title, { body: body, icon: '/favicon.png' });
       } else if (Notification.permission !== 'denied') {
@@ -225,6 +223,9 @@
       var userAgent = window.navigator.userAgent || '';
       var isIOSBrowser = /iPad|iPhone|iPod/.test(userAgent) ||
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      var isSafariBrowser = /Safari/.test(userAgent) &&
+        !/Chrome|CriOS|Chromium|Edg|OPR|Firefox|FxiOS/.test(userAgent);
+      var isWebKitBrowser = isIOSBrowser || isSafariBrowser;
 
       function showRetryState(message) {
         if (appStarted) return;
@@ -260,12 +261,12 @@
         });
       }
 
-      if (isIOSBrowser) {
+      if (isWebKitBrowser) {
         await clearStaleFlutterCaches();
       }
 
       try {
-        var loaderConfig = {
+        _flutter.loader.load({
           onEntrypointLoaded: async function(engineInitializer) {
             try {
               var appRunner = await engineInitializer.initializeEngine();
@@ -274,26 +275,18 @@
               if (loader) loader.remove();
             } catch (error) {
               console.error('Flutter app failed to start:', error);
-              showRetryState('Still loading on this iPhone? Tap retry.');
+              showRetryState('Still loading in Safari? Tap retry.');
             }
           }
-        };
-
-        if (!isIOSBrowser) {
-          loaderConfig.serviceWorker = {
-            serviceWorkerVersion: serviceWorkerVersion,
-          };
-        }
-
-        _flutter.loader.load(loaderConfig);
+        });
       } catch (error) {
         console.error('Flutter bootstrap failed:', error);
         showRetryState('Couldn\'t start the app. Please retry.');
       }
 
       setTimeout(function() {
-        showRetryState('Still loading on this iPhone? Tap retry.');
-      }, 10000);
+        showRetryState('Still loading in Safari? Tap retry.');
+      }, 14000);
     });
   </script>
 </body>

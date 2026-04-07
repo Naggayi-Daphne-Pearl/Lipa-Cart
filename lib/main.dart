@@ -25,6 +25,25 @@ import 'services/address_service.dart';
 import 'services/session_service.dart';
 import 'role_based_router.dart';
 
+Future<void> _bootstrapBackgroundServices() async {
+  if (!DefaultFirebaseOptions.isConfigured) return;
+
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } else {
+      Firebase.app();
+    }
+
+    await NotificationService().init().timeout(const Duration(seconds: 4));
+  } catch (e, stackTrace) {
+    debugPrint('[startup] Background service init failed: $e');
+    await Sentry.captureException(e, stackTrace: stackTrace);
+  }
+}
+
 Future<void> main() async {
   await SentryFlutter.init(
     (options) {
@@ -34,33 +53,6 @@ Future<void> main() async {
     },
     appRunner: () async {
       WidgetsFlutterBinding.ensureInitialized();
-
-      // Initialize Firebase if configured.
-      // Keep app startup non-blocking so iPhone browsers don't get stuck on the loader.
-      if (DefaultFirebaseOptions.isConfigured) {
-        try {
-          if (Firebase.apps.isEmpty) {
-            await Firebase.initializeApp(
-              options: DefaultFirebaseOptions.currentPlatform,
-            );
-          } else {
-            Firebase.app();
-          }
-
-          unawaited(
-            NotificationService()
-                .init()
-                .timeout(const Duration(seconds: 4))
-                .catchError((error, stackTrace) async {
-                  debugPrint('[startup] Notification init failed: $error');
-                  await Sentry.captureException(error, stackTrace: stackTrace);
-                }),
-          );
-        } catch (e, stackTrace) {
-          debugPrint('[startup] Firebase init failed: $e');
-          await Sentry.captureException(e, stackTrace: stackTrace);
-        }
-      }
 
       // Only set system UI overlay and orientations on mobile
       if (!kIsWeb) {
@@ -109,6 +101,7 @@ Future<void> main() async {
       };
 
       runApp(const LipaCartApp());
+      unawaited(_bootstrapBackgroundServices());
     },
   );
 }
