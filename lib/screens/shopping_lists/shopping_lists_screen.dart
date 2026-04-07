@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -13,6 +14,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
+import '../../widgets/feature_spotlight_card.dart';
 
 class ShoppingListsScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -24,11 +26,17 @@ class ShoppingListsScreen extends StatefulWidget {
 }
 
 class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
+  static const _listsSpotlightDismissedKey =
+      'shopping_lists_spotlight_dismissed';
+  static const _listsSpotlightVisitsKey = 'shopping_lists_spotlight_visits';
+
   final _searchController = TextEditingController();
+  bool _showListsSpotlight = false;
 
   @override
   void initState() {
     super.initState();
+    _prepareListsSpotlight();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = context.read<AuthProvider>();
 
@@ -45,6 +53,32 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _prepareListsSpotlight() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isDismissed = prefs.getBool(_listsSpotlightDismissedKey) ?? false;
+    final visitCount = (prefs.getInt(_listsSpotlightVisitsKey) ?? 0) + 1;
+    await prefs.setInt(_listsSpotlightVisitsKey, visitCount);
+
+    final shouldShow = !isDismissed && (visitCount <= 2 || visitCount % 4 == 0);
+    if (!mounted) return;
+
+    setState(() {
+      _showListsSpotlight = shouldShow;
+    });
+  }
+
+  Future<void> _dismissListsSpotlight({bool remember = false}) async {
+    if (remember) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_listsSpotlightDismissedKey, true);
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _showListsSpotlight = false;
+    });
   }
 
   double _estimateListValue(ShoppingList list) {
@@ -146,6 +180,47 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                   ],
                 ),
               ),
+
+              if (_showListsSpotlight)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSizes.lg,
+                    0,
+                    AppSizes.lg,
+                    AppSizes.md,
+                  ),
+                  child: FeatureSpotlightCard(
+                    icon: Iconsax.clipboard_text,
+                    eyebrow: 'SMART LISTS',
+                    title: 'Make repeat shopping easier',
+                    description:
+                        'Save weekly essentials, meal prep items, or party supplies once and bring them back in seconds.',
+                    highlights: const [
+                      'Plan ahead faster',
+                      'Reuse favorite items',
+                      'Add all to cart in one tap',
+                    ],
+                    primaryLabel: authProvider.isAuthenticated
+                        ? 'Create a list'
+                        : 'Sign in to save lists',
+                    onPrimaryTap: () {
+                      _dismissListsSpotlight();
+                      if (authProvider.isAuthenticated) {
+                        _showCreateListSheet(context);
+                      } else {
+                        context.go(
+                          '/login?return=%2Fcustomer%2Fshopping-lists',
+                        );
+                      }
+                    },
+                    secondaryLabel: 'Browse items',
+                    onSecondaryTap: () {
+                      _dismissListsSpotlight();
+                      context.go('/customer/browse');
+                    },
+                    onDismiss: () => _dismissListsSpotlight(remember: true),
+                  ),
+                ),
 
               if (authProvider.isAuthenticated && provider.lists.isNotEmpty)
                 Padding(
@@ -603,7 +678,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
         ),
         const SizedBox(height: AppSizes.sm),
         Text(
-          'Create your first shopping list to start\norganizing your groceries',
+          'Save weekly essentials, meal prep, or party items once\nso reordering your groceries takes seconds.',
           style: AppTextStyles.bodyMedium.copyWith(
             color: AppColors.textSecondary,
           ),

@@ -223,10 +223,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       icon: Icons.delivery_dining_outlined,
                       label: 'Fast delivery',
                     ),
-                    _GlassPill(
-                      icon: Iconsax.map_1,
-                      label: 'Track live',
-                    ),
+                    _GlassPill(icon: Iconsax.map_1, label: 'Track live'),
                   ],
                 )
               else ...[
@@ -327,10 +324,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     required bool isTablet,
     required bool isSmall,
   }) {
-    final titleSize = isSmall ? 28.0 : (isWide ? 46.0 : (isTablet ? 38.0 : 32.0));
+    final titleSize = isSmall
+        ? 28.0
+        : (isWide ? 46.0 : (isTablet ? 38.0 : 32.0));
 
     return Container(
-      padding: EdgeInsets.all(isSmall ? 20 : (isWide ? AppSizes.xl : AppSizes.lg)),
+      padding: EdgeInsets.all(
+        isSmall ? 20 : (isWide ? AppSizes.xl : AppSizes.lg),
+      ),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(AppSizes.radiusXl),
@@ -366,14 +367,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 icon: Icons.storefront_outlined,
                 label: 'Fresh groceries',
               ),
-              _SoftFeaturePill(
-                icon: Iconsax.note_1,
-                label: 'Shopping lists',
-              ),
-              _SoftFeaturePill(
-                icon: Iconsax.routing_2,
-                label: 'Live tracking',
-              ),
+              _SoftFeaturePill(icon: Iconsax.note_1, label: 'Shopping lists'),
+              _SoftFeaturePill(icon: Iconsax.routing_2, label: 'Live tracking'),
             ],
           ),
           const SizedBox(height: AppSizes.lg),
@@ -389,19 +384,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 _FeatureLine(
                   icon: Iconsax.shopping_bag,
                   title: 'Browse daily essentials',
-                  subtitle: 'Shop produce, pantry items, and home basics in one place.',
+                  subtitle:
+                      'Shop produce, pantry items, and home basics in one place.',
                 ),
                 SizedBox(height: AppSizes.sm),
                 _FeatureLine(
                   icon: Iconsax.note_21,
                   title: 'Save lists and reorder faster',
-                  subtitle: 'Keep your regular picks close and shop again with less effort.',
+                  subtitle:
+                      'Keep your regular picks close and shop again with less effort.',
                 ),
                 SizedBox(height: AppSizes.sm),
                 _FeatureLine(
                   icon: Iconsax.location,
                   title: 'Track every order live',
-                  subtitle: 'Follow your shopper or rider from pickup to doorstep.',
+                  subtitle:
+                      'Follow your shopper or rider from pickup to doorstep.',
                 ),
               ],
             ),
@@ -416,7 +414,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, AppSizes.buttonHeightLg),
+                minimumSize: const Size(
+                  double.infinity,
+                  AppSizes.buttonHeightLg,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppSizes.radiusFull),
                 ),
@@ -433,7 +434,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.textPrimary,
                 side: BorderSide(color: AppColors.grey300),
-                minimumSize: const Size(double.infinity, AppSizes.buttonHeightLg),
+                minimumSize: const Size(
+                  double.infinity,
+                  AppSizes.buttonHeightLg,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppSizes.radiusFull),
                 ),
@@ -465,7 +469,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
           const SizedBox(height: AppSizes.xl),
-          Text('Want to earn with LipaCart?', style: AppTextStyles.sectionTitle),
+          Text(
+            'Want to earn with LipaCart?',
+            style: AppTextStyles.sectionTitle,
+          ),
           const SizedBox(height: AppSizes.sm),
           _RoleEntry(
             icon: Iconsax.bag_happy,

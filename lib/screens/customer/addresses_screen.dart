@@ -238,10 +238,29 @@ class _AddressesScreenState extends State<AddressesScreen> {
               lat,
               lng,
             ) async {
-              if (address == null) {
-                await addressService.createAddress(
-                  token: auth.token!,
-                  customerId: auth.user!.customerId ?? '',
+              final token = auth.token;
+              final customerId = auth.user?.customerId ?? auth.user?.id;
+              bool saved = false;
+
+              if (token == null ||
+                  token.isEmpty ||
+                  customerId == null ||
+                  customerId.isEmpty) {
+                await addressService.savePreferredAddress(
+                  label: label,
+                  addressLine: addressLine,
+                  city: city,
+                  landmark: landmark,
+                  deliveryInstructions: instructions,
+                  isDefault: isDefault,
+                  gpsLat: lat,
+                  gpsLng: lng,
+                );
+                saved = true;
+              } else if (address == null) {
+                saved = await addressService.createAddress(
+                  token: token,
+                  customerId: customerId,
                   label: label,
                   addressLine: addressLine,
                   city: city,
@@ -252,8 +271,8 @@ class _AddressesScreenState extends State<AddressesScreen> {
                   gpsLng: lng,
                 );
               } else {
-                await addressService.updateAddress(
-                  token: auth.token!,
+                saved = await addressService.updateAddress(
+                  token: token,
                   addressId: address.id,
                   addressDocumentId: address.documentId,
                   label: label,
@@ -266,12 +285,28 @@ class _AddressesScreenState extends State<AddressesScreen> {
                   gpsLng: lng,
                 );
               }
-              await _refreshAddresses(auth, addressService);
-              if (context.mounted) {
-                Navigator.pop(context);
-                if (address == null && widget.returnRoute != null) {
-                  context.go(widget.returnRoute!);
-                }
+
+              if (saved) {
+                await _refreshAddresses(auth, addressService);
+              }
+
+              if (!context.mounted) return;
+
+              if (!saved) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      addressService.error ??
+                          'Could not save address. Please try again.',
+                    ),
+                  ),
+                );
+                return;
+              }
+
+              Navigator.pop(context);
+              if (address == null && widget.returnRoute != null) {
+                context.go(widget.returnRoute!);
               }
             },
       ),

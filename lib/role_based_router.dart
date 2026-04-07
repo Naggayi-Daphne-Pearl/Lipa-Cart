@@ -207,7 +207,6 @@ class RoleBasedRouter {
             state.matchedLocation.startsWith('/customer/orders') ||
             state.matchedLocation.startsWith('/customer/order-tracking') ||
             state.matchedLocation.startsWith('/customer/order-rating') ||
-            state.matchedLocation.startsWith('/customer/addresses') ||
             state.matchedLocation.startsWith('/customer/profile');
 
         // Not authenticated, trying to access protected → go to login
@@ -385,7 +384,13 @@ class RoleBasedRouter {
         // Customer Routes
         GoRoute(
           path: '/customer/home',
-          pageBuilder: (context, state) => _fadePage(const MainShell(), state),
+          pageBuilder: (context, state) =>
+              _fadePage(const MainShell(initialTab: 0), state),
+        ),
+        GoRoute(
+          path: '/customer/browse',
+          pageBuilder: (context, state) =>
+              _fadePage(const MainShell(initialTab: 1), state),
         ),
         GoRoute(
           path: '/customer/search',
@@ -394,8 +399,7 @@ class RoleBasedRouter {
         ),
         GoRoute(
           path: '/customer/categories',
-          pageBuilder: (context, state) =>
-              _fadePage(_safeBack(const CategoriesScreen()), state),
+          redirect: (context, state) => '/customer/browse',
         ),
         GoRoute(
           path: '/customer/category',
@@ -730,7 +734,7 @@ class _CustomerMainShellState extends State<CustomerMainShell> {
           setState(() => _selectedIndex = index);
           final routes = [
             '/customer/home',
-            '/customer/categories',
+            '/customer/browse',
             '/customer/orders',
             '/customer/profile',
           ];
@@ -740,7 +744,7 @@ class _CustomerMainShellState extends State<CustomerMainShell> {
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_bag),
-            label: 'Shop',
+            label: 'Browse',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.receipt), label: 'Orders'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),

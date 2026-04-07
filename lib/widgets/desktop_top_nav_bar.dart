@@ -71,9 +71,9 @@ class DesktopTopNavBar extends StatelessWidget {
             ),
             _buildNavLink(
               context,
-              label: 'Categories',
-              route: '/customer/categories',
-              isSelected: activeSection == 'shop',
+              label: 'Browse',
+              route: '/customer/browse',
+              isSelected: activeSection == 'browse',
             ),
             _buildNavLink(
               context,

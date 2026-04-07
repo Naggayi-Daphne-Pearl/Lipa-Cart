@@ -84,7 +84,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const DesktopTopNavBar(activeSection: 'shop'),
+              const DesktopTopNavBar(activeSection: 'browse'),
               // Title
               Padding(
                 padding: EdgeInsets.fromLTRB(

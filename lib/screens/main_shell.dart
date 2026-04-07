@@ -14,7 +14,9 @@ import 'shopping_lists/shopping_lists_screen.dart';
 import 'profile/profile_screen.dart';
 
 class MainShell extends StatefulWidget {
-  const MainShell({super.key});
+  final int initialTab;
+
+  const MainShell({super.key, this.initialTab = 0});
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -24,12 +26,36 @@ class _MainShellState extends State<MainShell> {
   // Tab indices: 0=Home, 1=Browse, 2=Lists, 3=Cart(external on mobile, sidebar on web), 4=Profile
   int _selectedTab = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    _selectedTab = widget.initialTab < 0
+        ? 0
+        : widget.initialTab > 4
+        ? 4
+        : widget.initialTab;
+  }
+
+  @override
+  void didUpdateWidget(covariant MainShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTab != widget.initialTab) {
+      setState(() {
+        _selectedTab = widget.initialTab < 0
+            ? 0
+            : widget.initialTab > 4
+            ? 4
+            : widget.initialTab;
+      });
+    }
+  }
+
   // Screens for IndexedStack
-  final List<Widget> _screens = const [
-    HomeScreen(), // stack index 0
-    BrowseScreen(), // stack index 1
-    ShoppingListsScreen(showBottomNav: false), // stack index 2
-    ProfileScreen(showBottomNav: false), // stack index 3
+  List<Widget> get _screens => [
+    const HomeScreen(),
+    const BrowseScreen(),
+    const ShoppingListsScreen(showBottomNav: false),
+    const ProfileScreen(showBottomNav: false),
   ];
 
   // Maps tab index to stack index

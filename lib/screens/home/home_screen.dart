@@ -7,6 +7,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -28,6 +29,7 @@ import '../../widgets/adaptive_product_section.dart';
 import '../../widgets/adaptive_category_section.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
+import '../../widgets/feature_spotlight_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -37,10 +39,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const _homeTourDismissedKey = 'home_quick_tour_dismissed';
+
   final PageController _bannerController = PageController();
   Timer? _bannerTimer;
   static const _bannerCount = 3;
   int _unreadNotifications = 0;
+  bool _showQuickTour = false;
 
   @override
   void initState() {
@@ -54,7 +59,28 @@ class _HomeScreenState extends State<HomeScreen> {
           products: productProvider.products,
         );
       }
-      _fetchUnreadCount();
+      await _fetchUnreadCount();
+      await _loadQuickTourPreference();
+    });
+  }
+
+  Future<void> _loadQuickTourPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dismissed = prefs.getBool(_homeTourDismissedKey) ?? false;
+    if (!mounted || dismissed) return;
+
+    setState(() {
+      _showQuickTour = true;
+    });
+  }
+
+  Future<void> _dismissQuickTour() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_homeTourDismissedKey, true);
+
+    if (!mounted) return;
+    setState(() {
+      _showQuickTour = false;
     });
   }
 
@@ -318,6 +344,35 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
+
+                if (_showQuickTour)
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      context.horizontalPadding,
+                      AppSizes.md,
+                      context.horizontalPadding,
+                      AppSizes.sm,
+                    ),
+                    child: FeatureSpotlightCard(
+                      icon: Iconsax.routing_2,
+                      eyebrow: 'QUICK START',
+                      title: 'Take a quick tour of LipaCart',
+                      description:
+                          'Browse products, save repeat orders in Shopping Lists, and track deliveries without interrupting your flow.',
+                      highlights: const [
+                        'Browse fresh picks',
+                        'Save lists for later',
+                        'Track each order live',
+                      ],
+                      primaryLabel: 'Open Lists',
+                      onPrimaryTap: () =>
+                          context.push('/customer/shopping-lists'),
+                      secondaryLabel: 'Browse products',
+                      onSecondaryTap: () => context.push('/customer/browse'),
+                      onDismiss: _dismissQuickTour,
+                      accentColor: AppColors.accent,
+                    ),
+                  ),
 
                 // Categories section
                 Padding(

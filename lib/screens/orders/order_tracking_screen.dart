@@ -285,9 +285,9 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     await Clipboard.setData(ClipboardData(text: addressText));
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Delivery address copied.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Delivery address copied.')));
   }
 
   Future<void> _respondToSubstitution(CartItem item, bool approved) async {
@@ -695,7 +695,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                                   clientPoint,
                                                 )
                                               : 15,
-                                          onTap: (_, __) => _openTrackingInMaps(),
+                                          onTap: (_, __) =>
+                                              _openTrackingInMaps(),
                                           onMapReady: () {
                                             _isTrackingMapReady = true;
                                             _fitTrackingRoute(
@@ -1649,9 +1650,10 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                       Expanded(
                                         child: Text(
                                           order.deliveryAddress.label,
-                                          style: AppTextStyles.labelMedium.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                          style: AppTextStyles.labelMedium
+                                              .copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                         ),
                                       ),
                                       const Icon(
@@ -1666,7 +1668,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                     order.deliveryAddress.fullAddress,
                                     style: AppTextStyles.bodySmall,
                                   ),
-                                  if (order.deliveryAddress.landmark != null) ...[
+                                  if (order.deliveryAddress.landmark !=
+                                      null) ...[
                                     const SizedBox(height: 4),
                                     Row(
                                       children: [
@@ -1679,9 +1682,11 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                         Expanded(
                                           child: Text(
                                             'Near: ${order.deliveryAddress.landmark}',
-                                            style: AppTextStyles.caption.copyWith(
-                                              color: AppColors.textSecondary,
-                                            ),
+                                            style: AppTextStyles.caption
+                                                .copyWith(
+                                                  color:
+                                                      AppColors.textSecondary,
+                                                ),
                                           ),
                                         ),
                                       ],

@@ -21,7 +21,7 @@ class AppBottomNav extends StatelessWidget {
         context.go('/customer/home');
         break;
       case 1:
-        context.go('/customer/categories');
+        context.go('/customer/browse');
         break;
       case 2:
         context.go('/customer/shopping-lists');
@@ -77,7 +77,7 @@ class AppBottomNav extends StatelessWidget {
                 context: context,
                 icon: Iconsax.search_normal,
                 activeIcon: Iconsax.search_normal_1,
-                label: 'Shop',
+                label: 'Browse',
                 index: 1,
               ),
               _buildNavItem(

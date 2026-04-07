@@ -23,11 +23,11 @@ class CategoriesScreen extends StatelessWidget {
     final productProvider = context.watch<ProductProvider>();
 
     return AdaptivePageScaffold(
-      title: 'Categories',
+      title: 'Browse by Category',
       subtitle:
-          'Browse fresh aisles with layouts tuned for both mobile and desktop.',
+          'Explore fresh aisles and jump into the section you want faster.',
       currentIndex: 1,
-      desktopActiveSection: 'shop',
+      desktopActiveSection: 'browse',
       mobileBody: _buildCategoriesGrid(context, productProvider),
       desktopBody: _buildCategoriesGrid(
         context,

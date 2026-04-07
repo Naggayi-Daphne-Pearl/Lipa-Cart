@@ -101,7 +101,7 @@ class _SearchScreenState extends State<SearchScreen> {
       subtitle:
           'Find groceries quickly with a dedicated mobile and desktop search layout.',
       currentIndex: 1,
-      desktopActiveSection: 'shop',
+      desktopActiveSection: 'browse',
       onBack: () {
         productProvider.clearSearch();
         if (context.canPop()) {

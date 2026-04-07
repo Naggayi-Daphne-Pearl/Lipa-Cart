@@ -34,10 +34,7 @@ class AppTheme {
           statusBarBrightness: Brightness.light,
         ),
         titleTextStyle: AppTextStyles.h4,
-        iconTheme: IconThemeData(
-          color: AppColors.textPrimary,
-          size: 24,
-        ),
+        iconTheme: IconThemeData(color: AppColors.textPrimary, size: 24),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.background,
@@ -67,10 +64,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          side: const BorderSide(
-            color: AppColors.primary,
-            width: 1.5,
-          ),
+          side: const BorderSide(color: AppColors.primary, width: 1.5),
           textStyle: AppTextStyles.buttonMedium,
         ),
       ),
@@ -97,52 +91,35 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(
-            color: AppColors.primary,
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(
-            color: AppColors.error,
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(
-            color: AppColors.error,
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
         ),
         hintStyle: AppTextStyles.bodyMedium.copyWith(
           color: AppColors.textTertiary,
         ),
         labelStyle: AppTextStyles.labelMedium,
-        errorStyle: AppTextStyles.caption.copyWith(
-          color: AppColors.error,
-        ),
+        errorStyle: AppTextStyles.caption.copyWith(color: AppColors.error),
       ),
       cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,
         shadowColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         margin: EdgeInsets.zero,
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.primarySoft,
         selectedColor: AppColors.primary.withValues(alpha: 0.2),
-        labelStyle: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.primary,
-        ),
+        labelStyle: AppTextStyles.labelSmall.copyWith(color: AppColors.primary),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.grey200,
@@ -155,9 +132,7 @@ class AppTheme {
           color: Colors.white,
         ),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
   }
@@ -190,10 +165,7 @@ class AppTheme {
           statusBarBrightness: Brightness.dark,
         ),
         titleTextStyle: AppTextStyles.h4,
-        iconTheme: IconThemeData(
-          color: Color(0xFFE8E8E8),
-          size: 24,
-        ),
+        iconTheme: IconThemeData(color: Color(0xFFE8E8E8), size: 24),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: Color(0xFF1A1A1A),
@@ -228,7 +200,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: const Color(0xFF2A2A2A),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
@@ -241,7 +216,9 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
-        hintStyle: AppTextStyles.bodyMedium.copyWith(color: const Color(0xFF666666)),
+        hintStyle: AppTextStyles.bodyMedium.copyWith(
+          color: const Color(0xFF666666),
+        ),
       ),
       cardTheme: CardThemeData(
         color: const Color(0xFF252525),
@@ -256,7 +233,9 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: const Color(0xFF333333),
-        contentTextStyle: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+        contentTextStyle: AppTextStyles.bodyMedium.copyWith(
+          color: Colors.white,
+        ),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
