@@ -411,8 +411,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
                           crossAxisCount: context.responsive<int>(
                             mobile: 2,
                             tablet: 3,
-                            desktop: 5,
-                            largeDesktop: 6,
+                            desktop: 6,
+                            largeDesktop: 7,
                           ),
                           mainAxisSpacing: context.responsive<double>(
                             mobile: AppSizes.md,
@@ -427,7 +427,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                           childAspectRatio: context.responsive<double>(
                             mobile: 0.68,
                             tablet: 0.73,
-                            desktop: 0.78,
+                            desktop: 0.84,
                           ),
                         ),
                         itemCount: filteredProducts.length,

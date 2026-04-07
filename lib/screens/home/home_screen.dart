@@ -1502,34 +1502,39 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+                padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             product.name,
-                            style: AppTextStyles.labelLarge.copyWith(
+                            style: AppTextStyles.labelMedium.copyWith(
                               fontWeight: FontWeight.w600,
+                              fontSize: 12.5,
+                              height: 1.1,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 1),
                           Text(
                             'per ${product.unit}',
-                            style: AppTextStyles.caption,
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 10,
+                              height: 1.0,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -1537,14 +1542,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Text(
                             Formatters.formatCurrency(product.price),
                             style: AppTextStyles.priceMedium.copyWith(
-                              fontSize: 16,
+                              fontSize: 15,
                               color: AppColors.accent,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         GestureDetector(
                           onTap: () {
                             if (isInCart) {
@@ -1569,8 +1574,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             }
                           },
                           child: Container(
-                            width: 34,
-                            height: 34,
+                            width: 32,
+                            height: 32,
                             decoration: BoxDecoration(
                               gradient: isInCart
                                   ? const LinearGradient(
@@ -1601,7 +1606,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Icon(
                               isInCart ? Iconsax.tick_circle5 : Iconsax.add,
                               color: Colors.white,
-                              size: 18,
+                              size: 16,
                             ),
                           ),
                         ),

@@ -14,7 +14,9 @@ import '../../models/user.dart';
 import '../../widgets/custom_button.dart';
 
 class SignupScreen extends StatefulWidget {
-  const SignupScreen({super.key});
+  final String? initialRole;
+
+  const SignupScreen({super.key, this.initialRole});
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();
@@ -35,6 +37,15 @@ class _SignupScreenState extends State<SignupScreen> {
 
   static const double _desktopBreakpoint = 800;
   static const double _formMaxWidth = 440;
+
+  @override
+  void initState() {
+    super.initState();
+    final role = widget.initialRole;
+    if (role == 'customer' || role == 'shopper' || role == 'rider') {
+      _selectedRole = role!;
+    }
+  }
 
   @override
   void dispose() {

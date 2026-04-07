@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+
+import '../../core/constants/app_sizes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../core/constants/app_sizes.dart';
 import '../../providers/auth_provider.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -16,622 +16,624 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen>
-    with TickerProviderStateMixin {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
-  late AnimationController _iconAnimationController;
-  late Animation<double> _iconScaleAnimation;
-
-  /// Total pages: 3 feature pages + 1 role selection page
-  static const int _featurePageCount = 3;
-  static const int _totalPageCount = 4;
-
-  final List<OnboardingItem> _items = [
-    OnboardingItem(
-      title: 'Shop Fresh Groceries',
-      description:
-          'Browse through a wide selection of fresh produce, meat, dairy, and pantry essentials from local markets.',
-      colors: [Color(0xFF2E7D32), Color(0xFF66BB6A)],
-      sceneIcons: [
-        SceneIcon(Iconsax.shop, 0.15, 0.20, 36, Color(0xFF4CAF50)),
-        SceneIcon(Iconsax.weight, 0.70, 0.15, 28, Color(0xFFFF6B6B)),
-        SceneIcon(Iconsax.milk, 0.80, 0.55, 24, Color(0xFF2196F3)),
-        SceneIcon(Iconsax.coffee, 0.20, 0.65, 22, Color(0xFFFFD93D)),
-      ],
-      mainIcon: Iconsax.shopping_bag,
-    ),
-    OnboardingItem(
-      title: 'Plan Smarter, Shop Easier',
-      description:
-          'Build quick lists and let trusted personal shoppers pick the best items with care and attention.',
-      colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
-      sceneIcons: [
-        SceneIcon(Iconsax.tick_circle, 0.18, 0.22, 24, Color(0xFF81C784)),
-        SceneIcon(Iconsax.edit_2, 0.74, 0.18, 24, Color(0xFFFFD54F)),
-        SceneIcon(Iconsax.people, 0.22, 0.62, 22, Color(0xFF42A5F5)),
-        SceneIcon(Iconsax.verify, 0.76, 0.58, 20, Color(0xFF81C784)),
-      ],
-      mainIcon: Iconsax.clipboard_text,
-    ),
-    OnboardingItem(
-      title: 'Fast Delivery',
-      description:
-          'Get your groceries delivered right to your doorstep by our reliable boda boda riders.',
-      colors: [Color(0xFF4A148C), Color(0xFF7E57C2)],
-      sceneIcons: [
-        SceneIcon(Iconsax.location, 0.20, 0.22, 26, Color(0xFFFF5252)),
-        SceneIcon(Iconsax.timer_1, 0.76, 0.18, 24, Color(0xFFFFD54F)),
-        SceneIcon(Iconsax.box_1, 0.22, 0.62, 22, Color(0xFF4CAF50)),
-        SceneIcon(Iconsax.map, 0.75, 0.58, 20, Color(0xFFFF9800)),
-      ],
-      mainIcon: Iconsax.truck_fast,
-    ),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _iconAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _iconScaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _iconAnimationController,
-        curve: Curves.elasticOut,
-      ),
-    );
-
-    _iconAnimationController.forward();
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  Future<void> _markOnboardingComplete() async {
+    await context.read<AuthProvider>().setFirstLaunchComplete();
   }
 
-  void _onPageChanged(int page) {
-    setState(() {
-      _currentPage = page;
-    });
-    _iconAnimationController.reset();
-    _iconAnimationController.forward();
-  }
-
-  void _nextPage() {
-    if (_currentPage < _totalPageCount - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOutCubic,
-      );
-    } else {
-      _completeOnboarding();
+  Future<void> _browseAsGuest() async {
+    await _markOnboardingComplete();
+    if (mounted) {
+      context.go('/customer/home');
     }
   }
 
-  void _completeOnboarding({String? role}) {
-    context.read<AuthProvider>().setFirstLaunchComplete();
-    if (role != null && role != 'customer') {
-      // Go to signup with role context
-      context.replace('/signup');
-    } else {
-      context.replace('/customer/home');
+  Future<void> _goToLogin() async {
+    await _markOnboardingComplete();
+    if (mounted) {
+      context.go('/login');
     }
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    _iconAnimationController.dispose();
-    super.dispose();
+  Future<void> _goToSignup({String role = 'customer'}) async {
+    await _markOnboardingComplete();
+    if (mounted) {
+      context.go('/signup?role=$role');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isRoleSelectionPage = _currentPage == _featurePageCount;
+    final size = MediaQuery.of(context).size;
+    final isWide = size.width >= 980;
+    final isTablet = size.width >= 700;
+    final isSmall = size.width < 600;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFFAFBFC), Color(0xFFFFFFFF), Color(0xFFF8F9FA)],
-            stops: [0.0, 0.5, 1.0],
+            colors: [Color(0xFFFFFCF7), Color(0xFFF6FAF7), Color(0xFFFFF6EC)],
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              // Header Bar with Logo and Skip
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.lg,
-                  vertical: AppSizes.sm,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.95),
-                  border: Border(
-                    bottom: BorderSide(color: AppColors.grey100, width: 0.75),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
-                      blurRadius: 8,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    SvgPicture.asset(
-                      'assets/images/logos/logo-on-white.svg',
-                      height: 25,
-                      fit: BoxFit.contain,
-                    ),
-                    TextButton(
-                      onPressed: _completeOnboarding,
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.textSecondary,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSizes.sm,
-                          vertical: AppSizes.xs,
-                        ),
-                      ),
-                      child: Text(
-                        'Skip intro',
-                        style: AppTextStyles.labelMedium.copyWith(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Page content
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: _onPageChanged,
-                  itemCount: _totalPageCount,
-                  itemBuilder: (context, index) {
-                    if (index < _featurePageCount) {
-                      return _buildFeaturePage(_items[index]);
-                    } else {
-                      return _buildRoleSelectionPage();
-                    }
-                  },
-                ),
-              ),
-              // Indicators and button
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSizes.xl,
-                  AppSizes.lg,
-                  AppSizes.xl,
-                  AppSizes.xl,
-                ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSizes.lg),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1180),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Step indicator
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          isRoleSelectionPage
-                              ? 'Almost there!'
-                              : 'Quick tour ${_currentPage + 1} of $_featurePageCount',
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.textSecondary.withValues(
-                              alpha: 0.8,
-                            ),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSizes.sm),
-                    // Progress dots
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSizes.md,
-                        vertical: AppSizes.sm,
-                      ),
-                      child: SmoothPageIndicator(
-                        controller: _pageController,
-                        count: _totalPageCount,
-                        effect: WormEffect(
-                          dotWidth: 10,
-                          dotHeight: 10,
-                          spacing: 10,
-                          activeDotColor: isRoleSelectionPage
-                              ? AppColors.primaryOrange
-                              : AppColors.primary,
-                          dotColor: AppColors.grey300,
-                          paintStyle: PaintingStyle.fill,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSizes.xxl),
-                    // Back / Next buttons
-                    if (!isRoleSelectionPage)
+                    _buildHeader(),
+                    const SizedBox(height: AppSizes.xl),
+                    if (isWide)
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (_currentPage > 0)
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () {
-                                  _pageController.previousPage(
-                                    duration: const Duration(milliseconds: 300),
-                                    curve: Curves.easeInOut,
-                                  );
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: AppColors.grey300),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      AppSizes.radiusFull,
-                                    ),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: AppSizes.md,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Iconsax.arrow_left_3,
-                                      size: 20,
-                                      color: Color(0xFF374151),
-                                    ),
-                                    const SizedBox(width: AppSizes.sm),
-                                    Text(
-                                      'Back',
-                                      style: AppTextStyles.labelLarge.copyWith(
-                                        color: const Color(0xFF374151),
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          if (_currentPage > 0)
-                            const SizedBox(width: AppSizes.md),
                           Expanded(
-                            child: ElevatedButton(
-                              onPressed: _nextPage,
-                              style:
-                                  ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF1B7F4E),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: AppSizes.md,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                        AppSizes.radiusFull,
-                                      ),
-                                    ),
-                                    elevation: 6,
-                                    shadowColor: const Color(
-                                      0xFF1B7F4E,
-                                    ).withValues(alpha: 0.5),
-                                  ).copyWith(
-                                    overlayColor: WidgetStateProperty.all(
-                                      Colors.white.withValues(alpha: 0.2),
-                                    ),
-                                  ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    _currentPage == _featurePageCount - 1
-                                        ? 'Continue'
-                                        : 'Next',
-                                    style: AppTextStyles.labelLarge.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 17,
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppSizes.sm),
-                                  const Icon(
-                                    Iconsax.arrow_right_3,
-                                    color: Colors.white,
-                                    size: 22,
-                                  ),
-                                ],
-                              ),
+                            flex: 11,
+                            child: _buildHeroPanel(compact: false),
+                          ),
+                          const SizedBox(width: AppSizes.xl),
+                          Expanded(
+                            flex: 9,
+                            child: _buildContentPanel(
+                              isWide: isWide,
+                              isTablet: isTablet,
+                              isSmall: isSmall,
                             ),
+                          ),
+                        ],
+                      )
+                    else
+                      Column(
+                        children: [
+                          _buildHeroPanel(compact: isSmall),
+                          const SizedBox(height: AppSizes.lg),
+                          _buildContentPanel(
+                            isWide: isWide,
+                            isTablet: isTablet,
+                            isSmall: isSmall,
                           ),
                         ],
                       ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // ── Feature page with rich illustration ──────────────────────────
-  Widget _buildFeaturePage(OnboardingItem item) {
-    return AnimatedBuilder(
-      animation: _iconAnimationController,
-      builder: (context, child) {
-        return SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSizes.xl,
-              vertical: AppSizes.md,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: AppSizes.md),
-                // Rich scene illustration
-                Transform.scale(
-                  scale: _iconScaleAnimation.value,
-                  child: _buildSceneIllustration(item),
-                ),
-                const SizedBox(height: 32),
-                // Title
-                Text(
-                  item.title,
-                  style: AppTextStyles.screenTitle.copyWith(
-                    fontSize: 30,
-                    letterSpacing: -0.8,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                // Description
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
-                  child: Text(
-                    item.description,
-                    style: AppTextStyles.screenSubtitle.copyWith(
-                      fontSize: 16,
-                      height: 1.7,
-                      letterSpacing: 0.2,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        SvgPicture.asset(
+          'assets/images/logos/logo-on-white.svg',
+          height: 28,
+          fit: BoxFit.contain,
+        ),
+        const Spacer(),
+        TextButton(
+          onPressed: _goToLogin,
+          child: Text(
+            'Sign in',
+            style: AppTextStyles.labelLarge.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
-        );
-      },
+        ),
+        const SizedBox(width: AppSizes.sm),
+        OutlinedButton(
+          onPressed: _browseAsGuest,
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(color: AppColors.grey300),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+            ),
+          ),
+          child: const Text('Skip'),
+        ),
+      ],
     );
   }
 
-  /// Builds a rich scene with gradient circle, central icon, and
-  /// surrounding floating icons to create an illustration effect.
-  Widget _buildSceneIllustration(OnboardingItem item) {
-    return SizedBox(
-      width: 260,
-      height: 260,
+  Widget _buildHeroPanel({required bool compact}) {
+    return Container(
+      padding: EdgeInsets.all(compact ? AppSizes.md : AppSizes.lg),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0F6A3D), Color(0xFF1A8B54), Color(0xFF3BB56D)],
+        ),
+        borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.18),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
       child: Stack(
-        alignment: Alignment.center,
         children: [
-          // Outer glow ring
-          Container(
-            width: 260,
-            height: 260,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  item.colors[0].withValues(alpha: 0.12),
-                  item.colors[1].withValues(alpha: 0.04),
-                  Colors.transparent,
-                ],
-                stops: const [0.4, 0.7, 1.0],
+          Positioned(
+            top: -30,
+            right: -20,
+            child: Container(
+              width: compact ? 84 : 120,
+              height: compact ? 84 : 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.08),
               ),
             ),
           ),
-          // Middle ring with subtle pattern
-          Container(
-            width: 200,
-            height: 200,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  item.colors[0].withValues(alpha: 0.15),
-                  item.colors[1].withValues(alpha: 0.08),
-                ],
+          Positioned(
+            bottom: compact ? -18 : 40,
+            left: -35,
+            child: Container(
+              width: compact ? 64 : 90,
+              height: compact ? 64 : 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.08),
               ),
             ),
           ),
-          // Central icon circle
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: item.colors,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _GlassPill(
+                icon: Iconsax.flash_1,
+                label: 'Fresh picks in 15–30 min',
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: item.colors[0].withValues(alpha: 0.4),
-                  blurRadius: 30,
-                  offset: const Offset(0, 12),
+              SizedBox(height: compact ? AppSizes.md : AppSizes.lg),
+              Text(
+                'Fresh groceries made simple.',
+                style: AppTextStyles.heroTitle.copyWith(
+                  fontSize: compact ? 28 : 34,
+                ),
+              ),
+              const SizedBox(height: AppSizes.sm),
+              Text(
+                'Browse essentials, discover local favorites, and follow every order from checkout to doorstep.',
+                style: AppTextStyles.heroBody.copyWith(
+                  fontSize: compact ? 15 : 16,
+                ),
+              ),
+              SizedBox(height: compact ? AppSizes.md : AppSizes.lg),
+              if (compact)
+                Wrap(
+                  spacing: AppSizes.sm,
+                  runSpacing: AppSizes.sm,
+                  children: const [
+                    _GlassPill(
+                      icon: Icons.storefront_outlined,
+                      label: 'Browse first',
+                    ),
+                    _GlassPill(
+                      icon: Icons.delivery_dining_outlined,
+                      label: 'Fast delivery',
+                    ),
+                    _GlassPill(
+                      icon: Iconsax.map_1,
+                      label: 'Track live',
+                    ),
+                  ],
+                )
+              else ...[
+                Wrap(
+                  spacing: AppSizes.md,
+                  runSpacing: AppSizes.md,
+                  children: const [
+                    _MetricTile(value: '400+', label: 'Fresh products'),
+                    _MetricTile(value: '4.8★', label: 'Trusted shoppers'),
+                    _MetricTile(value: 'Live', label: 'Order tracking'),
+                  ],
+                ),
+                const SizedBox(height: AppSizes.lg),
+                Wrap(
+                  spacing: AppSizes.md,
+                  runSpacing: AppSizes.md,
+                  children: const [
+                    _ProduceTile(
+                      icon: Icons.eco_outlined,
+                      title: 'Leafy greens',
+                      subtitle: 'Fresh today',
+                    ),
+                    _ProduceTile(
+                      icon: Icons.local_florist_outlined,
+                      title: 'Seasonal fruits',
+                      subtitle: 'Sweet & ripe',
+                    ),
+                    _ProduceTile(
+                      icon: Icons.shopping_basket_outlined,
+                      title: 'Pantry staples',
+                      subtitle: 'Always handy',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSizes.lg),
+                Container(
+                  padding: const EdgeInsets.all(AppSizes.md),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.16),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(
+                          Icons.delivery_dining_outlined,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: AppSizes.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Live rider updates',
+                              style: AppTextStyles.labelLarge.copyWith(
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Know how far your order is and when it gets to you.',
+                              style: AppTextStyles.caption.copyWith(
+                                color: Colors.white.withValues(alpha: 0.82),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Iconsax.arrow_right_3,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ],
+                  ),
                 ),
               ],
-            ),
-            child: Icon(item.mainIcon, size: 56, color: Colors.white),
+            ],
           ),
-          // Floating scene icons
-          for (final si in item.sceneIcons)
-            Positioned(
-              left: si.relX * 260,
-              top: si.relY * 260,
-              child: _FloatingIcon(
-                icon: si.icon,
-                size: si.size,
-                color: si.color,
-                gradientColors: item.colors,
-              ),
-            ),
         ],
       ),
     );
   }
 
-  // ── Role selection page ──────────────────────────────────────────
-  Widget _buildRoleSelectionPage() {
-    return AnimatedBuilder(
-      animation: _iconAnimationController,
-      builder: (context, child) {
-        return SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSizes.xl,
-              vertical: AppSizes.lg,
+  Widget _buildContentPanel({
+    required bool isWide,
+    required bool isTablet,
+    required bool isSmall,
+  }) {
+    final titleSize = isSmall ? 28.0 : (isWide ? 46.0 : (isTablet ? 38.0 : 32.0));
+
+    return Container(
+      padding: EdgeInsets.all(isSmall ? 20 : (isWide ? AppSizes.xl : AppSizes.lg)),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+        border: Border.all(color: AppColors.grey200),
+        boxShadow: AppColors.shadowMd,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('WELCOME TO LIPACART', style: AppTextStyles.overlineAccent),
+          const SizedBox(height: AppSizes.sm),
+          Text(
+            'Everything you need to shop smarter.',
+            style: AppTextStyles.screenTitle.copyWith(
+              fontSize: titleSize,
+              height: 1.08,
+              letterSpacing: -1.0,
             ),
-            child: Column(
+          ),
+          const SizedBox(height: AppSizes.md),
+          Text(
+            'LipaCart helps you browse groceries, save time with lists, and track your order all the way home.',
+            style: AppTextStyles.screenSubtitle.copyWith(
+              fontSize: isSmall ? 15 : 16,
+            ),
+          ),
+          const SizedBox(height: AppSizes.lg),
+          Wrap(
+            spacing: AppSizes.sm,
+            runSpacing: AppSizes.sm,
+            children: const [
+              _SoftFeaturePill(
+                icon: Icons.storefront_outlined,
+                label: 'Fresh groceries',
+              ),
+              _SoftFeaturePill(
+                icon: Iconsax.note_1,
+                label: 'Shopping lists',
+              ),
+              _SoftFeaturePill(
+                icon: Iconsax.routing_2,
+                label: 'Live tracking',
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSizes.lg),
+          Container(
+            padding: const EdgeInsets.all(AppSizes.md),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceWarm,
+              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              border: Border.all(color: AppColors.primarySoft),
+            ),
+            child: const Column(
               children: [
-                const SizedBox(height: AppSizes.lg),
-                // Title
-                Transform.scale(
-                  scale: _iconScaleAnimation.value,
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF1B7F4E), Color(0xFF2ECC71)],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Iconsax.user_octagon,
-                          size: 34,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'What brings you here?',
-                        style: AppTextStyles.screenTitle,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Choose how you\'d like to use LipaCart. This helps us tailor the experience just for you.',
-                        style: AppTextStyles.screenSubtitle,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
+                _FeatureLine(
+                  icon: Iconsax.shopping_bag,
+                  title: 'Browse daily essentials',
+                  subtitle: 'Shop produce, pantry items, and home basics in one place.',
                 ),
-                const SizedBox(height: 32),
-                // Role cards
-                _RoleCard(
-                  icon: Iconsax.shopping_cart,
-                  title: 'I want to shop',
-                  subtitle:
-                      'Browse groceries, place orders, and get them delivered to your door.',
-                  gradientColors: const [Color(0xFF1B7F4E), Color(0xFF2ECC71)],
-                  onTap: () => _completeOnboarding(role: 'customer'),
+                SizedBox(height: AppSizes.sm),
+                _FeatureLine(
+                  icon: Iconsax.note_21,
+                  title: 'Save lists and reorder faster',
+                  subtitle: 'Keep your regular picks close and shop again with less effort.',
                 ),
-                const SizedBox(height: AppSizes.md),
-                _RoleCard(
-                  icon: Iconsax.bag_happy,
-                  title: 'I want to be a Shopper',
-                  subtitle:
-                      'Earn money by picking and packing grocery orders for customers.',
-                  gradientColors: const [Color(0xFF1565C0), Color(0xFF42A5F5)],
-                  onTap: () => _completeOnboarding(role: 'shopper'),
-                ),
-                const SizedBox(height: AppSizes.md),
-                _RoleCard(
-                  icon: Iconsax.truck_fast,
-                  title: 'I want to be a Rider',
-                  subtitle:
-                      'Deliver orders on your boda boda and earn on your own schedule.',
-                  gradientColors: const [Color(0xFFE65100), Color(0xFFFF9800)],
-                  onTap: () => _completeOnboarding(role: 'rider'),
+                SizedBox(height: AppSizes.sm),
+                _FeatureLine(
+                  icon: Iconsax.location,
+                  title: 'Track every order live',
+                  subtitle: 'Follow your shopper or rider from pickup to doorstep.',
                 ),
               ],
             ),
           ),
-        );
-      },
+          const SizedBox(height: AppSizes.lg),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _browseAsGuest,
+              icon: const Icon(Iconsax.shopping_bag, size: 18),
+              label: const Text('Get started'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, AppSizes.buttonHeightLg),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSizes.sm),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _goToLogin,
+              icon: const Icon(Iconsax.login, size: 18),
+              label: const Text('Sign in'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textPrimary,
+                side: BorderSide(color: AppColors.grey300),
+                minimumSize: const Size(double.infinity, AppSizes.buttonHeightLg),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSizes.md),
+          Center(
+            child: Text.rich(
+              TextSpan(
+                style: AppTextStyles.bodySmall,
+                children: [
+                  const TextSpan(text: 'Already have an account? '),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: GestureDetector(
+                      onTap: _goToLogin,
+                      child: Text(
+                        'Sign in',
+                        style: AppTextStyles.labelLarge.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: AppSizes.xl),
+          Text('Want to earn with LipaCart?', style: AppTextStyles.sectionTitle),
+          const SizedBox(height: AppSizes.sm),
+          _RoleEntry(
+            icon: Iconsax.bag_happy,
+            title: 'Become a shopper',
+            subtitle: 'Pick and pack customer orders with care.',
+            accent: const Color(0xFF1D7EDE),
+            onTap: () => _goToSignup(role: 'shopper'),
+          ),
+          const SizedBox(height: AppSizes.sm),
+          _RoleEntry(
+            icon: Iconsax.truck_fast,
+            title: 'Ride with us',
+            subtitle: 'Deliver groceries fast and earn on your schedule.',
+            accent: AppColors.accent,
+            onTap: () => _goToSignup(role: 'rider'),
+          ),
+        ],
+      ),
     );
   }
 }
 
-// ── Floating icon widget with glass-like container ─────────────────
-class _FloatingIcon extends StatelessWidget {
+class _GlassPill extends StatelessWidget {
   final IconData icon;
-  final double size;
-  final Color color;
-  final List<Color> gradientColors;
+  final String label;
 
-  const _FloatingIcon({
+  const _GlassPill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.white),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: AppTextStyles.labelMedium.copyWith(color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricTile extends StatelessWidget {
+  final String value;
+  final String label;
+
+  const _MetricTile({required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 120,
+      padding: const EdgeInsets.all(AppSizes.md),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: AppTextStyles.heroMetric),
+          const SizedBox(height: 4),
+          Text(label, style: AppTextStyles.heroMeta),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProduceTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _ProduceTile({
     required this.icon,
-    required this.size,
-    required this.color,
-    required this.gradientColors,
+    required this.title,
+    required this.subtitle,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: size + 20,
-      height: size + 20,
+      width: 150,
+      padding: const EdgeInsets.all(AppSizes.md),
       decoration: BoxDecoration(
-        color: gradientColors[0].withValues(alpha: 0.9),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: gradientColors[0].withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: Colors.white),
+          ),
+          const SizedBox(height: AppSizes.sm),
+          Text(
+            title,
+            style: AppTextStyles.labelLarge.copyWith(color: Colors.white),
+          ),
+          Text(
+            subtitle,
+            style: AppTextStyles.caption.copyWith(
+              color: Colors.white.withValues(alpha: 0.82),
+            ),
           ),
         ],
       ),
-      child: Icon(icon, size: size, color: Colors.white),
     );
   }
 }
 
-// ── Role selection card ────────────────────────────────────────────
-class _RoleCard extends StatelessWidget {
+class _SoftFeaturePill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _SoftFeaturePill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.grey50,
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        border: Border.all(color: AppColors.grey200),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: AppColors.primary),
+          const SizedBox(width: 8),
+          Text(label, style: AppTextStyles.labelMedium),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoleEntry extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final List<Color> gradientColors;
+  final Color accent;
   final VoidCallback onTap;
 
-  const _RoleCard({
+  const _RoleEntry({
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.gradientColors,
+    required this.accent,
     required this.onTap,
   });
 
@@ -641,61 +643,37 @@ class _RoleCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(20),
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        child: Ink(
+          padding: const EdgeInsets.all(AppSizes.md),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: gradientColors[0].withValues(alpha: 0.15),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: gradientColors[0].withValues(alpha: 0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
+            color: AppColors.surfaceWarm,
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            border: Border.all(color: accent.withValues(alpha: 0.18)),
           ),
           child: Row(
             children: [
-              // Icon circle
               Container(
-                width: 56,
-                height: 56,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: gradientColors,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: gradientColors[0].withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, size: 28, color: Colors.white),
+                child: Icon(icon, color: accent),
               ),
-              const SizedBox(width: 16),
-              // Text
+              const SizedBox(width: AppSizes.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title, style: AppTextStyles.cardTitle),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(subtitle, style: AppTextStyles.cardSubtitle),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Icon(Iconsax.arrow_right_3, size: 20, color: gradientColors[0]),
+              Icon(Iconsax.arrow_right_3, size: 18, color: accent),
             ],
           ),
         ),
@@ -704,29 +682,43 @@ class _RoleCard extends StatelessWidget {
   }
 }
 
-// ── Data models ────────────────────────────────────────────────────
-class OnboardingItem {
-  final String title;
-  final String description;
-  final List<Color> colors;
-  final List<SceneIcon> sceneIcons;
-  final IconData mainIcon;
-
-  OnboardingItem({
-    required this.title,
-    required this.description,
-    required this.colors,
-    required this.sceneIcons,
-    required this.mainIcon,
-  });
-}
-
-class SceneIcon {
+class _FeatureLine extends StatelessWidget {
   final IconData icon;
-  final double relX; // 0..1 relative position
-  final double relY;
-  final double size;
-  final Color color;
+  final String title;
+  final String subtitle;
 
-  const SceneIcon(this.icon, this.relX, this.relY, this.size, this.color);
+  const _FeatureLine({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.primarySoft,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: AppColors.primary, size: 18),
+        ),
+        const SizedBox(width: AppSizes.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: AppTextStyles.cardTitle),
+              const SizedBox(height: 2),
+              Text(subtitle, style: AppTextStyles.cardSubtitle),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }

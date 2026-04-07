@@ -45,8 +45,8 @@ class CategoriesScreen extends StatelessWidget {
     final columns = context.responsive<int>(
       mobile: 2,
       tablet: 3,
-      desktop: 4,
-      largeDesktop: 5,
+      desktop: 5,
+      largeDesktop: 6,
     );
 
     return GridView.builder(
@@ -67,8 +67,8 @@ class CategoriesScreen extends StatelessWidget {
         childAspectRatio: context.responsive<double>(
           mobile: 0.84,
           tablet: 0.92,
-          desktop: 1.0,
-          largeDesktop: 1.04,
+          desktop: 0.94,
+          largeDesktop: 0.98,
         ),
       ),
       itemCount: productProvider.categories.length,
@@ -249,16 +249,16 @@ class CategoryProductsScreen extends StatelessWidget {
               crossAxisCount: context.responsive<int>(
                 mobile: 2,
                 tablet: 3,
-                desktop: 4,
-                largeDesktop: 5,
+                desktop: 5,
+                largeDesktop: 6,
               ),
               mainAxisSpacing: isDesktop ? AppSizes.lg : AppSizes.md,
               crossAxisSpacing: isDesktop ? AppSizes.lg : AppSizes.md,
               childAspectRatio: context.responsive<double>(
                 mobile: 0.72,
                 tablet: 0.74,
-                desktop: 0.8,
-                largeDesktop: 0.84,
+                desktop: 0.84,
+                largeDesktop: 0.88,
               ),
             ),
             itemCount: products.length,

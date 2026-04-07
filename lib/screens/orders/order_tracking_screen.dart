@@ -239,6 +239,57 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     });
   }
 
+  Future<void> _openTrackingInMaps() async {
+    final hasClientCoordinates =
+        order.deliveryAddress.latitude != 0 &&
+        order.deliveryAddress.longitude != 0;
+    final hasRiderCoordinates =
+        order.riderLatitude != null &&
+        order.riderLongitude != null &&
+        order.riderLatitude != 0 &&
+        order.riderLongitude != 0;
+
+    Uri uri;
+    if (hasClientCoordinates && hasRiderCoordinates) {
+      uri = Uri.parse(
+        'https://www.google.com/maps/dir/?api=1&origin=${order.riderLatitude},${order.riderLongitude}&destination=${order.deliveryAddress.latitude},${order.deliveryAddress.longitude}&travelmode=driving',
+      );
+    } else if (hasClientCoordinates) {
+      uri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=${order.deliveryAddress.latitude},${order.deliveryAddress.longitude}',
+      );
+    } else {
+      uri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(order.deliveryAddress.fullAddress)}',
+      );
+    }
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the route in Maps.')),
+      );
+    }
+  }
+
+  Future<void> _copyDeliveryAddress() async {
+    final addressText = [
+      order.deliveryAddress.label,
+      order.deliveryAddress.fullAddress,
+      if (order.deliveryAddress.landmark != null &&
+          order.deliveryAddress.landmark!.isNotEmpty)
+        'Near ${order.deliveryAddress.landmark}',
+    ].join(', ');
+
+    await Clipboard.setData(ClipboardData(text: addressText));
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Delivery address copied.')),
+    );
+  }
+
   Future<void> _respondToSubstitution(CartItem item, bool approved) async {
     final auth = context.read<AuthProvider>();
     final orderService = context.read<OrderService>();
@@ -644,6 +695,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                                   clientPoint,
                                                 )
                                               : 15,
+                                          onTap: (_, __) => _openTrackingInMaps(),
                                           onMapReady: () {
                                             _isTrackingMapReady = true;
                                             _fitTrackingRoute(
@@ -710,6 +762,17 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                           ),
                                         ],
                                       ),
+                                      Positioned(
+                                        top: 12,
+                                        left: 12,
+                                        child: _buildMapActionChip(
+                                          icon: Iconsax.map_1,
+                                          label: riderPoint != null
+                                              ? 'Open route'
+                                              : 'Open in Maps',
+                                          onTap: _openTrackingInMaps,
+                                        ),
+                                      ),
                                       if (riderPoint != null)
                                         Positioned(
                                           top: 12,
@@ -732,9 +795,9 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                               Text(
                                 riderPoint != null
                                     ? _isEstimatedRoute
-                                          ? 'Showing an estimated route and ETA while live road data refreshes.'
-                                          : 'Showing the rider’s road route, distance, and ETA to the client location.'
-                                    : 'The rider has been assigned. Once their live GPS updates, the map will show both pins connected by a route line.',
+                                          ? 'Showing an estimated route and ETA while live road data refreshes. Tap the map to open full directions.'
+                                          : 'Showing the rider’s road route, distance, and ETA to the client location. Tap the map to open full directions.'
+                                    : 'The rider has been assigned. Once their live GPS updates, the map will show both pins connected by a route line. You can still tap to open the address in Maps.',
                                 style: AppTextStyles.caption.copyWith(
                                   color: AppColors.textSecondary,
                                 ),
@@ -1555,57 +1618,86 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                           ],
                         ),
                         const SizedBox(height: AppSizes.md),
-                        Container(
-                          padding: const EdgeInsets.all(AppSizes.sm),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryOrange.withValues(
-                              alpha: 0.05,
-                            ),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _openTrackingInMaps,
+                            onLongPress: _copyDeliveryAddress,
                             borderRadius: BorderRadius.circular(
                               AppSizes.radiusSm,
                             ),
-                            border: Border.all(
-                              color: AppColors.primaryOrange.withValues(
-                                alpha: 0.2,
-                              ),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                order.deliveryAddress.label,
-                                style: AppTextStyles.labelMedium.copyWith(
-                                  fontWeight: FontWeight.w600,
+                            child: Ink(
+                              padding: const EdgeInsets.all(AppSizes.sm),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryOrange.withValues(
+                                  alpha: 0.05,
+                                ),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusSm,
+                                ),
+                                border: Border.all(
+                                  color: AppColors.primaryOrange.withValues(
+                                    alpha: 0.2,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                order.deliveryAddress.fullAddress,
-                                style: AppTextStyles.bodySmall,
-                              ),
-                              if (order.deliveryAddress.landmark != null) ...[
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Iconsax.map,
-                                      size: 14,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        'Near: ${order.deliveryAddress.landmark}',
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: AppColors.textSecondary,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          order.deliveryAddress.label,
+                                          style: AppTextStyles.labelMedium.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
                                       ),
+                                      const Icon(
+                                        Iconsax.arrow_right_3,
+                                        size: 16,
+                                        color: AppColors.primaryOrange,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    order.deliveryAddress.fullAddress,
+                                    style: AppTextStyles.bodySmall,
+                                  ),
+                                  if (order.deliveryAddress.landmark != null) ...[
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Iconsax.map,
+                                          size: 14,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            'Near: ${order.deliveryAddress.landmark}',
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
-                                ),
-                              ],
-                            ],
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Tap to open in Maps • Long press to copy',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.primaryOrange,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ],

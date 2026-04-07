@@ -36,22 +36,22 @@ class ProductCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+            borderRadius: BorderRadius.circular(AppSizes.radiusLg),
             border: Border.all(
-              color: AppColors.grey200.withValues(alpha: 0.5),
+              color: AppColors.grey200.withValues(alpha: 0.55),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
+                color: Colors.black.withValues(alpha: 0.045),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
                 spreadRadius: 0,
               ),
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+                color: Colors.black.withValues(alpha: 0.025),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
                 spreadRadius: 0,
               ),
             ],
@@ -69,12 +69,12 @@ class ProductCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppColors.grey50,
                         borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(AppSizes.radiusXl),
+                          top: Radius.circular(AppSizes.radiusLg),
                         ),
                       ),
                       child: ClipRRect(
                         borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(AppSizes.radiusXl),
+                          top: Radius.circular(AppSizes.radiusLg),
                         ),
                         child: CachedNetworkImage(
                           imageUrl: product.image,
@@ -136,7 +136,7 @@ class ProductCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.7),
                             borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(AppSizes.radiusXl),
+                              top: Radius.circular(AppSizes.radiusLg),
                             ),
                           ),
                           child: Center(
@@ -168,8 +168,8 @@ class ProductCard extends StatelessWidget {
                       top: 8,
                       right: 8,
                       child: Container(
-                        width: 30,
-                        height: 30,
+                        width: 28,
+                        height: 28,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
@@ -186,7 +186,7 @@ class ProductCard extends StatelessWidget {
                           color: isFavorite
                               ? AppColors.heartActive
                               : AppColors.grey400,
-                          size: 16,
+                          size: 15,
                         ),
                       ),
                     ),
@@ -199,7 +199,7 @@ class ProductCard extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
-                    vertical: 8,
+                    vertical: 7,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,8 +211,8 @@ class ProductCard extends StatelessWidget {
                         style: AppTextStyles.labelMedium.copyWith(
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
-                          height: 1.2,
-                          fontSize: 13,
+                          height: 1.18,
+                          fontSize: 12.5,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -236,7 +236,7 @@ class ProductCard extends StatelessWidget {
                               style: AppTextStyles.labelLarge.copyWith(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w800,
-                                fontSize: 14,
+                                fontSize: 13.5,
                               ),
                             ),
                           ),

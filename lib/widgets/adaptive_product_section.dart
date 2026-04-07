@@ -86,11 +86,12 @@ class _DesktopProductGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final maxCrossAxisExtent = context.responsive<double>(
       mobile: itemWidth,
-      tablet: 210,
-      desktop: 230,
-      largeDesktop: 240,
+      tablet: 198,
+      desktop: 188,
+      largeDesktop: 196,
     );
     final childAspectRatio = itemWidth / itemHeight;
+    final gridSpacing = context.isDesktop ? AppSizes.lg : AppSizes.md;
 
     return Padding(
       padding:
@@ -102,8 +103,8 @@ class _DesktopProductGrid extends StatelessWidget {
         gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: maxCrossAxisExtent,
           childAspectRatio: childAspectRatio,
-          crossAxisSpacing: context.isDesktop ? AppSizes.xl : AppSizes.lg,
-          mainAxisSpacing: context.isDesktop ? AppSizes.xl : AppSizes.lg,
+          crossAxisSpacing: gridSpacing,
+          mainAxisSpacing: gridSpacing,
         ),
         itemCount: products.length,
         itemBuilder: (context, index) => products[index],

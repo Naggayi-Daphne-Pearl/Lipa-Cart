@@ -338,7 +338,8 @@ class RoleBasedRouter {
         GoRoute(
           path: '/signup',
           builder: (context, state) {
-            return const SignupScreen();
+            final initialRole = state.uri.queryParameters['role'];
+            return SignupScreen(initialRole: initialRole);
           },
         ),
         GoRoute(
