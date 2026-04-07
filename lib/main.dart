@@ -115,14 +115,38 @@ class LipaCartApp extends StatefulWidget {
   State<LipaCartApp> createState() => _LipaCartAppState();
 }
 
-class _LipaCartAppState extends State<LipaCartApp> {
+class _LipaCartAppState extends State<LipaCartApp>
+    with WidgetsBindingObserver {
   GoRouter? _router;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     RoleBasedRouter.reset();
     _router = null;
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_refreshSessionOnResume());
+    }
+  }
+
+  Future<void> _refreshSessionOnResume() async {
+    final navContext = _router?.routerDelegate.navigatorKey.currentContext;
+    if (navContext == null || !navContext.mounted) return;
+
+    final authProvider = Provider.of<AuthProvider>(navContext, listen: false);
+    await authProvider.refreshSessionIfNeeded();
   }
 
   /// Route notification taps to the correct screen based on payload data.

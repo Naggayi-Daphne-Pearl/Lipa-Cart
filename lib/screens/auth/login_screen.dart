@@ -32,6 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _usePassword = true;
   bool _obscurePassword = true;
+  bool _rememberMe = true;
 
   bool _biometricsAvailable = false;
   final LocalAuthentication _localAuth = LocalAuthentication();
@@ -112,6 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final success = await authProvider.login(
         phoneNumber: phoneNumber,
         password: _passwordController.text,
+        rememberMe: _rememberMe,
       );
 
       setState(() => _isLoading = false);
@@ -140,6 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
           extra: {
             'phoneNumber': phoneNumber,
             'returnRoute': widget.returnRoute,
+            'rememberMe': _rememberMe,
           },
         );
       } else if (authProvider.errorMessage != null) {
@@ -610,26 +613,62 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => context.push('/forgot-password'),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppSizes.xs,
-                        ),
-                        minimumSize: const Size(AppSizes.touchTargetMin, 36),
-                      ),
-                      child: Text(
-                        'Forgot password?',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.w600,
+                  const SizedBox(height: AppSizes.sm),
+                ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                        onTap: () {
+                          setState(() => _rememberMe = !_rememberMe);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Checkbox(
+                                value: _rememberMe,
+                                activeColor: AppColors.primary,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                onChanged: (value) {
+                                  setState(() => _rememberMe = value ?? true);
+                                },
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Keep me signed in for 30 days',
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    if (_usePassword)
+                      TextButton(
+                        onPressed: () => context.push('/forgot-password'),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSizes.xs,
+                          ),
+                          minimumSize: const Size(AppSizes.touchTargetMin, 36),
+                        ),
+                        child: Text(
+                          'Forgot password?',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
                 SizedBox(height: _usePassword ? AppSizes.md : AppSizes.lg),
                 // Login button
                 CustomButton(

@@ -47,10 +47,14 @@ class AuthProvider extends ChangeNotifier {
     return _secureStorage.read(key: AppConstants.tokenKey);
   }
 
-  Future<void> _writeToken(String token) async {
+  Future<void> _writeToken(String token, {int maxAgeDays = 30}) async {
     if (kIsWeb) {
       final prefs = await SharedPreferences.getInstance();
-      WebCookieStorage.write(AppConstants.tokenKey, token);
+      WebCookieStorage.write(
+        AppConstants.tokenKey,
+        token,
+        maxAgeDays: maxAgeDays,
+      );
       await prefs.remove(_legacyTokenKey);
       return;
     }
@@ -67,12 +71,103 @@ class AuthProvider extends ChangeNotifier {
     await _secureStorage.delete(key: AppConstants.tokenKey);
   }
 
+  Future<String?> _readRefreshToken() async {
+    if (kIsWeb) {
+      return WebCookieStorage.read(AppConstants.refreshTokenKey);
+    }
+    return _secureStorage.read(key: AppConstants.refreshTokenKey);
+  }
+
+  Future<void> _writeRefreshToken(String? token, {int maxAgeDays = 30}) async {
+    if (token == null || token.isEmpty) return;
+
+    if (kIsWeb) {
+      return;
+    }
+
+    await _secureStorage.write(key: AppConstants.refreshTokenKey, value: token);
+  }
+
+  Future<void> _deleteRefreshToken() async {
+    if (kIsWeb) {
+      WebCookieStorage.delete(AppConstants.refreshTokenKey);
+      return;
+    }
+    await _secureStorage.delete(key: AppConstants.refreshTokenKey);
+  }
+
   AuthStatus _status = AuthStatus.initial;
   User? _user;
   String? _token;
   String? _errorMessage;
   bool _isFirstLaunch = true;
   bool _didBootstrap = false;
+
+  static const Duration _standardSessionLifetime = Duration(days: 14);
+  static const Duration _rememberedSessionLifetime = Duration(days: 30);
+  static const Duration _silentRefreshInterval = Duration(minutes: 45);
+
+  Future<void> _persistSessionMetadata({
+    bool rememberMe = true,
+    DateTime? issuedAt,
+    DateTime? lastRefreshAt,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final sessionStart = issuedAt ?? now;
+    final expiry = sessionStart.add(
+      rememberMe ? _rememberedSessionLifetime : _standardSessionLifetime,
+    );
+
+    await prefs.setString(
+      AppConstants.sessionMetadataKey,
+      jsonEncode({
+        'rememberMe': rememberMe,
+        'issuedAt': sessionStart.toIso8601String(),
+        'expiresAt': expiry.toIso8601String(),
+        'lastRefreshAt': (lastRefreshAt ?? now).toIso8601String(),
+      }),
+    );
+  }
+
+  Future<Map<String, dynamic>?> _readSessionMetadata() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(AppConstants.sessionMetadataKey);
+    if (raw == null || raw.isEmpty) return null;
+
+    final decoded = jsonDecode(raw);
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+    return null;
+  }
+
+  Future<void> _clearSessionMetadata() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(AppConstants.sessionMetadataKey);
+  }
+
+  bool _isSessionExpired(Map<String, dynamic>? metadata) {
+    final expiresAtRaw = metadata?['expiresAt'] as String?;
+    if (expiresAtRaw == null || expiresAtRaw.isEmpty) return false;
+
+    final expiresAt = DateTime.tryParse(expiresAtRaw);
+    if (expiresAt == null) return false;
+
+    return DateTime.now().isAfter(expiresAt);
+  }
+
+  bool _shouldSilentRefresh(Map<String, dynamic>? metadata) {
+    if (metadata == null) return true;
+
+    final lastRefreshRaw = metadata['lastRefreshAt'] as String?;
+    final lastRefreshAt =
+        lastRefreshRaw != null ? DateTime.tryParse(lastRefreshRaw) : null;
+
+    if (lastRefreshAt == null) return true;
+
+    return DateTime.now().difference(lastRefreshAt) >= _silentRefreshInterval;
+  }
 
   AuthStatus get status => _status;
   User? get user => _user;
@@ -127,27 +222,52 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final savedToken = await _readToken();
       final savedUserJson = prefs.getString(AppConstants.userKey);
+      final sessionMetadata = await _readSessionMetadata();
 
       if (savedToken == null || savedUserJson == null) {
+        await _deleteRefreshToken();
         _status = AuthStatus.unauthenticated;
         notifyListeners();
         return false;
       }
 
-      // Restore user data from SharedPreferences
+      if (_isSessionExpired(sessionMetadata)) {
+        await _deleteToken();
+        await _deleteRefreshToken();
+        await prefs.remove(AppConstants.userKey);
+        await _clearSessionMetadata();
+
+        _token = null;
+        _user = null;
+        _status = AuthStatus.unauthenticated;
+        _errorMessage = 'Session expired. Please login again.';
+        notifyListeners();
+        return false;
+      }
+
       _token = savedToken;
       final userJson = jsonDecode(savedUserJson) as Map<String, dynamic>;
       _user = User.fromJson(userJson);
 
+      if (sessionMetadata == null) {
+        await _persistSessionMetadata();
+      }
+
       _status = AuthStatus.authenticated;
       notifyListeners();
       _registerPushToken(); // non-blocking
+
+      if (_shouldSilentRefresh(sessionMetadata)) {
+        Future.microtask(() => refreshToken(silent: true));
+      }
+
       return true;
     } catch (e) {
-      // Token invalid or session data corrupted
       final prefs = await SharedPreferences.getInstance();
       await _deleteToken();
+      await _deleteRefreshToken();
       await prefs.remove(AppConstants.userKey);
+      await _clearSessionMetadata();
 
       _token = null;
       _user = null;
@@ -158,6 +278,24 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> refreshSessionIfNeeded({bool force = false}) async {
+    if (_token == null || _user == null) return false;
+
+    final sessionMetadata = await _readSessionMetadata();
+
+    if (_isSessionExpired(sessionMetadata)) {
+      _errorMessage = 'Session expired. Please login again.';
+      await logout();
+      return false;
+    }
+
+    if (!force && !_shouldSilentRefresh(sessionMetadata)) {
+      return true;
+    }
+
+    return refreshToken(silent: true);
+  }
+
   /// Sign up with phone number and password
   Future<bool> signup({
     required String phoneNumber,
@@ -165,6 +303,7 @@ class AuthProvider extends ChangeNotifier {
     String? name,
     String? email,
     String userType = 'customer',
+    bool rememberMe = true,
   }) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
@@ -177,14 +316,20 @@ class AuthProvider extends ChangeNotifier {
         name: name,
         email: email,
         userType: userType,
+        rememberMe: rememberMe,
       );
 
       final jwt = response['jwt'] as String;
+      final refreshToken = response['refreshToken'] as String?;
       final userData = response['user'] as Map<String, dynamic>;
 
       // Save JWT to secure storage
       final prefs = await SharedPreferences.getInstance();
-      await _writeToken(jwt);
+      await _writeToken(jwt, maxAgeDays: rememberMe ? 30 : 14);
+      await _writeRefreshToken(
+        refreshToken,
+        maxAgeDays: rememberMe ? 30 : 14,
+      );
 
       // Create User object
       _token = jwt;
@@ -210,6 +355,7 @@ class AuthProvider extends ChangeNotifier {
 
       // Save user data to SharedPreferences
       await prefs.setString(AppConstants.userKey, jsonEncode(_user!.toJson()));
+      await _persistSessionMetadata(rememberMe: rememberMe);
 
       _status = AuthStatus.authenticated;
       notifyListeners();
@@ -227,6 +373,7 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> login({
     required String phoneNumber,
     required String password,
+    bool rememberMe = true,
   }) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
@@ -236,14 +383,20 @@ class AuthProvider extends ChangeNotifier {
       final response = await AuthService.login(
         phoneNumber: phoneNumber,
         password: password,
+        rememberMe: rememberMe,
       );
 
       final jwt = response['jwt'] as String;
+      final refreshToken = response['refreshToken'] as String?;
       final userData = response['user'] as Map<String, dynamic>;
 
       // Save JWT to secure storage
       final prefs = await SharedPreferences.getInstance();
-      await _writeToken(jwt);
+      await _writeToken(jwt, maxAgeDays: rememberMe ? 30 : 14);
+      await _writeRefreshToken(
+        refreshToken,
+        maxAgeDays: rememberMe ? 30 : 14,
+      );
 
       // Create User object
       _token = jwt;
@@ -269,6 +422,7 @@ class AuthProvider extends ChangeNotifier {
 
       // Save user data to SharedPreferences
       await prefs.setString(AppConstants.userKey, jsonEncode(_user!.toJson()));
+      await _persistSessionMetadata(rememberMe: rememberMe);
 
       _status = AuthStatus.authenticated;
       notifyListeners();
@@ -299,20 +453,33 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Verify OTP and authenticate user
-  Future<bool> verifyOtp(String otp, String phoneNumber) async {
+  Future<bool> verifyOtp(
+    String otp,
+    String phoneNumber, {
+    bool rememberMe = true,
+  }) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final response = await AuthService.verifyOtp(phoneNumber, otp);
+      final response = await AuthService.verifyOtp(
+        phoneNumber,
+        otp,
+        rememberMe: rememberMe,
+      );
 
       final jwt = response['jwt'] as String;
+      final refreshToken = response['refreshToken'] as String?;
       final userData = response['user'] as Map<String, dynamic>;
 
       // Save JWT to secure storage
       final prefs = await SharedPreferences.getInstance();
-      await _writeToken(jwt);
+      await _writeToken(jwt, maxAgeDays: rememberMe ? 30 : 14);
+      await _writeRefreshToken(
+        refreshToken,
+        maxAgeDays: rememberMe ? 30 : 14,
+      );
 
       // Create User object with role from response
       _token = jwt;
@@ -328,6 +495,7 @@ class AuthProvider extends ChangeNotifier {
             userData['isPremium'] as bool? ??
             userData['is_premium'] as bool? ??
             false,
+        customerId: userData['customer_id']?.toString(),
         shopperId: userData['shopper_id']?.toString(),
         riderId: userData['rider_id']?.toString(),
         kycStatus: userData['kyc_status'] as String?,
@@ -337,6 +505,7 @@ class AuthProvider extends ChangeNotifier {
 
       // Save user data to SharedPreferences
       await prefs.setString(AppConstants.userKey, jsonEncode(_user!.toJson()));
+      await _persistSessionMetadata(rememberMe: rememberMe);
 
       _status = AuthStatus.authenticated;
       notifyListeners();
@@ -568,6 +737,8 @@ class AuthProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
 
     try {
+      final refreshToken = await _readRefreshToken();
+
       if (_token != null && _user != null) {
         if (_user!.role == UserRole.shopper && _user!.shopperId != null) {
           await StrapiService.updateShopperStatus(
@@ -583,12 +754,16 @@ class AuthProvider extends ChangeNotifier {
           );
         }
       }
+
+      await AuthService.logout(jwtToken: _token, refreshToken: refreshToken);
     } catch (e) {
       debugPrint('[auth] Failed to set worker offline during logout: $e');
     }
 
     await _deleteToken();
+    await _deleteRefreshToken();
     await prefs.remove(AppConstants.userKey);
+    await _clearSessionMetadata();
 
     _user = null;
     _token = null;
@@ -598,50 +773,77 @@ class AuthProvider extends ChangeNotifier {
 
   /// Refresh JWT token
   /// Call this when token is about to expire or after receiving 401
-  Future<bool> refreshToken() async {
+  Future<bool> refreshToken({bool silent = false}) async {
     try {
       if (_token == null) return false;
 
-      final response = await AuthService.refreshToken(_token!);
+      final sessionMetadata = await _readSessionMetadata();
+      final rememberMe = sessionMetadata?['rememberMe'] as bool? ?? true;
+      final savedRefreshToken = await _readRefreshToken();
+      final response = await AuthService.refreshToken(
+        _token,
+        refreshToken: savedRefreshToken,
+        rememberMe: rememberMe,
+      );
 
       final jwt = response['jwt'] as String;
+      final rotatedRefreshToken = response['refreshToken'] as String?;
       final userData = response['user'] as Map<String, dynamic>;
-
-      // Save new JWT to secure storage
       final prefs = await SharedPreferences.getInstance();
-      await _writeToken(jwt);
+      final issuedAt =
+          DateTime.tryParse(sessionMetadata?['issuedAt'] as String? ?? '') ??
+          DateTime.now();
 
-      // Update token
+      await _writeToken(jwt, maxAgeDays: rememberMe ? 30 : 14);
+      await _writeRefreshToken(
+        rotatedRefreshToken,
+        maxAgeDays: rememberMe ? 30 : 14,
+      );
       _token = jwt;
 
-      // Update user if data changed
-      if (userData['name'] != _user?.name ||
-          userData['email'] != _user?.email ||
-          userData['profile_photo'] != _user?.profileImage ||
-          userData['isPremium'] != _user?.isPremium ||
-          userData['is_premium'] != _user?.isPremium) {
+      if (_user != null) {
         _user = _user!.copyWith(
-          name: userData['name'],
-          email: userData['email'],
-          profileImage: userData['profile_photo'],
+          name: userData['name'] ?? _user!.name,
+          email: userData['email'] ?? _user!.email,
+          profileImage: userData['profile_photo'] ?? _user!.profileImage,
           isPremium:
               userData['isPremium'] as bool? ??
               userData['is_premium'] as bool? ??
               _user!.isPremium,
+          customerId: userData['customer_id']?.toString() ?? _user!.customerId,
+          shopperId: userData['shopper_id']?.toString() ?? _user!.shopperId,
+          riderId: userData['rider_id']?.toString() ?? _user!.riderId,
+          kycStatus: (userData['kyc_status'] as String?) ?? _user!.kycStatus,
         );
 
-        // Save updated user data
         await prefs.setString(
           AppConstants.userKey,
           jsonEncode(_user!.toJson()),
         );
       }
 
+      await _persistSessionMetadata(
+        rememberMe: rememberMe,
+        issuedAt: issuedAt,
+        lastRefreshAt: DateTime.now(),
+      );
+
       notifyListeners();
       return true;
     } catch (e) {
-      // Token refresh failed - logout user
-      _errorMessage = 'Session expired. Please login again.';
+      final errorText = e.toString().toLowerCase();
+      final looksLikeAuthFailure =
+          errorText.contains('401') ||
+          errorText.contains('expired') ||
+          errorText.contains('invalid') ||
+          errorText.contains('unauthorized');
+
+      if (silent && !looksLikeAuthFailure) {
+        debugPrint('[auth] Silent refresh skipped: $e');
+        return false;
+      }
+
+      _errorMessage = silent ? null : 'Session expired. Please login again.';
       await logout();
       return false;
     }

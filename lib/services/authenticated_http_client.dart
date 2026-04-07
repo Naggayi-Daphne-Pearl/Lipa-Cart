@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../providers/auth_provider.dart';
+import 'http_client_factory.dart';
 import '../core/constants/app_constants.dart';
 import 'session_service.dart';
 
 /// HTTP client with automatic token refresh on 401 errors
 /// Wraps standard http.Client with authentication and retry logic
 class AuthenticatedHttpClient {
-  final http.Client _client = http.Client();
+  final http.Client _client = createHttpClient();
   final AuthProvider _authProvider;
 
   AuthenticatedHttpClient(this._authProvider);

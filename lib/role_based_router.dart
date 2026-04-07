@@ -348,9 +348,11 @@ class RoleBasedRouter {
               final extra = state.extra as Map<String, dynamic>;
               final phoneNumber = extra['phoneNumber'] as String? ?? '';
               final returnRoute = extra['returnRoute'] as String?;
+              final rememberMe = extra['rememberMe'] as bool? ?? true;
               return OtpScreen(
                 phoneNumber: phoneNumber,
                 returnRoute: returnRoute,
+                rememberMe: rememberMe,
               );
             }
             final phoneNumber = state.extra as String? ?? '';

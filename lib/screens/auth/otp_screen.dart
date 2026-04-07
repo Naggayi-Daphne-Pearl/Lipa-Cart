@@ -18,8 +18,14 @@ import '../../widgets/custom_button.dart';
 class OtpScreen extends StatefulWidget {
   final String phoneNumber;
   final String? returnRoute;
+  final bool rememberMe;
 
-  const OtpScreen({super.key, required this.phoneNumber, this.returnRoute});
+  const OtpScreen({
+    super.key,
+    required this.phoneNumber,
+    this.returnRoute,
+    this.rememberMe = true,
+  });
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -76,6 +82,7 @@ class _OtpScreenState extends State<OtpScreen> {
     final success = await authProvider.verifyOtp(
       _otpController.text,
       widget.phoneNumber,
+      rememberMe: widget.rememberMe,
     );
 
     setState(() => _isLoading = false);

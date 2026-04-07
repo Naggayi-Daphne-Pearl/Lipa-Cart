@@ -33,8 +33,8 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
   double _passwordStrength = 0;
   bool _obscureConfirmPassword = true;
+  bool _rememberMe = true;
   String _selectedRole = 'customer';
-
   static const double _desktopBreakpoint = 800;
   static const double _formMaxWidth = 440;
 
@@ -75,6 +75,7 @@ class _SignupScreenState extends State<SignupScreen> {
           ? null
           : _emailController.text.trim(),
       userType: _selectedRole,
+      rememberMe: _rememberMe,
     );
 
     setState(() => _isLoading = false);
@@ -890,7 +891,50 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: AppSizes.lg),
+                const SizedBox(height: AppSizes.md),
+                InkWell(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                  onTap: () {
+                    setState(() => _rememberMe = !_rememberMe);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value: _rememberMe,
+                          activeColor: AppColors.primary,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          onChanged: (value) {
+                            setState(() => _rememberMe = value ?? true);
+                          },
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Keep me signed in on this device',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                'Recommended for your personal phone or laptop.',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.md),
                 // Sign up button
                 CustomButton(
                   text: 'Create My Account',

@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/constants/app_constants.dart';
+import 'http_client_factory.dart';
 
 /// Authentication Service
 /// Handles phone + password authentication, OTP fallback, and JWT token management
 class AuthService {
+  static final http.Client _client = createHttpClient();
   static String get _apiUrl => AppConstants.apiUrl;
 
   /// Sign up with phone number and password
@@ -18,9 +20,10 @@ class AuthService {
     String? name,
     String? email,
     String userType = 'customer',
+    bool rememberMe = true,
   }) async {
     try {
-      final response = await http
+      final response = await _client
           .post(
             Uri.parse('$_apiUrl/auth/signup'),
             headers: {'Content-Type': 'application/json'},
@@ -30,6 +33,7 @@ class AuthService {
               'name': name,
               'email': email,
               'userType': userType,
+              'rememberMe': rememberMe,
             }),
           )
           .timeout(AppConstants.apiTimeout);
@@ -53,13 +57,18 @@ class AuthService {
   static Future<Map<String, dynamic>> login({
     required String phoneNumber,
     required String password,
+    bool rememberMe = true,
   }) async {
     try {
-      final response = await http
+      final response = await _client
           .post(
             Uri.parse('$_apiUrl/auth/login'),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'phone': phoneNumber, 'password': password}),
+            body: jsonEncode({
+              'phone': phoneNumber,
+              'password': password,
+              'rememberMe': rememberMe,
+            }),
           )
           .timeout(AppConstants.apiTimeout);
 
@@ -82,7 +91,7 @@ class AuthService {
   /// Throws exception if request fails
   static Future<void> sendOtp(String phoneNumber) async {
     try {
-      final response = await http
+      final response = await _client
           .post(
             Uri.parse('$_apiUrl/otp/request'),
             headers: {'Content-Type': 'application/json'},
@@ -104,14 +113,19 @@ class AuthService {
   /// Throws if verification fails
   static Future<Map<String, dynamic>> verifyOtp(
     String phoneNumber,
-    String otp,
-  ) async {
+    String otp, {
+    bool rememberMe = true,
+  }) async {
     try {
-      final response = await http
+      final response = await _client
           .post(
             Uri.parse('$_apiUrl/otp/verify'),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'phone': phoneNumber, 'otp': otp}),
+            body: jsonEncode({
+              'phone': phoneNumber,
+              'otp': otp,
+              'rememberMe': rememberMe,
+            }),
           )
           .timeout(AppConstants.apiTimeout);
 
@@ -132,7 +146,7 @@ class AuthService {
   /// Returns custom user data (id, phone, name, email, user_type, profile_photo)
   static Future<Map<String, dynamic>> getMe(String jwtToken) async {
     try {
-      final response = await http
+      final response = await _client
           .get(
             Uri.parse('$_apiUrl/auth/me'),
             headers: {
@@ -161,15 +175,26 @@ class AuthService {
   /// Takes existing token and requests a new one from backend
   /// Returns { jwt, user: { ... } }
   /// Throws if refresh fails (token invalid or expired)
-  static Future<Map<String, dynamic>> refreshToken(String jwtToken) async {
+  static Future<Map<String, dynamic>> refreshToken(
+    String? jwtToken, {
+    String? refreshToken,
+    bool rememberMe = true,
+  }) async {
     try {
-      final response = await http
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (jwtToken != null && jwtToken.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $jwtToken';
+      }
+
+      final response = await _client
           .post(
             Uri.parse('$_apiUrl/auth/refresh'),
-            headers: {
-              'Authorization': 'Bearer $jwtToken',
-              'Content-Type': 'application/json',
-            },
+            headers: headers,
+            body: jsonEncode({
+              if (refreshToken != null && refreshToken.isNotEmpty)
+                'refreshToken': refreshToken,
+              'rememberMe': rememberMe,
+            }),
           )
           .timeout(AppConstants.apiTimeout);
 
@@ -189,11 +214,37 @@ class AuthService {
     }
   }
 
+  /// Revoke the active refresh session and clear any server cookie.
+  static Future<void> logout({
+    String? jwtToken,
+    String? refreshToken,
+  }) async {
+    try {
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (jwtToken != null && jwtToken.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $jwtToken';
+      }
+
+      await _client
+          .post(
+            Uri.parse('$_apiUrl/auth/logout'),
+            headers: headers,
+            body: jsonEncode({
+              if (refreshToken != null && refreshToken.isNotEmpty)
+                'refreshToken': refreshToken,
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+    } catch (_) {
+      // Logout should still succeed locally even if the server revoke call fails.
+    }
+  }
+
   /// Request password reset OTP
   /// Verifies user exists and sends OTP to their phone
   static Future<void> forgotPassword(String phoneNumber) async {
     try {
-      final response = await http
+      final response = await _client
           .post(
             Uri.parse('$_apiUrl/auth/forgot-password'),
             headers: {'Content-Type': 'application/json'},
@@ -220,7 +271,7 @@ class AuthService {
     required String newPassword,
   }) async {
     try {
-      final response = await http
+      final response = await _client
           .post(
             Uri.parse('$_apiUrl/auth/reset-password'),
             headers: {'Content-Type': 'application/json'},
@@ -255,7 +306,7 @@ class AuthService {
         throw Exception('No authentication token available');
       }
 
-      final response = await http
+      final response = await _client
           .put(
             Uri.parse('$_apiUrl/users/$userId'),
             headers: {
