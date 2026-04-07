@@ -51,40 +51,51 @@ class NotificationService {
   Future<void> init() async {
     if (_initialized || !DefaultFirebaseOptions.isConfigured) return;
 
-    _messaging = FirebaseMessaging.instance;
+    try {
+      _messaging = FirebaseMessaging.instance;
 
-    // Register the background handler
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      if (!kIsWeb) {
+        // Register the background handler
+        FirebaseMessaging.onBackgroundMessage(
+          firebaseMessagingBackgroundHandler,
+        );
 
-    // Create the Android notification channel
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.createNotificationChannel(_orderChannel);
+        // Create the Android notification channel
+        await _localNotifications
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >()
+            ?.createNotificationChannel(_orderChannel);
 
-    // Initialize local notifications for foreground display
-    await _localNotifications.initialize(
-      const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-        iOS: DarwinInitializationSettings(),
-      ),
-      onDidReceiveNotificationResponse: _onLocalNotificationTap,
-    );
+        // Initialize local notifications for foreground display
+        await _localNotifications.initialize(
+          const InitializationSettings(
+            android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+            iOS: DarwinInitializationSettings(),
+          ),
+          onDidReceiveNotificationResponse: _onLocalNotificationTap,
+        );
+      }
 
-    // Listen for foreground messages
-    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+      // Listen for foreground messages
+      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
-    // Handle notification taps that open the app from background/terminated
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
+      // Handle notification taps that open the app from background/terminated
+      FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
 
-    // Check if the app was opened from a terminated state via a notification
-    final initialMessage = await _messaging!.getInitialMessage();
-    if (initialMessage != null) {
-      _handleNotificationTap(initialMessage);
+      // Avoid blocking startup indefinitely on browsers where web push isn't fully supported.
+      final initialMessage = await _messaging!.getInitialMessage().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => null,
+      );
+      if (initialMessage != null) {
+        _handleNotificationTap(initialMessage);
+      }
+    } catch (e) {
+      debugPrint('[notifications] Init skipped: $e');
+    } finally {
+      _initialized = true;
     }
-
-    _initialized = true;
   }
 
   /// Request notification permission from the user.

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,16 +35,31 @@ Future<void> main() async {
     appRunner: () async {
       WidgetsFlutterBinding.ensureInitialized();
 
-      // Initialize Firebase if configured (skip gracefully in dev without config)
+      // Initialize Firebase if configured.
+      // Keep app startup non-blocking so iPhone browsers don't get stuck on the loader.
       if (DefaultFirebaseOptions.isConfigured) {
-        if (Firebase.apps.isEmpty) {
-          await Firebase.initializeApp(
-            options: DefaultFirebaseOptions.currentPlatform,
+        try {
+          if (Firebase.apps.isEmpty) {
+            await Firebase.initializeApp(
+              options: DefaultFirebaseOptions.currentPlatform,
+            );
+          } else {
+            Firebase.app();
+          }
+
+          unawaited(
+            NotificationService()
+                .init()
+                .timeout(const Duration(seconds: 4))
+                .catchError((error, stackTrace) async {
+                  debugPrint('[startup] Notification init failed: $error');
+                  await Sentry.captureException(error, stackTrace: stackTrace);
+                }),
           );
-        } else {
-          Firebase.app();
+        } catch (e, stackTrace) {
+          debugPrint('[startup] Firebase init failed: $e');
+          await Sentry.captureException(e, stackTrace: stackTrace);
         }
-        await NotificationService().init();
       }
 
       // Only set system UI overlay and orientations on mobile

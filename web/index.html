@@ -18,6 +18,7 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="description" content="Fresh groceries delivered to your doorstep">
 
   <!-- iOS meta tags & icons -->
@@ -33,58 +34,120 @@
   <link rel="manifest" href="manifest.json">
 
   <style>
+    :root {
+      color-scheme: light;
+    }
+
     body {
       margin: 0;
       padding: 0;
-      background: linear-gradient(135deg, #E8F5E9 0%, #F1F8E9 60%, #FAFAFA 100%);
+      min-height: 100vh;
+      background: linear-gradient(180deg, #FFFDF8 0%, #F7F2E8 100%);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     }
 
-    /* Loading screen */
     .loading {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .loading-card {
+      width: min(360px, 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      height: 100vh;
+      text-align: center;
+      padding: 32px 28px;
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(21, 135, 75, 0.08);
+      box-shadow: 0 20px 60px rgba(21, 135, 75, 0.10);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
     }
 
     .logo-container {
-      width: 100px;
-      height: 100px;
+      width: 92px;
+      height: 92px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 24px;
+      margin-bottom: 22px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #1B7F4E 0%, #15874B 100%);
+      box-shadow: 0 16px 40px rgba(21, 135, 75, 0.22);
       animation: pulse 2s ease-in-out infinite;
     }
 
     .logo-container img {
+      width: 54px;
+      height: 54px;
       object-fit: contain;
-      filter: drop-shadow(0 10px 30px rgba(27, 127, 78, 0.3));
+      border-radius: 14px;
     }
 
     .app-name {
       font-size: 32px;
-      font-weight: bold;
-      color: #2C2C2C;
-      letter-spacing: 2px;
+      font-weight: 800;
+      color: #1F2937;
+      letter-spacing: -0.5px;
       margin-bottom: 8px;
     }
 
     .tagline {
-      font-size: 16px;
+      font-size: 15px;
+      line-height: 1.5;
       color: #6B7280;
+      max-width: 260px;
     }
 
-    .spinner {
-      width: 40px;
-      height: 40px;
-      margin-top: 32px;
-      border: 4px solid #E8F5E9;
-      border-top: 4px solid #15874B;
+    .status-pill {
+      margin-top: 18px;
+      padding: 9px 14px;
+      border-radius: 999px;
+      background: #E9F6EE;
+      color: #1B7F4E;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .dots {
+      margin-top: 18px;
+      display: inline-flex;
+      gap: 8px;
+    }
+
+    .retry-button {
+      display: none;
+      margin-top: 18px;
+      border: none;
+      border-radius: 999px;
+      background: #15874B;
+      color: white;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .dots span {
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      animation: spin 1s linear infinite;
+      background: #15874B;
+      opacity: 0.25;
+      animation: bounce 1.1s infinite ease-in-out;
+    }
+
+    .dots span:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .dots span:nth-child(3) {
+      animation-delay: 0.3s;
     }
 
     @keyframes pulse {
@@ -92,25 +155,39 @@
         transform: scale(1);
       }
       50% {
-        transform: scale(1.05);
+        transform: scale(1.04);
       }
     }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    @keyframes bounce {
+      0%, 80%, 100% {
+        transform: translateY(0);
+        opacity: 0.25;
+      }
+      40% {
+        transform: translateY(-5px);
+        opacity: 1;
+      }
     }
   </style>
 </head>
 <body>
   <!-- Loading screen -->
   <div class="loading">
-    <div class="logo-container">
-      <img src="favicon.png" alt="LipaCart Logo" style="width: 60px; height: 60px; border-radius: 16px;">
+    <div class="loading-card">
+      <div class="logo-container">
+        <img src="favicon.png" alt="LipaCart Logo">
+      </div>
+      <div class="app-name">LipaCart</div>
+      <div class="tagline">Groceries, essentials, and quick delivery for your everyday routine.</div>
+      <div class="status-pill" id="loading-status">Loading your fresh picks...</div>
+      <div class="dots" id="loading-dots" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <button id="retry-load" class="retry-button" type="button">Retry loading</button>
     </div>
-    <div class="app-name">LipaCart</div>
-    <div class="tagline">Fresh Groceries Delivered</div>
-    <div class="spinner"></div>
   </div>
 
   <!-- Firebase SDK for web push notifications -->
@@ -139,26 +216,84 @@
   <script src="flutter.js" defer></script>
 
   <script>
-    window.addEventListener('load', function(ev) {
-      // Download main.dart.js
-      _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: serviceWorkerVersion,
-        },
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp().then(function() {
-              var loader = document.querySelector('.loading');
-              if (loader) loader.remove();
-            });
-          });
-          // Fallback: remove loader after 5s even if runApp callback doesn't fire
-          setTimeout(function() {
-            var loader = document.querySelector('.loading');
-            if (loader) loader.remove();
-          }, 5000);
+    window.addEventListener('load', async function() {
+      var loader = document.querySelector('.loading');
+      var status = document.getElementById('loading-status');
+      var dots = document.getElementById('loading-dots');
+      var retryButton = document.getElementById('retry-load');
+      var appStarted = false;
+      var userAgent = window.navigator.userAgent || '';
+      var isIOSBrowser = /iPad|iPhone|iPod/.test(userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      function showRetryState(message) {
+        if (appStarted) return;
+        if (status) status.textContent = message;
+        if (dots) dots.style.display = 'none';
+        if (retryButton) retryButton.style.display = 'inline-flex';
+      }
+
+      async function clearStaleFlutterCaches() {
+        if (!('serviceWorker' in navigator)) return;
+        try {
+          var registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(function(registration) {
+            return registration.unregister();
+          }));
+
+          if ('caches' in window) {
+            var keys = await caches.keys();
+            await Promise.all(keys.filter(function(key) {
+              return key.indexOf('flutter') !== -1 || key.indexOf('workbox') !== -1;
+            }).map(function(key) {
+              return caches.delete(key);
+            }));
+          }
+        } catch (error) {
+          console.warn('Could not clear stale service workers:', error);
         }
-      });
+      }
+
+      if (retryButton) {
+        retryButton.addEventListener('click', function() {
+          window.location.reload();
+        });
+      }
+
+      if (isIOSBrowser) {
+        await clearStaleFlutterCaches();
+      }
+
+      try {
+        var loaderConfig = {
+          onEntrypointLoaded: async function(engineInitializer) {
+            try {
+              var appRunner = await engineInitializer.initializeEngine();
+              await appRunner.runApp();
+              appStarted = true;
+              if (loader) loader.remove();
+            } catch (error) {
+              console.error('Flutter app failed to start:', error);
+              showRetryState('Still loading on this iPhone? Tap retry.');
+            }
+          }
+        };
+
+        if (!isIOSBrowser) {
+          loaderConfig.serviceWorker = {
+            serviceWorkerVersion: serviceWorkerVersion,
+          };
+        }
+
+        _flutter.loader.load(loaderConfig);
+      } catch (error) {
+        console.error('Flutter bootstrap failed:', error);
+        showRetryState('Couldn\'t start the app. Please retry.');
+      }
+
+      setTimeout(function() {
+        showRetryState('Still loading on this iPhone? Tap retry.');
+      }, 10000);
     });
   </script>
 </body>
