@@ -10,11 +10,7 @@ class GoogleCallbackScreen extends StatefulWidget {
   final String? returnRoute;
   final String? source;
 
-  const GoogleCallbackScreen({
-    super.key,
-    this.returnRoute,
-    this.source,
-  });
+  const GoogleCallbackScreen({super.key, this.returnRoute, this.source});
 
   @override
   State<GoogleCallbackScreen> createState() => _GoogleCallbackScreenState();
@@ -51,9 +47,11 @@ class _GoogleCallbackScreenState extends State<GoogleCallbackScreen> {
     if (!mounted) return;
 
     if (result.success || authProvider.isAuthenticated) {
-      context.go(returnRoute != null && returnRoute.isNotEmpty
-          ? returnRoute
-          : '/customer/home');
+      context.go(
+        returnRoute != null && returnRoute.isNotEmpty
+            ? returnRoute
+            : '/customer/home',
+      );
       return;
     }
 
@@ -77,13 +75,11 @@ class _GoogleCallbackScreenState extends State<GoogleCallbackScreen> {
 
     setState(() => _isProcessing = false);
 
-    final message = authProvider.errorMessage ??
+    final message =
+        authProvider.errorMessage ??
         'Google sign-in could not be completed right now.';
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.error,
-      ),
+      SnackBar(content: Text(message), backgroundColor: AppColors.error),
     );
 
     _redirectToLogin();

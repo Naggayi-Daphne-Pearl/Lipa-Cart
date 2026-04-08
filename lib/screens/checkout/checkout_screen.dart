@@ -155,9 +155,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Add phone number to place your order'),
         content: Column(
           mainAxisSize: MainAxisSize.min,

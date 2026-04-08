@@ -193,10 +193,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
     final launched = await GoogleOAuthService.launchConsentScreen(
       callbackPath: '/auth/google/callback',
-      queryParameters: {
-        'role': 'customer',
-        'source': 'signup',
-      },
+      queryParameters: {'role': 'customer', 'source': 'signup'},
     );
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

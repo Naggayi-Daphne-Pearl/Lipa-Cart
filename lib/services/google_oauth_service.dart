@@ -92,7 +92,9 @@ class GoogleOAuthService {
     final fragment = Uri.base.fragment.isNotEmpty
         ? Uri.base.fragment
         : (savedFragment ?? '');
-    final query = Uri.base.query.isNotEmpty ? Uri.base.query : (savedQuery ?? '');
+    final query = Uri.base.query.isNotEmpty
+        ? Uri.base.query
+        : (savedQuery ?? '');
 
     String? idToken;
     Map<String, String> params = const {};
