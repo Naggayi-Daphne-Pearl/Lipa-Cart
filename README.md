@@ -63,14 +63,18 @@ This flow allows users to explore products freely while ensuring secure, authent
    | `SENTRY_DSN` | Sentry error tracking DSN | *(empty — Sentry disabled)* |
    | `SENTRY_ENV` | Sentry environment tag | `development` |
    | `IMGBB_API_KEY` | ImgBB API key for image uploads | *(empty)* |
+   | `GOOGLE_WEB_CLIENT_ID` | Google OAuth web client ID for the consent screen | `461833863082-gkset420arg3nqcip15jm9ptclom7g9e.apps.googleusercontent.com` |
 
    Pass them via `--dart-define` when running:
    ```bash
-   flutter run -d chrome \
+   flutter run -d chrome --web-port 3000 \
      --dart-define=API_BASE_URL=http://localhost:1337 \
      --dart-define=SENTRY_DSN=https://your-key@sentry.io/123 \
-     --dart-define=IMGBB_API_KEY=your_key
+     --dart-define=IMGBB_API_KEY=your_key \
+     --dart-define=GOOGLE_WEB_CLIENT_ID=461833863082-gkset420arg3nqcip15jm9ptclom7g9e.apps.googleusercontent.com
    ```
+
+   > For Google OAuth on web, add `http://localhost:3000/login` and your deployed `/login` URL to the Google Cloud OAuth client's allowed redirect URIs.
 
    Or run with defaults (localhost, no Sentry):
    ```bash

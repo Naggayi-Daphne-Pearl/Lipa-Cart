@@ -86,6 +86,80 @@ class AuthService {
     }
   }
 
+  /// Sign in with a Google ID token from the web consent flow.
+  /// Returns either a normal auth payload or { needsSignup: true, profile: {...} }
+  static Future<Map<String, dynamic>> googleSignIn({
+    required String idToken,
+    bool rememberMe = true,
+    String userType = 'customer',
+  }) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$_apiUrl/google-auth/signin'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'idToken': idToken,
+              'rememberMe': rememberMe,
+              'userType': userType,
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      final body = jsonDecode(response.body);
+      if (response.statusCode != 200) {
+        throw Exception(
+          body['error']?['message'] ??
+              body['message'] ??
+              'Failed to sign in with Google',
+        );
+      }
+
+      return body as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('Error signing in with Google: $e');
+    }
+  }
+
+  /// Complete a Google customer profile later by attaching a real phone number.
+  static Future<Map<String, dynamic>> completeCustomerProfile({
+    required String phoneNumber,
+    String? name,
+    String? email,
+    required String jwtToken,
+  }) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$_apiUrl/google-auth/complete-profile'),
+            headers: {
+              'Authorization': 'Bearer $jwtToken',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'phone': phoneNumber,
+              if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+              if (email != null && email.trim().isNotEmpty)
+                'email': email.trim(),
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      final body = jsonDecode(response.body);
+      if (response.statusCode != 200) {
+        throw Exception(
+          body['error']?['message'] ??
+              body['message'] ??
+              'Failed to complete customer profile',
+        );
+      }
+
+      return body as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('Error completing customer profile: $e');
+    }
+  }
+
   /// Request OTP for phone number (Fallback authentication method)
   /// Phone format: +256XXXXXXXXX (Uganda)
   /// Throws exception if request fails
@@ -215,10 +289,7 @@ class AuthService {
   }
 
   /// Revoke the active refresh session and clear any server cookie.
-  static Future<void> logout({
-    String? jwtToken,
-    String? refreshToken,
-  }) async {
+  static Future<void> logout({String? jwtToken, String? refreshToken}) async {
     try {
       final headers = <String, String>{'Content-Type': 'application/json'};
       if (jwtToken != null && jwtToken.isNotEmpty) {
@@ -286,7 +357,9 @@ class AuthService {
       if (response.statusCode != 200) {
         final body = jsonDecode(response.body);
         throw Exception(
-          body['error']?['message'] ?? body['error'] ?? 'Failed to reset password',
+          body['error']?['message'] ??
+              body['error'] ??
+              'Failed to reset password',
         );
       }
     } catch (e) {

@@ -116,6 +116,7 @@ class ShoppingListProvider extends ChangeNotifier {
     String? description,
     String emoji = '🛒',
     String color = '#15874B',
+    List<ShoppingListItem>? items,
     bool isPremium = false,
     String? authToken,
   }) async {
@@ -136,6 +137,7 @@ class ShoppingListProvider extends ChangeNotifier {
         description: description,
         emoji: emoji,
         color: color,
+        items: items,
         authToken: authToken,
       );
 

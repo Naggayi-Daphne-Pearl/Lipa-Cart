@@ -1151,50 +1151,12 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                                           : descController.text,
                                       emoji: selectedEmoji,
                                       color: selectedColor,
+                                      items: templateItems,
                                       isPremium: isPremium,
                                       authToken: authToken,
                                     );
                                 if (!context.mounted) return;
                                 if (didCreate) {
-                                  // Add template items if provided
-                                  if (templateItems != null &&
-                                      templateItems.isNotEmpty) {
-                                    final provider = context
-                                        .read<ShoppingListProvider>();
-                                    final newList = provider.lists.firstWhere(
-                                      (list) =>
-                                          list.name == nameController.text,
-                                      orElse: () => provider.lists.first,
-                                    );
-
-                                    try {
-                                      for (final templateItem
-                                          in templateItems) {
-                                        final item = ShoppingListItem(
-                                          id: '${DateTime.now().millisecondsSinceEpoch}_${templateItem.name.hashCode}',
-                                          name: templateItem.name.trim(),
-                                          description: templateItem.description,
-                                          quantity: templateItem.quantity,
-                                          unit: templateItem.unit,
-                                          unitPrice: templateItem.unitPrice,
-                                          budgetAmount:
-                                              templateItem.budgetAmount,
-                                          linkedProduct:
-                                              templateItem.linkedProduct,
-                                        );
-                                        await provider.addItemToList(
-                                          newList.id,
-                                          item,
-                                          authToken: authToken,
-                                        );
-                                      }
-                                    } catch (e) {
-                                      debugPrint(
-                                        'Warning: Failed to add some template items: $e',
-                                      );
-                                      // Continue anyway - list was created successfully
-                                    }
-                                  }
                                   if (context.mounted) {
                                     Navigator.of(context).pop();
                                   }

@@ -10,6 +10,9 @@
 ///   --dart-define=FIREBASE_MESSAGING_SENDER_ID=...
 ///   --dart-define=FIREBASE_APP_ID=...
 ///
+/// For Google OAuth on web also pass:
+///  ` --dart-define=GOOGLE_WEB_CLIENT_ID=...
+///
 /// For local development the defaults point at localhost.
 class AppConfig {
   AppConfig._();
@@ -17,7 +20,7 @@ class AppConfig {
   /// Backend API base URL (no trailing slash)
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:1337',
+    defaultValue: 'https://lipa-cart-strapi-production.up.railway.app',
   );
 
   /// Full API path
@@ -40,4 +43,14 @@ class AppConfig {
     'IMGBB_API_KEY',
     defaultValue: '',
   );
+
+  /// Google OAuth web client ID used by the consent screen / Google sign-in.
+  static const String googleWebClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+    defaultValue:
+        '461833863082-gkset420arg3nqcip15jm9ptclom7g9e.apps.googleusercontent.com',
+  );
+
+  static bool get isGoogleOAuthConfigured =>
+      googleWebClientId.trim().isNotEmpty;
 }

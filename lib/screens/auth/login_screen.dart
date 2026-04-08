@@ -13,6 +13,7 @@ import '../../core/constants/app_sizes.dart';
 import '../../core/utils/validators.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/address_service.dart';
+import '../../services/google_oauth_service.dart';
 import '../../models/user.dart';
 import '../../widgets/custom_button.dart';
 
@@ -44,6 +45,15 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _checkBiometrics();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final authProvider = context.read<AuthProvider>();
+      if (authProvider.isAuthenticated) {
+        await _handlePostLogin(authProvider);
+        return;
+      }
+      await _handleGoogleOAuthCallback();
+    });
   }
 
   Future<void> _checkBiometrics() async {
@@ -99,6 +109,124 @@ class _LoginScreenState extends State<LoginScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _continueWithGoogle() async {
+    if (!kIsWeb) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google OAuth is currently available on the web app.'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
+    if (!GoogleOAuthService.isConfigured) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google OAuth is not configured yet.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final launched = await GoogleOAuthService.launchConsentScreen(
+      callbackPath: '/auth/google/callback',
+      queryParameters: {
+        'role': 'customer',
+        'source': 'login',
+        if (widget.returnRoute != null && widget.returnRoute!.isNotEmpty)
+          'return': widget.returnRoute,
+      },
+    );
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to open the Google consent screen right now.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleGoogleOAuthCallback() async {
+    final profile = GoogleOAuthService.readProfileFromCurrentUrl();
+    if (profile == null || !mounted) return;
+
+    setState(() => _isLoading = true);
+
+    final authProvider = context.read<AuthProvider>();
+    final stateParams = profile.stateParams;
+    final roleFromQuery = 'customer';
+    final returnRoute = stateParams['return'] ?? widget.returnRoute;
+    final result = await authProvider.signInWithGoogle(
+      profile.idToken,
+      rememberMe: _rememberMe,
+      userType: roleFromQuery,
+    );
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (authProvider.isAuthenticated) {
+      await _handlePostLogin(authProvider);
+      return;
+    }
+
+    if (result.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.needsPhoneNumber
+                ? 'Signed in with Google. You can add your phone number when you place your first order.'
+                : 'Signed in with Google as ${profile.email}.',
+          ),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      context.go('/customer/home');
+      return;
+    }
+
+    if (result.needsSignup) {
+      final signupUri = Uri(
+        path: '/signup',
+        queryParameters: {
+          'oauth': 'google',
+          'role': roleFromQuery,
+          'email': result.email ?? profile.email,
+          if ((result.name ?? profile.name)?.trim().isNotEmpty == true)
+            'name': (result.name ?? profile.name)!.trim(),
+          if (returnRoute != null && returnRoute.isNotEmpty)
+            'return': returnRoute,
+        },
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Google verified for ${result.email ?? profile.email}. Finish sign-up with your phone number.',
+          ),
+          backgroundColor: AppColors.primary,
+        ),
+      );
+
+      context.go(signupUri.toString());
+      return;
+    }
+
+    if (authProvider.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage!),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   Future<void> _login() async {
@@ -681,6 +809,45 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? AppSizes.buttonHeightMd
                       : AppSizes.buttonHeightLg,
                 ),
+                if (kIsWeb) ...[
+                  const SizedBox(height: AppSizes.sm),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _continueWithGoogle,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primaryDark,
+                        side: BorderSide(
+                          color: AppColors.primary.withValues(alpha: 0.18),
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          vertical: isDesktop ? 14 : 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.login, size: 18),
+                      label: Text(
+                        'Continue with Google',
+                        style: AppTextStyles.labelLarge.copyWith(
+                          color: AppColors.primaryDark,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.sm),
+                  Text(
+                    'Customer accounts only — Google prefills your name and email for faster checkout.',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
                 // Biometric login
                 if (_biometricsAvailable) ...[
                   const SizedBox(height: AppSizes.md),

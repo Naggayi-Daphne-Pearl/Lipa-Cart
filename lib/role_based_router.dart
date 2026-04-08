@@ -16,6 +16,7 @@ import 'screens/auth/signup_screen.dart';
 import 'screens/auth/otp_screen.dart';
 import 'screens/auth/profile_completion_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
+import 'screens/auth/google_callback_screen.dart';
 import 'screens/profile/profile_screen.dart';
 
 // Customer screens
@@ -192,6 +193,7 @@ class RoleBasedRouter {
         final isAuthRoute =
             state.matchedLocation == '/login' ||
             state.matchedLocation == '/signup' ||
+            state.matchedLocation == '/auth/google/callback' ||
             state.matchedLocation == '/onboarding' ||
             state.matchedLocation.startsWith('/otp') ||
             state.matchedLocation == '/profile-completion' ||
@@ -338,7 +340,26 @@ class RoleBasedRouter {
           path: '/signup',
           builder: (context, state) {
             final initialRole = state.uri.queryParameters['role'];
-            return SignupScreen(initialRole: initialRole);
+            final initialName = state.uri.queryParameters['name'];
+            final initialEmail = state.uri.queryParameters['email'];
+            final oauthProvider = state.uri.queryParameters['oauth'];
+            return SignupScreen(
+              initialRole: initialRole,
+              initialName: initialName,
+              initialEmail: initialEmail,
+              oauthProvider: oauthProvider,
+            );
+          },
+        ),
+        GoRoute(
+          path: '/auth/google/callback',
+          builder: (context, state) {
+            final returnRoute = state.uri.queryParameters['return'];
+            final source = state.uri.queryParameters['source'];
+            return GoogleCallbackScreen(
+              returnRoute: returnRoute,
+              source: source,
+            );
           },
         ),
         GoRoute(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 import 'services/notification_service.dart';
 import 'package:provider/provider.dart';
@@ -46,6 +47,10 @@ Future<void> _bootstrapBackgroundServices() async {
 
 Future<void> _runAppBootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (kIsWeb) {
+    usePathUrlStrategy();
+  }
 
   // Only set system UI overlay and orientations on mobile
   if (!kIsWeb) {
@@ -115,8 +120,7 @@ class LipaCartApp extends StatefulWidget {
   State<LipaCartApp> createState() => _LipaCartAppState();
 }
 
-class _LipaCartAppState extends State<LipaCartApp>
-    with WidgetsBindingObserver {
+class _LipaCartAppState extends State<LipaCartApp> with WidgetsBindingObserver {
   GoRouter? _router;
 
   @override

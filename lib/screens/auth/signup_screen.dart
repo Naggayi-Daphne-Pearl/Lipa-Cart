@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,13 +11,23 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/validators.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/google_oauth_service.dart';
 import '../../models/user.dart';
 import '../../widgets/custom_button.dart';
 
 class SignupScreen extends StatefulWidget {
   final String? initialRole;
+  final String? initialName;
+  final String? initialEmail;
+  final String? oauthProvider;
 
-  const SignupScreen({super.key, this.initialRole});
+  const SignupScreen({
+    super.key,
+    this.initialRole,
+    this.initialName,
+    this.initialEmail,
+    this.oauthProvider,
+  });
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();
@@ -35,16 +46,32 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscureConfirmPassword = true;
   bool _rememberMe = true;
   String _selectedRole = 'customer';
+  bool _googlePrefillActive = false;
   static const double _desktopBreakpoint = 800;
   static const double _formMaxWidth = 440;
 
   @override
   void initState() {
     super.initState();
+    _googlePrefillActive = widget.oauthProvider == 'google';
     final role = widget.initialRole;
-    if (role == 'customer' || role == 'shopper' || role == 'rider') {
+    if (_googlePrefillActive) {
+      _selectedRole = 'customer';
+    } else if (role == 'customer' || role == 'shopper' || role == 'rider') {
       _selectedRole = role!;
     }
+    _nameController.text = widget.initialName?.trim() ?? '';
+    _emailController.text = widget.initialEmail?.trim() ?? '';
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final authProvider = context.read<AuthProvider>();
+      if (authProvider.isAuthenticated) {
+        _handlePostSignup(authProvider);
+        return;
+      }
+      await _handleGoogleOAuthCallback();
+    });
   }
 
   @override
@@ -55,6 +82,130 @@ class _SignupScreenState extends State<SignupScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleGoogleOAuthCallback() async {
+    final profile = GoogleOAuthService.readProfileFromCurrentUrl();
+    if (profile == null || !mounted) return;
+
+    setState(() {
+      _isLoading = true;
+      _googlePrefillActive = true;
+      _selectedRole = 'customer';
+    });
+
+    final authProvider = context.read<AuthProvider>();
+    final result = await authProvider.signInWithGoogle(
+      profile.idToken,
+      rememberMe: _rememberMe,
+      userType: 'customer',
+    );
+
+    if (!mounted) return;
+
+    if (authProvider.isAuthenticated) {
+      _handlePostSignup(authProvider);
+      return;
+    }
+
+    if (result.success) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.needsPhoneNumber
+                ? 'Your customer account is ready. Add your phone number when you place your first order.'
+                : 'Signed in with Google as ${profile.email}.',
+          ),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      context.go('/customer/home');
+      return;
+    }
+
+    if (result.needsSignup) {
+      setState(() {
+        _isLoading = false;
+        _googlePrefillActive = true;
+        _selectedRole = 'customer';
+        _nameController.text = (result.name ?? profile.name ?? '').trim();
+        _emailController.text = (result.email ?? profile.email).trim();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Almost there — we filled your name and email. Add your phone number now or continue shopping and add it at checkout.',
+          ),
+          backgroundColor: AppColors.primary,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = false);
+    if (authProvider.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage!),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _continueWithGoogle() async {
+    if (_selectedRole != 'customer') {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Google sign-up is available for customers only. Shopper and rider accounts continue with phone sign-up and KYC.',
+          ),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
+    if (!kIsWeb) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google OAuth is currently available on the web app.'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      return;
+    }
+
+    if (!GoogleOAuthService.isConfigured) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google OAuth is not configured yet.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final launched = await GoogleOAuthService.launchConsentScreen(
+      callbackPath: '/auth/google/callback',
+      queryParameters: {
+        'role': 'customer',
+        'source': 'signup',
+      },
+    );
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to open the Google consent screen right now.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   Future<void> _signup() async {
@@ -476,6 +627,38 @@ class _SignupScreenState extends State<SignupScreen> {
                 )
                 .toList(),
           ),
+          if (_googlePrefillActive) ...[
+            const SizedBox(height: AppSizes.md),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                border: Border.all(color: AppColors.primaryMuted),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Iconsax.shield_tick,
+                    size: 16,
+                    color: AppColors.primaryDark,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Google filled your name and email. Add your phone number and password to finish creating your account.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           SizedBox(height: headerGap),
           // Form card
           Container(
@@ -506,19 +689,80 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSizes.sm),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final useCompactWrap =
-                        !isDesktop && constraints.maxWidth < 380;
+                if (_googlePrefillActive)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primarySoft,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      border: Border.all(color: AppColors.primaryMuted),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _RoleChip(
+                            label: 'Customer',
+                            icon: Iconsax.shopping_bag,
+                            isSelected: true,
+                            onTap: () {},
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final useCompactWrap =
+                          !isDesktop && constraints.maxWidth < 380;
 
-                    if (useCompactWrap) {
-                      final chipWidth = (constraints.maxWidth - 10) / 2;
-                      return Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
+                      if (useCompactWrap) {
+                        final chipWidth = (constraints.maxWidth - 10) / 2;
+                        return Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            SizedBox(
+                              width: chipWidth,
+                              child: _RoleChip(
+                                label: 'Customer',
+                                icon: Iconsax.shopping_bag,
+                                isSelected: _selectedRole == 'customer',
+                                onTap: () =>
+                                    setState(() => _selectedRole = 'customer'),
+                              ),
+                            ),
+                            SizedBox(
+                              width: chipWidth,
+                              child: _RoleChip(
+                                label: 'Shopper',
+                                icon: Iconsax.bag_happy,
+                                isSelected: _selectedRole == 'shopper',
+                                onTap: () =>
+                                    setState(() => _selectedRole = 'shopper'),
+                              ),
+                            ),
+                            SizedBox(
+                              width: chipWidth,
+                              child: _RoleChip(
+                                label: 'Rider',
+                                icon: Iconsax.truck_fast,
+                                isSelected: _selectedRole == 'rider',
+                                onTap: () =>
+                                    setState(() => _selectedRole = 'rider'),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+
+                      return Row(
                         children: [
-                          SizedBox(
-                            width: chipWidth,
+                          Expanded(
                             child: _RoleChip(
                               label: 'Customer',
                               icon: Iconsax.shopping_bag,
@@ -527,8 +771,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                   setState(() => _selectedRole = 'customer'),
                             ),
                           ),
-                          SizedBox(
-                            width: chipWidth,
+                          const SizedBox(width: 10),
+                          Expanded(
                             child: _RoleChip(
                               label: 'Shopper',
                               icon: Iconsax.bag_happy,
@@ -537,8 +781,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                   setState(() => _selectedRole = 'shopper'),
                             ),
                           ),
-                          SizedBox(
-                            width: chipWidth,
+                          const SizedBox(width: 10),
+                          Expanded(
                             child: _RoleChip(
                               label: 'Rider',
                               icon: Iconsax.truck_fast,
@@ -549,46 +793,70 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                         ],
                       );
-                    }
-
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: _RoleChip(
-                            label: 'Customer',
-                            icon: Iconsax.shopping_bag,
-                            isSelected: _selectedRole == 'customer',
-                            onTap: () =>
-                                setState(() => _selectedRole = 'customer'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _RoleChip(
-                            label: 'Shopper',
-                            icon: Iconsax.bag_happy,
-                            isSelected: _selectedRole == 'shopper',
-                            onTap: () =>
-                                setState(() => _selectedRole = 'shopper'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _RoleChip(
-                            label: 'Rider',
-                            icon: Iconsax.truck_fast,
-                            isSelected: _selectedRole == 'rider',
-                            onTap: () =>
-                                setState(() => _selectedRole = 'rider'),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                    },
+                  ),
                 SizedBox(height: fieldGap),
                 _buildRoleGuidanceCard(),
                 SizedBox(height: fieldGap),
+                if (kIsWeb && _selectedRole == 'customer') ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _continueWithGoogle,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primaryDark,
+                        side: BorderSide(
+                          color: AppColors.primary.withValues(alpha: 0.18),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.login, size: 18),
+                      label: Text(
+                        'Continue with Google',
+                        style: AppTextStyles.labelLarge.copyWith(
+                          color: AppColors.primaryDark,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.sm),
+                  Center(
+                    child: Text(
+                      'Customer quick sign-up — Google creates your account fast, and you can add your phone number at checkout.',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  SizedBox(height: fieldGap),
+                ] else if (kIsWeb) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.grey100,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    ),
+                    child: Text(
+                      'Shopper and rider sign-up stays on phone + password so we can complete verification and KYC safely.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: fieldGap),
+                ],
                 // Phone number
                 Text(
                   'Phone Number',

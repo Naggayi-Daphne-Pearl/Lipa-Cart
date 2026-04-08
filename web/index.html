@@ -191,6 +191,25 @@
   </div>
 
   <script>
+    (function preserveGoogleOAuthCallback() {
+      try {
+        if (window.location.hash && window.location.hash.includes('id_token=')) {
+          window.sessionStorage.setItem(
+            'google_oauth_fragment',
+            window.location.hash.substring(1)
+          );
+        }
+        if (window.location.search && window.location.search.includes('id_token=')) {
+          window.sessionStorage.setItem(
+            'google_oauth_query',
+            window.location.search.substring(1)
+          );
+        }
+      } catch (error) {
+        console.debug('Unable to preserve Google OAuth callback state', error);
+      }
+    })();
+
     function showBrowserNotification(title, body) {
       if (typeof Notification === 'undefined') return;
 

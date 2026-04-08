@@ -19,6 +19,24 @@ enum AuthStatus {
   error,
 }
 
+class GoogleSignInResult {
+  final bool success;
+  final bool needsSignup;
+  final bool needsPhoneNumber;
+  final String? email;
+  final String? name;
+  final String? pictureUrl;
+
+  const GoogleSignInResult({
+    required this.success,
+    this.needsSignup = false,
+    this.needsPhoneNumber = false,
+    this.email,
+    this.name,
+    this.pictureUrl,
+  });
+}
+
 class AuthProvider extends ChangeNotifier {
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
   static const String _legacyTokenKey = 'auth_token';
@@ -161,8 +179,9 @@ class AuthProvider extends ChangeNotifier {
     if (metadata == null) return true;
 
     final lastRefreshRaw = metadata['lastRefreshAt'] as String?;
-    final lastRefreshAt =
-        lastRefreshRaw != null ? DateTime.tryParse(lastRefreshRaw) : null;
+    final lastRefreshAt = lastRefreshRaw != null
+        ? DateTime.tryParse(lastRefreshRaw)
+        : null;
 
     if (lastRefreshAt == null) return true;
 
@@ -175,6 +194,12 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
   bool get isFirstLaunch => _isFirstLaunch;
+  bool get needsPhoneNumber {
+    final phone = _user?.phoneNumber.trim() ?? '';
+    return _user != null &&
+        _user!.role == UserRole.customer &&
+        !RegExp(r'^\+256\d{9}$').hasMatch(phone);
+  }
 
   /// Update KYC status locally without a backend call
   void updateKycStatus(String kycStatus) {
@@ -326,10 +351,7 @@ class AuthProvider extends ChangeNotifier {
       // Save JWT to secure storage
       final prefs = await SharedPreferences.getInstance();
       await _writeToken(jwt, maxAgeDays: rememberMe ? 30 : 14);
-      await _writeRefreshToken(
-        refreshToken,
-        maxAgeDays: rememberMe ? 30 : 14,
-      );
+      await _writeRefreshToken(refreshToken, maxAgeDays: rememberMe ? 30 : 14);
 
       // Create User object
       _token = jwt;
@@ -393,10 +415,7 @@ class AuthProvider extends ChangeNotifier {
       // Save JWT to secure storage
       final prefs = await SharedPreferences.getInstance();
       await _writeToken(jwt, maxAgeDays: rememberMe ? 30 : 14);
-      await _writeRefreshToken(
-        refreshToken,
-        maxAgeDays: rememberMe ? 30 : 14,
-      );
+      await _writeRefreshToken(refreshToken, maxAgeDays: rememberMe ? 30 : 14);
 
       // Create User object
       _token = jwt;
@@ -430,6 +449,122 @@ class AuthProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       _status = AuthStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Sign in with Google on web and either restore a backend session or
+  /// return prefill details for a new sign-up.
+  Future<GoogleSignInResult> signInWithGoogle(
+    String idToken, {
+    bool rememberMe = true,
+    String userType = 'customer',
+  }) async {
+    _status = AuthStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await AuthService.googleSignIn(
+        idToken: idToken,
+        rememberMe: rememberMe,
+        userType: userType,
+      );
+
+      if (response['needsSignup'] == true) {
+        final profile = (response['profile'] as Map<String, dynamic>?) ?? {};
+        _status = AuthStatus.unauthenticated;
+        _errorMessage = null;
+        notifyListeners();
+        return GoogleSignInResult(
+          success: false,
+          needsSignup: true,
+          email: profile['email']?.toString(),
+          name: profile['name']?.toString(),
+          pictureUrl: profile['picture']?.toString(),
+        );
+      }
+
+      final jwt = response['jwt'] as String;
+      final refreshToken = response['refreshToken'] as String?;
+      final userData = response['user'] as Map<String, dynamic>;
+
+      final prefs = await SharedPreferences.getInstance();
+      await _writeToken(jwt, maxAgeDays: rememberMe ? 30 : 14);
+      await _writeRefreshToken(refreshToken, maxAgeDays: rememberMe ? 30 : 14);
+
+      _token = jwt;
+      _user = User(
+        id: (userData['id'] ?? userData['documentId'] ?? '').toString(),
+        documentId: userData['document_id']?.toString(),
+        phoneNumber: (userData['phone'] ?? '').toString(),
+        email: userData['email'],
+        role: UserRoleExtension.fromString(userData['user_type'] ?? userType),
+        name: userData['name'],
+        profileImage: userData['profile_photo'],
+        isPremium:
+            userData['isPremium'] as bool? ??
+            userData['is_premium'] as bool? ??
+            false,
+        customerId: userData['customer_id']?.toString(),
+        shopperId: userData['shopper_id']?.toString(),
+        riderId: userData['rider_id']?.toString(),
+        kycStatus: userData['kyc_status'] as String?,
+        kycRejectionReason: userData['kyc_rejection_reason'] as String?,
+        createdAt: DateTime.now(),
+      );
+
+      await prefs.setString(AppConstants.userKey, jsonEncode(_user!.toJson()));
+      await _persistSessionMetadata(rememberMe: rememberMe);
+
+      _status = AuthStatus.authenticated;
+      notifyListeners();
+      _registerPushToken();
+      return GoogleSignInResult(
+        success: true,
+        needsPhoneNumber: userData['needs_phone_number'] as bool? ?? false,
+      );
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return const GoogleSignInResult(success: false);
+    }
+  }
+
+  /// Save a real customer phone number after a Google-authenticated sign-in.
+  Future<bool> completeCustomerProfile({
+    required String phoneNumber,
+    String? name,
+    String? email,
+  }) async {
+    if (_token == null || _user == null) return false;
+
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await AuthService.completeCustomerProfile(
+        phoneNumber: phoneNumber,
+        name: name ?? _user!.name,
+        email: email ?? _user!.email,
+        jwtToken: _token!,
+      );
+
+      final userData = response['user'] as Map<String, dynamic>;
+      _user = _user!.copyWith(
+        phoneNumber: (userData['phone'] ?? phoneNumber).toString(),
+        name: userData['name'] as String? ?? _user!.name,
+        email: userData['email'] as String? ?? _user!.email,
+      );
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(AppConstants.userKey, jsonEncode(_user!.toJson()));
+      notifyListeners();
+      return true;
+    } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
       return false;
@@ -476,10 +611,7 @@ class AuthProvider extends ChangeNotifier {
       // Save JWT to secure storage
       final prefs = await SharedPreferences.getInstance();
       await _writeToken(jwt, maxAgeDays: rememberMe ? 30 : 14);
-      await _writeRefreshToken(
-        refreshToken,
-        maxAgeDays: rememberMe ? 30 : 14,
-      );
+      await _writeRefreshToken(refreshToken, maxAgeDays: rememberMe ? 30 : 14);
 
       // Create User object with role from response
       _token = jwt;

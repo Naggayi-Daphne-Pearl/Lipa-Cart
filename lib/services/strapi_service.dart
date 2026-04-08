@@ -99,6 +99,7 @@ class StrapiService {
     String? description,
     String emoji = '🛒',
     String color = '#15874B',
+    List<ShoppingListItem>? items,
     required String authToken,
   }) async {
     final response = await http
@@ -114,6 +115,8 @@ class StrapiService {
               'description': description,
               'emoji': emoji,
               'color': color,
+              if (items != null)
+                'items': items.map(_shoppingListItemToStrapiData).toList(),
               'publishedAt': DateTime.now().toIso8601String(),
             },
           }),

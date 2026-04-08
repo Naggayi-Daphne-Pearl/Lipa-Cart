@@ -220,10 +220,12 @@ class _AddressesScreenState extends State<AddressesScreen> {
     AddressService addressService,
     Address? address,
   ) {
+    final pageContext = context;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => AddressForm(
+      builder: (sheetContext) => AddressForm(
         address: address,
         userId: auth.user?.customerId ?? '',
         token: auth.token ?? '',
@@ -290,10 +292,10 @@ class _AddressesScreenState extends State<AddressesScreen> {
                 await _refreshAddresses(auth, addressService);
               }
 
-              if (!context.mounted) return;
+              if (!pageContext.mounted) return;
 
               if (!saved) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(pageContext).showSnackBar(
                   SnackBar(
                     content: Text(
                       addressService.error ??
@@ -304,9 +306,14 @@ class _AddressesScreenState extends State<AddressesScreen> {
                 return;
               }
 
-              Navigator.pop(context);
-              if (address == null && widget.returnRoute != null) {
-                context.go(widget.returnRoute!);
+              Navigator.of(sheetContext).pop();
+              if (widget.returnRoute != null &&
+                  widget.returnRoute!.isNotEmpty) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (pageContext.mounted) {
+                    pageContext.go(widget.returnRoute!);
+                  }
+                });
               }
             },
       ),
@@ -374,6 +381,16 @@ class _AddressesScreenState extends State<AddressesScreen> {
       addressDocumentId: documentId,
     );
     await _refreshAddresses(auth, addressService);
+
+    if (widget.returnRoute != null &&
+        widget.returnRoute!.isNotEmpty &&
+        context.mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          context.go(widget.returnRoute!);
+        }
+      });
+    }
   }
 }
 

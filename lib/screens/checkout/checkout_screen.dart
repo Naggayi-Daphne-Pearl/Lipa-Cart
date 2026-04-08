@@ -34,6 +34,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _isLoading = false;
   bool _consentChecked = false;
   bool _showAddressForm = false;
+  bool _didAutoRedirectForMissingAddress = false;
 
   // Guest checkout fields
   late final TextEditingController _guestNameController;
@@ -88,15 +89,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (authProvider.user == null || authProvider.token == null) return;
     final customerId = authProvider.user?.customerId;
     if (customerId == null || customerId.isEmpty) return;
-    if (authProvider.user!.addresses.isNotEmpty) return;
 
-    final success = await addressService.fetchAddresses(
-      authProvider.token!,
-      customerId,
-    );
-    if (success && mounted) {
-      await authProvider.setAddresses(addressService.userAddresses);
-      setState(() => _selectedAddress = authProvider.defaultAddress);
+    if (authProvider.user!.addresses.isEmpty) {
+      final success = await addressService.fetchAddresses(
+        authProvider.token!,
+        customerId,
+      );
+      if (success && mounted) {
+        await authProvider.setAddresses(addressService.userAddresses);
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _selectedAddress = authProvider.defaultAddress);
+
+    if (_selectedAddress == null && !_didAutoRedirectForMissingAddress) {
+      _didAutoRedirectForMissingAddress = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _goToAddressSelection();
+        }
+      });
     }
   }
 
@@ -134,6 +147,70 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   double _toRadians(double degrees) => degrees * math.pi / 180;
+
+  Future<String?> _promptForMissingPhoneNumber() async {
+    final phoneController = TextEditingController();
+    String? submittedPhone;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text('Add phone number to place your order'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Google got you signed in quickly. We just need a delivery phone number before your first order.',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                prefixText: '+256 ',
+                hintText: '7XXXXXXXX',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Not now'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final phoneText = phoneController.text.trim();
+              if (phoneText.length != 9 ||
+                  !RegExp(r'^[0-9]{9}$').hasMatch(phoneText)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Phone number must be exactly 9 digits'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+
+              submittedPhone = '+256$phoneText';
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('Save & continue'),
+          ),
+        ],
+      ),
+    );
+
+    phoneController.dispose();
+    return submittedPhone;
+  }
 
   Future<void> _placeOrder() async {
     setState(() => _isLoading = true);
@@ -259,14 +336,46 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       } else {
         // Authenticated checkout flow
         final authProvider = context.read<AuthProvider>();
-        if (_selectedAddress == null) {
+
+        if (authProvider.needsPhoneNumber) {
+          final phoneNumber = await _promptForMissingPhoneNumber();
+          if (!mounted) return;
+          if (phoneNumber == null) {
+            setState(() => _isLoading = false);
+            return;
+          }
+
+          final saved = await authProvider.completeCustomerProfile(
+            phoneNumber: phoneNumber,
+          );
+          if (!mounted) return;
+
+          if (!saved) {
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  authProvider.errorMessage ?? 'Failed to save phone number',
+                ),
+                backgroundColor: AppColors.error,
+              ),
+            );
+            return;
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Please add a delivery address'),
-              backgroundColor: AppColors.error,
+              content: Text(
+                'Phone number saved. You can continue with checkout.',
+              ),
+              backgroundColor: AppColors.success,
             ),
           );
+        }
+
+        if (_selectedAddress == null) {
           setState(() => _isLoading = false);
+          _goToAddressSelection();
           return;
         }
 
@@ -320,6 +429,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           total: cartProvider.total,
           paymentMethod: _selectedPayment.name,
         );
+
+        if (!mounted) return;
 
         if (backendOrder != null) {
           orderProvider.syncOrdersFromService(orderService.orders);
@@ -699,11 +810,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
+  void _goToAddressSelection() {
+    final returnRoute = Uri.encodeComponent('/customer/checkout');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please add or select a delivery address to continue.'),
+        backgroundColor: AppColors.warning,
+      ),
+    );
+    context.go('/customer/addresses?return=$returnRoute');
+  }
+
   Widget _buildAddAddressButton() {
     return GestureDetector(
-      onTap: () {
-        setState(() => _showAddressForm = true);
-      },
+      onTap: _goToAddressSelection,
       child: Container(
         padding: const EdgeInsets.all(AppSizes.md),
         decoration: BoxDecoration(
@@ -719,7 +839,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const Icon(Iconsax.add, color: AppColors.primaryOrange, size: 20),
             const SizedBox(width: AppSizes.sm),
             Text(
-              'Add Delivery Address',
+              'Select Delivery Address',
               style: AppTextStyles.labelMedium.copyWith(
                 color: AppColors.primaryOrange,
               ),
