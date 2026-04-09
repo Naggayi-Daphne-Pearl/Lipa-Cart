@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        # actions/checkout v4 — SHA-pinned for supply-chain safety; Dependabot will update.
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Setup Flutter
+        # subosito/flutter-action v2 — tag-pinned in Phase 1; Dependabot github-actions
+        # will propose a SHA pin on the next bump. Track: https://github.com/subosito/flutter-action
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.29.x'
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # flutter analyze is blocking — the baseline is currently clean (flutter_lints
+      # recommended ruleset). New analyzer findings introduced by a PR should fail CI.
+      - name: Analyze
+        run: flutter analyze
+
+      # Phase 1: dart format is non-blocking so formatting debt in the baseline does
+      # not churn this PR. A dedicated follow-up PR will run `dart format .` on the
+      # whole tree, after which `continue-on-error` should be removed to make
+      # formatting regressions blocking. See CONTRIBUTING.md.
+      - name: Check formatting
+        continue-on-error: true
+        run: dart format --output=none --set-exit-if-changed .
+
+      # Phase 1: tests are non-blocking. The default widget_test.dart is a scaffold
+      # and real test coverage is still being built up. Flip to blocking once the
+      # test suite reflects real coverage on auth, cart, checkout, and orders.
+      - name: Run tests
+        continue-on-error: true
+        run: flutter test
+
+  build-web:
+    name: Build web
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.29.x'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Sanity-check that the web build still compiles. Runtime config (API base URL,
+      # Firebase, Sentry DSN) is injected at deploy time, not build time, so no secrets
+      # are needed here. If a PR introduces a build-time secret, add it as a repo secret
+      # and reference it via `--dart-define` — do NOT commit defaults.
+      - name: Build web (release)
+        continue-on-error: true
+        run: flutter build web --release

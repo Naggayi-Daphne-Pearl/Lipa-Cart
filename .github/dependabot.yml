@@ -1,0 +1,40 @@
+version: 2
+updates:
+  - package-ecosystem: 'pub'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'Africa/Kampala'
+    open-pull-requests-limit: 10
+    labels:
+      - 'dependencies'
+    commit-message:
+      prefix: 'chore(deps)'
+      prefix-development: 'chore(deps-dev)'
+    groups:
+      firebase:
+        patterns:
+          - 'firebase_*'
+      flutter-ui:
+        patterns:
+          - 'flutter_svg'
+          - 'cached_network_image'
+          - 'shimmer'
+          - 'flutter_staggered_grid_view'
+          - 'smooth_page_indicator'
+          - 'iconsax'
+      dev-dependencies:
+        dependency-type: 'development'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+    labels:
+      - 'dependencies'
+      - 'ci'
+    commit-message:
+      prefix: 'chore(ci)'
