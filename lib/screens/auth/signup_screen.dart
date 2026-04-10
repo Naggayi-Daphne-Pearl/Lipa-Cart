@@ -280,25 +280,29 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Widget _buildFormContent() {
+    final isDesktop = MediaQuery.of(context).size.width >= 800;
+
     return Form(
       key: _formKey,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: isDesktop ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: AppSizes.sm),
-          SvgPicture.asset('assets/images/logos/logo-on-white.svg', height: 32),
-          const SizedBox(height: AppSizes.lg),
+          if (!isDesktop) ...[
+            const SizedBox(height: AppSizes.sm),
+            SvgPicture.asset('assets/images/logos/logo-on-white.svg', height: 32),
+            const SizedBox(height: AppSizes.lg),
+          ],
           Text(
             'Create Account',
-            style: AppTextStyles.h2.copyWith(color: AppColors.primaryDark),
-            textAlign: TextAlign.center,
+            style: (isDesktop ? AppTextStyles.h1 : AppTextStyles.h2).copyWith(color: AppColors.primaryDark),
+            textAlign: isDesktop ? TextAlign.left : TextAlign.center,
           ),
           const SizedBox(height: AppSizes.xs),
           Text(
             'Set up your account to start ordering.',
             style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
-            textAlign: TextAlign.center,
+            textAlign: isDesktop ? TextAlign.left : TextAlign.center,
           ),
           const SizedBox(height: AppSizes.lg),
 
