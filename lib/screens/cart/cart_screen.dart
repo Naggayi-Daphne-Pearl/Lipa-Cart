@@ -14,6 +14,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
+import '../../widgets/auth_bottom_sheet.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -902,10 +903,12 @@ class _GuestOrSignInSheet extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
-                final returnRoute = Uri.encodeComponent('/customer/checkout');
-                context.go('/login?return=$returnRoute');
+                final authenticated = await showAuthBottomSheet(context);
+                if (authenticated == true && context.mounted) {
+                  context.go('/customer/checkout');
+                }
               },
               icon: const Icon(Iconsax.login),
               label: const Text('Sign In / Register'),

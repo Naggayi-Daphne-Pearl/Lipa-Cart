@@ -17,6 +17,7 @@ import '../../services/address_service.dart';
 import '../../services/order_service.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
+import '../../widgets/auth_bottom_sheet.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -624,7 +625,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: () => context.push('/login'),
+              onPressed: () => showAuthBottomSheet(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -708,7 +709,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => context.push('/signup'),
+                        onPressed: () => context.push('/signup?role=shopper'),
                         icon: Icon(Iconsax.shopping_bag, size: 18),
                         label: const Text('Shopper'),
                         style: OutlinedButton.styleFrom(
@@ -726,7 +727,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(width: AppSizes.md),
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => context.push('/signup'),
+                        onPressed: () => context.push('/signup?role=rider'),
                         icon: Icon(Iconsax.truck_fast, size: 18),
                         label: const Text('Rider'),
                         style: OutlinedButton.styleFrom(

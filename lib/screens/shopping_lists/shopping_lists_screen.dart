@@ -15,6 +15,7 @@ import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
 import '../../widgets/feature_spotlight_card.dart';
+import '../../widgets/auth_bottom_sheet.dart';
 
 class ShoppingListsScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -905,7 +906,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
         ),
         const SizedBox(height: AppSizes.xl),
         GestureDetector(
-          onTap: () => context.go('/login'),
+          onTap: () => showAuthBottomSheet(context),
           child: Container(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSizes.xl,
