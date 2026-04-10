@@ -42,6 +42,12 @@ class AddressService extends ChangeNotifier {
     return _addresses.map(_toUserAddress).toList();
   }
 
+  user_models.Address? get defaultUserAddress {
+    final addr = defaultAddress;
+    if (addr == null) return null;
+    return _toUserAddress(addr);
+  }
+
   user_models.Address _toUserAddress(Address address) {
     final landmark = address.landmark;
     final fullAddress =

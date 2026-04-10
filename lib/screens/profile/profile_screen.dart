@@ -169,13 +169,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (refreshedUser == null) return;
 
       final customerId = refreshedUser.customerId ?? refreshedUser.id;
-      final addressSuccess = await addressService.fetchAddresses(
+      await addressService.fetchAddresses(
         token,
         customerId,
       );
-      if (addressSuccess) {
-        await authProvider.setAddresses(addressService.userAddresses);
-      }
 
       if (orderProvider.orders.isEmpty) {
         final ordersSuccess = await orderService.fetchOrders(

@@ -522,17 +522,14 @@ class _OtpScreenState extends State<OtpScreen> {
 
     if (returnRoute.startsWith('/customer/checkout')) {
       final token = authProvider.token;
-      if (token != null && user != null && user.addresses.isEmpty) {
-        final addressService = context.read<AddressService>();
+      final addressService = context.read<AddressService>();
+      if (token != null && user != null && addressService.userAddresses.isEmpty) {
         final customerId = user.customerId ?? user.id;
-        final success = await addressService.fetchAddresses(token, customerId);
-        if (success) {
-          await authProvider.setAddresses(addressService.userAddresses);
-        }
+        await addressService.fetchAddresses(token, customerId);
       }
 
       if (!mounted) return;
-      final hasAddress = authProvider.user?.addresses.isNotEmpty == true;
+      final hasAddress = addressService.userAddresses.isNotEmpty;
       if (!hasAddress) {
         final encoded = Uri.encodeComponent(returnRoute);
         context.go('/customer/addresses?return=$encoded');

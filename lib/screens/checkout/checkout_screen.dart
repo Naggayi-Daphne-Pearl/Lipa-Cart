@@ -77,7 +77,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     });
 
     if (!widget.isGuest) {
-      _selectedAddress = context.read<AuthProvider>().defaultAddress;
+      _selectedAddress = context.read<AddressService>().defaultUserAddress;
       _loadSavedAddresses();
     }
   }
@@ -90,18 +90,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final customerId = authProvider.user?.customerId;
     if (customerId == null || customerId.isEmpty) return;
 
-    if (authProvider.user!.addresses.isEmpty) {
-      final success = await addressService.fetchAddresses(
+    if (addressService.userAddresses.isEmpty) {
+      await addressService.fetchAddresses(
         authProvider.token!,
         customerId,
       );
-      if (success && mounted) {
-        await authProvider.setAddresses(addressService.userAddresses);
-      }
     }
 
     if (!mounted) return;
-    setState(() => _selectedAddress = authProvider.defaultAddress);
+    setState(() => _selectedAddress = addressService.defaultUserAddress);
 
     if (_selectedAddress == null && !_didAutoRedirectForMissingAddress) {
       _didAutoRedirectForMissingAddress = true;
@@ -800,7 +797,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
           ),
           TextButton(
-            onPressed: () => _showAddressSelector(authProvider),
+            onPressed: () => _showAddressSelector(),
             child: const Text('Change'),
           ),
         ],
@@ -1203,7 +1200,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  void _showAddressSelector(AuthProvider authProvider) {
+  void _showAddressSelector() {
+    final addressService = context.read<AddressService>();
+    final addresses = addressService.userAddresses;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -1220,10 +1219,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             children: [
               Text('Select Address', style: AppTextStyles.h5),
               const SizedBox(height: AppSizes.md),
-              if (authProvider.user?.addresses.isEmpty ?? true)
+              if (addresses.isEmpty)
                 const Center(child: Text('No saved addresses'))
               else
-                ...authProvider.user!.addresses.map((address) {
+                ...addresses.map((address) {
                   return ListTile(
                     onTap: () {
                       setState(() => _selectedAddress = address);
