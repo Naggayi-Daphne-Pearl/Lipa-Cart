@@ -104,9 +104,12 @@ class _ShopperCompletedTasksScreenState
             onRefresh: _refresh,
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: shopper.completedTasks.length,
+              itemCount: shopper.completedTasks.length + 1,
               itemBuilder: (context, index) {
-                return _buildCompletedCard(shopper.completedTasks[index]);
+                if (index == 0) {
+                  return _buildCompletedSummary(shopper.completedTasks);
+                }
+                return _buildCompletedCard(shopper.completedTasks[index - 1]);
               },
             ),
           );
@@ -317,6 +320,47 @@ class _ShopperCompletedTasksScreenState
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompletedSummary(List<Order> tasks) {
+    final delivered = tasks.where((o) => o.status == OrderStatus.delivered).length;
+    final cancelled = tasks.where((o) => o.status == OrderStatus.cancelled || o.status == OrderStatus.refunded).length;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _summaryChip('Delivered', delivered, AppColors.success),
+          _summaryChip('Cancelled', cancelled, AppColors.error),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryChip(String label, int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$label: $count',
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

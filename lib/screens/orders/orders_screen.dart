@@ -315,6 +315,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   Widget _buildCleanOrderCard(BuildContext context, Order order) {
+    final itemCount = order.items.length;
     return GestureDetector(
       onTap: () => context.push('/customer/order-tracking', extra: order),
       child: Container(
@@ -391,23 +392,49 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       ),
                     ),
 
-                    // Status and Date Row
+                    // Status and total row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Status Badge
                         _buildStatusBadge(order.status),
-
-                        // Date
                         Text(
-                          Formatters.formatDate(order.createdAt),
+                          Formatters.formatCurrency(order.total),
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: context.responsive<double>(
+                              mobile: 14.0,
+                              tablet: 15.0,
+                              desktop: 15.0,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: AppSizes.xs),
+
+                    // Item count and quick hint
+                    Row(
+                      children: [
+                        Icon(
+                          Iconsax.box,
+                          size: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
                           style: AppTextStyles.caption.copyWith(
                             color: AppColors.textSecondary,
-                            fontSize: context.responsive<double>(
-                              mobile: 11.0,
-                              tablet: 12.0,
-                              desktop: 12.0,
-                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          'Tap to view',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textTertiary,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],

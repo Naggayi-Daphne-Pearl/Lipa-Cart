@@ -445,44 +445,55 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                       children: [
                         // Order number and status
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Order #${order.orderNumber}',
-                                  style: AppTextStyles.h5.copyWith(
-                                    fontWeight: FontWeight.w700,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Order #${order.orderNumber}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.h5.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Placed on ${Formatters.formatDateTime(order.createdAt)}',
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.textSecondary,
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Placed on ${Formatters.formatDateTime(order.createdAt)}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _getStatusColor(
-                                  order.status,
-                                ).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(
-                                  AppSizes.radiusFull,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
                                 ),
-                              ),
-                              child: Text(
-                                order.status.displayName,
-                                style: AppTextStyles.labelSmall.copyWith(
-                                  color: _getStatusColor(order.status),
-                                  fontWeight: FontWeight.w600,
+                                decoration: BoxDecoration(
+                                  color: _getStatusColor(
+                                    order.status,
+                                  ).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusFull,
+                                  ),
+                                ),
+                                child: Text(
+                                  order.status.displayName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    color: _getStatusColor(order.status),
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ),
