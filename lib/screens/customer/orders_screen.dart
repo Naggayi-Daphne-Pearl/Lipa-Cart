@@ -28,7 +28,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     final userId = auth.user?.id;
     if (auth.user != null && auth.token != null && userId != null) {
-      await orderService.fetchOrders(auth.token!, userId);
+      await orderService.fetchOrders(
+        auth.token!,
+        auth.user?.documentId ?? userId,
+      );
     }
   }
 

@@ -178,7 +178,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (orderProvider.orders.isEmpty) {
         final ordersSuccess = await orderService.fetchOrders(
           token,
-          refreshedUser.id,
+          refreshedUser.documentId ?? refreshedUser.id,
         );
         if (ordersSuccess) {
           orderProvider.syncOrdersFromService(orderService.orders);

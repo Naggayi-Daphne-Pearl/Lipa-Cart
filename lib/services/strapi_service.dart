@@ -26,6 +26,28 @@ class StrapiService {
     return false;
   }
 
+  static String _extractErrorMessage(
+    http.Response response, {
+    required String fallback,
+  }) {
+    try {
+      if (response.body.isEmpty) return fallback;
+      final body = json.decode(response.body);
+      if (body is Map<String, dynamic>) {
+        final error = body['error'];
+        if (error is Map<String, dynamic>) {
+          final message = error['message'] as String?;
+          if (message != null && message.isNotEmpty) return message;
+        }
+        final message = body['message'] as String?;
+        if (message != null && message.isNotEmpty) return message;
+      }
+      return fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   static Future<List<Category>> getCategories() async {
     final response = await http
         .get(Uri.parse('$_apiUrl/categories?populate=*'))
@@ -600,14 +622,20 @@ class StrapiService {
           )
           .timeout(AppConstants.apiTimeout);
 
+      if (_handleAuthError(response)) {
+        throw Exception('Session expired. Please login again.');
+      }
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['data'] as Map<String, dynamic>?;
       }
-      return null;
+      throw Exception(
+        _extractErrorMessage(response, fallback: 'Failed to claim order'),
+      );
     } catch (e) {
-      // ignored
-      return null;
+      if (e is Exception) rethrow;
+      throw Exception('Failed to claim order: $e');
     }
   }
 
@@ -620,10 +648,18 @@ class StrapiService {
             headers: {'Authorization': 'Bearer $token'},
           )
           .timeout(AppConstants.apiTimeout);
-      return response.statusCode == 200;
+
+      if (_handleAuthError(response)) {
+        throw Exception('Session expired. Please login again.');
+      }
+
+      if (response.statusCode == 200) return true;
+      throw Exception(
+        _extractErrorMessage(response, fallback: 'Failed to cancel task'),
+      );
     } catch (e) {
-      // ignored
-      return false;
+      if (e is Exception) rethrow;
+      throw Exception('Failed to cancel task: $e');
     }
   }
 
@@ -645,14 +681,20 @@ class StrapiService {
           )
           .timeout(AppConstants.apiTimeout);
 
+      if (_handleAuthError(response)) {
+        throw Exception('Session expired. Please login again.');
+      }
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['data'] as Map<String, dynamic>?;
       }
-      return null;
+      throw Exception(
+        _extractErrorMessage(response, fallback: 'Failed to update order status'),
+      );
     } catch (e) {
-      // ignored
-      return null;
+      if (e is Exception) rethrow;
+      throw Exception('Failed to update order status: $e');
     }
   }
 
@@ -948,14 +990,20 @@ class StrapiService {
           )
           .timeout(AppConstants.apiTimeout);
 
+      if (_handleAuthError(response)) {
+        throw Exception('Session expired. Please login again.');
+      }
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['data'] as Map<String, dynamic>?;
       }
-      return null;
+      throw Exception(
+        _extractErrorMessage(response, fallback: 'Failed to claim delivery'),
+      );
     } catch (e) {
-      // ignored
-      return null;
+      if (e is Exception) rethrow;
+      throw Exception('Failed to claim delivery: $e');
     }
   }
 
@@ -975,14 +1023,20 @@ class StrapiService {
           )
           .timeout(AppConstants.apiTimeout);
 
+      if (_handleAuthError(response)) {
+        throw Exception('Session expired. Please login again.');
+      }
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['data'] as Map<String, dynamic>?;
       }
-      return null;
+      throw Exception(
+        _extractErrorMessage(response, fallback: 'Failed to cancel delivery'),
+      );
     } catch (e) {
-      // ignored
-      return null;
+      if (e is Exception) rethrow;
+      throw Exception('Failed to cancel delivery: $e');
     }
   }
 
@@ -1009,14 +1063,20 @@ class StrapiService {
           )
           .timeout(AppConstants.apiTimeout);
 
+      if (_handleAuthError(response)) {
+        throw Exception('Session expired. Please login again.');
+      }
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['data'] as Map<String, dynamic>?;
       }
-      return null;
+      throw Exception(
+        _extractErrorMessage(response, fallback: 'Failed to update delivery status'),
+      );
     } catch (e) {
-      // ignored
-      return null;
+      if (e is Exception) rethrow;
+      throw Exception('Failed to update delivery status: $e');
     }
   }
 

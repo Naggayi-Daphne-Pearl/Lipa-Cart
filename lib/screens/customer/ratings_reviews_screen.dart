@@ -26,7 +26,10 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
     final auth = context.read<AuthProvider>();
     final orderService = context.read<OrderService>();
     if (auth.token != null && auth.user != null) {
-      await orderService.fetchOrders(auth.token!, auth.user!.id);
+      await orderService.fetchOrders(
+        auth.token!,
+        auth.user!.documentId ?? auth.user!.id,
+      );
     }
   }
 
@@ -187,7 +190,7 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
                     const Icon(Icons.star_rounded, size: 18, color: Color(0xFFFFA726)),
                     const SizedBox(width: 4),
                     Text(
-                      '${order.rating!.stars.toStringAsFixed(1)}',
+                      order.rating!.stars.toStringAsFixed(1),
                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                     ),
                   ],

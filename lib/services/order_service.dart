@@ -349,15 +349,20 @@ class OrderService extends ChangeNotifier {
   }
 
   /// Fetch all orders for current customer
-  Future<bool> fetchOrders(String token, String userId) async {
+  Future<bool> fetchOrders(String token, String customerIdentifier) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      final isNumericId = int.tryParse(customerIdentifier) != null;
+
       // Strapi v5 syntax: populate order_items and delivery_address
+      final filters = isNumericId
+        ? 'filters[customer][id][\$eq]=$customerIdentifier'
+        : 'filters[customer][documentId][\$eq]=$customerIdentifier';
       final url =
-          '$baseUrl/api/orders?filters[customer][\$eq]=$userId&populate[0]=order_items&populate[1]=delivery_address&populate[2]=customer&populate[3]=shopper&populate[4]=rider&sort[0]=createdAt:desc';
+        '$baseUrl/api/orders?$filters&populate[0]=order_items&populate[1]=delivery_address&populate[2]=customer&populate[3]=shopper&populate[4]=rider&sort[0]=createdAt:desc';
 
       final response = await http.get(
         Uri.parse(url),
@@ -751,19 +756,15 @@ class OrderService extends ChangeNotifier {
     String? reason,
   }) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/api/orders/$orderId'),
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/orders/$orderId/customer-cancel'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
-          'data': {
-            'status': 'cancelled',
-            'cancelled_at': DateTime.now().toIso8601String(),
-            if (reason != null && reason.isNotEmpty)
-              'cancellation_reason': reason,
-          },
+          if (reason != null && reason.isNotEmpty)
+            'cancellation_reason': reason,
         }),
       );
 
@@ -779,6 +780,20 @@ class OrderService extends ChangeNotifier {
         }
         notifyListeners();
         return true;
+      }
+      if (response.body.isNotEmpty) {
+        try {
+          final payload = jsonDecode(response.body) as Map<String, dynamic>;
+          final err = payload['error'] as Map<String, dynamic>?;
+          final msg = err?['message'] as String?;
+          if (msg != null && msg.isNotEmpty) {
+            _error = msg;
+            notifyListeners();
+            return false;
+          }
+        } catch (_) {
+          // ignored
+        }
       }
       return false;
     } catch (e) {

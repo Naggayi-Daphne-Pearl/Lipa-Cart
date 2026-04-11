@@ -2376,7 +2376,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                 // Refresh orders list so it's updated immediately
                 await orderService.fetchOrders(
                   token,
-                  authProvider.user!.id.toString(),
+                  authProvider.user!.documentId ?? authProvider.user!.id.toString(),
                 );
 
                 // Dismiss loading
