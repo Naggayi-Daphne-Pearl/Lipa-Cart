@@ -641,7 +641,12 @@ class RoleBasedRouter {
         ),
         GoRoute(
           path: '/rider/active-deliveries',
-          builder: (context, state) => const RiderActiveDeliveriesScreen(),
+          builder: (context, state) {
+            final focusDeliveryId = state.uri.queryParameters['focus'];
+            return RiderActiveDeliveriesScreen(
+              focusDeliveryId: focusDeliveryId,
+            );
+          },
         ),
         GoRoute(
           path: '/rider/earnings',

@@ -162,6 +162,9 @@ class _ShopperAvailableTasksScreenState
     String shopperId,
     ShopperProvider shopperProvider,
   ) {
+    final screenContext = this.context;
+    final messenger = ScaffoldMessenger.maybeOf(screenContext);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -258,7 +261,7 @@ class _ShopperAvailableTasksScreenState
               child: ElevatedButton(
                 onPressed: () async {
                   showDialog(
-                    context: context,
+                    context: screenContext,
                     builder: (dialogContext) => AlertDialog(
                       title: const Text('Accept Task?'),
                       content: Text(
@@ -271,15 +274,25 @@ class _ShopperAvailableTasksScreenState
                         ),
                         ElevatedButton(
                           onPressed: () async {
-                            final messenger = ScaffoldMessenger.of(context);
                             Navigator.pop(dialogContext);
                             final success = await shopperProvider.acceptTask(
                               token,
                               task.documentId ?? task.id,
                               shopperId,
                             );
-                            if (success && mounted) {
-                              messenger.showSnackBar(
+                            if (!mounted) return;
+
+                            if (success) {
+                              final acceptedOrderId = task.documentId ?? task.id;
+                              Order? acceptedOrder;
+                              for (final active in shopperProvider.activeTasks) {
+                                if (active.documentId == acceptedOrderId || active.id == acceptedOrderId) {
+                                  acceptedOrder = active;
+                                  break;
+                                }
+                              }
+
+                              messenger?.showSnackBar(
                                 SnackBar(
                                   content: const Text(
                                     'Task accepted! Start shopping.',
@@ -288,12 +301,10 @@ class _ShopperAvailableTasksScreenState
                                 ),
                               );
                               // Navigate directly to the shopping checklist for this order
-                              if (context.mounted) {
-                                context.go(
-                                  '/shopper/shopping-checklist',
-                                  extra: task,
-                                );
-                              }
+                              GoRouter.of(screenContext).go(
+                                '/shopper/shopping-checklist',
+                                extra: acceptedOrder ?? task,
+                              );
                             }
                           },
                           child: const Text('Accept Task'),

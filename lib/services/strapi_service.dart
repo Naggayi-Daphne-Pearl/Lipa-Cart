@@ -959,6 +959,33 @@ class StrapiService {
     }
   }
 
+  /// Rider cancels a claimed delivery before transit starts.
+  static Future<Map<String, dynamic>?> unclaimDelivery(
+    String orderDocumentId,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .delete(
+            Uri.parse('$_apiUrl/orders/$orderDocumentId/claim-delivery'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } catch (e) {
+      // ignored
+      return null;
+    }
+  }
+
   /// Rider updates delivery status (in_transit, delivered)
   static Future<Map<String, dynamic>?> updateRiderOrderStatus(
     String orderDocumentId,

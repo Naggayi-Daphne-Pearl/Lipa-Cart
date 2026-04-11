@@ -187,6 +187,9 @@ class _RiderAvailableDeliveriesScreenState
     String riderId,
     RiderProvider riderProvider,
   ) {
+    final screenContext = this.context;
+    final messenger = ScaffoldMessenger.maybeOf(screenContext);
+
     return Container(
       margin: const EdgeInsets.only(bottom: AppSizes.md),
       decoration: BoxDecoration(
@@ -316,7 +319,7 @@ class _RiderAvailableDeliveriesScreenState
               height: 48,
               onPressed: () async {
                 showDialog(
-                  context: context,
+                  context: screenContext,
                   builder: (dialogContext) => AlertDialog(
                     shape: RoundedRectangleBorder(
                       borderRadius:
@@ -340,8 +343,11 @@ class _RiderAvailableDeliveriesScreenState
                             delivery.documentId ?? delivery.id,
                             riderId,
                           );
-                          if (success && mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                          if (!mounted) return;
+
+                          if (success) {
+                            final acceptedId = delivery.documentId ?? delivery.id;
+                            messenger?.showSnackBar(
                               SnackBar(
                                 content: const Text(
                                   'Delivery accepted! Start your route.',
@@ -350,9 +356,7 @@ class _RiderAvailableDeliveriesScreenState
                               ),
                             );
                             // Navigate directly to active deliveries
-                            if (context.mounted) {
-                              context.go('/rider/active-deliveries');
-                            }
+                            GoRouter.of(screenContext).go('/rider/active-deliveries?focus=$acceptedId');
                           }
                         },
                         style: ElevatedButton.styleFrom(

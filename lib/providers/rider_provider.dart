@@ -182,6 +182,30 @@ class RiderProvider extends ChangeNotifier {
     }
   }
 
+  /// Cancel a claimed delivery before transit starts.
+  Future<bool> cancelDelivery(
+    String token,
+    String orderId,
+    String riderId,
+  ) async {
+    try {
+      final result = await StrapiService.unclaimDelivery(orderId, token);
+      if (result != null) {
+        await fetchActiveDeliveries(token, riderId);
+        await fetchAvailableDeliveries(token);
+        notifyListeners();
+        return true;
+      }
+      _error = 'Failed to cancel delivery';
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = 'Error: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Mark delivery as complete (delivered to customer)
   Future<bool> completeDelivery(
     String token,
