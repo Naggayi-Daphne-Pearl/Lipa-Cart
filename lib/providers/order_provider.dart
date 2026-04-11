@@ -29,7 +29,8 @@ class OrderProvider extends ChangeNotifier {
       .where(
         (o) =>
             o.status != OrderStatus.delivered &&
-            o.status != OrderStatus.cancelled,
+            o.status != OrderStatus.cancelled &&
+            o.status != OrderStatus.refunded,
       )
       .toList();
 
@@ -37,7 +38,8 @@ class OrderProvider extends ChangeNotifier {
       .where(
         (o) =>
             o.status == OrderStatus.delivered ||
-            o.status == OrderStatus.cancelled,
+            o.status == OrderStatus.cancelled ||
+            o.status == OrderStatus.refunded,
       )
       .toList();
 

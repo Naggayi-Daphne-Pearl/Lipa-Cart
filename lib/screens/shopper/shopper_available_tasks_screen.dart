@@ -280,13 +280,20 @@ class _ShopperAvailableTasksScreenState
                             );
                             if (success && mounted) {
                               messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text(
+                                SnackBar(
+                                  content: const Text(
                                     'Task accepted! Start shopping.',
                                   ),
-                                  backgroundColor: Colors.green,
+                                  backgroundColor: AppColors.primary,
                                 ),
                               );
+                              // Navigate directly to the shopping checklist for this order
+                              if (context.mounted) {
+                                context.go(
+                                  '/shopper/shopping-checklist',
+                                  extra: task,
+                                );
+                              }
                             }
                           },
                           child: const Text('Accept Task'),
@@ -296,7 +303,7 @@ class _ShopperAvailableTasksScreenState
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 child: const Text(
@@ -323,21 +330,21 @@ class _ShopperAvailableTasksScreenState
 
     if (minutesAgo < 5) {
       label = 'NEW';
-      color = Colors.green;
-      bgColor = Colors.green.withValues(alpha: 0.1);
+      color = AppColors.primary;
+      bgColor = AppColors.primarySoft;
     } else if (minutesAgo < 15) {
       label = '${minutesAgo}m ago';
-      color = Colors.blue;
-      bgColor = Colors.blue.withValues(alpha: 0.1);
+      color = AppColors.info;
+      bgColor = AppColors.cardBlue;
     } else if (minutesAgo < 30) {
       label = '${minutesAgo}m ago';
-      color = Colors.orange;
-      bgColor = Colors.orange.withValues(alpha: 0.1);
+      color = AppColors.accent;
+      bgColor = AppColors.accentSoft;
     } else {
       final display = minutesAgo < 60 ? '${minutesAgo}m' : '${minutesAgo ~/ 60}h';
       label = 'Urgent · $display';
-      color = Colors.red;
-      bgColor = Colors.red.withValues(alpha: 0.1);
+      color = AppColors.error;
+      bgColor = AppColors.errorSoft;
     }
 
     return Container(

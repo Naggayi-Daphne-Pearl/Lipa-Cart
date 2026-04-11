@@ -9,6 +9,11 @@ class CartItem {
   double? actualPrice;
   String? shopperNotes;
   bool? substitutionApproved;
+  bool? isSubstituted;
+  String? substituteName;
+  double? substitutePrice;
+  String? substitutePhotoUrl;
+  String? substituteForItemId;
 
   CartItem({
     required this.id,
@@ -19,7 +24,31 @@ class CartItem {
     this.actualPrice,
     this.shopperNotes,
     this.substitutionApproved,
+    this.isSubstituted,
+    this.substituteName,
+    this.substitutePrice,
+    this.substitutePhotoUrl,
+    this.substituteForItemId,
   });
+
+  /// Parse substitute name from legacy "SUBSTITUTE: Name (UGX Price)" notes.
+  static String? parseSubstituteNameFromNotes(String? notes) {
+    if (notes == null || !notes.startsWith('SUBSTITUTE:')) return null;
+    return notes.replaceFirst('SUBSTITUTE: ', '').replaceFirst(RegExp(r'\s*\(UGX\s*[\d,]+\)\s*$'), '').trim();
+  }
+
+  /// Parse substitute price from legacy "SUBSTITUTE: ... (UGX Price)" notes.
+  static double? parseSubstitutePriceFromNotes(String? notes) {
+    if (notes == null) return null;
+    final match = RegExp(r'UGX\s*([\d,]+)').firstMatch(notes);
+    if (match == null) return null;
+    return double.tryParse(match.group(1)!.replaceAll(',', ''));
+  }
+
+  /// Whether this item has a pending substitute suggestion.
+  bool get hasSubstituteSuggestion =>
+      (isSubstituted == true || substituteName != null) &&
+      substitutionApproved == null;
 
   double get totalPrice => product.price * quantity;
 
@@ -32,6 +61,11 @@ class CartItem {
     double? actualPrice,
     String? shopperNotes,
     bool? substitutionApproved,
+    bool? isSubstituted,
+    String? substituteName,
+    double? substitutePrice,
+    String? substitutePhotoUrl,
+    String? substituteForItemId,
   }) {
     return CartItem(
       id: id ?? this.id,
@@ -42,6 +76,11 @@ class CartItem {
       actualPrice: actualPrice ?? this.actualPrice,
       shopperNotes: shopperNotes ?? this.shopperNotes,
       substitutionApproved: substitutionApproved ?? this.substitutionApproved,
+      isSubstituted: isSubstituted ?? this.isSubstituted,
+      substituteName: substituteName ?? this.substituteName,
+      substitutePrice: substitutePrice ?? this.substitutePrice,
+      substitutePhotoUrl: substitutePhotoUrl ?? this.substitutePhotoUrl,
+      substituteForItemId: substituteForItemId ?? this.substituteForItemId,
     );
   }
 
@@ -56,10 +95,24 @@ class CartItem {
       if (shopperNotes != null) 'shopperNotes': shopperNotes,
       if (substitutionApproved != null)
         'substitutionApproved': substitutionApproved,
+      if (isSubstituted != null) 'isSubstituted': isSubstituted,
+      if (substituteName != null) 'substituteName': substituteName,
+      if (substitutePrice != null) 'substitutePrice': substitutePrice,
+      if (substitutePhotoUrl != null) 'substitutePhotoUrl': substitutePhotoUrl,
+      if (substituteForItemId != null)
+        'substituteForItemId': substituteForItemId,
     };
   }
 
   factory CartItem.fromJson(Map<String, dynamic> json) {
+    final shopperNotes = json['shopperNotes'] as String?;
+
+    // Structured substitution fields take priority over legacy notes parsing
+    final structuredName = json['substituteName'] as String?;
+    final structuredPrice = (json['substitutePrice'] as num?)?.toDouble();
+    final substituteName = structuredName ?? parseSubstituteNameFromNotes(shopperNotes);
+    final substitutePrice = structuredPrice ?? parseSubstitutePriceFromNotes(shopperNotes);
+
     return CartItem(
       id: json['id'] as String,
       product: Product.fromJson(json['product'] as Map<String, dynamic>),
@@ -67,8 +120,13 @@ class CartItem {
       specialInstructions: json['specialInstructions'] as String?,
       found: json['found'] as bool?,
       actualPrice: (json['actualPrice'] as num?)?.toDouble(),
-      shopperNotes: json['shopperNotes'] as String?,
+      shopperNotes: shopperNotes,
       substitutionApproved: json['substitutionApproved'] as bool?,
+      isSubstituted: json['isSubstituted'] as bool?,
+      substituteName: substituteName,
+      substitutePrice: substitutePrice,
+      substitutePhotoUrl: json['substitutePhotoUrl'] as String?,
+      substituteForItemId: json['substituteForItemId'] as String?,
     );
   }
 }

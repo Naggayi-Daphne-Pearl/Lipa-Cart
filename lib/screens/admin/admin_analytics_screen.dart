@@ -106,7 +106,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
                     const SizedBox(width: 20),
                     Expanded(child: _buildTeamCard('Active Riders',
                         Iconsax.truck_fast, _stats['riderCount'] ?? 0,
-                        const Color(0xFFEF4444))),
+                        AppColors.primaryDark)),
                   ],
                 )
               else ...[
@@ -114,7 +114,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
                     _stats['shopperCount'] ?? 0, AppColors.primary),
                 const SizedBox(height: 20),
                 _buildTeamCard('Active Riders', Iconsax.truck_fast,
-                    _stats['riderCount'] ?? 0, const Color(0xFFEF4444)),
+                    _stats['riderCount'] ?? 0, AppColors.primaryDark),
               ],
               const SizedBox(height: 32),
             ],
@@ -136,7 +136,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
         // Date range pills
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: AppColors.grey200),
           ),
@@ -178,25 +178,25 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
         title: 'Total Orders',
         value: '${_stats['totalOrders'] ?? 0}',
         icon: Iconsax.bag_2,
-        color: const Color(0xFF10B981),
+        color: AppColors.primary,
       ),
       _AnalyticsData(
         title: 'Revenue',
         value: _formatCurrency((_stats['totalOrders'] ?? 0) * 45000),
         icon: Iconsax.money_recive,
-        color: const Color(0xFF6366F1),
+        color: AppColors.beverages,
       ),
       _AnalyticsData(
         title: 'Active Users',
         value: '${_stats['totalUsers'] ?? 0}',
         icon: Iconsax.people,
-        color: const Color(0xFF0EA5E9),
+        color: AppColors.info,
       ),
       _AnalyticsData(
         title: 'Products Listed',
         value: '${_stats['totalProducts'] ?? 0}',
         icon: Iconsax.box,
-        color: const Color(0xFFEA7702),
+        color: AppColors.accent,
       ),
     ];
 

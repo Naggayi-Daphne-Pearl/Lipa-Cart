@@ -6,6 +6,7 @@ import '../../providers/shopper_provider.dart';
 import '../../models/order.dart';
 import '../../models/user.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_order_status_colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/shopper_button.dart';
@@ -63,17 +64,7 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
   }
 
   Color _getStatusColor(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.shopping:
-        return Colors.blue;
-      case OrderStatus.readyForDelivery:
-        return Colors.green;
-      case OrderStatus.confirmed:
-      case OrderStatus.shopperAssigned:
-        return AppColors.accent;
-      default:
-        return Colors.grey;
-    }
+    return AppOrderStatusColors.foreground(status);
   }
 
   String _getStatusText(OrderStatus status) {
@@ -247,9 +238,10 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
                         label: const Text('Awaiting Rider Pickup'),
                         onPressed: null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          disabledBackgroundColor: Colors.green.withValues(alpha: 0.3),
-                          disabledForegroundColor: Colors.green,
+                          backgroundColor: AppColors.primary,
+                          disabledBackgroundColor:
+                              AppColors.primary.withValues(alpha: 0.3),
+                          disabledForegroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -273,7 +265,7 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: order.status == OrderStatus.shopping
-                              ? Colors.blue
+                              ? AppColors.primary
                               : AppColors.accent,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
@@ -291,7 +283,7 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
                     icon: const Icon(Icons.cancel_outlined, size: 18),
                     label: const Text('Cancel Task'),
                     style: TextButton.styleFrom(
-                      foregroundColor: Colors.red,
+                      foregroundColor: AppColors.error,
                     ),
                     onPressed: () => _showCancelDialog(order),
                   ),

@@ -182,7 +182,7 @@ class _ShopperCompletedTasksScreenState
 
     if (isCancelled) {
       badgeText = 'Cancelled';
-      badgeColor = Colors.red;
+      badgeColor = AppColors.error;
       badgeIcon = Icons.cancel;
     } else if (isDelivered) {
       badgeText = 'Delivered';
@@ -190,19 +190,19 @@ class _ShopperCompletedTasksScreenState
       badgeIcon = Icons.check_circle;
     } else if (order.status == OrderStatus.inTransit) {
       badgeText = 'In Transit';
-      badgeColor = Colors.purple;
+      badgeColor = AppColors.accent;
       badgeIcon = Icons.local_shipping;
     } else if (order.status == OrderStatus.readyForDelivery) {
       badgeText = 'Awaiting Rider';
-      badgeColor = Colors.orange;
+      badgeColor = AppColors.accent;
       badgeIcon = Icons.timer;
     } else if (order.status == OrderStatus.riderAssigned) {
       badgeText = 'Rider Assigned';
-      badgeColor = Colors.deepPurple;
+      badgeColor = AppColors.info;
       badgeIcon = Icons.local_shipping;
     } else {
       badgeText = order.status.displayName;
-      badgeColor = Colors.blue;
+      badgeColor = AppColors.primary;
       badgeIcon = Icons.info;
     }
 
@@ -290,8 +290,8 @@ class _ShopperCompletedTasksScreenState
                         icon: const Icon(Icons.local_shipping, size: 16),
                         label: Text('Call ${order.riderName}', overflow: TextOverflow.ellipsis),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.purple,
-                          side: const BorderSide(color: Colors.purple),
+                          foregroundColor: AppColors.info,
+                          side: const BorderSide(color: AppColors.info),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                         ),

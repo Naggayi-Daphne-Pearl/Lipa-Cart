@@ -304,6 +304,20 @@ class StrapiService {
             ? (productData['documentId'] ?? productData['id']).toString()
             : '';
 
+        // Parse substitution photo URL from Strapi media field
+        String? substitutePhotoUrl;
+        final photoField = itemAttrs['substitution_photo'];
+        if (photoField is Map<String, dynamic>) {
+          final url = photoField['url'] as String?;
+          if (url != null && url.isNotEmpty) {
+            substitutePhotoUrl = url.startsWith('http') ? url : '${AppConstants.baseUrl}$url';
+          }
+        }
+
+        final shopperNotes = itemAttrs['shopper_notes'] as String?;
+        final structuredName = itemAttrs['substitute_name'] as String?;
+        final structuredPrice = (itemAttrs['substitute_price'] as num?)?.toDouble();
+
         return CartItem(
           id: (item['documentId'] ?? item['id'] ?? '').toString(),
           product: Product(
@@ -321,7 +335,12 @@ class StrapiService {
           specialInstructions: itemAttrs['special_instructions'] as String?,
           found: itemAttrs['found'] as bool?,
           actualPrice: (itemAttrs['actual_price'] as num?)?.toDouble(),
-          shopperNotes: itemAttrs['shopper_notes'] as String?,
+          shopperNotes: shopperNotes,
+          substitutionApproved: itemAttrs['substitution_approved'] as bool?,
+          isSubstituted: itemAttrs['is_substituted'] as bool?,
+          substituteName: structuredName ?? CartItem.parseSubstituteNameFromNotes(shopperNotes),
+          substitutePrice: structuredPrice ?? CartItem.parseSubstitutePriceFromNotes(shopperNotes),
+          substitutePhotoUrl: substitutePhotoUrl,
         );
       }).toList();
     } else if (orderItemsRaw is Map && orderItemsRaw['data'] is List) {
@@ -332,6 +351,7 @@ class StrapiService {
         final quantity = (itemAttrs['quantity'] as num?)?.toDouble() ?? 1;
         final estimatedPrice =
             (itemAttrs['estimated_price'] as num?)?.toDouble() ?? 0;
+        final shopperNotes = itemAttrs['shopper_notes'] as String?;
 
         return CartItem(
           id: (item['documentId'] ?? item['id'] ?? '').toString(),
@@ -347,6 +367,11 @@ class StrapiService {
             isAvailable: true,
           ),
           quantity: quantity,
+          shopperNotes: shopperNotes,
+          substitutionApproved: itemAttrs['substitution_approved'] as bool?,
+          isSubstituted: itemAttrs['is_substituted'] as bool?,
+          substituteName: itemAttrs['substitute_name'] as String? ?? CartItem.parseSubstituteNameFromNotes(shopperNotes),
+          substitutePrice: (itemAttrs['substitute_price'] as num?)?.toDouble() ?? CartItem.parseSubstitutePriceFromNotes(shopperNotes),
         );
       }).toList();
     }
@@ -389,7 +414,7 @@ class StrapiService {
     final statusStr = attrs['status'] as String? ?? 'pending';
     const statusMap = {
       'pending': OrderStatus.pending,
-      'payment_processing': OrderStatus.pending,
+      'payment_processing': OrderStatus.paymentProcessing,
       'payment_confirmed': OrderStatus.confirmed,
       'shopper_assigned': OrderStatus.shopperAssigned,
       'shopping': OrderStatus.shopping,
@@ -398,7 +423,7 @@ class StrapiService {
       'in_transit': OrderStatus.inTransit,
       'delivered': OrderStatus.delivered,
       'cancelled': OrderStatus.cancelled,
-      'refunded': OrderStatus.cancelled,
+      'refunded': OrderStatus.refunded,
     };
     final status = statusMap[statusStr] ?? OrderStatus.pending;
 

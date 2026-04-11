@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_order_status_colors.dart';
+import '../../models/order.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
 import '../../widgets/app_loading_indicator.dart';
@@ -33,9 +36,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Order Details'),
-        backgroundColor: Colors.green,
       ),
       body: Consumer2<AuthProvider, OrderService>(
         builder: (context, auth, orderService, _) {
@@ -72,7 +75,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               children: [
                 // Order status header
                 Container(
-                  color: Colors.green[50],
+                  color: AppColors.primarySoft,
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,20 +96,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 order.createdAt.toString().split('.')[0],
-                                style: TextStyle(color: Colors.grey[600]),
+                                style: TextStyle(color: AppColors.textSecondary),
                               ),
                             ],
                           ),
-                          _buildStatusBadge(order.status.name),
+                          _buildStatusBadge(order.status),
                         ],
                       ),
                       const SizedBox(height: 12),
                       LinearProgressIndicator(
-                        value: _getProgressValue(order.status.name),
+                        value: _getProgressValue(order.status),
                         minHeight: 4,
-                        backgroundColor: Colors.grey[300],
+                        backgroundColor: AppColors.grey200,
                         valueColor: const AlwaysStoppedAnimation<Color>(
-                          Colors.green,
+                          AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -114,7 +117,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         order.statusLabel,
                         style: const TextStyle(
                           fontWeight: FontWeight.w500,
-                          color: Colors.green,
+                          color: AppColors.primary,
                         ),
                       ),
                     ],
@@ -172,7 +175,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 'Expected delivery: ${order.deliveredAt?.toString() ?? 'TBD'}',
-                                style: TextStyle(color: Colors.grey[600]),
+                                style: TextStyle(color: AppColors.textSecondary),
                               ),
                             ],
                           ),
@@ -249,7 +252,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             'Total',
                             order.total,
                             isBold: true,
-                            color: Colors.green,
+                            color: AppColors.primary,
                           ),
                         ],
                       ),
@@ -291,7 +294,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           child: ElevatedButton(
                             onPressed: () => _showRatingDialog(context),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: AppColors.primary,
                             ),
                             child: const Text('Rate This Order'),
                           ),
@@ -397,73 +400,43 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  Widget _buildStatusBadge(String status) {
-    Color bgColor;
-    Color textColor;
-    String label;
-
-    switch (status) {
-      case 'pending':
-      case 'payment_confirmed':
-        bgColor = Colors.yellow[100]!;
-        textColor = Colors.orange;
-        label = 'Pending';
-        break;
-      case 'shopping':
-      case 'ready_for_pickup':
-        bgColor = Colors.blue[100]!;
-        textColor = Colors.blue;
-        label = 'Shopping';
-        break;
-      case 'in_transit':
-        bgColor = Colors.purple[100]!;
-        textColor = Colors.purple;
-        label = 'In Transit';
-        break;
-      case 'delivered':
-        bgColor = Colors.green[100]!;
-        textColor = Colors.green;
-        label = 'Delivered';
-        break;
-      case 'cancelled':
-        bgColor = Colors.red[100]!;
-        textColor = Colors.red;
-        label = 'Cancelled';
-        break;
-      default:
-        bgColor = Colors.grey[100]!;
-        textColor = Colors.grey;
-        label = status;
-    }
-
+  Widget _buildStatusBadge(OrderStatus status) {
+    final t = AppOrderStatusColors.triple(status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(4),
+        color: t.$1,
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        label,
-        style: TextStyle(color: textColor, fontWeight: FontWeight.w500),
+        t.$3,
+        style: TextStyle(color: t.$2, fontWeight: FontWeight.w500),
       ),
     );
   }
 
-  double _getProgressValue(String status) {
+  double _getProgressValue(OrderStatus status) {
     switch (status) {
-      case 'pending':
-      case 'payment_confirmed':
+      case OrderStatus.pending:
+      case OrderStatus.confirmed:
         return 0.2;
-      case 'shopping':
+      case OrderStatus.shopperAssigned:
+        return 0.3;
+      case OrderStatus.shopping:
         return 0.4;
-      case 'ready_for_pickup':
+      case OrderStatus.readyForDelivery:
         return 0.6;
-      case 'in_transit':
+      case OrderStatus.riderAssigned:
+        return 0.7;
+      case OrderStatus.inTransit:
         return 0.8;
-      case 'delivered':
+      case OrderStatus.delivered:
         return 1.0;
-      default:
+      case OrderStatus.cancelled:
+      case OrderStatus.refunded:
         return 0;
+      case OrderStatus.paymentProcessing:
+        return 0.1;
     }
   }
 }

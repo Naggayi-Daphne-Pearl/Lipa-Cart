@@ -376,7 +376,34 @@ class _RiderActiveDeliveriesScreenState
                 ),
               ),
             const SizedBox(height: AppSizes.sm),
-            // Items summary
+            // COD banner — prominent at the top
+            if (order.paymentMethod == PaymentMethod.cashOnDelivery)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                margin: const EdgeInsets.only(bottom: AppSizes.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
+                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Iconsax.money_recive, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'COLLECT ${Formatters.formatCurrency(order.total)} CASH',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            // Items summary + your earning
             Row(
               children: [
                 Icon(Iconsax.box_1, size: 16, color: AppColors.textTertiary),
@@ -390,15 +417,55 @@ class _RiderActiveDeliveriesScreenState
                 ),
                 const Spacer(),
                 Text(
-                  Formatters.formatCurrency(order.deliveryFee),
+                  'Your Earning: ${Formatters.formatCurrency(order.deliveryFee)}',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 15,
+                    fontSize: 13,
                     color: AppColors.accent,
                   ),
                 ),
               ],
             ),
+            // Expandable item list
+            if (order.items.isNotEmpty)
+              Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.only(bottom: 8),
+                  title: Text(
+                    'View items',
+                    style: TextStyle(fontSize: 12, color: AppColors.accent, fontWeight: FontWeight.w600),
+                  ),
+                  iconColor: AppColors.accent,
+                  collapsedIconColor: AppColors.accent,
+                  children: order.items.map((item) {
+                    final substituted = item.substituteName != null;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${substituted ? item.substituteName! : item.product.name}  x${item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 1)} ${item.product.unit}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                                decoration: substituted ? TextDecoration.none : null,
+                              ),
+                            ),
+                          ),
+                          if (substituted)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 4),
+                              child: Icon(Icons.swap_horiz, size: 14, color: AppColors.accent),
+                            ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
             const SizedBox(height: AppSizes.sm),
             // GPS Navigation buttons
             Row(
@@ -475,41 +542,6 @@ class _RiderActiveDeliveriesScreenState
                 ),
               )
             else if (order.status == OrderStatus.inTransit) ...[
-              // COD: Collect cash first
-              if (order.paymentMethod == PaymentMethod.cashOnDelivery)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSizes.sm),
-                  child: Container(
-                    padding: const EdgeInsets.all(AppSizes.sm),
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                      border: Border.all(
-                        color: AppColors.warning.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Iconsax.money_recive,
-                          color: AppColors.warning,
-                          size: 20,
-                        ),
-                        const SizedBox(width: AppSizes.sm),
-                        Expanded(
-                          child: Text(
-                            'Collect ${Formatters.formatCurrency(order.total)} cash before completing',
-                            style: const TextStyle(
-                              color: AppColors.warning,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               // Rider is delivering — require delivery proof photo
               SizedBox(
                 width: double.infinity,

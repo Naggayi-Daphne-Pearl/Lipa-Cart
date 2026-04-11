@@ -75,7 +75,7 @@ class _AdminShellState extends State<AdminShell> {
       // Top bar
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textPrimary,
         surfaceTintColor: Colors.transparent,
         toolbarHeight: 64,
@@ -263,7 +263,7 @@ class _AdminShellState extends State<AdminShell> {
             Container(
               width: 240,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 border: Border(right: BorderSide(color: AppColors.grey200)),
               ),
               child: _buildSidebarContent(context),

@@ -606,7 +606,7 @@ class _RiderDetailsView extends StatelessWidget {
                       icon: const Icon(Icons.edit),
                       label: const Text('Edit Profile'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: AppColors.primary,
                       ),
                     ),
                   ),

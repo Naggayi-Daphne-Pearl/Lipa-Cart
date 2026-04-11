@@ -235,6 +235,7 @@ class OrderCard extends StatelessWidget {
   Color _getStatusColor(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:
+      case OrderStatus.paymentProcessing:
         return AppColors.warning;
       case OrderStatus.confirmed:
       case OrderStatus.shopperAssigned:
@@ -246,6 +247,7 @@ class OrderCard extends StatelessWidget {
       case OrderStatus.delivered:
         return AppColors.success;
       case OrderStatus.cancelled:
+      case OrderStatus.refunded:
         return AppColors.error;
     }
   }

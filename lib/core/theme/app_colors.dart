@@ -57,6 +57,7 @@ class AppColors {
   // Status Colors
   static const Color success = Color(0xFF15874B);
   static const Color error = Color(0xFFDC3545);
+  static const Color errorSoft = Color(0xFFFFEBEE);
   static const Color warning = accent;
   static const Color info = Color(0xFF0D6EFD);
 

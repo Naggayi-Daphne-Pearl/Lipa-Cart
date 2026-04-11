@@ -476,7 +476,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen>
       case UserRole.rider:
         return AppColors.warning;
       case UserRole.admin:
-        return AppColors.error;
+        return AppColors.beverages;
     }
   }
 }

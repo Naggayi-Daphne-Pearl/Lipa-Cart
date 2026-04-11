@@ -89,18 +89,11 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
     super.dispose();
   }
 
-  String? _substituteLabel(CartItem item) {
-    final note = item.shopperNotes;
-    if (note == null || !note.startsWith('SUBSTITUTE:')) return null;
-    return note.replaceFirst('SUBSTITUTE: ', '');
-  }
-
-  double? _substitutePrice(CartItem item) {
-    final note = item.shopperNotes;
-    if (note == null) return null;
-    final match = RegExp(r'UGX\s*([\d,]+)').firstMatch(note);
-    if (match == null) return null;
-    return double.tryParse(match.group(1)!.replaceAll(',', ''));
+  /// Extracts the customer's rejection reason from special_instructions.
+  String? _rejectionReason(CartItem item) {
+    final instructions = item.specialInstructions;
+    if (instructions == null || !instructions.startsWith('REJECTION:')) return null;
+    return instructions.replaceFirst('REJECTION: ', '').trim();
   }
 
   Future<void> _refreshOrder({bool showFeedback = true}) async {
@@ -152,7 +145,7 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
       if (showFeedback &&
           previousApproval != nextApproval &&
           nextApproval != null) {
-        final label = _substituteLabel(latestItem) ?? latestItem.product.name;
+        final label = latestItem.substituteName ?? latestItem.product.name;
         feedback = {
           'message': nextApproval
               ? 'Customer accepted $label. You can continue with the replacement.'
@@ -625,15 +618,17 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
   Widget _buildItemCard(_ChecklistItem item) {
     final product = item.cartItem.product;
     final estimatedLineTotal = product.price * item.cartItem.quantity;
-    final substituteLabel = _substituteLabel(item.cartItem);
+    final substituteLabel = item.cartItem.substituteName;
     final substituteApproved = item.cartItem.substitutionApproved;
+    final hasSubstitute = substituteLabel != null || item.cartItem.isSubstituted == true;
     final approvedSubstitute =
-        substituteLabel != null && substituteApproved == true;
+        hasSubstitute && substituteApproved == true;
     final pendingSubstitute =
-        substituteLabel != null && substituteApproved == null;
+        hasSubstitute && substituteApproved == null;
     final rejectedSubstitute =
-        substituteLabel != null && substituteApproved == false;
-    final displayName = approvedSubstitute ? substituteLabel : product.name;
+        hasSubstitute && substituteApproved == false;
+    final rejectionReason = _rejectionReason(item.cartItem);
+    final displayName = approvedSubstitute ? (substituteLabel ?? product.name) : product.name;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -708,7 +703,8 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                           ),
                         ),
                       if (item.cartItem.specialInstructions != null &&
-                          item.cartItem.specialInstructions!.isNotEmpty)
+                          item.cartItem.specialInstructions!.isNotEmpty &&
+                          !item.cartItem.specialInstructions!.startsWith('REJECTION:'))
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
@@ -791,7 +787,7 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                 ),
               ),
             ),
-            if (substituteLabel != null)
+            if (hasSubstitute)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Container(
@@ -834,7 +830,7 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                           approvedSubstitute
                               ? 'Customer allowed this substitute. Replace the original item with $substituteLabel and continue shopping.'
                               : rejectedSubstitute
-                              ? 'Customer rejected this substitute. Suggest another option or leave the item unavailable.'
+                              ? 'Customer rejected this substitute.${rejectionReason != null ? ' They said: "$rejectionReason"' : ' Suggest another option or leave the item unavailable.'}'
                               : 'Waiting for customer approval for $substituteLabel.',
                           style: TextStyle(
                             fontSize: 12,
@@ -860,9 +856,7 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                   child: approvedSubstitute
                       ? ElevatedButton.icon(
                           onPressed: () {
-                            final approvedPrice = _substitutePrice(
-                              item.cartItem,
-                            );
+                            final approvedPrice = item.cartItem.substitutePrice;
                             setState(() {
                               item.found = true;
                               item.cartItem.found = true;
@@ -919,7 +913,9 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
   }
 
   void _showSubstituteDialog(_ChecklistItem item) {
-    final substituteController = TextEditingController();
+    // Pre-fill with what the customer requested (from rejection reason)
+    final reason = _rejectionReason(item.cartItem);
+    final substituteController = TextEditingController(text: reason ?? '');
     final priceController = TextEditingController();
 
     showDialog(
@@ -928,7 +924,7 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            Icon(Icons.swap_horiz, color: AppColors.accent, size: 22),
+            Icon(Icons.swap_horiz, color: AppColors.primary, size: 22),
             const SizedBox(width: 8),
             const Text('Suggest Substitute'),
           ],
@@ -941,6 +937,28 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
               'Original: ${item.cartItem.product.name}',
               style: TextStyle(color: Colors.grey[600], fontSize: 13),
             ),
+            if (reason != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.chat_bubble_outline, size: 14, color: AppColors.accent),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Customer asked: "$reason"',
+                        style: const TextStyle(fontSize: 12, color: AppColors.accent, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             TextField(
               controller: substituteController,
@@ -975,37 +993,43 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
             onPressed: () async {
               final name = substituteController.text.trim();
               if (name.isEmpty) return;
+              final price = priceController.text.trim();
+              final parsedPrice = double.tryParse(price);
+              if (parsedPrice == null || parsedPrice <= 0) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter a valid price'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
 
               Navigator.pop(ctx);
 
-              final price = priceController.text.trim();
-              final parsedPrice = double.tryParse(price);
-              final note =
-                  'SUBSTITUTE: $name${price.isNotEmpty ? ' (UGX $price)' : ''}';
-
+              // Optimistically update local state
               setState(() {
                 item.found = false;
                 item.actualPrice = parsedPrice;
-                item.notesController.text = note;
                 item.cartItem.found = false;
                 item.cartItem.actualPrice = parsedPrice;
-                item.cartItem.shopperNotes = note;
+                item.cartItem.isSubstituted = true;
+                item.cartItem.substituteName = name;
+                item.cartItem.substitutePrice = parsedPrice;
                 item.cartItem.substitutionApproved = null;
               });
 
               final auth = context.read<AuthProvider>();
-              final shopper = context.read<ShopperProvider>();
+              final orderService = context.read<OrderService>();
               final token = auth.token;
 
               if (token != null) {
-                final success = await shopper.updateOrderItems(token, [
-                  {
-                    'documentId': item.cartItem.id,
-                    'found': false,
-                    if (parsedPrice != null) 'actual_price': parsedPrice,
-                    'shopper_notes': note,
-                  },
-                ]);
+                final success = await orderService.suggestSubstitute(
+                  token,
+                  item.cartItem.id,
+                  name: name,
+                  price: parsedPrice,
+                );
 
                 if (!mounted) return;
 
@@ -1013,30 +1037,19 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
                   SnackBar(
                     content: Text(
                       success
-                          ? 'Substitute suggested and customer notified immediately.'
-                          : (shopper.error ??
+                          ? 'Substitute suggested — customer notified.'
+                          : (orderService.error ??
                                 'Failed to send substitute suggestion.'),
                     ),
                     backgroundColor: success
-                        ? AppColors.accent
+                        ? AppColors.primary
                         : AppColors.error,
                   ),
                 );
-                return;
               }
-
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Substitute saved locally. Sign in again if syncing fails.',
-                  ),
-                  backgroundColor: AppColors.accent,
-                ),
-              );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accent,
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
             ),
             child: const Text('Suggest'),

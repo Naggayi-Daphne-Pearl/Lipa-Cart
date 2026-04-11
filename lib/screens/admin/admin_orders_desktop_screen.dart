@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
 import '../../models/order.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_order_status_colors.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../widgets/app_loading_indicator.dart';
 
@@ -91,26 +92,7 @@ class _AdminOrdersDesktopScreenState extends State<AdminOrdersDesktopScreen> {
   }
 
   Color _getStatusColor(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return Colors.orange;
-      case OrderStatus.confirmed:
-        return Colors.blue;
-      case OrderStatus.shopperAssigned:
-        return Colors.teal;
-      case OrderStatus.shopping:
-        return Colors.cyan;
-      case OrderStatus.readyForDelivery:
-        return Colors.purple;
-      case OrderStatus.riderAssigned:
-        return Colors.deepPurple;
-      case OrderStatus.inTransit:
-        return Colors.indigo;
-      case OrderStatus.delivered:
-        return Colors.green;
-      case OrderStatus.cancelled:
-        return Colors.red;
-    }
+    return AppOrderStatusColors.foreground(status);
   }
 
   String _formatStatus(OrderStatus status) {
@@ -263,7 +245,7 @@ class _AdminOrdersDesktopScreenState extends State<AdminOrdersDesktopScreen> {
                 child: _selectedOrder == null
                     ? const Center(
                         child: Text('Select an order to view details'))
-                    : _OrderDetailsView(order: _selectedOrder!),
+                    : _OrderDetailsView(order: _selectedOrder!, onOrderUpdated: _loadOrders),
               ),
             ],
           );
@@ -281,30 +263,12 @@ class _AdminOrdersDesktopScreenState extends State<AdminOrdersDesktopScreen> {
 
 class _OrderDetailsView extends StatelessWidget {
   final Order order;
+  final VoidCallback? onOrderUpdated;
 
-  const _OrderDetailsView({required this.order});
+  const _OrderDetailsView({required this.order, this.onOrderUpdated});
 
   Color _getStatusColor(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return Colors.orange;
-      case OrderStatus.confirmed:
-        return Colors.blue;
-      case OrderStatus.shopperAssigned:
-        return Colors.teal;
-      case OrderStatus.shopping:
-        return Colors.cyan;
-      case OrderStatus.readyForDelivery:
-        return Colors.purple;
-      case OrderStatus.riderAssigned:
-        return Colors.deepPurple;
-      case OrderStatus.inTransit:
-        return Colors.indigo;
-      case OrderStatus.delivered:
-        return Colors.green;
-      case OrderStatus.cancelled:
-        return Colors.red;
-    }
+    return AppOrderStatusColors.foreground(status);
   }
 
   String _formatStatus(OrderStatus status) {
@@ -317,7 +281,7 @@ class _OrderDetailsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.grey[50],
+      color: AppColors.background,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -338,7 +302,7 @@ class _OrderDetailsView extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Created: ${order.createdAt?.toString().split(' ')[0] ?? "N/A"}',
+                      'Created: ${order.createdAt.toString().split(' ')[0]}',
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                   ],
@@ -360,6 +324,14 @@ class _OrderDetailsView extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+
+            // Admin action buttons
+            _buildAdminActions(context),
+            const SizedBox(height: 24),
+
+            // Order Timeline
+            _buildTimeline(),
             const SizedBox(height: 24),
 
             // Customer Info
@@ -390,7 +362,7 @@ class _OrderDetailsView extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Order Items
+            // Order Items with substitution details
             _buildSection(
               'Items (${order.items.length})',
               [
@@ -403,33 +375,72 @@ class _OrderDetailsView extends StatelessWidget {
                   ...order.items.map(
                     (item) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.product.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.product.name,
+                                      style: const TextStyle(fontWeight: FontWeight.w500),
+                                    ),
+                                    Text(
+                                      'Qty: ${item.quantity.toStringAsFixed(0)} • ${item.found == true ? "Found" : item.found == false ? "Not found" : "Pending"}',
+                                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  'Qty: ${item.quantity.toStringAsFixed(0)}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[600],
+                              ),
+                              Text(
+                                CurrencyFormatter.format(item.actualPrice ?? item.totalPrice),
+                                style: const TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                          // Substitution details
+                          if (item.isSubstituted == true || item.substituteName != null)
+                            Container(
+                              margin: const EdgeInsets.only(top: 6),
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.accentSoft,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.swap_horiz, size: 14, color: AppColors.accent),
+                                      const SizedBox(width: 4),
+                                      Text('Substitute: ${item.substituteName ?? "N/A"}',
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    ],
                                   ),
-                                ),
-                              ],
+                                  if (item.substitutePrice != null)
+                                    Text('Price: ${CurrencyFormatter.format(item.substitutePrice!)}',
+                                      style: TextStyle(fontSize: 11, color: Colors.grey[700])),
+                                  Text(
+                                    'Status: ${item.substitutionApproved == true ? "Approved" : item.substitutionApproved == false ? "Rejected" : "Pending"}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: item.substitutionApproved == true
+                                          ? AppColors.success
+                                          : item.substitutionApproved == false
+                                          ? AppColors.error
+                                          : AppColors.accent,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          Text(
-                            CurrencyFormatter.format(item.totalPrice),
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
                         ],
                       ),
                     ),
@@ -444,19 +455,19 @@ class _OrderDetailsView extends StatelessWidget {
               [
                 _buildInfoRow(
                   'Subtotal',
-                  CurrencyFormatter.format(order.subtotal ?? 0),
+                  CurrencyFormatter.format(order.subtotal),
                 ),
                 _buildInfoRow(
                   'Service Fee',
-                  CurrencyFormatter.format(order.serviceFee ?? 0),
+                  CurrencyFormatter.format(order.serviceFee),
                 ),
                 _buildInfoRow(
                   'Delivery Fee',
-                  CurrencyFormatter.format(order.deliveryFee ?? 0),
+                  CurrencyFormatter.format(order.deliveryFee),
                 ),
                 _buildInfoRow(
                   'Discount',
-                  CurrencyFormatter.format(order.discount ?? 0),
+                  CurrencyFormatter.format(order.discount),
                 ),
                 Container(
                   margin: const EdgeInsets.only(top: 8),
@@ -477,7 +488,7 @@ class _OrderDetailsView extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        CurrencyFormatter.format(order.total ?? 0),
+                        CurrencyFormatter.format(order.total),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -492,6 +503,137 @@ class _OrderDetailsView extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAdminActions(BuildContext context) {
+    final orderId = order.documentId ?? order.id;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        if (order.status == OrderStatus.pending)
+          _buildActionButton(context, 'Confirm Payment', AppColors.primary, () async {
+            final auth = context.read<AuthProvider>();
+            final svc = context.read<OrderService>();
+            final success = await svc.adminConfirmPayment(auth.token!, orderId);
+            if (success) onOrderUpdated?.call();
+          }),
+        if (order.status == OrderStatus.shopperAssigned || order.status == OrderStatus.shopping)
+          _buildActionButton(context, 'Reassign Shopper', AppColors.accent, () async {
+            final auth = context.read<AuthProvider>();
+            final svc = context.read<OrderService>();
+            final success = await svc.adminReassignShopper(auth.token!, orderId);
+            if (success) onOrderUpdated?.call();
+          }),
+        if (order.status == OrderStatus.riderAssigned || order.status == OrderStatus.inTransit)
+          _buildActionButton(context, 'Reassign Rider', AppColors.accent, () async {
+            final auth = context.read<AuthProvider>();
+            final svc = context.read<OrderService>();
+            final success = await svc.adminReassignRider(auth.token!, orderId);
+            if (success) onOrderUpdated?.call();
+          }),
+        if (order.status != OrderStatus.delivered &&
+            order.status != OrderStatus.cancelled &&
+            order.status != OrderStatus.refunded)
+          _buildActionButton(context, 'Cancel Order', AppColors.error, () async {
+            final reason = await showDialog<String>(
+              context: context,
+              builder: (ctx) {
+                final controller = TextEditingController();
+                return AlertDialog(
+                  title: const Text('Cancel Order'),
+                  content: TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(hintText: 'Reason for cancellation'),
+                  ),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Back')),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
+                      child: const Text('Cancel Order'),
+                    ),
+                  ],
+                );
+              },
+            );
+            if (reason == null) return;
+            final auth = context.read<AuthProvider>();
+            final svc = context.read<OrderService>();
+            final success = await svc.adminCancelOrder(auth.token!, orderId, reason.isEmpty ? 'Cancelled by admin' : reason);
+            if (success) onOrderUpdated?.call();
+          }),
+      ],
+    );
+  }
+
+  Widget _buildActionButton(BuildContext context, String label, Color color, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 13)),
+    );
+  }
+
+  Widget _buildTimeline() {
+    final events = <MapEntry<String, DateTime?>>[];
+    events.add(MapEntry('Order Created', order.createdAt));
+    events.add(MapEntry('Payment Confirmed', order.paymentConfirmedAt));
+    events.add(MapEntry('Shopper Assigned', order.shopperAssignedAt));
+    events.add(MapEntry('Shopping Started', order.shoppingStartedAt));
+    events.add(MapEntry('Shopping Completed', order.shoppingCompletedAt));
+    events.add(MapEntry('Rider Assigned', order.riderAssignedAt));
+    events.add(MapEntry('Picked Up', order.pickedUpAt));
+    events.add(MapEntry('Delivered', order.deliveredAt));
+    if (order.cancelledAt != null) events.add(MapEntry('Cancelled', order.cancelledAt));
+
+    return _buildSection(
+      'Timeline',
+      events.map((e) {
+        final happened = e.value != null;
+        final timeStr = e.value != null
+            ? '${e.value!.toString().split('.')[0]}'
+            : '—';
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: happened ? AppColors.primary : AppColors.grey300,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  e.key,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: happened ? FontWeight.w600 : FontWeight.normal,
+                    color: happened ? AppColors.textPrimary : AppColors.textTertiary,
+                  ),
+                ),
+              ),
+              Text(
+                timeStr,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: happened ? AppColors.textSecondary : AppColors.textTertiary,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 

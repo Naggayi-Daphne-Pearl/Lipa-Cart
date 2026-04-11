@@ -235,7 +235,7 @@ class _ShopperProfileScreenState extends State<ShopperProfileScreen> {
                       height: 8,
                       decoration: BoxDecoration(
                         color: isOnline
-                            ? const Color(0xFF4CAF50)
+                            ? AppColors.primary
                             : Colors.white54,
                         shape: BoxShape.circle,
                       ),

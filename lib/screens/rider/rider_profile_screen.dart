@@ -242,7 +242,7 @@ class _RiderProfileScreenState extends State<RiderProfileScreen> {
                       height: 8,
                       decoration: BoxDecoration(
                         color: isOnline
-                            ? const Color(0xFF4CAF50)
+                            ? AppColors.primary
                             : Colors.white54,
                         shape: BoxShape.circle,
                       ),

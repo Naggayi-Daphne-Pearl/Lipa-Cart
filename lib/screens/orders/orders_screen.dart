@@ -5,6 +5,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_order_status_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
@@ -100,6 +101,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         .where(
           (o) =>
               o.status != OrderStatus.cancelled &&
+              o.status != OrderStatus.refunded &&
               o.status != OrderStatus.delivered,
         )
         .toList();
@@ -107,7 +109,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
         .where((o) => o.status == OrderStatus.delivered)
         .toList();
     final cancelledOrders = orderProvider.orders
-        .where((o) => o.status == OrderStatus.cancelled)
+        .where(
+          (o) =>
+              o.status == OrderStatus.cancelled ||
+              o.status == OrderStatus.refunded,
+        )
         .toList();
 
     return Scaffold(
@@ -499,30 +505,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
   (Color bgColor, Color textColor, String label) _getStatusColors(
     OrderStatus status,
   ) {
-    switch (status) {
-      case OrderStatus.pending:
-        return (const Color(0xFFFFF4E6), const Color(0xFFFF9800), 'Processing');
-      case OrderStatus.confirmed:
-        return (const Color(0xFFE3F2FD), const Color(0xFF1976D2), 'Confirmed');
-      case OrderStatus.shopperAssigned:
-        return (
-          const Color(0xFFE0F2F1),
-          const Color(0xFF00897B),
-          'Shopper Assigned',
-        );
-      case OrderStatus.shopping:
-        return (const Color(0xFFE3F2FD), const Color(0xFF1976D2), 'Shopping');
-      case OrderStatus.readyForDelivery:
-        return (const Color(0xFFE3F2FD), const Color(0xFF1976D2), 'Ready');
-      case OrderStatus.riderAssigned:
-        return (Colors.deepPurple[100]!, Colors.deepPurple, 'Rider Assigned');
-      case OrderStatus.inTransit:
-        return (const Color(0xFFFFF4E6), const Color(0xFFFF9800), 'On the way');
-      case OrderStatus.delivered:
-        return (const Color(0xFFE8F5E9), const Color(0xFF388E3C), 'Delivered');
-      case OrderStatus.cancelled:
-        return (const Color(0xFFFFEBEE), const Color(0xFFD32F2F), 'Cancelled');
-    }
+    final t = AppOrderStatusColors.triple(status);
+    return (t.$1, t.$2, t.$3);
   }
 
   Widget _buildEmptyState(BuildContext context, String message) {

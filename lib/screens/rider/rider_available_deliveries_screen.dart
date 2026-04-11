@@ -269,10 +269,42 @@ class _RiderAvailableDeliveriesScreenState
                 ),
               ),
 
-            // Delivery fee
+            // Payment method badge + order total
+            Row(
+              children: [
+                Icon(Iconsax.wallet_2, size: 16, color: AppColors.textTertiary),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: delivery.paymentMethod == PaymentMethod.cashOnDelivery
+                        ? AppColors.accent.withValues(alpha: 0.15)
+                        : AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                  ),
+                  child: Text(
+                    delivery.paymentMethod == PaymentMethod.cashOnDelivery ? 'COD' : 'Paid',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: delivery.paymentMethod == PaymentMethod.cashOnDelivery
+                          ? AppColors.accent
+                          : AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Total: ${Formatters.formatCurrency(delivery.total)}',
+                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSizes.sm),
+            // Delivery fee (your earning)
             _buildInfoRow(
-              icon: Iconsax.wallet_2,
-              label: 'Delivery Fee',
+              icon: Iconsax.money_recive,
+              label: 'Your Earning',
               value: Formatters.formatCurrency(delivery.deliveryFee),
               valueColor: _brandColor,
             ),
@@ -317,6 +349,10 @@ class _RiderAvailableDeliveriesScreenState
                                 backgroundColor: _brandColor,
                               ),
                             );
+                            // Navigate directly to active deliveries
+                            if (context.mounted) {
+                              context.go('/rider/active-deliveries');
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(
