@@ -22,7 +22,7 @@ class PaymentService {
         'orderId': orderId,
         'phoneNumber': phoneNumber,
       }),
-    );
+    ).timeout(AppConstants.apiTimeout);
 
     final body = response.body.isNotEmpty
         ? jsonDecode(response.body) as Map<String, dynamic>

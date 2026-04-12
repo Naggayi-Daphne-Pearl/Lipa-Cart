@@ -68,15 +68,16 @@ class _ShopperRatingsScreenState extends State<ShopperRatingsScreen> {
           final rating = shopper.averageRating;
           final reviews = shopper.totalReviews;
           final reviewItems = shopper.ratings;
-          final writtenReviews = reviewItems.where((review) {
+          final allWrittenReviews = reviewItems.where((review) {
             final comment = (review['comment'] as String?) ?? '';
             return comment.trim().isNotEmpty;
-          }).take(10).toList();
+          }).toList();
+          final writtenReviews = allWrittenReviews.take(10).toList();
           final breakdown = shopper.ratingBreakdown;
           final completedCount = shopper.completedOrders;
           final hasData = reviews > 0;
           final ratingsWithoutComments = hasData
-              ? (reviews - writtenReviews.length).clamp(0, reviews)
+              ? (reviews - allWrittenReviews.length).clamp(0, reviews)
               : 0;
 
           return SingleChildScrollView(

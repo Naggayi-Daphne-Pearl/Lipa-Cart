@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/logout_helper.dart';
+import '../../services/notification_service.dart';
 
 class AdminShell extends StatefulWidget {
   final Widget child;
@@ -19,12 +20,28 @@ class AdminShell extends StatefulWidget {
 
 class _AdminShellState extends State<AdminShell> {
   late String _currentRoute;
+  int _unreadNotifications = 0;
 
   @override
   void initState() {
     super.initState();
-    _currentRoute =
-        GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
+    _currentRoute = GoRouter.of(
+      context,
+    ).routerDelegate.currentConfiguration.uri.path;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _refreshUnreadCount();
+      }
+    });
+  }
+
+  Future<void> _refreshUnreadCount() async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    final unread = await NotificationService().getUnreadCount(token);
+    if (!mounted) return;
+    setState(() => _unreadNotifications = unread);
   }
 
   String _getPageTitle(String route) {
@@ -69,9 +86,7 @@ class _AdminShellState extends State<AdminShell> {
 
     return Scaffold(
       // Mobile drawer
-      drawer: isMobile ? Drawer(
-        child: _buildSidebarContent(context),
-      ) : null,
+      drawer: isMobile ? Drawer(child: _buildSidebarContent(context)) : null,
       // Top bar
       appBar: AppBar(
         elevation: 0,
@@ -79,21 +94,21 @@ class _AdminShellState extends State<AdminShell> {
         foregroundColor: AppColors.textPrimary,
         surfaceTintColor: Colors.transparent,
         toolbarHeight: 64,
-        leading: isMobile ? Builder(
-          builder: (ctx) => IconButton(
-            icon: const Icon(Iconsax.menu_1),
-            onPressed: () => Scaffold.of(ctx).openDrawer(),
-          ),
-        ) : null,
+        leading: isMobile
+            ? Builder(
+                builder: (ctx) => IconButton(
+                  icon: const Icon(Iconsax.menu_1),
+                  onPressed: () => Scaffold.of(ctx).openDrawer(),
+                ),
+              )
+            : null,
         title: Row(
           children: [
             Icon(pageIcon, size: 22, color: AppColors.primary),
             const SizedBox(width: 10),
             Text(
               pageTitle,
-              style: AppTextStyles.h5.copyWith(
-                color: AppColors.textPrimary,
-              ),
+              style: AppTextStyles.h5.copyWith(color: AppColors.textPrimary),
             ),
           ],
         ),
@@ -113,14 +128,21 @@ class _AdminShellState extends State<AdminShell> {
             ),
           // Notification bell
           IconButton(
-            onPressed: () {
+            onPressed: () async {
               context.go('/admin/notifications');
+              await Future<void>.delayed(const Duration(milliseconds: 150));
+              _refreshUnreadCount();
             },
-            icon: Badge(
-              smallSize: 8,
-              backgroundColor: AppColors.error,
-              child: const Icon(Iconsax.notification, size: 22),
-            ),
+            icon: _unreadNotifications > 0
+                ? Badge(
+                    label: Text(
+                      _unreadNotifications > 99
+                          ? '99+'
+                          : '$_unreadNotifications',
+                    ),
+                    child: const Icon(Iconsax.notification, size: 22),
+                  )
+                : const Icon(Iconsax.notification, size: 22),
             tooltip: 'Notifications',
           ),
           const SizedBox(width: 4),
@@ -136,8 +158,10 @@ class _AdminShellState extends State<AdminShell> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.grey100,
                       borderRadius: BorderRadius.circular(10),
@@ -181,8 +205,11 @@ class _AdminShellState extends State<AdminShell> {
                             ],
                           ),
                           const SizedBox(width: 2),
-                          Icon(Icons.keyboard_arrow_down,
-                              size: 18, color: AppColors.textTertiary),
+                          Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 18,
+                            color: AppColors.textTertiary,
+                          ),
                         ],
                       ],
                     ),
@@ -210,8 +237,11 @@ class _AdminShellState extends State<AdminShell> {
                     PopupMenuItem<void>(
                       child: Row(
                         children: [
-                          Icon(Iconsax.user,
-                              size: 18, color: AppColors.textSecondary),
+                          Icon(
+                            Iconsax.user,
+                            size: 18,
+                            color: AppColors.textSecondary,
+                          ),
                           const SizedBox(width: 12),
                           const Text('Profile'),
                         ],
@@ -221,8 +251,11 @@ class _AdminShellState extends State<AdminShell> {
                     PopupMenuItem<void>(
                       child: Row(
                         children: [
-                          Icon(Iconsax.setting_2,
-                              size: 18, color: AppColors.textSecondary),
+                          Icon(
+                            Iconsax.setting_2,
+                            size: 18,
+                            color: AppColors.textSecondary,
+                          ),
                           const SizedBox(width: 12),
                           const Text('Settings'),
                         ],
@@ -233,8 +266,11 @@ class _AdminShellState extends State<AdminShell> {
                     PopupMenuItem<void>(
                       child: Row(
                         children: [
-                          const Icon(Iconsax.logout,
-                              size: 18, color: AppColors.error),
+                          const Icon(
+                            Iconsax.logout,
+                            size: 18,
+                            color: AppColors.error,
+                          ),
                           const SizedBox(width: 12),
                           Text(
                             'Logout',
@@ -264,9 +300,7 @@ class _AdminShellState extends State<AdminShell> {
               child: _buildSidebarContent(context),
             ),
           // Main content
-          Expanded(
-            child: widget.child,
-          ),
+          Expanded(child: widget.child),
         ],
       ),
     );
@@ -281,9 +315,22 @@ class _AdminShellState extends State<AdminShell> {
           child: Row(
             children: [
               Container(
-                width: 36, height: 36,
-                decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
-                child: const Center(child: Text('LC', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))),
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Center(
+                  child: Text(
+                    'LC',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(width: 10),
               Text('Lipa Cart', style: AppTextStyles.h5.copyWith(fontSize: 16)),
@@ -295,13 +342,64 @@ class _AdminShellState extends State<AdminShell> {
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
             children: [
-              _SidebarItem(icon: Iconsax.category, label: 'Dashboard', isActive: _currentRoute.contains('/admin/dashboard'), onTap: () { _navigate('/admin/dashboard'); Navigator.of(context).maybePop(); }),
-              _SidebarItem(icon: Iconsax.box, label: 'Products', isActive: _currentRoute.contains('/admin/products'), onTap: () { _navigate('/admin/products'); Navigator.of(context).maybePop(); }),
-              _SidebarItem(icon: Iconsax.bag_2, label: 'Orders', isActive: _currentRoute.contains('/admin/orders'), onTap: () { _navigate('/admin/orders'); Navigator.of(context).maybePop(); }),
-              _SidebarItem(icon: Iconsax.shop, label: 'Shoppers', isActive: _currentRoute.contains('/admin/users'), onTap: () { _navigate('/admin/users'); Navigator.of(context).maybePop(); }),
-              _SidebarItem(icon: Iconsax.truck_fast, label: 'Riders', isActive: _currentRoute.contains('/admin/riders'), onTap: () { _navigate('/admin/riders'); Navigator.of(context).maybePop(); }),
-              const Padding(padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), child: Divider(height: 1)),
-              _SidebarItem(icon: Iconsax.chart_2, label: 'Analytics', isActive: _currentRoute.contains('/admin/analytics'), onTap: () { _navigate('/admin/analytics'); Navigator.of(context).maybePop(); }),
+              _SidebarItem(
+                icon: Iconsax.category,
+                label: 'Dashboard',
+                isActive: _currentRoute.contains('/admin/dashboard'),
+                onTap: () {
+                  _navigate('/admin/dashboard');
+                  Navigator.of(context).maybePop();
+                },
+              ),
+              _SidebarItem(
+                icon: Iconsax.box,
+                label: 'Products',
+                isActive: _currentRoute.contains('/admin/products'),
+                onTap: () {
+                  _navigate('/admin/products');
+                  Navigator.of(context).maybePop();
+                },
+              ),
+              _SidebarItem(
+                icon: Iconsax.bag_2,
+                label: 'Orders',
+                isActive: _currentRoute.contains('/admin/orders'),
+                onTap: () {
+                  _navigate('/admin/orders');
+                  Navigator.of(context).maybePop();
+                },
+              ),
+              _SidebarItem(
+                icon: Iconsax.shop,
+                label: 'Shoppers',
+                isActive: _currentRoute.contains('/admin/users'),
+                onTap: () {
+                  _navigate('/admin/users');
+                  Navigator.of(context).maybePop();
+                },
+              ),
+              _SidebarItem(
+                icon: Iconsax.truck_fast,
+                label: 'Riders',
+                isActive: _currentRoute.contains('/admin/riders'),
+                onTap: () {
+                  _navigate('/admin/riders');
+                  Navigator.of(context).maybePop();
+                },
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Divider(height: 1),
+              ),
+              _SidebarItem(
+                icon: Iconsax.chart_2,
+                label: 'Analytics',
+                isActive: _currentRoute.contains('/admin/analytics'),
+                onTap: () {
+                  _navigate('/admin/analytics');
+                  Navigator.of(context).maybePop();
+                },
+              ),
             ],
           ),
         ),
@@ -309,17 +407,36 @@ class _AdminShellState extends State<AdminShell> {
           padding: const EdgeInsets.all(12),
           child: Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Row(
               children: [
-                Icon(Iconsax.message_question, size: 18, color: AppColors.primary),
+                Icon(
+                  Iconsax.message_question,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Need help?', style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
-                      Text('Contact support', style: AppTextStyles.caption.copyWith(fontSize: 10, color: AppColors.textTertiary)),
+                      Text(
+                        'Need help?',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Contact support',
+                        style: AppTextStyles.caption.copyWith(
+                          fontSize: 10,
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -404,8 +521,8 @@ class _SidebarItemState extends State<_SidebarItem> {
             color: isActive
                 ? AppColors.primary.withValues(alpha: 0.1)
                 : _isHovered
-                    ? AppColors.grey100
-                    : Colors.transparent,
+                ? AppColors.grey100
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -415,8 +532,8 @@ class _SidebarItemState extends State<_SidebarItem> {
                 color: isActive
                     ? AppColors.primary
                     : _isHovered
-                        ? AppColors.textPrimary
-                        : AppColors.textTertiary,
+                    ? AppColors.textPrimary
+                    : AppColors.textTertiary,
                 size: 20,
               ),
               const SizedBox(width: 12),
@@ -427,8 +544,8 @@ class _SidebarItemState extends State<_SidebarItem> {
                   color: isActive
                       ? AppColors.primary
                       : _isHovered
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
                 ),
               ),
               if (isActive) ...[

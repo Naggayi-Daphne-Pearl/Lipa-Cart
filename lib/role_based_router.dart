@@ -119,7 +119,10 @@ class RoleBasedRouter {
   /// Creates a fade transition page for smoother navigation.
   /// Wraps a screen so that back navigation goes to customer home
   /// instead of popping an empty stack (which crashes on web).
-  static Widget _safeBack(Widget child, {String fallbackRoute = '/customer/home'}) {
+  static Widget _safeBack(
+    Widget child, {
+    String fallbackRoute = '/customer/home',
+  }) {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -462,14 +465,12 @@ class RoleBasedRouter {
             // In select mode the user came from another screen (usually
             // checkout) via context.go, so there's nothing to pop back to.
             // System back should land on that origin route, not home.
-            final fallback = selectMode && returnRoute != null && returnRoute.isNotEmpty
+            final fallback =
+                selectMode && returnRoute != null && returnRoute.isNotEmpty
                 ? returnRoute
                 : '/customer/home';
             return _safeBack(
-              AddressesScreen(
-                returnRoute: returnRoute,
-                selectMode: selectMode,
-              ),
+              AddressesScreen(returnRoute: returnRoute, selectMode: selectMode),
               fallbackRoute: fallback,
             );
           },

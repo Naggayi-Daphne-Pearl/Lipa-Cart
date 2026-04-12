@@ -70,15 +70,16 @@ class _RiderRatingsScreenState extends State<RiderRatingsScreen> {
           final rating = rider.averageRating;
           final reviews = rider.totalReviews;
           final reviewItems = rider.ratings;
-          final writtenReviews = reviewItems.where((review) {
+          final allWrittenReviews = reviewItems.where((review) {
             final comment = (review['comment'] as String?) ?? '';
             return comment.trim().isNotEmpty;
-          }).take(10).toList();
+          }).toList();
+          final writtenReviews = allWrittenReviews.take(10).toList();
           final breakdown = rider.ratingBreakdown;
           final completedCount = rider.completedOrders;
           final hasData = reviews > 0;
           final ratingsWithoutComments = hasData
-              ? (reviews - writtenReviews.length).clamp(0, reviews)
+              ? (reviews - allWrittenReviews.length).clamp(0, reviews)
               : 0;
 
           return SingleChildScrollView(

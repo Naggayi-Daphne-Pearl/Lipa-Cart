@@ -46,8 +46,19 @@ class Rating {
       orderId = orderField;
     } else if (orderField is int) {
       orderId = orderField.toString();
-    } else if (orderField is Map && orderField['documentId'] != null) {
-      orderId = orderField['documentId'].toString();
+    } else if (orderField is Map) {
+      if (orderField['documentId'] != null) {
+        orderId = orderField['documentId'].toString();
+      } else if (orderField['id'] != null) {
+        orderId = orderField['id'].toString();
+      } else if (orderField['data'] is Map) {
+        final data = orderField['data'] as Map;
+        if (data['documentId'] != null) {
+          orderId = data['documentId'].toString();
+        } else if (data['id'] != null) {
+          orderId = data['id'].toString();
+        }
+      }
     }
 
     // Extract id safely — backend may return id as: int, documentId string, or string

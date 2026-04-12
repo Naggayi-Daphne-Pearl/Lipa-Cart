@@ -41,9 +41,11 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
         .where((o) => o.status == OrderStatus.delivered)
         .toList();
 
-    final ratedOrders = deliveredOrders.where((o) => o.hasBeenRated).toList();
+    final ratedOrders = deliveredOrders
+      .where((o) => o.rating != null || o.hasBeenRated)
+      .toList();
     final unratedOrders = deliveredOrders
-        .where((o) => !o.hasBeenRated)
+      .where((o) => o.rating == null && !o.hasBeenRated)
         .toList();
 
     return Scaffold(
@@ -192,6 +194,11 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
   }
 
   Widget _buildOrderCard(Order order, {required bool rated}) {
+    final headerRating =
+        order.rating?.overallRating ??
+        order.rating?.shopperRating ??
+        order.rating?.riderRating;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -235,7 +242,7 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      (order.rating!.overallRating ?? 5).toStringAsFixed(0),
+                      headerRating != null ? headerRating.toString() : '--',
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,

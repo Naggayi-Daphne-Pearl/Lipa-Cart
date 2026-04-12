@@ -11,6 +11,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/logout_helper.dart';
 import '../../widgets/shopper_button.dart';
+import '../../services/notification_service.dart';
 
 class ShopperHomeScreen extends StatefulWidget {
   const ShopperHomeScreen({super.key});
@@ -21,6 +22,7 @@ class ShopperHomeScreen extends StatefulWidget {
 
 class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
   int _currentNavIndex = 0;
+  int _unreadNotifications = 0;
 
   @override
   void initState() {
@@ -38,8 +40,8 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
         authProvider.user?.role == UserRole.admin
             ? '/admin/dashboard'
             : authProvider.user?.role == UserRole.rider
-                ? '/rider/home'
-                : '/customer/home',
+            ? '/rider/home'
+            : '/customer/home',
       );
       return;
     }
@@ -54,6 +56,7 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
     final token = authProvider.token;
     final user = authProvider.user;
     if (token != null && user != null) {
+      _refreshUnreadCount();
       if (user.shopperId != null) {
         shopperProvider.loadShopperProfile(token, user.shopperId!);
       }
@@ -63,6 +66,15 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
         shopperProvider.fetchCompletedTasks(token, user.documentId!);
       }
     }
+  }
+
+  Future<void> _refreshUnreadCount() async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    final unread = await NotificationService().getUnreadCount(token);
+    if (!mounted) return;
+    setState(() => _unreadNotifications = unread);
   }
 
   Future<void> _onRefresh() async {
@@ -84,9 +96,11 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
     // Capitalize each word properly
     return name
         .split(' ')
-        .map((w) => w.isNotEmpty
-            ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}'
-            : '')
+        .map(
+          (w) => w.isNotEmpty
+              ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}'
+              : '',
+        )
         .join(' ');
   }
 
@@ -133,146 +147,161 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
           return ErrorBoundary(
             onRetry: () => setState(() {}),
             child: RefreshIndicator(
-            onRefresh: _onRefresh,
-            color: AppColors.primary,
-            child: CustomScrollView(
-              slivers: [
-                // Custom App Bar
-                SliverAppBar(
-                  expandedHeight: 0,
-                  floating: true,
-                  backgroundColor: AppColors.surface,
-                  surfaceTintColor: Colors.transparent,
-                  title: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Dashboard',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
+              onRefresh: _onRefresh,
+              color: AppColors.primary,
+              child: CustomScrollView(
+                slivers: [
+                  // Custom App Bar
+                  SliverAppBar(
+                    expandedHeight: 0,
+                    floating: true,
+                    backgroundColor: AppColors.surface,
+                    surfaceTintColor: Colors.transparent,
+                    title: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Dashboard',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
-                      ),
-                      Text(
-                        DateFormat('EEEE, MMM d').format(DateTime.now()),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textTertiary,
+                        Text(
+                          DateFormat('EEEE, MMM d').format(DateTime.now()),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textTertiary,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    IconButton(
-                      onPressed: () => context.push('/shopper/notifications'),
-                      icon: const Icon(Iconsax.notification),
-                      tooltip: 'Notifications',
+                      ],
                     ),
-                    // Online status indicator
-                    Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () {
-                          final sid = user?.shopperId;
-                          if (authProvider.token != null && sid != null) {
-                            shopperProvider.toggleOnlineStatus(
-                              authProvider.token!,
-                              sid,
-                              !isOnline,
-                            );
-                          }
+                    actions: [
+                      IconButton(
+                        onPressed: () async {
+                          await context.push('/shopper/notifications');
+                          _refreshUnreadCount();
                         },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isOnline
-                                ? AppColors.primarySoft
-                                : AppColors.grey100,
-                            borderRadius:
-                                BorderRadius.circular(AppSizes.radiusFull),
-                            border: Border.all(
+                        icon: _unreadNotifications > 0
+                            ? Badge(
+                                label: Text(
+                                  _unreadNotifications > 99
+                                      ? '99+'
+                                      : '$_unreadNotifications',
+                                ),
+                                child: const Icon(Iconsax.notification),
+                              )
+                            : const Icon(Iconsax.notification),
+                        tooltip: 'Notifications',
+                      ),
+                      // Online status indicator
+                      Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () {
+                            final sid = user?.shopperId;
+                            if (authProvider.token != null && sid != null) {
+                              shopperProvider.toggleOnlineStatus(
+                                authProvider.token!,
+                                sid,
+                                !isOnline,
+                              );
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
                               color: isOnline
-                                  ? AppColors.primary
-                                  : AppColors.grey300,
-                              width: 1,
+                                  ? AppColors.primarySoft
+                                  : AppColors.grey100,
+                              borderRadius: BorderRadius.circular(
+                                AppSizes.radiusFull,
+                              ),
+                              border: Border.all(
+                                color: isOnline
+                                    ? AppColors.primary
+                                    : AppColors.grey300,
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: isOnline
+                                        ? AppColors.primary
+                                        : AppColors.grey400,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  isOnline ? 'Online' : 'Offline',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: isOnline
+                                        ? AppColors.primary
+                                        : AppColors.grey600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: isOnline
-                                      ? AppColors.primary
-                                      : AppColors.grey400,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                isOnline ? 'Online' : 'Offline',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: isOnline
-                                      ? AppColors.primary
-                                      : AppColors.grey600,
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                  ],
-                ),
-
-                // Body content
-                SliverPadding(
-                  padding: const EdgeInsets.all(AppSizes.md),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      // Welcome Card
-                      _buildWelcomeCard(user, isOnline),
-                      const SizedBox(height: AppSizes.lg),
-
-                      // Today's Summary header with date
-                      _buildSectionHeader(
-                        'Today\'s Summary',
-                        icon: Iconsax.chart_1,
-                      ),
-                      const SizedBox(height: AppSizes.sm),
-                      _buildStatsGrid(shopperProvider),
-                      const SizedBox(height: AppSizes.lg),
-
-                      // Performance Section
-                      _buildSectionHeader(
-                        'Your Performance',
-                        icon: Iconsax.star_1,
-                      ),
-                      const SizedBox(height: AppSizes.sm),
-                      _buildPerformanceCard(shopperProvider),
-                      const SizedBox(height: AppSizes.lg),
-
-                      // Quick Actions - now with different actions
-                      _buildSectionHeader(
-                        'Quick Actions',
-                        icon: Iconsax.flash_1,
-                      ),
-                      const SizedBox(height: AppSizes.sm),
-                      _buildQuickActions(context, shopperProvider),
-                      const SizedBox(height: AppSizes.lg),
-                    ]),
+                      const SizedBox(width: 4),
+                    ],
                   ),
-                ),
-              ],
+
+                  // Body content
+                  SliverPadding(
+                    padding: const EdgeInsets.all(AppSizes.md),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        // Welcome Card
+                        _buildWelcomeCard(user, isOnline),
+                        const SizedBox(height: AppSizes.lg),
+
+                        // Today's Summary header with date
+                        _buildSectionHeader(
+                          'Today\'s Summary',
+                          icon: Iconsax.chart_1,
+                        ),
+                        const SizedBox(height: AppSizes.sm),
+                        _buildStatsGrid(shopperProvider),
+                        const SizedBox(height: AppSizes.lg),
+
+                        // Performance Section
+                        _buildSectionHeader(
+                          'Your Performance',
+                          icon: Iconsax.star_1,
+                        ),
+                        const SizedBox(height: AppSizes.sm),
+                        _buildPerformanceCard(shopperProvider),
+                        const SizedBox(height: AppSizes.lg),
+
+                        // Quick Actions - now with different actions
+                        _buildSectionHeader(
+                          'Quick Actions',
+                          icon: Iconsax.flash_1,
+                        ),
+                        const SizedBox(height: AppSizes.sm),
+                        _buildQuickActions(context, shopperProvider),
+                        const SizedBox(height: AppSizes.lg),
+                      ]),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
           );
         },
       ),
@@ -470,8 +499,11 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                       color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                     ),
-                    child: const Icon(Iconsax.search_normal_1,
-                        color: AppColors.primary, size: 20),
+                    child: const Icon(
+                      Iconsax.search_normal_1,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: AppSizes.sm),
                   const Expanded(
@@ -497,8 +529,11 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                       ],
                     ),
                   ),
-                  const Icon(Icons.arrow_forward_ios,
-                      size: 14, color: AppColors.primary),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 14,
+                    color: AppColors.primary,
+                  ),
                 ],
               ),
             ),
@@ -540,8 +575,11 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                   ),
                   child: Icon(icon, color: color, size: 18),
                 ),
-                Icon(Icons.arrow_forward_ios,
-                    size: 12, color: AppColors.grey400),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                  color: AppColors.grey400,
+                ),
               ],
             ),
             const SizedBox(height: AppSizes.sm),
@@ -556,10 +594,7 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
             const SizedBox(height: 2),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textTertiary,
-              ),
+              style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
             ),
           ],
         ),
@@ -609,24 +644,29 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(5, (i) {
                           if (i < rating.floor()) {
-                            return const Icon(Icons.star_rounded,
-                                size: 18, color: Colors.amber);
+                            return const Icon(
+                              Icons.star_rounded,
+                              size: 18,
+                              color: Colors.amber,
+                            );
                           } else if (i < rating) {
-                            return const Icon(Icons.star_half_rounded,
-                                size: 18, color: Colors.amber);
+                            return const Icon(
+                              Icons.star_half_rounded,
+                              size: 18,
+                              color: Colors.amber,
+                            );
                           }
-                          return Icon(Icons.star_outline_rounded,
-                              size: 18, color: AppColors.grey300);
+                          return Icon(
+                            Icons.star_outline_rounded,
+                            size: 18,
+                            color: AppColors.grey300,
+                          );
                         }),
                       ),
                     ],
                   ),
                 ),
-                Container(
-                  width: 1,
-                  height: 60,
-                  color: AppColors.grey200,
-                ),
+                Container(width: 1, height: 60, color: AppColors.grey200),
                 // Reviews
                 Expanded(
                   child: Column(
@@ -678,10 +718,7 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                 Text(
                   'Complete your first task to start building your reputation!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textTertiary,
-                  ),
+                  style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
                 ),
               ],
             ),
@@ -756,7 +793,9 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
-            vertical: AppSizes.md, horizontal: AppSizes.sm),
+          vertical: AppSizes.md,
+          horizontal: AppSizes.sm,
+        ),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
@@ -880,8 +919,9 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppSizes.radiusLg)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSizes.radiusLg),
+        ),
       ),
       builder: (ctx) {
         final user = context.read<AuthProvider>().user;
@@ -961,7 +1001,8 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                   label: 'Verification',
                   onTap: () {
                     Navigator.of(ctx).pop();
-                    if (kycStatus == 'not_submitted' || kycStatus == 'rejected') {
+                    if (kycStatus == 'not_submitted' ||
+                        kycStatus == 'rejected') {
                       context.push('/shopper/kyc');
                     } else if (kycStatus == 'pending_review') {
                       _showKycStatusDetail(kycStatus);
@@ -1014,7 +1055,11 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                 color: statusConfig.iconBgColor,
                 borderRadius: BorderRadius.circular(AppSizes.radiusXs),
               ),
-              child: Icon(statusConfig.icon, color: statusConfig.color, size: 20),
+              child: Icon(
+                statusConfig.icon,
+                color: statusConfig.color,
+                size: 20,
+              ),
             ),
             const SizedBox(width: AppSizes.sm),
             Expanded(
@@ -1041,8 +1086,11 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
               ),
             ),
             if (kycStatus != 'approved')
-              Icon(Icons.arrow_forward_ios,
-                  size: 14, color: statusConfig.color),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 14,
+                color: statusConfig.color,
+              ),
           ],
         ),
       ),
@@ -1122,8 +1170,9 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppSizes.radiusLg)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSizes.radiusLg),
+        ),
       ),
       builder: (ctx) {
         return SafeArea(
@@ -1209,8 +1258,11 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Iconsax.info_circle,
-                          color: AppColors.primary, size: 20),
+                      const Icon(
+                        Iconsax.info_circle,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
                       const SizedBox(width: AppSizes.sm),
                       Expanded(
                         child: Text(
@@ -1251,7 +1303,8 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
-                              'Still under review. Please check back later.'),
+                            'Still under review. Please check back later.',
+                          ),
                         ),
                       );
                     }
@@ -1274,8 +1327,8 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
     final color = isCompleted
         ? AppColors.success
         : isActive
-            ? AppColors.warning
-            : AppColors.grey300;
+        ? AppColors.warning
+        : AppColors.grey300;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSizes.md),
@@ -1297,14 +1350,14 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                 child: isCompleted
                     ? Icon(Icons.check, size: 14, color: color)
                     : isActive
-                        ? Container(
-                            margin: const EdgeInsets.all(5),
-                            decoration: BoxDecoration(
-                              color: color,
-                              shape: BoxShape.circle,
-                            ),
-                          )
-                        : null,
+                    ? Container(
+                        margin: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      )
+                    : null,
               ),
             ],
           ),
@@ -1325,10 +1378,7 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                 ),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textTertiary,
-                  ),
+                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                 ),
               ],
             ),
@@ -1350,10 +1400,7 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
       leading: Icon(icon, color: color ?? AppColors.textSecondary, size: 22),
       title: Text(
         label,
-        style: TextStyle(
-          fontSize: 15,
-          color: color ?? AppColors.textPrimary,
-        ),
+        style: TextStyle(fontSize: 15, color: color ?? AppColors.textPrimary),
       ),
       trailing: trailing,
       contentPadding: EdgeInsets.zero,

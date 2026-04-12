@@ -223,6 +223,16 @@ class OrderService extends ChangeNotifier {
       final items = _parseOrderItems(attributes);
 
       final deliveryAddress = _parseDeliveryAddress(attributes);
+      final backendStatus = attributes['status'] as String?;
+      final paidStatuses = <String>{
+        'payment_confirmed',
+        'shopper_assigned',
+        'shopping',
+        'ready_for_pickup',
+        'rider_assigned',
+        'in_transit',
+        'delivered',
+      };
 
       // Parse customer data if available
       user_models.User? customer;
@@ -352,7 +362,7 @@ class OrderService extends ChangeNotifier {
         paymentMethod: paymentMethodFromBackendValue(
           attributes['payment_method'] as String?,
         ),
-        isPaid: (attributes['status'] as String?) == 'payment_confirmed',
+        isPaid: paidStatuses.contains(backendStatus),
         deliveryProofUrl: attributes['delivery_proof_url'] as String?,
         rating: () {
           final ratingData = attributes['rating'];

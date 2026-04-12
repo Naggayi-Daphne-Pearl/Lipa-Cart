@@ -16,7 +16,8 @@ class NotificationInboxScreen extends StatefulWidget {
   const NotificationInboxScreen({super.key});
 
   @override
-  State<NotificationInboxScreen> createState() => _NotificationInboxScreenState();
+  State<NotificationInboxScreen> createState() =>
+      _NotificationInboxScreenState();
 }
 
 class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
@@ -42,13 +43,15 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
     }
 
     try {
-      final response = await http.get(
-        Uri.parse('${AppConstants.apiUrl}/notifications/mine?pageSize=50'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(AppConstants.apiTimeout);
+      final response = await http
+          .get(
+            Uri.parse('${AppConstants.apiUrl}/notifications/mine?pageSize=50'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(AppConstants.apiTimeout);
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -174,7 +177,8 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
         ? notification['data'] as Map<String, dynamic>
         : <String, dynamic>{};
     final route = (data['route'] as String?) ?? '';
-    final type = (data['type'] as String?) ?? (notification['type'] as String?) ?? '';
+    final type =
+        (data['type'] as String?) ?? (notification['type'] as String?) ?? '';
 
     if (route.isNotEmpty) {
       context.go(route);
@@ -231,7 +235,9 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
               onPressed: _markAllRead,
               child: Text(
                 'Mark all read',
-                style: AppTextStyles.labelMedium.copyWith(color: AppColors.primary),
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.primary,
+                ),
               ),
             ),
         ],
@@ -239,24 +245,25 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
       body: _isLoading
           ? const AppLoadingIndicator.page()
           : _error != null
-              ? _buildError()
-              : _notifications.isEmpty
-                  ? _buildEmpty()
-                  : RefreshIndicator(
-                      onRefresh: _loadNotifications,
-                      color: AppColors.accent,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSizes.md,
-                          vertical: AppSizes.sm,
-                        ),
-                        itemCount: _notifications.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: AppSizes.xs),
-                        itemBuilder: (context, index) {
-                          return _buildNotificationCard(_notifications[index]);
-                        },
-                      ),
-                    ),
+          ? _buildError()
+          : _notifications.isEmpty
+          ? _buildEmpty()
+          : RefreshIndicator(
+              onRefresh: _loadNotifications,
+              color: AppColors.accent,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSizes.md,
+                  vertical: AppSizes.sm,
+                ),
+                itemCount: _notifications.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AppSizes.xs),
+                itemBuilder: (context, index) {
+                  return _buildNotificationCard(_notifications[index]);
+                },
+              ),
+            ),
     );
   }
 
@@ -304,7 +311,9 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
                         child: Text(
                           notification['title'] ?? '',
                           style: AppTextStyles.labelLarge.copyWith(
-                            fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
+                            fontWeight: isRead
+                                ? FontWeight.w500
+                                : FontWeight.w700,
                           ),
                         ),
                       ),
