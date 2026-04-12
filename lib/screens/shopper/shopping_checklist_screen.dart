@@ -127,6 +127,10 @@ class _ShoppingChecklistScreenState extends State<ShoppingChecklistScreen> {
       localItem.cartItem.actualPrice = latestItem.actualPrice;
       localItem.cartItem.shopperNotes = latestItem.shopperNotes;
       localItem.cartItem.substitutionApproved = nextApproval;
+      localItem.cartItem.isSubstituted = latestItem.isSubstituted;
+      localItem.cartItem.substituteName = latestItem.substituteName;
+      localItem.cartItem.substitutePrice = latestItem.substitutePrice;
+      localItem.cartItem.substitutePhotoUrl = latestItem.substitutePhotoUrl;
       localItem.found = latestItem.found ?? localItem.found;
       localItem.actualPrice = latestItem.actualPrice ?? localItem.actualPrice;
 

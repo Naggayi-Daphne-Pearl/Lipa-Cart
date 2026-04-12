@@ -177,14 +177,16 @@ class _ShopperCompletedTasksScreenState
 
   Widget _buildCompletedCard(Order order) {
     final isCancelled = order.status == OrderStatus.cancelled;
+    final isRefunded = order.status == OrderStatus.refunded;
+    final isTerminalFailure = isCancelled || isRefunded;
     final isDelivered = order.status == OrderStatus.delivered;
 
     final String badgeText;
     final Color badgeColor;
     final IconData badgeIcon;
 
-    if (isCancelled) {
-      badgeText = 'Cancelled';
+    if (isTerminalFailure) {
+      badgeText = isRefunded ? 'Refunded' : 'Cancelled';
       badgeColor = AppColors.error;
       badgeIcon = Icons.cancel;
     } else if (isDelivered) {
@@ -282,7 +284,7 @@ class _ShopperCompletedTasksScreenState
               ],
             ),
             // Call buttons for rider and customer
-            if (!isCancelled && !isDelivered) ...[
+            if (!isTerminalFailure && !isDelivered) ...[
               const SizedBox(height: 12),
               Row(
                 children: [

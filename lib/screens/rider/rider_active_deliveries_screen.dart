@@ -470,9 +470,9 @@ class _RiderActiveDeliveriesScreenState
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => _showNavigationOptions(order),
+                onPressed: () => _openNavigation(order),
                 icon: const Icon(Iconsax.route_square, size: 16),
-                label: const Text('Navigate'),
+                label: const Text('Navigate to delivery'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.info,
                   side: const BorderSide(color: AppColors.info),
@@ -597,52 +597,6 @@ class _RiderActiveDeliveriesScreenState
                   foregroundColor: AppColors.textSecondary,
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Open the device's map app with directions to the shopper's pickup location.
-  void _openPickupNavigation(Order order) {
-    final shopperName = order.shopperName;
-    if (shopperName != null && shopperName.isNotEmpty) {
-      final query = Uri.encodeComponent('$shopperName market Kampala');
-      final url = 'https://www.google.com/maps/search/?api=1&query=$query';
-      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Shopper pickup location not available')),
-      );
-    }
-  }
-
-  void _showNavigationOptions(Order order) {
-    showModalBottomSheet<void>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.store),
-              title: const Text('Pickup location'),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                _openPickupNavigation(order);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Iconsax.gps),
-              title: const Text('Delivery location'),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                _openNavigation(order);
-              },
             ),
           ],
         ),
