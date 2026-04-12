@@ -27,7 +27,7 @@ class UploadService {
     String token, {
     String? apiUrlOverride,
     Future<http.StreamedResponse> Function(http.MultipartRequest request)?
-        sendRequest,
+    sendRequest,
   }) async {
     final bytes = await imageFile.readAsBytes();
     final name = imageFile.uri.pathSegments.isNotEmpty
@@ -45,13 +45,11 @@ class UploadService {
   static Future<String?> uploadImageBytes(
     Uint8List bytes,
     String fileName,
-    String token,
-    {
+    String token, {
     String? apiUrlOverride,
     Future<http.StreamedResponse> Function(http.MultipartRequest request)?
-        sendRequest,
-  }
-  ) async {
+    sendRequest,
+  }) async {
     final sizeMb = bytes.length / (1024 * 1024);
     if (sizeMb > _maxFileSizeMb) {
       throw Exception(
@@ -73,10 +71,9 @@ class UploadService {
 
     final sender = sendRequest ?? _defaultSend;
     final streamed = await sender(request).timeout(
-          const Duration(seconds: 60),
-          onTimeout: () =>
-              throw TimeoutException('Upload timed out after 60s'),
-        );
+      const Duration(seconds: 60),
+      onTimeout: () => throw TimeoutException('Upload timed out after 60s'),
+    );
     final response = await http.Response.fromStream(streamed);
 
     if (response.statusCode != 200 && response.statusCode != 201) {

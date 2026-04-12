@@ -19,10 +19,7 @@ import '../../widgets/app_loading_indicator.dart';
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
 
-  const ProductDetailScreen({
-    super.key,
-    required this.product,
-  });
+  const ProductDetailScreen({super.key, required this.product});
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
@@ -66,14 +63,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Add to Shopping List', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const Text(
+                'Add to Shopping List',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
               const SizedBox(height: 16),
               if (lists.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      Text('No lists yet', style: TextStyle(color: Colors.grey[500])),
+                      Text(
+                        'No lists yet',
+                        style: TextStyle(color: Colors.grey[500]),
+                      ),
                       const SizedBox(height: 8),
                       TextButton(
                         onPressed: () {
@@ -86,37 +89,59 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                 )
               else
-                ...lists.map((list) => ListTile(
-                  leading: Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(
-                      color: Color(int.parse('FF${list.color.replaceAll('#', '')}', radix: 16)),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center(child: Text(list.emoji ?? '🛒', style: const TextStyle(fontSize: 18))),
-                  ),
-                  title: Text(list.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text('${list.totalItems} items'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    final item = ShoppingListItem(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      name: product.name,
-                      quantity: 1,
-                      unit: product.unit,
-                      unitPrice: product.price,
-                      linkedProduct: product,
-                    );
-                    listProvider.addItemToList(list.id, item, authToken: authToken);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${product.name} added to ${list.name}'),
-                        backgroundColor: Colors.green,
-                        duration: const Duration(seconds: 2),
+                ...lists.map(
+                  (list) => ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Color(
+                          int.parse(
+                            'FF${list.color.replaceAll('#', '')}',
+                            radix: 16,
+                          ),
+                        ),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    );
-                  },
-                )),
+                      child: Center(
+                        child: Text(
+                          list.emoji ?? '🛒',
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      list.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text('${list.totalItems} items'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      final item = ShoppingListItem(
+                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                        name: product.name,
+                        quantity: 1,
+                        unit: product.unit,
+                        unitPrice: product.price,
+                        linkedProduct: product,
+                      );
+                      listProvider.addItemToList(
+                        list.id,
+                        item,
+                        authToken: authToken,
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '${product.name} added to ${list.name}',
+                          ),
+                          backgroundColor: Colors.green,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+                ),
             ],
           ),
         ),
@@ -172,28 +197,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   Container(
                     height: 320,
                     width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: _getProductBgColor(),
-                    ),
+                    decoration: BoxDecoration(color: _getProductBgColor()),
                     child: SafeArea(
                       bottom: false,
                       child: Stack(
                         children: [
-                          // Product Image
-                          Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(AppSizes.xl),
-                              child: CachedNetworkImage(
-                                imageUrl: widget.product.image,
-                                fit: BoxFit.contain,
-                                placeholder: (context, url) => const Center(
-                                  child: AppLoadingIndicator.small(),
-                                ),
-                                errorWidget: (context, url, error) => Icon(
-                                  Iconsax.image,
-                                  size: 64,
-                                  color: AppColors.grey400,
-                                ),
+                          // Product image fills the hero area for consistent alignment.
+                          Positioned.fill(
+                            child: CachedNetworkImage(
+                              imageUrl: widget.product.image,
+                              fit: BoxFit.cover,
+                              alignment: Alignment.center,
+                              placeholder: (context, url) => const Center(
+                                child: AppLoadingIndicator.small(),
+                              ),
+                              errorWidget: (context, url, error) => Icon(
+                                Iconsax.image,
+                                size: 64,
+                                color: AppColors.grey400,
                               ),
                             ),
                           ),
@@ -217,10 +238,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   shape: BoxShape.circle,
                                   boxShadow: AppColors.shadowSm,
                                 ),
-                                child: const Icon(
-                                  Iconsax.arrow_left,
-                                  size: 20,
-                                ),
+                                child: const Icon(Iconsax.arrow_left, size: 20),
                               ),
                             ),
                           ),
@@ -389,8 +407,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               Container(
                                 decoration: BoxDecoration(
                                   color: AppColors.grey100,
-                                  borderRadius:
-                                      BorderRadius.circular(AppSizes.radiusMd),
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusMd,
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
@@ -529,8 +548,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.primary,
-                            borderRadius:
-                                BorderRadius.circular(AppSizes.radiusFull),
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusFull,
+                            ),
                           ),
                           child: Row(
                             children: [
@@ -555,7 +575,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         onPressed: () => _addToList(widget.product),
                         icon: const Icon(Iconsax.clipboard_text, size: 16),
                         label: const Text('Add to List'),
-                        style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                        ),
                       ),
                     ],
                   ),
@@ -574,17 +596,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 1,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -628,23 +644,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 children: [
                   Text(
                     rating.toStringAsFixed(1),
-                    style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700),
+                    style: AppTextStyles.h3.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: List.generate(5, (i) {
                       final starValue = i + 1;
                       return Icon(
-                        starValue <= rating.round() ? Icons.star_rounded : Icons.star_outline_rounded,
+                        starValue <= rating.round()
+                            ? Icons.star_rounded
+                            : Icons.star_outline_rounded,
                         size: 16,
-                        color: starValue <= rating.round() ? AppColors.accent : AppColors.grey300,
+                        color: starValue <= rating.round()
+                            ? AppColors.accent
+                            : AppColors.grey300,
                       );
                     }),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '$reviewCount reviews',
-                    style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -655,14 +679,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   children: List.generate(5, (i) {
                     final star = 5 - i;
                     // Simulate distribution based on average rating
-                    final pct = _estimateRatingDistribution(star, rating, reviewCount);
+                    final pct = _estimateRatingDistribution(
+                      star,
+                      rating,
+                      reviewCount,
+                    );
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2),
                       child: Row(
                         children: [
                           Text('$star', style: AppTextStyles.caption),
                           const SizedBox(width: 4),
-                          const Icon(Icons.star_rounded, size: 12, color: AppColors.accent),
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 12,
+                            color: AppColors.accent,
+                          ),
                           const SizedBox(width: 6),
                           Expanded(
                             child: ClipRRect(
@@ -671,7 +703,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 value: pct,
                                 minHeight: 6,
                                 backgroundColor: AppColors.grey200,
-                                valueColor: const AlwaysStoppedAnimation(AppColors.accent),
+                                valueColor: const AlwaysStoppedAnimation(
+                                  AppColors.accent,
+                                ),
                               ),
                             ),
                           ),
@@ -689,7 +723,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           Center(
             child: Text(
               'No reviews yet. Be the first to review after purchase!',
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -698,7 +734,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  double _estimateRatingDistribution(int star, double avgRating, int totalReviews) {
+  double _estimateRatingDistribution(
+    int star,
+    double avgRating,
+    int totalReviews,
+  ) {
     if (totalReviews == 0) return 0;
     // Simple bell-curve estimation centered on the average
     final diff = (star - avgRating).abs();
@@ -717,19 +757,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       decoration: BoxDecoration(
         color: AppColors.grey50,
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        border: Border.all(
-          color: AppColors.grey200,
-          width: 1,
-        ),
+        border: Border.all(color: AppColors.grey200, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: AppColors.primary,
-            size: 24,
-          ),
+          Icon(icon, color: AppColors.primary, size: 24),
           const SizedBox(height: AppSizes.sm),
           Text(
             title,
@@ -763,11 +796,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           color: isAdd ? AppColors.grey300 : Colors.transparent,
           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
         ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: AppColors.textPrimary,
-        ),
+        child: Icon(icon, size: 20, color: AppColors.textPrimary),
       ),
     );
   }
@@ -799,15 +828,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   imageUrl: product.image,
                   fit: BoxFit.cover,
                   width: double.infinity,
-                  placeholder: (context, url) => Container(
-                    color: AppColors.grey100,
-                  ),
+                  placeholder: (context, url) =>
+                      Container(color: AppColors.grey100),
                   errorWidget: (context, url, error) => Container(
                     color: AppColors.grey100,
-                    child: Icon(
-                      Iconsax.image,
-                      color: AppColors.grey400,
-                    ),
+                    child: Icon(Iconsax.image, color: AppColors.grey400),
                   ),
                 ),
               ),
