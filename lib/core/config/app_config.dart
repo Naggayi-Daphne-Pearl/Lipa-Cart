@@ -13,7 +13,10 @@
 /// For Google OAuth on web also pass:
 ///  ` --dart-define=GOOGLE_WEB_CLIENT_ID=...
 ///
-/// For local development the defaults point at localhost.
+/// Defaults point at the Railway production backend so dev builds Just Work
+/// against a real API. To run against a local Strapi instance, override at
+/// build time:
+///   flutter run --dart-define=API_BASE_URL=http://localhost:1337
 class AppConfig {
   AppConfig._();
 

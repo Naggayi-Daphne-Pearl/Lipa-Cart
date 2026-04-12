@@ -405,7 +405,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           serviceFee: cartProvider.serviceFee,
           deliveryFee: cartProvider.deliveryFee,
           total: cartProvider.total,
-          paymentMethod: _selectedPayment.name,
+          paymentMethod: _selectedPayment.toBackendValue,
         );
 
         if (!mounted) return;

@@ -364,9 +364,8 @@ class Order {
           ? DateTime.parse(json['cancelledAt'] as String)
           : null,
       cancellationReason: json['cancellationReason'] as String?,
-      paymentMethod: PaymentMethod.values.firstWhere(
-        (p) => p.name == json['paymentMethod'],
-        orElse: () => PaymentMethod.mobileMoney,
+      paymentMethod: paymentMethodFromBackendValue(
+        json['paymentMethod'] as String?,
       ),
       isPaid: json['isPaid'] as bool? ?? false,
       rating: json['rating'] != null
@@ -401,5 +400,37 @@ extension PaymentMethodExtension on PaymentMethod {
       case PaymentMethod.cashOnDelivery:
         return 'cash';
     }
+  }
+
+  /// Serialised value for the backend `order.payment_method` enum.
+  ///
+  /// These values match the Strapi schema at
+  /// `Lipa-Cart-Backend/src/api/order/content-types/order/schema.json` —
+  /// changing them requires a corresponding enum + data migration on the
+  /// backend. Do NOT rely on Dart's enum `.name` for round-tripping.
+  String get toBackendValue {
+    switch (this) {
+      case PaymentMethod.mobileMoney:
+        return 'mobileMoney';
+      case PaymentMethod.card:
+        return 'card';
+      case PaymentMethod.cashOnDelivery:
+        return 'cashOnDelivery';
+    }
+  }
+}
+
+/// Parse a backend `order.payment_method` string back into a [PaymentMethod].
+/// Unknown/null values fall back to [PaymentMethod.mobileMoney].
+PaymentMethod paymentMethodFromBackendValue(String? value) {
+  switch (value) {
+    case 'mobileMoney':
+      return PaymentMethod.mobileMoney;
+    case 'card':
+      return PaymentMethod.card;
+    case 'cashOnDelivery':
+      return PaymentMethod.cashOnDelivery;
+    default:
+      return PaymentMethod.mobileMoney;
   }
 }
