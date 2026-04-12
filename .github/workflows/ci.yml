@@ -81,6 +81,10 @@ jobs:
       # Firebase, Sentry DSN) is injected at deploy time, not build time, so no secrets
       # are needed here. If a PR introduces a build-time secret, add it as a repo secret
       # and reference it via `--dart-define` — do NOT commit defaults.
+      # --no-tree-shake-icons: the icon tree shaker aborts on "codepoint 0"
+      # with the iconsax font under Flutter 3.41. Ships ~1MB extra of font
+      # assets but makes the build deterministic. Revisit once iconsax or
+      # Flutter fixes the underlying subsetting issue.
       - name: Build web (release)
         continue-on-error: true
-        run: flutter build web --release
+        run: flutter build web --release --no-tree-shake-icons
