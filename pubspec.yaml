@@ -58,7 +58,7 @@ dependencies:
   geolocator: ^14.0.2
   sentry_flutter: ^9.15.0
   connectivity_plus: ^6.1.4
-  local_auth: ^2.3.0
+  local_auth: ^3.0.1
 
 dev_dependencies:
   flutter_test:
