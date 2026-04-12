@@ -31,7 +31,7 @@ dependencies:
   pin_code_fields: ^8.0.1
 
   # Storage
-  shared_preferences: ^2.3.3
+  shared_preferences: ^2.5.5
   flutter_secure_storage: ^9.2.2
 
   # HTTP
