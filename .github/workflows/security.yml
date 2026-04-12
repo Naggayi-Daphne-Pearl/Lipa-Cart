@@ -37,15 +37,15 @@ jobs:
       # Flip to `false` once the baseline is clean — see CONTRIBUTING.md.
       #
       # Ruleset notes: Semgrep does not ship a dedicated Dart/Flutter ruleset, so
-      # we rely on OWASP Top Ten (language-agnostic), the mobile pack, and secrets.
-      # This still catches hardcoded credentials, insecure HTTP, weak crypto, and
-      # common injection patterns in Dart source.
+      # we rely on OWASP Top Ten (language-agnostic) and secrets. This still
+      # catches hardcoded credentials, insecure HTTP, weak crypto, and common
+      # injection patterns in Dart source. (p/mobile was retired from the
+      # Semgrep registry.)
       - name: Run Semgrep
         continue-on-error: true
         run: |
           semgrep ci \
             --config p/owasp-top-ten \
-            --config p/mobile \
             --config p/secrets
 
   gitleaks:
