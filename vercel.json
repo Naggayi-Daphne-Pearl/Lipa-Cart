@@ -3,6 +3,11 @@
   "installCommand": "echo 'skip'",
   "buildCommand": "bash scripts/vercel-build.sh",
   "outputDirectory": "build/web",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",
