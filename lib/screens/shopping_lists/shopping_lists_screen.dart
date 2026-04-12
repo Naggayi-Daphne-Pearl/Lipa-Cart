@@ -492,6 +492,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
   Widget _buildListCard(ShoppingList list) {
     final color = _parseColor(list.color);
     final estimatedValue = _estimateListValue(list);
+    final progressPercent = (list.progress * 100).round();
 
     return GestureDetector(
       onTap: () =>
@@ -579,74 +580,122 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
             // Bottom info section
             Padding(
               padding: const EdgeInsets.all(AppSizes.md),
-              child: Row(
+              child: Column(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Iconsax.shopping_bag, color: color, size: 16),
-                            const SizedBox(width: AppSizes.xs),
-                            Text(
-                              '${list.totalItems} item${list.totalItems != 1 ? 's' : ''}',
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w600,
+                            Row(
+                              children: [
+                                Icon(
+                                  Iconsax.shopping_bag,
+                                  color: color,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: AppSizes.xs),
+                                Text(
+                                  '${list.totalItems} item${list.totalItems != 1 ? 's' : ''}',
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSizes.sm),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: list.isComplete
+                                        ? AppColors.success.withValues(
+                                            alpha: 0.14,
+                                          )
+                                        : color.withValues(alpha: 0.14),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    list.isComplete
+                                        ? 'Completed'
+                                        : '$progressPercent% done',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: list.isComplete
+                                          ? AppColors.success
+                                          : color,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (estimatedValue > 0) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Est. ${Formatters.formatCurrency(estimatedValue)}',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.primaryDark,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        if (estimatedValue > 0) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            'Est. ${Formatters.formatCurrency(estimatedValue)}',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.primaryDark,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSizes.md),
-                  // Add to cart button
-                  if (list.purchasableItems.isNotEmpty)
-                    GestureDetector(
-                      onTap: () => _addListToCart(list),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSizes.md,
-                          vertical: AppSizes.sm,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(
-                            AppSizes.radiusFull,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Iconsax.bag_2,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                            const SizedBox(width: AppSizes.xs),
-                            Text(
-                              'Add All',
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                            ],
                           ],
                         ),
                       ),
+                      const SizedBox(width: AppSizes.md),
+                      // Add to cart button
+                      if (list.purchasableItems.isNotEmpty)
+                        GestureDetector(
+                          onTap: () => _addListToCart(list),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSizes.md,
+                              vertical: AppSizes.sm,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(
+                                AppSizes.radiusFull,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Iconsax.bag_2,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: AppSizes.xs),
+                                Text(
+                                  'Add All',
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (list.totalItems > 0) ...[
+                    const SizedBox(height: AppSizes.sm),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        minHeight: 8,
+                        value: list.progress,
+                        backgroundColor: AppColors.grey200,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          list.isComplete ? AppColors.success : color,
+                        ),
+                      ),
                     ),
+                  ],
                 ],
               ),
             ),
