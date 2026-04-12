@@ -6,9 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/rider_provider.dart';
 import '../../models/order.dart';
@@ -21,7 +19,9 @@ import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/rider_button.dart';
 
 class RiderActiveDeliveriesScreen extends StatefulWidget {
-  const RiderActiveDeliveriesScreen({super.key});
+  final String? focusDeliveryId;
+
+  const RiderActiveDeliveriesScreen({super.key, this.focusDeliveryId});
 
   @override
   State<RiderActiveDeliveriesScreen> createState() =>
@@ -244,15 +244,57 @@ class _RiderActiveDeliveriesScreenState
             );
           }
 
+          final focusId = widget.focusDeliveryId;
+          final deliveries = [...rider.activeDeliveries];
+          if (focusId != null && focusId.isNotEmpty) {
+            deliveries.sort((a, b) {
+              final aFocused = (a.documentId ?? a.id) == focusId;
+              final bFocused = (b.documentId ?? b.id) == focusId;
+              if (aFocused == bFocused) return 0;
+              return aFocused ? -1 : 1;
+            });
+          }
+
           return RefreshIndicator(
             onRefresh: _refresh,
             color: _brandColor,
-            child: ListView.builder(
+            child: ListView(
               padding: const EdgeInsets.all(AppSizes.md),
-              itemCount: rider.activeDeliveries.length,
-              itemBuilder: (context, index) {
-                return _buildDeliveryCard(rider.activeDeliveries[index]);
-              },
+              children: [
+                if (focusId != null && focusId.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: AppSizes.sm),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSizes.md,
+                      vertical: AppSizes.sm,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentSoft,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                      border: Border.all(color: AppColors.accent.withValues(alpha: 0.25)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Iconsax.flash_1, size: 16, color: AppColors.accent),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Newly accepted delivery is pinned at the top. Start pickup to begin route.',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ...deliveries.map((delivery) {
+                  final isFocused = focusId != null && (delivery.documentId ?? delivery.id) == focusId;
+                  return _buildDeliveryCard(delivery, isFocused: isFocused);
+                }),
+              ],
             ),
           );
         },
@@ -260,7 +302,7 @@ class _RiderActiveDeliveriesScreenState
     );
   }
 
-  Widget _buildDeliveryCard(Order order) {
+  Widget _buildDeliveryCard(Order order, {bool isFocused = false}) {
     final itemCount = order.items.length;
     final statusColor = _getStatusColor(order.status);
     final statusText = _getStatusText(order.status);
@@ -270,7 +312,10 @@ class _RiderActiveDeliveriesScreenState
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        border: Border.all(color: AppColors.grey200),
+        border: Border.all(
+          color: isFocused ? AppColors.accent : AppColors.grey200,
+          width: isFocused ? 1.4 : 1,
+        ),
         boxShadow: AppColors.shadowSm,
       ),
       child: Padding(
@@ -328,55 +373,35 @@ class _RiderActiveDeliveriesScreenState
                 ),
               ],
             ),
-            // Mini map preview
-            if (order.deliveryAddress.latitude != 0 &&
-                order.deliveryAddress.longitude != 0)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSizes.sm),
-                child: ClipRRect(
+            const SizedBox(height: AppSizes.sm),
+            // COD banner — prominent at the top
+            if (order.paymentMethod == PaymentMethod.cashOnDelivery)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                margin: const EdgeInsets.only(bottom: AppSizes.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.accent,
                   borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                  child: SizedBox(
-                    height: 120,
-                    width: double.infinity,
-                    child: IgnorePointer(
-                      child: FlutterMap(
-                        options: MapOptions(
-                          initialCenter: LatLng(
-                            order.deliveryAddress.latitude,
-                            order.deliveryAddress.longitude,
-                          ),
-                          initialZoom: 14,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Iconsax.money_recive, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'COLLECT ${Formatters.formatCurrency(order.total)} CASH',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
                         ),
-                        children: [
-                          TileLayer(
-                            urlTemplate:
-                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          ),
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                point: LatLng(
-                                  order.deliveryAddress.latitude,
-                                  order.deliveryAddress.longitude,
-                                ),
-                                width: 40,
-                                height: 40,
-                                child: const Icon(
-                                  Iconsax.location5,
-                                  color: AppColors.error,
-                                  size: 32,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-            const SizedBox(height: AppSizes.sm),
-            // Items summary
+            // Items summary + your earning
             Row(
               children: [
                 Icon(Iconsax.box_1, size: 16, color: AppColors.textTertiary),
@@ -390,126 +415,133 @@ class _RiderActiveDeliveriesScreenState
                 ),
                 const Spacer(),
                 Text(
-                  Formatters.formatCurrency(order.deliveryFee),
+                  'Your Earning: ${Formatters.formatCurrency(order.deliveryFee)}',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 15,
+                    fontSize: 13,
                     color: AppColors.accent,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: AppSizes.sm),
-            // GPS Navigation buttons
-            Row(
-              children: [
-                // Navigate to Pickup (Shopper)
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _openPickupNavigation(order),
-                    icon: const Icon(Icons.store, size: 16),
-                    label: const Text(
-                      'Pickup Location',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.deepPurple,
-                      side: const BorderSide(color: Colors.deepPurple),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            _buildStageIndicator(order.status),
+            // Expandable item list
+            if (order.items.isNotEmpty)
+              Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.only(bottom: 8),
+                  title: Text(
+                    'View items',
+                    style: TextStyle(fontSize: 12, color: AppColors.accent, fontWeight: FontWeight.w600),
+                  ),
+                  iconColor: AppColors.accent,
+                  collapsedIconColor: AppColors.accent,
+                  children: order.items.map((item) {
+                    final substituted = item.substituteName != null;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${substituted ? item.substituteName! : item.product.name}  x${item.quantity.toStringAsFixed(item.quantity == item.quantity.roundToDouble() ? 0 : 1)} ${item.product.unit}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                                decoration: substituted ? TextDecoration.none : null,
+                              ),
+                            ),
+                          ),
+                          if (substituted)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 4),
+                              child: Icon(Icons.swap_horiz, size: 14, color: AppColors.accent),
+                            ),
+                        ],
                       ),
-                    ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            const SizedBox(height: AppSizes.sm),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _openNavigation(order),
+                icon: const Icon(Iconsax.route_square, size: 16),
+                label: const Text('Navigate to delivery'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.info,
+                  side: const BorderSide(color: AppColors.info),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                   ),
                 ),
-                const SizedBox(width: 8),
-                // Navigate to Delivery
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _openNavigation(order),
-                    icon: const Icon(Iconsax.gps, size: 16),
-                    label: const Text(
-                      'Delivery Location',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.info,
-                      side: const BorderSide(color: AppColors.info),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
             const SizedBox(height: AppSizes.sm),
             // Action buttons based on status
             if (order.status == OrderStatus.readyForDelivery ||
                 order.status == OrderStatus.riderAssigned)
               // Rider has claimed but not yet picked up
-              SizedBox(
-                width: double.infinity,
-                child: RiderButton.primary(
-                  text: 'Picked Up — Start Delivery',
-                  icon: Iconsax.truck_fast,
-                  height: 44,
-                  onPressed: () async {
-                    final auth = context.read<AuthProvider>();
-                    final rider = context.read<RiderProvider>();
-                    final success = await rider.markInTransit(
-                      auth.token!,
-                      order.documentId ?? order.id,
-                      auth.user!.documentId ?? auth.user!.id,
-                    );
-                    if (success && mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                            'Order picked up — delivering now!',
-                          ),
-                          backgroundColor: AppColors.info,
-                        ),
-                      );
-                    }
-                  },
-                ),
-              )
-            else if (order.status == OrderStatus.inTransit) ...[
-              // COD: Collect cash first
-              if (order.paymentMethod == PaymentMethod.cashOnDelivery)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSizes.sm),
-                  child: Container(
-                    padding: const EdgeInsets.all(AppSizes.sm),
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                      border: Border.all(
-                        color: AppColors.warning.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Iconsax.money_recive,
-                          color: AppColors.warning,
-                          size: 20,
-                        ),
-                        const SizedBox(width: AppSizes.sm),
-                        Expanded(
-                          child: Text(
-                            'Collect ${Formatters.formatCurrency(order.total)} cash before completing',
-                            style: const TextStyle(
-                              color: AppColors.warning,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+              Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: RiderButton.primary(
+                      text: 'Picked Up — Start Delivery',
+                      icon: Iconsax.truck_fast,
+                      height: 44,
+                      onPressed: () async {
+                        final auth = context.read<AuthProvider>();
+                        final rider = context.read<RiderProvider>();
+                        final success = await rider.markInTransit(
+                          auth.token!,
+                          order.documentId ?? order.id,
+                          auth.user!.documentId ?? auth.user!.id,
+                        );
+                        if (success && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                'Order picked up — delivering now!',
+                              ),
+                              backgroundColor: AppColors.info,
                             ),
-                          ),
-                        ),
-                      ],
+                          );
+                        }
+                      },
                     ),
                   ),
-                ),
+                  if (order.customer != null &&
+                      order.customer!.phoneNumber.isNotEmpty) ...[
+                    const SizedBox(height: AppSizes.xs),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showCallDialog(
+                          'Customer',
+                          order.customer!.name ?? 'Customer',
+                          order.customer!.phoneNumber,
+                        ),
+                        icon: const Icon(Iconsax.call, size: 16),
+                        label: const Text('Call Customer'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.accent,
+                          side: const BorderSide(color: AppColors.accent),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              )
+            else if (order.status == OrderStatus.inTransit) ...[
               // Rider is delivering — require delivery proof photo
               SizedBox(
                 width: double.infinity,
@@ -530,90 +562,131 @@ class _RiderActiveDeliveriesScreenState
                   ),
                 ),
               ),
+              const SizedBox(height: AppSizes.xs),
+              if (order.customer != null && order.customer!.phoneNumber.isNotEmpty)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showCallDialog(
+                      'Customer',
+                      order.customer!.name ?? 'Customer',
+                      order.customer!.phoneNumber,
+                    ),
+                    icon: const Icon(Iconsax.call, size: 16),
+                    label: const Text('Call Customer'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accent,
+                      side: const BorderSide(color: AppColors.accent),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                      ),
+                    ),
+                  ),
+                ),
             ],
-            // Call buttons row
-            if ((order.customer != null &&
-                    order.customer!.phoneNumber.isNotEmpty) ||
-                (order.shopperName != null && order.shopperPhone != null)) ...[
-              const SizedBox(height: AppSizes.sm),
-              Row(
-                children: [
-                  // Call Shopper
-                  if (order.shopperName != null &&
-                      order.shopperPhone != null &&
-                      order.shopperPhone!.isNotEmpty)
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _showCallDialog(
-                          'Shopper',
-                          order.shopperName!,
-                          order.shopperPhone!,
-                        ),
-                        icon: const Icon(Iconsax.shopping_bag, size: 16),
-                        label: const Text(
-                          'Shopper',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.info,
-                          side: BorderSide(color: AppColors.info),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppSizes.radiusSm,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  if (order.shopperName != null && order.customer != null)
-                    const SizedBox(width: AppSizes.xs),
-                  // Call Customer
-                  if (order.customer != null &&
-                      order.customer!.phoneNumber.isNotEmpty)
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _showCallDialog(
-                          'Customer',
-                          order.customer!.name ?? 'Customer',
-                          order.customer!.phoneNumber,
-                        ),
-                        icon: const Icon(Iconsax.call, size: 16),
-                        label: const Text(
-                          'Customer',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.accent,
-                          side: BorderSide(color: AppColors.accent),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppSizes.radiusSm,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+            const SizedBox(height: AppSizes.xs),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => _showMoreActionsSheet(order),
+                icon: const Icon(Iconsax.more, size: 16),
+                label: const Text('More actions'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                ),
               ),
-            ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  /// Open the device's map app with directions to the shopper's pickup location.
-  void _openPickupNavigation(Order order) {
-    final shopperName = order.shopperName;
-    if (shopperName != null && shopperName.isNotEmpty) {
-      final query = Uri.encodeComponent('$shopperName market Kampala');
-      final url = 'https://www.google.com/maps/search/?api=1&query=$query';
-      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Shopper pickup location not available')),
+  void _showMoreActionsSheet(Order order) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (order.shopperName != null &&
+                order.shopperPhone != null &&
+                order.shopperPhone!.isNotEmpty)
+              ListTile(
+                leading: const Icon(Iconsax.shopping_bag),
+                title: const Text('Call shopper'),
+                subtitle: Text(order.shopperName!),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _showCallDialog('Shopper', order.shopperName!, order.shopperPhone!);
+                },
+              ),
+            if (order.status == OrderStatus.readyForDelivery ||
+                order.status == OrderStatus.riderAssigned)
+              ListTile(
+                leading: const Icon(Iconsax.close_circle, color: AppColors.error),
+                title: const Text(
+                  'Cancel delivery',
+                  style: TextStyle(color: AppColors.error),
+                ),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _confirmCancelDelivery(order);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStageIndicator(OrderStatus status) {
+    int stageIndex;
+    switch (status) {
+      case OrderStatus.riderAssigned:
+      case OrderStatus.readyForDelivery:
+        stageIndex = 0;
+        break;
+      case OrderStatus.inTransit:
+        stageIndex = 1;
+        break;
+      case OrderStatus.delivered:
+        stageIndex = 2;
+        break;
+      default:
+        stageIndex = 0;
+    }
+
+    Widget stageChip(String label, bool active) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: active ? AppColors.accentSoft : AppColors.grey100,
+          borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: active ? AppColors.accent : AppColors.textTertiary,
+          ),
+        ),
       );
     }
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        stageChip('Assigned', stageIndex >= 0),
+        stageChip('In Transit', stageIndex >= 1),
+        stageChip('Delivered', stageIndex >= 2),
+      ],
+    );
   }
 
   /// Open the device's map app with directions to the delivery address.
@@ -813,6 +886,48 @@ class _RiderActiveDeliveriesScreenState
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _confirmCancelDelivery(Order order) async {
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cancel Delivery?'),
+        content: const Text(
+          'This will unassign you and return the order to available deliveries for other riders.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Keep Delivery'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Cancel Delivery'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldCancel != true || !mounted) return;
+
+    final auth = context.read<AuthProvider>();
+    final rider = context.read<RiderProvider>();
+    final success = await rider.cancelDelivery(
+      auth.token!,
+      order.documentId ?? order.id,
+      auth.user!.documentId ?? auth.user!.id,
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success ? 'Delivery cancelled successfully' : 'Failed to cancel delivery'),
+        backgroundColor: success ? AppColors.warning : AppColors.error,
       ),
     );
   }

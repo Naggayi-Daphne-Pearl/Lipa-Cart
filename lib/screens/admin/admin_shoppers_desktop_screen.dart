@@ -442,14 +442,14 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                                     final kycStatus = shopper['kyc_status'] ??
                                         'not_submitted';
 
-                                    Color kycColor = Colors.orange;
+                                    Color kycColor = AppColors.accent;
                                     if (kycStatus == 'approved') {
-                                      kycColor = Colors.green;
+                                      kycColor = AppColors.primary;
                                     } else if (kycStatus == 'rejected') {
-                                      kycColor = Colors.red;
+                                      kycColor = AppColors.error;
                                     } else if (kycStatus ==
                                         'pending_review') {
-                                      kycColor = Colors.blue;
+                                      kycColor = AppColors.info;
                                     }
 
                                     return Card(
@@ -566,13 +566,13 @@ class _ShopperDetailsView extends StatelessWidget {
   Color _getKycStatusColor(String status) {
     switch (status) {
       case 'approved':
-        return Colors.green;
+        return AppColors.primary;
       case 'rejected':
-        return Colors.red;
+        return AppColors.error;
       case 'pending_review':
-        return Colors.blue;
+        return AppColors.info;
       default:
-        return Colors.orange;
+        return AppColors.accent;
     }
   }
 
@@ -707,7 +707,7 @@ class _ShopperDetailsView extends StatelessWidget {
                 icon: const Icon(Icons.edit),
                 label: const Text('Edit Profile'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: AppColors.primary,
                 ),
               ),
             ),

@@ -39,6 +39,8 @@ class OrderService extends ChangeNotifier {
 
   OrderStatus _mapStatus(String? status) {
     switch (status) {
+      case 'payment_processing':
+        return OrderStatus.paymentProcessing;
       case 'payment_confirmed':
         return OrderStatus.confirmed;
       case 'shopper_assigned':
@@ -53,6 +55,8 @@ class OrderService extends ChangeNotifier {
         return OrderStatus.delivered;
       case 'cancelled':
         return OrderStatus.cancelled;
+      case 'refunded':
+        return OrderStatus.refunded;
       case 'shopping':
         return OrderStatus.shopping;
       case 'pending':
@@ -110,6 +114,21 @@ class OrderService extends ChangeNotifier {
         isAvailable: true,
       );
 
+      // Parse substitution photo URL from Strapi media field
+      String? substitutePhotoUrl;
+      final photoField = itemAttrs['substitution_photo'];
+      if (photoField is Map<String, dynamic>) {
+        final url = photoField['url'] as String?;
+        if (url != null && url.isNotEmpty) {
+          substitutePhotoUrl = url.startsWith('http') ? url : '${AppConstants.baseUrl}$url';
+        }
+      }
+
+      final shopperNotes = itemAttrs['shopper_notes'] as String?;
+      // Structured fields take priority over legacy notes parsing
+      final structuredName = itemAttrs['substitute_name'] as String?;
+      final structuredPrice = (itemAttrs['substitute_price'] as num?)?.toDouble();
+
       return CartItem(
         id: (item['documentId'] ?? item['id'] ?? '').toString(),
         product: product,
@@ -117,8 +136,13 @@ class OrderService extends ChangeNotifier {
         specialInstructions: itemAttrs['special_instructions'] as String?,
         found: itemAttrs['found'] as bool?,
         actualPrice: (itemAttrs['actual_price'] as num?)?.toDouble(),
-        shopperNotes: itemAttrs['shopper_notes'] as String?,
+        shopperNotes: shopperNotes,
         substitutionApproved: itemAttrs['substitution_approved'] as bool?,
+        isSubstituted: itemAttrs['is_substituted'] as bool?,
+        substituteName: structuredName ?? CartItem.parseSubstituteNameFromNotes(shopperNotes),
+        substitutePrice: structuredPrice ?? CartItem.parseSubstitutePriceFromNotes(shopperNotes),
+        substitutePhotoUrl: substitutePhotoUrl,
+        substituteForItemId: (itemAttrs['substitute_for_item']?['documentId'] ?? itemAttrs['substitute_for_item']?['id'])?.toString(),
       );
     }).toList();
 
@@ -293,6 +317,27 @@ class OrderService extends ChangeNotifier {
         deliveredAt: DateTime.tryParse(
           attributes['delivered_at'] as String? ?? '',
         ),
+        paymentConfirmedAt: DateTime.tryParse(
+          attributes['payment_confirmed_at'] as String? ?? '',
+        ),
+        shopperAssignedAt: DateTime.tryParse(
+          attributes['shopper_assigned_at'] as String? ?? '',
+        ),
+        shoppingStartedAt: DateTime.tryParse(
+          attributes['shopping_started_at'] as String? ?? '',
+        ),
+        shoppingCompletedAt: DateTime.tryParse(
+          attributes['shopping_completed_at'] as String? ?? '',
+        ),
+        riderAssignedAt: DateTime.tryParse(
+          attributes['rider_assigned_at'] as String? ?? '',
+        ),
+        pickedUpAt: DateTime.tryParse(
+          attributes['picked_up_at'] as String? ?? '',
+        ),
+        cancelledAt: DateTime.tryParse(
+          attributes['cancelled_at'] as String? ?? '',
+        ),
         cancellationReason: attributes['cancellation_reason'] as String?,
         paymentMethod: PaymentMethod.mobileMoney,
         isPaid: false,
@@ -304,15 +349,20 @@ class OrderService extends ChangeNotifier {
   }
 
   /// Fetch all orders for current customer
-  Future<bool> fetchOrders(String token, String userId) async {
+  Future<bool> fetchOrders(String token, String customerIdentifier) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      final isNumericId = int.tryParse(customerIdentifier) != null;
+
       // Strapi v5 syntax: populate order_items and delivery_address
+      final filters = isNumericId
+        ? 'filters[customer][id][\$eq]=$customerIdentifier'
+        : 'filters[customer][documentId][\$eq]=$customerIdentifier';
       final url =
-          '$baseUrl/api/orders?filters[customer][\$eq]=$userId&populate[0]=order_items&populate[1]=delivery_address&populate[2]=customer&populate[3]=shopper&populate[4]=rider&sort[0]=createdAt:desc';
+        '$baseUrl/api/orders?$filters&populate[0]=order_items&populate[1]=delivery_address&populate[2]=customer&populate[3]=shopper&populate[4]=rider&sort[0]=createdAt:desc';
 
       final response = await http.get(
         Uri.parse(url),
@@ -448,9 +498,15 @@ class OrderService extends ChangeNotifier {
   Future<bool> respondToSubstitution(
     String token,
     String orderItemId,
-    bool approved,
-  ) async {
+    bool approved, {
+    String? rejectionReason,
+  }) async {
     try {
+      final body = <String, dynamic>{'approved': approved};
+      if (!approved && rejectionReason != null && rejectionReason.isNotEmpty) {
+        body['rejection_reason'] = rejectionReason;
+      }
+
       final response = await http.patch(
         Uri.parse(
           '$baseUrl/api/order-items/$orderItemId/substitution-response',
@@ -459,12 +515,127 @@ class OrderService extends ChangeNotifier {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({'approved': approved}),
+        body: jsonEncode(body),
       );
 
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        notifyListeners();
+        return true;
+      }
+      return false;
     } catch (e) {
       _error = 'Error responding to substitution: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Shopper suggests a structured substitute for an unavailable item.
+  Future<bool> suggestSubstitute(
+    String token,
+    String orderItemId, {
+    required String name,
+    required double price,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(
+          '$baseUrl/api/order-items/$orderItemId/suggest-substitute',
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'substitute_name': name,
+          'substitute_price': price,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        notifyListeners();
+        return true;
+      }
+      _error = 'Failed to suggest substitute';
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = 'Error suggesting substitute: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // --- Admin actions ---
+
+  /// Admin confirms payment for a pending order.
+  Future<bool> adminConfirmPayment(String token, String orderId) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/orders/$orderId/confirm-payment'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) { notifyListeners(); return true; }
+      _error = 'Failed to confirm payment';
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = 'Error confirming payment: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Admin cancels an order from any status.
+  Future<bool> adminCancelOrder(String token, String orderId, String reason) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/orders/$orderId/admin-cancel'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        body: jsonEncode({'cancellation_reason': reason}),
+      );
+      if (response.statusCode == 200) { notifyListeners(); return true; }
+      _error = 'Failed to cancel order';
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = 'Error cancelling order: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Admin removes current shopper, resets order to payment_confirmed.
+  Future<bool> adminReassignShopper(String token, String orderId) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/orders/$orderId/reassign-shopper'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) { notifyListeners(); return true; }
+      _error = 'Failed to reassign shopper';
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = 'Error reassigning shopper: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Admin removes current rider, resets order to ready_for_pickup.
+  Future<bool> adminReassignRider(String token, String orderId) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/orders/$orderId/reassign-rider'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) { notifyListeners(); return true; }
+      _error = 'Failed to reassign rider';
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = 'Error reassigning rider: $e';
       notifyListeners();
       return false;
     }
@@ -531,19 +702,39 @@ class OrderService extends ChangeNotifier {
     }
   }
 
-  /// Create order as guest (no authentication required)
+  /// Create order as guest (no authentication required).
+  ///
+  /// The backend computes subtotal/service_fee/delivery_fee/total from the
+  /// products in [items] — the client is not allowed to influence the totals.
+  /// Returns the fully-populated order from the backend on success, or null
+  /// on failure (with [error] populated).
   Future<Order?> createGuestOrder({
     required String guestName,
     required String guestPhone,
     required String addressLine,
     String? city,
     String? landmark,
-    required double subtotal,
-    required double serviceFee,
-    required double deliveryFee,
-    required double total,
+    required List<CartItem> items,
   }) async {
     try {
+      final itemsPayload = items
+          .where((item) => item.product.strapiId != null || item.product.id.isNotEmpty)
+          .map((item) => {
+                'product': item.product.id,
+                'quantity': item.quantity,
+                'unit': item.product.unit,
+                if (item.specialInstructions != null &&
+                    item.specialInstructions!.isNotEmpty)
+                  'special_instructions': item.specialInstructions,
+              })
+          .toList();
+
+      if (itemsPayload.isEmpty) {
+        _error = 'Cart has no items the backend can recognise';
+        notifyListeners();
+        return null;
+      }
+
       final response = await http.post(
         Uri.parse('$baseUrl/api/orders/guest'),
         headers: {'Content-Type': 'application/json'},
@@ -551,24 +742,31 @@ class OrderService extends ChangeNotifier {
           'name': guestName,
           'phone': guestPhone,
           'address_line': addressLine,
-          'city': city,
-          'landmark': landmark,
-          'subtotal': subtotal,
-          'service_fee': serviceFee,
-          'delivery_fee': deliveryFee,
-          'total': total,
+          if (city != null) 'city': city,
+          if (landmark != null) 'landmark': landmark,
+          'items': itemsPayload,
         }),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
         final order = _fromStrapi(data['data']);
         _currentOrder = order;
         _orders.insert(0, order);
+        _error = null;
         notifyListeners();
         return order;
       }
-      _error = 'Failed to create guest order';
+
+      // Surface backend validation messages so the user knows why we rejected.
+      try {
+        final payload = jsonDecode(response.body) as Map<String, dynamic>;
+        final err = payload['error'] as Map<String, dynamic>?;
+        final msg = err?['message'] as String?;
+        _error = (msg != null && msg.isNotEmpty) ? msg : 'Failed to create guest order';
+      } catch (_) {
+        _error = 'Failed to create guest order (status ${response.statusCode})';
+      }
       notifyListeners();
       return null;
     } catch (e) {
@@ -585,19 +783,15 @@ class OrderService extends ChangeNotifier {
     String? reason,
   }) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/api/orders/$orderId'),
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/orders/$orderId/customer-cancel'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
-          'data': {
-            'status': 'cancelled',
-            'cancelled_at': DateTime.now().toIso8601String(),
-            if (reason != null && reason.isNotEmpty)
-              'cancellation_reason': reason,
-          },
+          if (reason != null && reason.isNotEmpty)
+            'cancellation_reason': reason,
         }),
       );
 
@@ -613,6 +807,20 @@ class OrderService extends ChangeNotifier {
         }
         notifyListeners();
         return true;
+      }
+      if (response.body.isNotEmpty) {
+        try {
+          final payload = jsonDecode(response.body) as Map<String, dynamic>;
+          final err = payload['error'] as Map<String, dynamic>?;
+          final msg = err?['message'] as String?;
+          if (msg != null && msg.isNotEmpty) {
+            _error = msg;
+            notifyListeners();
+            return false;
+          }
+        } catch (_) {
+          // ignored
+        }
       }
       return false;
     } catch (e) {

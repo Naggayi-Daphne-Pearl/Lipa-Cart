@@ -1,7 +1,16 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/constants/app_constants.dart';
 import 'http_client_factory.dart';
+
+/// Extracts a user-friendly message from any exception.
+String _friendlyError(Object e, String fallback) {
+  if (e is http.ClientException) return 'Could not reach the server. Please try again.';
+  if (e is TimeoutException) return 'Request timed out. Please try again.';
+  final msg = e.toString().replaceAll(RegExp(r'Exception:\s*'), '');
+  return msg.isNotEmpty ? msg : fallback;
+}
 
 /// Authentication Service
 /// Handles phone + password authentication, OTP fallback, and JWT token management
@@ -46,7 +55,7 @@ class AuthService {
       final body = jsonDecode(response.body);
       return body as Map<String, dynamic>;
     } catch (e) {
-      throw Exception('Error signing up: $e');
+      throw Exception(_friendlyError(e, 'Failed to sign up'));
     }
   }
 
@@ -82,7 +91,7 @@ class AuthService {
       final body = jsonDecode(response.body);
       return body as Map<String, dynamic>;
     } catch (e) {
-      throw Exception('Error logging in: $e');
+      throw Exception(_friendlyError(e, 'Failed to sign in'));
     }
   }
 
@@ -117,7 +126,7 @@ class AuthService {
 
       return body as Map<String, dynamic>;
     } catch (e) {
-      throw Exception('Error signing in with Google: $e');
+      throw Exception(_friendlyError(e, 'Failed to sign in with Google'));
     }
   }
 
@@ -156,7 +165,7 @@ class AuthService {
 
       return body as Map<String, dynamic>;
     } catch (e) {
-      throw Exception('Error completing customer profile: $e');
+      throw Exception(_friendlyError(e, 'Failed to complete profile'));
     }
   }
 
@@ -178,7 +187,7 @@ class AuthService {
         throw Exception(body['message'] ?? 'Failed to send OTP');
       }
     } catch (e) {
-      throw Exception('Error sending OTP: $e');
+      throw Exception(_friendlyError(e, 'Failed to send verification code'));
     }
   }
 
@@ -211,7 +220,7 @@ class AuthService {
       final body = jsonDecode(response.body);
       return body as Map<String, dynamic>;
     } catch (e) {
-      throw Exception('Error verifying OTP: $e');
+      throw Exception(_friendlyError(e, 'Failed to verify code'));
     }
   }
 
@@ -241,7 +250,7 @@ class AuthService {
       final body = jsonDecode(response.body);
       return body as Map<String, dynamic>;
     } catch (e) {
-      throw Exception('Error getting user: $e');
+      throw Exception(_friendlyError(e, 'Failed to load profile'));
     }
   }
 
@@ -284,7 +293,7 @@ class AuthService {
       final body = jsonDecode(response.body);
       return body as Map<String, dynamic>;
     } catch (e) {
-      throw Exception('Error refreshing token: $e');
+      throw Exception(_friendlyError(e, 'Session expired — please sign in again'));
     }
   }
 
@@ -330,7 +339,7 @@ class AuthService {
         );
       }
     } catch (e) {
-      throw Exception('$e');
+      throw Exception(_friendlyError(e, 'No account found with this number'));
     }
   }
 
@@ -363,7 +372,7 @@ class AuthService {
         );
       }
     } catch (e) {
-      throw Exception('$e');
+      throw Exception(_friendlyError(e, 'Failed to reset password'));
     }
   }
 
@@ -402,7 +411,7 @@ class AuthService {
       final body = jsonDecode(response.body);
       return body is Map ? body as Map<String, dynamic> : {};
     } catch (e) {
-      throw Exception('Error updating profile: $e');
+      throw Exception(_friendlyError(e, 'Failed to update profile'));
     }
   }
 }

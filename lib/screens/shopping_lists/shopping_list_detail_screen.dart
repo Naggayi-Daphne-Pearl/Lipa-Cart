@@ -276,6 +276,35 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                               ],
                             ),
                           ),
+                          const SizedBox(height: AppSizes.sm),
+                          Wrap(
+                            spacing: AppSizes.sm,
+                            runSpacing: AppSizes.sm,
+                            children: [
+                              _buildOverviewChip(
+                                icon: Iconsax.task_square,
+                                label:
+                                    '${checkedItems.length}/${list.totalItems} checked',
+                                color: checkedItems.isEmpty
+                                    ? AppColors.textSecondary
+                                    : AppColors.success,
+                              ),
+                              _buildOverviewChip(
+                                icon: Iconsax.note_1,
+                                label:
+                                    '${uncheckedItems.length} pending',
+                                color: color,
+                              ),
+                              if (estimatedTotal > 0)
+                                _buildOverviewChip(
+                                  icon: Iconsax.wallet_money,
+                                  label: Formatters.formatCurrency(
+                                    estimatedTotal,
+                                  ),
+                                  color: AppColors.primary,
+                                ),
+                            ],
+                          ),
                           const SizedBox(height: AppSizes.lg),
 
                           // All items — unchecked first, then checked
@@ -428,6 +457,35 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildOverviewChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

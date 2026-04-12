@@ -141,10 +141,17 @@ class ShoppingListProvider extends ChangeNotifier {
         authToken: authToken,
       );
 
+      // Some create responses can omit populated component items; keep
+      // user-provided template items immediately to avoid empty-list flicker.
+      final hydratedList =
+          (newList.items.isNotEmpty || items == null || items.isEmpty)
+          ? newList
+          : newList.copyWith(items: items);
+
       debugPrint(
         'DEBUG: Shopping list created successfully - ID: ${newList.id}',
       );
-      _lists.insert(0, newList);
+      _lists.insert(0, hydratedList);
       await _persistLists();
       notifyListeners();
       return true;

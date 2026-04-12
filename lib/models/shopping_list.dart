@@ -78,6 +78,7 @@ class ShoppingListItem {
           (attributes['expected_price'] as num?)?.toDouble(),
       budgetAmount: (attributes['budget_amount'] as num?)?.toDouble(),
       linkedProduct: linkedProduct,
+      isChecked: attributes['is_checked'] as bool? ?? false,
     );
   }
 
@@ -175,7 +176,12 @@ class ShoppingList {
 
   factory ShoppingList.fromStrapi(Map<String, dynamic> json) {
     final attributes = (json['attributes'] as Map<String, dynamic>?) ?? json;
-    final itemsData = attributes['items'] as List<dynamic>? ?? [];
+    final rawItems = attributes['items'];
+    final itemsData = rawItems is List<dynamic>
+        ? rawItems
+        : (rawItems is Map<String, dynamic> && rawItems['data'] is List)
+        ? (rawItems['data'] as List<dynamic>)
+        : <dynamic>[];
     final items = itemsData
         .map(
           (item) => ShoppingListItem.fromStrapi(item as Map<String, dynamic>),

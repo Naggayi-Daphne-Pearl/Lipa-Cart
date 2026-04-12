@@ -20,7 +20,7 @@ class AppConfig {
   /// Backend API base URL (no trailing slash)
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://lipa-cart-strapi-production.up.railway.app',
+    defaultValue: 'http://localhost:1337',
   );
 
   /// Full API path

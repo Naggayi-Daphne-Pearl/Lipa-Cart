@@ -231,12 +231,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _persistUser() async {
-    if (_user == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(AppConstants.userKey, jsonEncode(_user!.toJson()));
-  }
-
   /// Check for existing session and restore if valid
   /// Called on app startup
   Future<bool> tryAutoLogin() async {
@@ -812,56 +806,6 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = 'Failed to refresh profile: $e';
       notifyListeners();
     }
-  }
-
-  Future<void> addAddress(Address address) async {
-    if (_user == null) return;
-
-    final addresses = List<Address>.from(_user!.addresses);
-    if (address.isDefault) {
-      for (int i = 0; i < addresses.length; i++) {
-        addresses[i] = addresses[i].copyWith(isDefault: false);
-      }
-    }
-    addresses.add(address);
-    _user = _user!.copyWith(addresses: addresses);
-    await _persistUser();
-    notifyListeners();
-  }
-
-  Future<void> removeAddress(String addressId) async {
-    if (_user == null) return;
-
-    final addresses = _user!.addresses.where((a) => a.id != addressId).toList();
-    _user = _user!.copyWith(addresses: addresses);
-    await _persistUser();
-    notifyListeners();
-  }
-
-  Future<void> setDefaultAddress(String addressId) async {
-    if (_user == null) return;
-
-    final addresses = _user!.addresses.map((a) {
-      return a.copyWith(isDefault: a.id == addressId);
-    }).toList();
-    _user = _user!.copyWith(addresses: addresses);
-    await _persistUser();
-    notifyListeners();
-  }
-
-  Future<void> setAddresses(List<Address> addresses) async {
-    if (_user == null) return;
-    _user = _user!.copyWith(addresses: addresses);
-    await _persistUser();
-    notifyListeners();
-  }
-
-  Address? get defaultAddress {
-    if (_user == null || _user!.addresses.isEmpty) return null;
-    return _user!.addresses.firstWhere(
-      (a) => a.isDefault,
-      orElse: () => _user!.addresses.first,
-    );
   }
 
   /// Logout and clear stored session

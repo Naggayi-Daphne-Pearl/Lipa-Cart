@@ -499,35 +499,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         title: 'Total Users',
         value: _stats['totalUsers'] ?? 0,
         icon: Iconsax.people,
-        color: const Color(0xFF6366F1), // Indigo
+        color: AppColors.beverages,
         route: '/admin/users',
       ),
       _StatData(
         title: 'Orders',
         value: _stats['totalOrders'] ?? 0,
         icon: Iconsax.bag_2,
-        color: const Color(0xFF10B981), // Green
+        color: AppColors.primary,
         route: '/admin/orders',
       ),
       _StatData(
         title: 'Products',
         value: _stats['totalProducts'] ?? 0,
         icon: Iconsax.box,
-        color: const Color(0xFFEA7702), // Orange
+        color: AppColors.accent,
         route: '/admin/products',
       ),
       _StatData(
         title: 'Shoppers',
         value: _stats['shopperCount'] ?? 0,
         icon: Iconsax.shop,
-        color: const Color(0xFF0EA5E9), // Sky blue
+        color: AppColors.info,
         route: '/admin/users',
       ),
       _StatData(
         title: 'Riders',
         value: _stats['riderCount'] ?? 0,
         icon: Iconsax.truck_fast,
-        color: const Color(0xFFEF4444), // Red
+        color: AppColors.primaryDark,
         route: '/admin/riders',
       ),
     ];
@@ -597,7 +597,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.grey200),
           ),
@@ -606,10 +606,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF3E0),
+                  color: AppColors.accentSoft,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Iconsax.timer_1, color: Color(0xFFEA7702), size: 20),
+                child: const Icon(Iconsax.timer_1, color: AppColors.accent, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -647,7 +647,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ElevatedButton(
                 onPressed: () => _confirmPayment(documentId),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   shape: RoundedRectangleBorder(
@@ -685,17 +685,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               onTap: () { Navigator.pop(ctx); context.go('/admin/products'); },
             ),
             ListTile(
-              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFFFF3E0), borderRadius: BorderRadius.circular(10)), child: const Icon(Iconsax.bag_2, color: AppColors.accent, size: 20)),
+              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: AppColors.accentSoft, borderRadius: BorderRadius.circular(10)), child: const Icon(Iconsax.bag_2, color: AppColors.accent, size: 20)),
               title: const Text('View Pending Orders'),
               onTap: () { Navigator.pop(ctx); context.go('/admin/orders'); },
             ),
             ListTile(
-              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFE3F2FD), borderRadius: BorderRadius.circular(10)), child: const Icon(Iconsax.verify, color: AppColors.info, size: 20)),
+              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: AppColors.cardBlue, borderRadius: BorderRadius.circular(10)), child: const Icon(Iconsax.verify, color: AppColors.info, size: 20)),
               title: const Text('Approve KYC'),
               onTap: () { Navigator.pop(ctx); context.go('/admin/riders'); },
             ),
             ListTile(
-              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFF3E5F5), borderRadius: BorderRadius.circular(10)), child: const Icon(Iconsax.chart_2, color: Color(0xFF9B7BB8), size: 20)),
+              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: AppColors.beige, borderRadius: BorderRadius.circular(10)), child: const Icon(Iconsax.chart_2, color: AppColors.beverages, size: 20)),
               title: const Text('View Analytics'),
               onTap: () { Navigator.pop(ctx); context.go('/admin/analytics'); },
             ),
@@ -711,31 +711,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _QuickAction(
         icon: Iconsax.user_add,
         label: 'Add Shopper',
-        color: const Color(0xFF0EA5E9),
+        color: AppColors.info,
         onTap: () => _showAddStaffDialog('shopper'),
       ),
       _QuickAction(
         icon: Iconsax.truck_fast,
         label: 'Add Rider',
-        color: const Color(0xFFEF4444),
+        color: AppColors.primaryDark,
         onTap: () => _showAddStaffDialog('rider'),
       ),
       _QuickAction(
         icon: Iconsax.add_square,
         label: 'Add Product',
-        color: const Color(0xFFEA7702),
+        color: AppColors.accent,
         onTap: () => context.go('/admin/products'),
       ),
       _QuickAction(
         icon: Iconsax.receipt_2,
         label: 'View Orders',
-        color: const Color(0xFF10B981),
+        color: AppColors.primary,
         onTap: () => context.go('/admin/orders'),
       ),
       _QuickAction(
         icon: Iconsax.chart_2,
         label: 'Analytics',
-        color: const Color(0xFF6366F1),
+        color: AppColors.beverages,
         onTap: () => context.go('/admin/analytics'),
       ),
     ];

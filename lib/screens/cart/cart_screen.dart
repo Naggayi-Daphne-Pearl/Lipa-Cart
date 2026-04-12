@@ -14,6 +14,7 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
+import '../../widgets/auth_bottom_sheet.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -35,7 +36,7 @@ class CartScreen extends StatelessWidget {
             top: Radius.circular(AppSizes.radiusXl),
           ),
         ),
-        builder: (context) => _GuestOrSignInSheet(),
+        builder: (_) => _GuestOrSignInSheet(parentContext: context),
       );
     }
   }
@@ -860,7 +861,9 @@ class CartScreen extends StatelessWidget {
 
 /// Modal sheet offering Sign In or Guest checkout options
 class _GuestOrSignInSheet extends StatelessWidget {
-  const _GuestOrSignInSheet();
+  const _GuestOrSignInSheet({required this.parentContext});
+
+  final BuildContext parentContext;
 
   @override
   Widget build(BuildContext context) {
@@ -902,10 +905,16 @@ class _GuestOrSignInSheet extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
-                final returnRoute = Uri.encodeComponent('/customer/checkout');
-                context.go('/login?return=$returnRoute');
+                if (!parentContext.mounted) return;
+                final authenticated = await showAuthBottomSheet(
+                  parentContext,
+                  returnRoute: '/customer/checkout',
+                );
+                if (authenticated == true && parentContext.mounted) {
+                  parentContext.go('/customer/checkout');
+                }
               },
               icon: const Icon(Iconsax.login),
               label: const Text('Sign In / Register'),

@@ -51,10 +51,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
     final token = auth.token;
 
     if (auth.user != null && token != null && customerId != null) {
-      final success = await addressService.fetchAddresses(token, customerId);
-      if (success) {
-        await auth.setAddresses(addressService.userAddresses);
-      }
+      await addressService.fetchAddresses(token, customerId);
     }
   }
 

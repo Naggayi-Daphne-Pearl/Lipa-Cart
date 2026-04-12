@@ -162,6 +162,9 @@ class _ShopperAvailableTasksScreenState
     String shopperId,
     ShopperProvider shopperProvider,
   ) {
+    final screenContext = this.context;
+    final messenger = ScaffoldMessenger.maybeOf(screenContext);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -258,7 +261,7 @@ class _ShopperAvailableTasksScreenState
               child: ElevatedButton(
                 onPressed: () async {
                   showDialog(
-                    context: context,
+                    context: screenContext,
                     builder: (dialogContext) => AlertDialog(
                       title: const Text('Accept Task?'),
                       content: Text(
@@ -271,21 +274,36 @@ class _ShopperAvailableTasksScreenState
                         ),
                         ElevatedButton(
                           onPressed: () async {
-                            final messenger = ScaffoldMessenger.of(context);
                             Navigator.pop(dialogContext);
                             final success = await shopperProvider.acceptTask(
                               token,
                               task.documentId ?? task.id,
                               shopperId,
                             );
-                            if (success && mounted) {
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text(
+                            if (!mounted) return;
+
+                            if (success) {
+                              final acceptedOrderId = task.documentId ?? task.id;
+                              Order? acceptedOrder;
+                              for (final active in shopperProvider.activeTasks) {
+                                if (active.documentId == acceptedOrderId || active.id == acceptedOrderId) {
+                                  acceptedOrder = active;
+                                  break;
+                                }
+                              }
+
+                              messenger?.showSnackBar(
+                                SnackBar(
+                                  content: const Text(
                                     'Task accepted! Start shopping.',
                                   ),
-                                  backgroundColor: Colors.green,
+                                  backgroundColor: AppColors.primary,
                                 ),
+                              );
+                              // Navigate directly to the shopping checklist for this order
+                              GoRouter.of(screenContext).go(
+                                '/shopper/shopping-checklist',
+                                extra: acceptedOrder ?? task,
                               );
                             }
                           },
@@ -296,7 +314,7 @@ class _ShopperAvailableTasksScreenState
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 child: const Text(
@@ -323,21 +341,21 @@ class _ShopperAvailableTasksScreenState
 
     if (minutesAgo < 5) {
       label = 'NEW';
-      color = Colors.green;
-      bgColor = Colors.green.withValues(alpha: 0.1);
+      color = AppColors.primary;
+      bgColor = AppColors.primarySoft;
     } else if (minutesAgo < 15) {
       label = '${minutesAgo}m ago';
-      color = Colors.blue;
-      bgColor = Colors.blue.withValues(alpha: 0.1);
+      color = AppColors.info;
+      bgColor = AppColors.cardBlue;
     } else if (minutesAgo < 30) {
       label = '${minutesAgo}m ago';
-      color = Colors.orange;
-      bgColor = Colors.orange.withValues(alpha: 0.1);
+      color = AppColors.accent;
+      bgColor = AppColors.accentSoft;
     } else {
       final display = minutesAgo < 60 ? '${minutesAgo}m' : '${minutesAgo ~/ 60}h';
       label = 'Urgent · $display';
-      color = Colors.red;
-      bgColor = Colors.red.withValues(alpha: 0.1);
+      color = AppColors.error;
+      bgColor = AppColors.errorSoft;
     }
 
     return Container(

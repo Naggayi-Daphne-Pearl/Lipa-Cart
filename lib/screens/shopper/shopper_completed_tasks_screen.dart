@@ -104,9 +104,12 @@ class _ShopperCompletedTasksScreenState
             onRefresh: _refresh,
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: shopper.completedTasks.length,
+              itemCount: shopper.completedTasks.length + 1,
               itemBuilder: (context, index) {
-                return _buildCompletedCard(shopper.completedTasks[index]);
+                if (index == 0) {
+                  return _buildCompletedSummary(shopper.completedTasks);
+                }
+                return _buildCompletedCard(shopper.completedTasks[index - 1]);
               },
             ),
           );
@@ -174,15 +177,17 @@ class _ShopperCompletedTasksScreenState
 
   Widget _buildCompletedCard(Order order) {
     final isCancelled = order.status == OrderStatus.cancelled;
+    final isRefunded = order.status == OrderStatus.refunded;
+    final isTerminalFailure = isCancelled || isRefunded;
     final isDelivered = order.status == OrderStatus.delivered;
 
     final String badgeText;
     final Color badgeColor;
     final IconData badgeIcon;
 
-    if (isCancelled) {
-      badgeText = 'Cancelled';
-      badgeColor = Colors.red;
+    if (isTerminalFailure) {
+      badgeText = isRefunded ? 'Refunded' : 'Cancelled';
+      badgeColor = AppColors.error;
       badgeIcon = Icons.cancel;
     } else if (isDelivered) {
       badgeText = 'Delivered';
@@ -190,19 +195,19 @@ class _ShopperCompletedTasksScreenState
       badgeIcon = Icons.check_circle;
     } else if (order.status == OrderStatus.inTransit) {
       badgeText = 'In Transit';
-      badgeColor = Colors.purple;
+      badgeColor = AppColors.accent;
       badgeIcon = Icons.local_shipping;
     } else if (order.status == OrderStatus.readyForDelivery) {
       badgeText = 'Awaiting Rider';
-      badgeColor = Colors.orange;
+      badgeColor = AppColors.accent;
       badgeIcon = Icons.timer;
     } else if (order.status == OrderStatus.riderAssigned) {
       badgeText = 'Rider Assigned';
-      badgeColor = Colors.deepPurple;
+      badgeColor = AppColors.info;
       badgeIcon = Icons.local_shipping;
     } else {
       badgeText = order.status.displayName;
-      badgeColor = Colors.blue;
+      badgeColor = AppColors.primary;
       badgeIcon = Icons.info;
     }
 
@@ -279,7 +284,7 @@ class _ShopperCompletedTasksScreenState
               ],
             ),
             // Call buttons for rider and customer
-            if (!isCancelled && !isDelivered) ...[
+            if (!isTerminalFailure && !isDelivered) ...[
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -290,8 +295,8 @@ class _ShopperCompletedTasksScreenState
                         icon: const Icon(Icons.local_shipping, size: 16),
                         label: Text('Call ${order.riderName}', overflow: TextOverflow.ellipsis),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.purple,
-                          side: const BorderSide(color: Colors.purple),
+                          foregroundColor: AppColors.info,
+                          side: const BorderSide(color: AppColors.info),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                         ),
@@ -317,6 +322,47 @@ class _ShopperCompletedTasksScreenState
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompletedSummary(List<Order> tasks) {
+    final delivered = tasks.where((o) => o.status == OrderStatus.delivered).length;
+    final cancelled = tasks.where((o) => o.status == OrderStatus.cancelled || o.status == OrderStatus.refunded).length;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _summaryChip('Delivered', delivered, AppColors.success),
+          _summaryChip('Cancelled', cancelled, AppColors.error),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryChip(String label, int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$label: $count',
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

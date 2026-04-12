@@ -66,6 +66,27 @@ class _RecipesScreenState extends State<RecipesScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<RecipeProvider>();
     final filteredRecipes = _getFilteredRecipes(provider);
+    final totalAvailableIngredients = filteredRecipes.fold<int>(
+      0,
+      (sum, recipe) => sum + recipe.purchasableIngredients.length,
+    );
+    final totalIngredients = filteredRecipes.fold<int>(
+      0,
+      (sum, recipe) => sum + recipe.ingredients.length,
+    );
+    final averageTime = filteredRecipes.isEmpty
+        ? 0
+        : (filteredRecipes
+                    .map((r) => r.totalTime)
+                    .reduce((a, b) => a + b) /
+                filteredRecipes.length)
+            .round();
+    final averageCost = filteredRecipes.isEmpty
+        ? 0.0
+        : filteredRecipes
+                .map((r) => r.estimatedCost)
+                .reduce((a, b) => a + b) /
+            filteredRecipes.length;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -293,6 +314,38 @@ class _RecipesScreenState extends State<RecipesScreen> {
                 ),
                 const SizedBox(height: AppSizes.sm),
 
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.horizontalPadding,
+                  ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildRecipeMetricChip(
+                          icon: Iconsax.box,
+                          label: 'Ingredients in stock',
+                          value:
+                              '$totalAvailableIngredients/$totalIngredients',
+                        ),
+                        const SizedBox(width: AppSizes.sm),
+                        _buildRecipeMetricChip(
+                          icon: Iconsax.clock,
+                          label: 'Avg cook time',
+                          value: '$averageTime min',
+                        ),
+                        const SizedBox(width: AppSizes.sm),
+                        _buildRecipeMetricChip(
+                          icon: Iconsax.wallet_2,
+                          label: 'Avg basket cost',
+                          value: 'UGX ${averageCost.round()}',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.md),
+
                 // Recipes list/grid
                 Expanded(
                   child: provider.isLoading
@@ -305,6 +358,46 @@ class _RecipesScreenState extends State<RecipesScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRecipeMetricChip({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+        border: Border.all(color: AppColors.grey200),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: AppColors.primary),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              Text(
+                value,
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

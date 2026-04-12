@@ -26,6 +26,28 @@ class StrapiService {
     return false;
   }
 
+  static String _extractErrorMessage(
+    http.Response response, {
+    required String fallback,
+  }) {
+    try {
+      if (response.body.isEmpty) return fallback;
+      final body = json.decode(response.body);
+      if (body is Map<String, dynamic>) {
+        final error = body['error'];
+        if (error is Map<String, dynamic>) {
+          final message = error['message'] as String?;
+          if (message != null && message.isNotEmpty) return message;
+        }
+        final message = body['message'] as String?;
+        if (message != null && message.isNotEmpty) return message;
+      }
+      return fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   static Future<List<Category>> getCategories() async {
     final response = await http
         .get(Uri.parse('$_apiUrl/categories?populate=*'))
@@ -104,7 +126,7 @@ class StrapiService {
   }) async {
     final response = await http
         .post(
-          Uri.parse('$_apiUrl/shopping-lists'),
+          Uri.parse('$_apiUrl/shopping-lists?populate=*'),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $authToken',
@@ -195,6 +217,7 @@ class StrapiService {
       'unit_price': item.unitPrice,
       'budget_amount': item.budgetAmount,
       'notes': item.description,
+      'is_checked': item.isChecked,
     };
 
     final productId = item.linkedProduct?.strapiId ?? item.linkedProduct?.id;
@@ -224,27 +247,44 @@ class StrapiService {
   }
 
   static Future<List<Recipe>> getRecipes() async {
-    // Simplified populate query - use wildcard instead of complex nested fields
-    final url = '$_apiUrl/recipes?populate=*';
+    const pageSize = 100;
+    var page = 1;
+    final allRecipes = <Recipe>[];
 
-    final response = await http
-        .get(Uri.parse(url))
-        .timeout(AppConstants.apiTimeout);
+    while (true) {
+      final url =
+          '$_apiUrl/recipes?pagination[page]=$page&pagination[pageSize]=$pageSize'
+          '&populate[ingredients][populate]=product'
+          '&populate[instructions]=*';
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load recipes: ${response.statusCode}');
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load recipes: ${response.statusCode}');
+      }
+
+      final body = json.decode(response.body) as Map<String, dynamic>;
+      final data = (body['data'] as List<dynamic>? ?? <dynamic>[])
+          .cast<Map<String, dynamic>>();
+
+      allRecipes.addAll(
+        data
+            .map((item) => Recipe.fromStrapi(item, baseUrl: _baseUrl))
+            .toList(),
+      );
+
+      final pagination = (body['meta'] as Map<String, dynamic>?)?['pagination']
+          as Map<String, dynamic>?;
+      final pageCount = (pagination?['pageCount'] as num?)?.toInt() ?? page;
+      if (page >= pageCount || data.isEmpty) {
+        break;
+      }
+      page += 1;
     }
 
-    final body = json.decode(response.body);
-    final data = body['data'] as List<dynamic>;
-    return data
-        .map(
-          (item) => Recipe.fromStrapi(
-            item as Map<String, dynamic>,
-            baseUrl: _baseUrl,
-          ),
-        )
-        .toList();
+    return allRecipes;
   }
 
   // =============== SHOPPER METHODS ===============
@@ -304,6 +344,20 @@ class StrapiService {
             ? (productData['documentId'] ?? productData['id']).toString()
             : '';
 
+        // Parse substitution photo URL from Strapi media field
+        String? substitutePhotoUrl;
+        final photoField = itemAttrs['substitution_photo'];
+        if (photoField is Map<String, dynamic>) {
+          final url = photoField['url'] as String?;
+          if (url != null && url.isNotEmpty) {
+            substitutePhotoUrl = url.startsWith('http') ? url : '${AppConstants.baseUrl}$url';
+          }
+        }
+
+        final shopperNotes = itemAttrs['shopper_notes'] as String?;
+        final structuredName = itemAttrs['substitute_name'] as String?;
+        final structuredPrice = (itemAttrs['substitute_price'] as num?)?.toDouble();
+
         return CartItem(
           id: (item['documentId'] ?? item['id'] ?? '').toString(),
           product: Product(
@@ -321,7 +375,12 @@ class StrapiService {
           specialInstructions: itemAttrs['special_instructions'] as String?,
           found: itemAttrs['found'] as bool?,
           actualPrice: (itemAttrs['actual_price'] as num?)?.toDouble(),
-          shopperNotes: itemAttrs['shopper_notes'] as String?,
+          shopperNotes: shopperNotes,
+          substitutionApproved: itemAttrs['substitution_approved'] as bool?,
+          isSubstituted: itemAttrs['is_substituted'] as bool?,
+          substituteName: structuredName ?? CartItem.parseSubstituteNameFromNotes(shopperNotes),
+          substitutePrice: structuredPrice ?? CartItem.parseSubstitutePriceFromNotes(shopperNotes),
+          substitutePhotoUrl: substitutePhotoUrl,
         );
       }).toList();
     } else if (orderItemsRaw is Map && orderItemsRaw['data'] is List) {
@@ -332,6 +391,7 @@ class StrapiService {
         final quantity = (itemAttrs['quantity'] as num?)?.toDouble() ?? 1;
         final estimatedPrice =
             (itemAttrs['estimated_price'] as num?)?.toDouble() ?? 0;
+        final shopperNotes = itemAttrs['shopper_notes'] as String?;
 
         return CartItem(
           id: (item['documentId'] ?? item['id'] ?? '').toString(),
@@ -347,6 +407,11 @@ class StrapiService {
             isAvailable: true,
           ),
           quantity: quantity,
+          shopperNotes: shopperNotes,
+          substitutionApproved: itemAttrs['substitution_approved'] as bool?,
+          isSubstituted: itemAttrs['is_substituted'] as bool?,
+          substituteName: itemAttrs['substitute_name'] as String? ?? CartItem.parseSubstituteNameFromNotes(shopperNotes),
+          substitutePrice: (itemAttrs['substitute_price'] as num?)?.toDouble() ?? CartItem.parseSubstitutePriceFromNotes(shopperNotes),
         );
       }).toList();
     }
@@ -389,7 +454,7 @@ class StrapiService {
     final statusStr = attrs['status'] as String? ?? 'pending';
     const statusMap = {
       'pending': OrderStatus.pending,
-      'payment_processing': OrderStatus.pending,
+      'payment_processing': OrderStatus.paymentProcessing,
       'payment_confirmed': OrderStatus.confirmed,
       'shopper_assigned': OrderStatus.shopperAssigned,
       'shopping': OrderStatus.shopping,
@@ -398,7 +463,7 @@ class StrapiService {
       'in_transit': OrderStatus.inTransit,
       'delivered': OrderStatus.delivered,
       'cancelled': OrderStatus.cancelled,
-      'refunded': OrderStatus.cancelled,
+      'refunded': OrderStatus.refunded,
     };
     final status = statusMap[statusStr] ?? OrderStatus.pending;
 
@@ -575,14 +640,20 @@ class StrapiService {
           )
           .timeout(AppConstants.apiTimeout);
 
+      if (_handleAuthError(response)) {
+        throw Exception('Session expired. Please login again.');
+      }
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['data'] as Map<String, dynamic>?;
       }
-      return null;
+      throw Exception(
+        _extractErrorMessage(response, fallback: 'Failed to claim order'),
+      );
     } catch (e) {
-      // ignored
-      return null;
+      if (e is Exception) rethrow;
+      throw Exception('Failed to claim order: $e');
     }
   }
 
@@ -595,10 +666,18 @@ class StrapiService {
             headers: {'Authorization': 'Bearer $token'},
           )
           .timeout(AppConstants.apiTimeout);
-      return response.statusCode == 200;
+
+      if (_handleAuthError(response)) {
+        throw Exception('Session expired. Please login again.');
+      }
+
+      if (response.statusCode == 200) return true;
+      throw Exception(
+        _extractErrorMessage(response, fallback: 'Failed to cancel task'),
+      );
     } catch (e) {
-      // ignored
-      return false;
+      if (e is Exception) rethrow;
+      throw Exception('Failed to cancel task: $e');
     }
   }
 
@@ -620,14 +699,20 @@ class StrapiService {
           )
           .timeout(AppConstants.apiTimeout);
 
+      if (_handleAuthError(response)) {
+        throw Exception('Session expired. Please login again.');
+      }
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['data'] as Map<String, dynamic>?;
       }
-      return null;
+      throw Exception(
+        _extractErrorMessage(response, fallback: 'Failed to update order status'),
+      );
     } catch (e) {
-      // ignored
-      return null;
+      if (e is Exception) rethrow;
+      throw Exception('Failed to update order status: $e');
     }
   }
 
@@ -923,14 +1008,53 @@ class StrapiService {
           )
           .timeout(AppConstants.apiTimeout);
 
+      if (_handleAuthError(response)) {
+        throw Exception('Session expired. Please login again.');
+      }
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['data'] as Map<String, dynamic>?;
       }
-      return null;
+      throw Exception(
+        _extractErrorMessage(response, fallback: 'Failed to claim delivery'),
+      );
     } catch (e) {
-      // ignored
-      return null;
+      if (e is Exception) rethrow;
+      throw Exception('Failed to claim delivery: $e');
+    }
+  }
+
+  /// Rider cancels a claimed delivery before transit starts.
+  static Future<Map<String, dynamic>?> unclaimDelivery(
+    String orderDocumentId,
+    String token,
+  ) async {
+    try {
+      final response = await http
+          .delete(
+            Uri.parse('$_apiUrl/orders/$orderDocumentId/claim-delivery'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (_handleAuthError(response)) {
+        throw Exception('Session expired. Please login again.');
+      }
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['data'] as Map<String, dynamic>?;
+      }
+      throw Exception(
+        _extractErrorMessage(response, fallback: 'Failed to cancel delivery'),
+      );
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Failed to cancel delivery: $e');
     }
   }
 
@@ -957,14 +1081,20 @@ class StrapiService {
           )
           .timeout(AppConstants.apiTimeout);
 
+      if (_handleAuthError(response)) {
+        throw Exception('Session expired. Please login again.');
+      }
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['data'] as Map<String, dynamic>?;
       }
-      return null;
+      throw Exception(
+        _extractErrorMessage(response, fallback: 'Failed to update delivery status'),
+      );
     } catch (e) {
-      // ignored
-      return null;
+      if (e is Exception) rethrow;
+      throw Exception('Failed to update delivery status: $e');
     }
   }
 

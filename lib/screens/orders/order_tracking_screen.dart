@@ -290,7 +290,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     ).showSnackBar(const SnackBar(content: Text('Delivery address copied.')));
   }
 
-  Future<void> _respondToSubstitution(CartItem item, bool approved) async {
+  Future<void> _respondToSubstitution(CartItem item, bool approved, {String? rejectionReason}) async {
     final auth = context.read<AuthProvider>();
     final orderService = context.read<OrderService>();
     if (auth.token == null) return;
@@ -299,6 +299,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
       auth.token!,
       item.id,
       approved,
+      rejectionReason: rejectionReason,
     );
 
     if (!mounted) return;
@@ -325,6 +326,74 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
         ),
       );
     }
+  }
+
+  void _showRejectSubstituteSheet(CartItem item) {
+    final reasonController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 20, right: 20, top: 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Reject Substitute',
+              style: AppTextStyles.h3,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tell your shopper what you\'d prefer instead (optional):',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: 'e.g. I\'d prefer organic bananas',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _respondToSubstitution(
+                    item,
+                    false,
+                    rejectionReason: reasonController.text.trim().isNotEmpty
+                        ? reasonController.text.trim()
+                        : null,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text('Reject Substitute'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -376,44 +445,55 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                       children: [
                         // Order number and status
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Order #${order.orderNumber}',
-                                  style: AppTextStyles.h5.copyWith(
-                                    fontWeight: FontWeight.w700,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Order #${order.orderNumber}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.h5.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Placed on ${Formatters.formatDateTime(order.createdAt)}',
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.textSecondary,
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Placed on ${Formatters.formatDateTime(order.createdAt)}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _getStatusColor(
-                                  order.status,
-                                ).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(
-                                  AppSizes.radiusFull,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
                                 ),
-                              ),
-                              child: Text(
-                                order.status.displayName,
-                                style: AppTextStyles.labelSmall.copyWith(
-                                  color: _getStatusColor(order.status),
-                                  fontWeight: FontWeight.w600,
+                                decoration: BoxDecoration(
+                                  color: _getStatusColor(
+                                    order.status,
+                                  ).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusFull,
+                                  ),
+                                ),
+                                child: Text(
+                                  order.status.displayName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    color: _getStatusColor(order.status),
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1018,274 +1098,195 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                               ),
                                             ),
                                           ],
-                                          if (item.shopperNotes != null &&
-                                              item.shopperNotes!.isNotEmpty)
+                                          // Structured substitution UI
+                                          if (item.substituteName != null || item.isSubstituted == true)
                                             Padding(
-                                              padding: const EdgeInsets.only(
-                                                top: 4,
-                                              ),
-                                              child:
-                                                  item.shopperNotes!.startsWith(
-                                                    'SUBSTITUTE:',
-                                                  )
-                                                  ? Container(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                            8,
+                                              padding: const EdgeInsets.only(top: 4),
+                                              child: Container(
+                                                padding: const EdgeInsets.all(8),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.accent.withValues(alpha: 0.08),
+                                                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                                  border: Border.all(
+                                                    color: AppColors.accent.withValues(alpha: 0.3),
+                                                  ),
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Row(
+                                                      children: [
+                                                        const Icon(Icons.swap_horiz, size: 16, color: AppColors.accent),
+                                                        const SizedBox(width: 6),
+                                                        Expanded(
+                                                          child: Text(
+                                                            item.substitutionApproved == null
+                                                                ? 'Your shopper found a substitute'
+                                                                : 'Substitute Suggested',
+                                                            style: AppTextStyles.caption.copyWith(
+                                                              color: AppColors.accent,
+                                                              fontWeight: FontWeight.w600,
+                                                              fontSize: 11,
+                                                            ),
                                                           ),
-                                                      decoration: BoxDecoration(
-                                                        color: AppColors.accent
-                                                            .withValues(
-                                                              alpha: 0.08,
-                                                            ),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              AppSizes.radiusSm,
-                                                            ),
-                                                        border: Border.all(
-                                                          color: AppColors
-                                                              .accent
-                                                              .withValues(
-                                                                alpha: 0.3,
-                                                              ),
                                                         ),
-                                                      ),
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Row(
-                                                            children: [
-                                                              const Icon(
-                                                                Icons
-                                                                    .swap_horiz,
-                                                                size: 16,
-                                                                color: AppColors
-                                                                    .accent,
-                                                              ),
-                                                              const SizedBox(
-                                                                width: 6,
-                                                              ),
-                                                              Text(
-                                                                'Substitute Suggested',
-                                                                style: AppTextStyles
-                                                                    .caption
-                                                                    .copyWith(
-                                                                      color: AppColors
-                                                                          .accent,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w600,
-                                                                      fontSize:
-                                                                          11,
-                                                                    ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                          const SizedBox(
-                                                            height: 4,
-                                                          ),
-                                                          Text(
-                                                            item.shopperNotes!
-                                                                .replaceFirst(
-                                                                  'SUBSTITUTE: ',
-                                                                  '',
-                                                                ),
-                                                            style: AppTextStyles
-                                                                .caption
-                                                                .copyWith(
-                                                                  color: AppColors
-                                                                      .textPrimary,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w500,
-                                                                ),
-                                                          ),
-                                                          const SizedBox(
-                                                            height: 8,
-                                                          ),
-                                                          if (item.substitutionApproved ==
-                                                              null)
-                                                            Row(
-                                                              children: [
-                                                                Expanded(
-                                                                  child: SizedBox(
-                                                                    height: 30,
-                                                                    child: OutlinedButton(
-                                                                      onPressed: () =>
-                                                                          _respondToSubstitution(
-                                                                            item,
-                                                                            true,
-                                                                          ),
-                                                                      style: OutlinedButton.styleFrom(
-                                                                        foregroundColor:
-                                                                            AppColors.success,
-                                                                        side: const BorderSide(
-                                                                          color:
-                                                                              AppColors.success,
-                                                                        ),
-                                                                        padding:
-                                                                            EdgeInsets.zero,
-                                                                        shape: RoundedRectangleBorder(
-                                                                          borderRadius:
-                                                                              BorderRadius.circular(
-                                                                                6,
-                                                                              ),
-                                                                        ),
-                                                                      ),
-                                                                      child: const Text(
-                                                                        'Accept',
-                                                                        style: TextStyle(
-                                                                          fontSize:
-                                                                              11,
-                                                                          fontWeight:
-                                                                              FontWeight.w600,
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                                const SizedBox(
-                                                                  width: 8,
-                                                                ),
-                                                                Expanded(
-                                                                  child: SizedBox(
-                                                                    height: 30,
-                                                                    child: OutlinedButton(
-                                                                      onPressed: () =>
-                                                                          _respondToSubstitution(
-                                                                            item,
-                                                                            false,
-                                                                          ),
-                                                                      style: OutlinedButton.styleFrom(
-                                                                        foregroundColor:
-                                                                            AppColors.error,
-                                                                        side: const BorderSide(
-                                                                          color:
-                                                                              AppColors.error,
-                                                                        ),
-                                                                        padding:
-                                                                            EdgeInsets.zero,
-                                                                        shape: RoundedRectangleBorder(
-                                                                          borderRadius:
-                                                                              BorderRadius.circular(
-                                                                                6,
-                                                                              ),
-                                                                        ),
-                                                                      ),
-                                                                      child: const Text(
-                                                                        'Reject',
-                                                                        style: TextStyle(
-                                                                          fontSize:
-                                                                              11,
-                                                                          fontWeight:
-                                                                              FontWeight.w600,
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            )
-                                                          else
-                                                            Container(
-                                                              width: double
-                                                                  .infinity,
-                                                              padding:
-                                                                  const EdgeInsets.symmetric(
-                                                                    horizontal:
-                                                                        8,
-                                                                    vertical: 6,
-                                                                  ),
-                                                              decoration: BoxDecoration(
-                                                                color:
-                                                                    (item.substitutionApproved ==
-                                                                                true
-                                                                            ? AppColors.success
-                                                                            : AppColors.error)
-                                                                        .withValues(
-                                                                          alpha:
-                                                                              0.08,
-                                                                        ),
-                                                                borderRadius:
-                                                                    BorderRadius.circular(
-                                                                      6,
-                                                                    ),
-                                                              ),
-                                                              child: Row(
-                                                                children: [
-                                                                  Icon(
-                                                                    item.substitutionApproved ==
-                                                                            true
-                                                                        ? Icons
-                                                                              .check_circle
-                                                                        : Icons
-                                                                              .cancel,
-                                                                    size: 14,
-                                                                    color:
-                                                                        item.substitutionApproved ==
-                                                                            true
-                                                                        ? AppColors
-                                                                              .success
-                                                                        : AppColors
-                                                                              .error,
-                                                                  ),
-                                                                  const SizedBox(
-                                                                    width: 6,
-                                                                  ),
-                                                                  Expanded(
-                                                                    child: Text(
-                                                                      item.substitutionApproved ==
-                                                                              true
-                                                                          ? 'Approved — your shopper can buy this substitute.'
-                                                                          : 'Rejected — your shopper will skip this substitute.',
-                                                                      style: AppTextStyles.caption.copyWith(
-                                                                        color:
-                                                                            item.substitutionApproved ==
-                                                                                true
-                                                                            ? AppColors.success
-                                                                            : AppColors.error,
-                                                                        fontWeight:
-                                                                            FontWeight.w600,
-                                                                      ),
-                                                                    ),
-                                                                  ),
-                                                                ],
-                                                              ),
-                                                            ),
-                                                        ],
-                                                      ),
-                                                    )
-                                                  : Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 8,
-                                                            vertical: 4,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.blue
-                                                            .withValues(
-                                                              alpha: 0.05,
-                                                            ),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              AppSizes.radiusXs,
-                                                            ),
-                                                      ),
-                                                      child: Text(
-                                                        'Shopper: ${item.shopperNotes}',
-                                                        style: AppTextStyles
-                                                            .caption
-                                                            .copyWith(
-                                                              color: Colors
-                                                                  .blue[700],
-                                                              fontStyle:
-                                                                  FontStyle
-                                                                      .italic,
-                                                            ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 6),
+                                                    // Substitute name
+                                                    Text(
+                                                      item.substituteName ?? 'Substitute',
+                                                      style: AppTextStyles.caption.copyWith(
+                                                        color: AppColors.textPrimary,
+                                                        fontWeight: FontWeight.w600,
                                                       ),
                                                     ),
+                                                    // Price comparison
+                                                    if (item.substitutePrice != null)
+                                                      Padding(
+                                                        padding: const EdgeInsets.only(top: 4),
+                                                        child: Row(
+                                                          children: [
+                                                            Text(
+                                                              'Original: ${Formatters.formatCurrency(item.product.price)}',
+                                                              style: AppTextStyles.caption.copyWith(
+                                                                color: AppColors.textSecondary,
+                                                                fontSize: 11,
+                                                              ),
+                                                            ),
+                                                            const Padding(
+                                                              padding: EdgeInsets.symmetric(horizontal: 6),
+                                                              child: Icon(Icons.arrow_forward, size: 12, color: AppColors.textSecondary),
+                                                            ),
+                                                            Text(
+                                                              Formatters.formatCurrency(item.substitutePrice!),
+                                                              style: AppTextStyles.caption.copyWith(
+                                                                fontWeight: FontWeight.w700,
+                                                                fontSize: 11,
+                                                                color: item.substitutePrice! <= item.product.price
+                                                                    ? AppColors.success
+                                                                    : AppColors.accent,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    // Substitute photo thumbnail
+                                                    if (item.substitutePhotoUrl != null)
+                                                      Padding(
+                                                        padding: const EdgeInsets.only(top: 8),
+                                                        child: GestureDetector(
+                                                          onTap: () => showDialog(
+                                                            context: context,
+                                                            builder: (_) => Dialog(
+                                                              child: ClipRRect(
+                                                                borderRadius: BorderRadius.circular(12),
+                                                                child: Image.network(item.substitutePhotoUrl!, fit: BoxFit.contain),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          child: ClipRRect(
+                                                            borderRadius: BorderRadius.circular(8),
+                                                            child: Image.network(
+                                                              item.substitutePhotoUrl!,
+                                                              height: 80,
+                                                              width: double.infinity,
+                                                              fit: BoxFit.cover,
+                                                              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    const SizedBox(height: 8),
+                                                    // Accept/Reject or status
+                                                    if (item.substitutionApproved == null)
+                                                      Row(
+                                                        children: [
+                                                          Expanded(
+                                                            child: SizedBox(
+                                                              height: 30,
+                                                              child: OutlinedButton(
+                                                                onPressed: () => _respondToSubstitution(item, true),
+                                                                style: OutlinedButton.styleFrom(
+                                                                  foregroundColor: AppColors.success,
+                                                                  side: const BorderSide(color: AppColors.success),
+                                                                  padding: EdgeInsets.zero,
+                                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                                                ),
+                                                                child: const Text('Accept', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          const SizedBox(width: 8),
+                                                          Expanded(
+                                                            child: SizedBox(
+                                                              height: 30,
+                                                              child: OutlinedButton(
+                                                                onPressed: () => _showRejectSubstituteSheet(item),
+                                                                style: OutlinedButton.styleFrom(
+                                                                  foregroundColor: AppColors.error,
+                                                                  side: const BorderSide(color: AppColors.error),
+                                                                  padding: EdgeInsets.zero,
+                                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                                                ),
+                                                                child: const Text('Reject', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      )
+                                                    else
+                                                      Container(
+                                                        width: double.infinity,
+                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                                        decoration: BoxDecoration(
+                                                          color: (item.substitutionApproved == true ? AppColors.success : AppColors.error).withValues(alpha: 0.08),
+                                                          borderRadius: BorderRadius.circular(6),
+                                                        ),
+                                                        child: Row(
+                                                          children: [
+                                                            Icon(
+                                                              item.substitutionApproved == true ? Icons.check_circle : Icons.cancel,
+                                                              size: 14,
+                                                              color: item.substitutionApproved == true ? AppColors.success : AppColors.error,
+                                                            ),
+                                                            const SizedBox(width: 6),
+                                                            Expanded(
+                                                              child: Text(
+                                                                item.substitutionApproved == true
+                                                                    ? 'Approved — your shopper can buy this substitute.'
+                                                                    : 'Rejected — your shopper will skip this substitute.',
+                                                                style: AppTextStyles.caption.copyWith(
+                                                                  color: item.substitutionApproved == true ? AppColors.success : AppColors.error,
+                                                                  fontWeight: FontWeight.w600,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                              ),
+                                            )
+                                          // Regular shopper notes (non-substitution)
+                                          else if (item.shopperNotes != null && item.shopperNotes!.isNotEmpty)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 4),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.info.withValues(alpha: 0.08),
+                                                  borderRadius: BorderRadius.circular(AppSizes.radiusXs),
+                                                ),
+                                                child: Text(
+                                                  'Shopper: ${item.shopperNotes}',
+                                                  style: AppTextStyles.caption.copyWith(
+                                                    color: AppColors.info,
+                                                    fontStyle: FontStyle.italic,
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                         ],
                                       ),
@@ -2375,7 +2376,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                 // Refresh orders list so it's updated immediately
                 await orderService.fetchOrders(
                   token,
-                  authProvider.user!.id.toString(),
+                  authProvider.user!.documentId ?? authProvider.user!.id.toString(),
                 );
 
                 // Dismiss loading
@@ -2922,12 +2923,17 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
         return Icons.check_circle;
       case OrderStatus.cancelled:
         return Icons.cancel;
+      case OrderStatus.paymentProcessing:
+        return Icons.hourglass_top;
+      case OrderStatus.refunded:
+        return Icons.currency_exchange;
     }
   }
 
   Color _getStatusColor(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:
+      case OrderStatus.paymentProcessing:
         return AppColors.warning;
       case OrderStatus.confirmed:
       case OrderStatus.shopperAssigned:
@@ -2939,6 +2945,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
       case OrderStatus.delivered:
         return AppColors.success;
       case OrderStatus.cancelled:
+      case OrderStatus.refunded:
         return AppColors.error;
     }
   }

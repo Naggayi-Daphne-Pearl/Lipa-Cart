@@ -4,6 +4,7 @@ import 'rating.dart';
 
 enum OrderStatus {
   pending,
+  paymentProcessing,
   confirmed,
   shopperAssigned,
   shopping,
@@ -12,6 +13,7 @@ enum OrderStatus {
   inTransit,
   delivered,
   cancelled,
+  refunded,
 }
 
 extension OrderStatusExtension on OrderStatus {
@@ -19,6 +21,8 @@ extension OrderStatusExtension on OrderStatus {
     switch (this) {
       case OrderStatus.pending:
         return 'Order Placed';
+      case OrderStatus.paymentProcessing:
+        return 'Payment Processing';
       case OrderStatus.confirmed:
         return 'Payment Confirmed';
       case OrderStatus.shopperAssigned:
@@ -35,6 +39,8 @@ extension OrderStatusExtension on OrderStatus {
         return 'Delivered';
       case OrderStatus.cancelled:
         return 'Cancelled';
+      case OrderStatus.refunded:
+        return 'Refunded';
     }
   }
 
@@ -42,6 +48,8 @@ extension OrderStatusExtension on OrderStatus {
     switch (this) {
       case OrderStatus.pending:
         return 'Your order has been received';
+      case OrderStatus.paymentProcessing:
+        return 'Your payment is being processed';
       case OrderStatus.confirmed:
         return 'Payment confirmed, awaiting shopper';
       case OrderStatus.shopperAssigned:
@@ -58,12 +66,16 @@ extension OrderStatusExtension on OrderStatus {
         return 'Your order has been delivered';
       case OrderStatus.cancelled:
         return 'Your order was cancelled';
+      case OrderStatus.refunded:
+        return 'Your order has been refunded';
     }
   }
 
   int get stepIndex {
     switch (this) {
       case OrderStatus.pending:
+        return 0;
+      case OrderStatus.paymentProcessing:
         return 0;
       case OrderStatus.confirmed:
         return 1;
@@ -80,6 +92,8 @@ extension OrderStatusExtension on OrderStatus {
       case OrderStatus.delivered:
         return 7;
       case OrderStatus.cancelled:
+        return -1;
+      case OrderStatus.refunded:
         return -1;
     }
   }
@@ -109,6 +123,13 @@ class Order {
   final DateTime createdAt;
   final DateTime? estimatedDelivery;
   final DateTime? deliveredAt;
+  final DateTime? paymentConfirmedAt;
+  final DateTime? shopperAssignedAt;
+  final DateTime? shoppingStartedAt;
+  final DateTime? shoppingCompletedAt;
+  final DateTime? riderAssignedAt;
+  final DateTime? pickedUpAt;
+  final DateTime? cancelledAt;
   final String? cancellationReason;
   final PaymentMethod paymentMethod;
   final bool isPaid;
@@ -140,6 +161,13 @@ class Order {
     required this.createdAt,
     this.estimatedDelivery,
     this.deliveredAt,
+    this.paymentConfirmedAt,
+    this.shopperAssignedAt,
+    this.shoppingStartedAt,
+    this.shoppingCompletedAt,
+    this.riderAssignedAt,
+    this.pickedUpAt,
+    this.cancelledAt,
     this.cancellationReason,
     required this.paymentMethod,
     this.isPaid = false,
@@ -184,6 +212,13 @@ class Order {
     DateTime? createdAt,
     DateTime? estimatedDelivery,
     DateTime? deliveredAt,
+    DateTime? paymentConfirmedAt,
+    DateTime? shopperAssignedAt,
+    DateTime? shoppingStartedAt,
+    DateTime? shoppingCompletedAt,
+    DateTime? riderAssignedAt,
+    DateTime? pickedUpAt,
+    DateTime? cancelledAt,
     String? cancellationReason,
     PaymentMethod? paymentMethod,
     bool? isPaid,
@@ -214,6 +249,13 @@ class Order {
       createdAt: createdAt ?? this.createdAt,
       estimatedDelivery: estimatedDelivery ?? this.estimatedDelivery,
       deliveredAt: deliveredAt ?? this.deliveredAt,
+      paymentConfirmedAt: paymentConfirmedAt ?? this.paymentConfirmedAt,
+      shopperAssignedAt: shopperAssignedAt ?? this.shopperAssignedAt,
+      shoppingStartedAt: shoppingStartedAt ?? this.shoppingStartedAt,
+      shoppingCompletedAt: shoppingCompletedAt ?? this.shoppingCompletedAt,
+      riderAssignedAt: riderAssignedAt ?? this.riderAssignedAt,
+      pickedUpAt: pickedUpAt ?? this.pickedUpAt,
+      cancelledAt: cancelledAt ?? this.cancelledAt,
       cancellationReason: cancellationReason ?? this.cancellationReason,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       isPaid: isPaid ?? this.isPaid,
@@ -247,6 +289,13 @@ class Order {
       'createdAt': createdAt.toIso8601String(),
       'estimatedDelivery': estimatedDelivery?.toIso8601String(),
       'deliveredAt': deliveredAt?.toIso8601String(),
+      'paymentConfirmedAt': paymentConfirmedAt?.toIso8601String(),
+      'shopperAssignedAt': shopperAssignedAt?.toIso8601String(),
+      'shoppingStartedAt': shoppingStartedAt?.toIso8601String(),
+      'shoppingCompletedAt': shoppingCompletedAt?.toIso8601String(),
+      'riderAssignedAt': riderAssignedAt?.toIso8601String(),
+      'pickedUpAt': pickedUpAt?.toIso8601String(),
+      'cancelledAt': cancelledAt?.toIso8601String(),
       'cancellationReason': cancellationReason,
       'paymentMethod': paymentMethod.name,
       'isPaid': isPaid,
@@ -292,6 +341,27 @@ class Order {
           : null,
       deliveredAt: json['deliveredAt'] != null
           ? DateTime.parse(json['deliveredAt'] as String)
+          : null,
+      paymentConfirmedAt: json['paymentConfirmedAt'] != null
+          ? DateTime.parse(json['paymentConfirmedAt'] as String)
+          : null,
+      shopperAssignedAt: json['shopperAssignedAt'] != null
+          ? DateTime.parse(json['shopperAssignedAt'] as String)
+          : null,
+      shoppingStartedAt: json['shoppingStartedAt'] != null
+          ? DateTime.parse(json['shoppingStartedAt'] as String)
+          : null,
+      shoppingCompletedAt: json['shoppingCompletedAt'] != null
+          ? DateTime.parse(json['shoppingCompletedAt'] as String)
+          : null,
+      riderAssignedAt: json['riderAssignedAt'] != null
+          ? DateTime.parse(json['riderAssignedAt'] as String)
+          : null,
+      pickedUpAt: json['pickedUpAt'] != null
+          ? DateTime.parse(json['pickedUpAt'] as String)
+          : null,
+      cancelledAt: json['cancelledAt'] != null
+          ? DateTime.parse(json['cancelledAt'] as String)
           : null,
       cancellationReason: json['cancellationReason'] as String?,
       paymentMethod: PaymentMethod.values.firstWhere(

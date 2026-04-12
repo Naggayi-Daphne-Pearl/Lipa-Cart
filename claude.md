@@ -49,7 +49,7 @@ Lipa-Cart is a full-featured grocery delivery application built with Flutter tar
 
 ## Tech Stack
 
-- **Framework**: Flutter 3.29+ (Dart SDK ^3.9.2)
+- **Framework**: Flutter 3.35+ (Dart SDK ^3.9.2)
 - **State Management**: Provider (ChangeNotifier pattern)
 - **UI**: Material Design 3 with custom theme
 - **Icons**: Iconsax

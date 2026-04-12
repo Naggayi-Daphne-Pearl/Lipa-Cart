@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_order_status_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
 import '../../models/order.dart';
@@ -26,16 +28,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
     final userId = auth.user?.id;
     if (auth.user != null && auth.token != null && userId != null) {
-      await orderService.fetchOrders(auth.token!, userId);
+      await orderService.fetchOrders(
+        auth.token!,
+        auth.user?.documentId ?? userId,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('My Orders'),
-        backgroundColor: Colors.green,
       ),
       body: Consumer<OrderService>(
         builder: (context, orderService, _) {
@@ -51,7 +56,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   Icon(
                     Icons.shopping_bag_outlined,
                     size: 64,
-                    color: Colors.grey[300],
+                    color: AppColors.grey300,
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -59,16 +64,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Start shopping to place your first order',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(color: AppColors.textTertiary),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () => context.go('/customer/categories'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                    ),
                     child: const Text('Start Shopping'),
                   ),
                 ],
@@ -119,13 +121,13 @@ class OrderCard extends StatelessWidget {
                       fontSize: 16,
                     ),
                   ),
-                  _buildStatusBadge(order.status.name),
+                  _buildStatusBadge(order.status),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
                 order.createdAt.toString().split('.')[0],
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
               ),
               const SizedBox(height: 12),
               Row(
@@ -134,18 +136,21 @@ class OrderCard extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Total', style: TextStyle(color: Colors.grey[600])),
+                      Text(
+                        'Total',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
                       Text(
                         'KES ${order.total.toStringAsFixed(2)}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
-                          color: Colors.green,
+                          color: AppColors.primary,
                         ),
                       ),
                     ],
                   ),
-                  Icon(Icons.arrow_forward_ios, color: Colors.grey[400]),
+                  Icon(Icons.arrow_forward_ios, color: AppColors.grey400),
                 ],
               ),
             ],
@@ -155,68 +160,19 @@ class OrderCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge(String status) {
-    Color bgColor;
-    Color textColor;
-    String displayText;
-
-    switch (status) {
-      case 'pending':
-        bgColor = Colors.yellow[100]!;
-        textColor = Colors.orange;
-        displayText = 'Pending';
-        break;
-      case 'confirmed':
-        bgColor = Colors.yellow[100]!;
-        textColor = Colors.orange;
-        displayText = 'Confirmed';
-        break;
-      case 'shopperAssigned':
-        bgColor = Colors.teal[100]!;
-        textColor = Colors.teal;
-        displayText = 'Shopper Assigned';
-        break;
-      case 'shopping':
-        bgColor = Colors.blue[100]!;
-        textColor = Colors.blue;
-        displayText = 'Shopping';
-        break;
-      case 'readyForDelivery':
-        bgColor = Colors.blue[100]!;
-        textColor = Colors.blue;
-        displayText = 'Ready for Pickup';
-        break;
-      case 'inTransit':
-        bgColor = Colors.purple[100]!;
-        textColor = Colors.purple;
-        displayText = 'In Transit';
-        break;
-      case 'delivered':
-        bgColor = Colors.green[100]!;
-        textColor = Colors.green;
-        displayText = 'Delivered';
-        break;
-      case 'cancelled':
-        bgColor = Colors.red[100]!;
-        textColor = Colors.red;
-        displayText = 'Cancelled';
-        break;
-      default:
-        bgColor = Colors.grey[100]!;
-        textColor = Colors.grey;
-        displayText = status;
-    }
+  Widget _buildStatusBadge(OrderStatus status) {
+    final t = AppOrderStatusColors.triple(status);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(4),
+        color: t.$1,
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        displayText,
+        t.$3,
         style: TextStyle(
-          color: textColor,
+          color: t.$2,
           fontWeight: FontWeight.w500,
           fontSize: 12,
         ),

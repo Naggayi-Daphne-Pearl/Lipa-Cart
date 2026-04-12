@@ -6,6 +6,7 @@ import '../../providers/shopper_provider.dart';
 import '../../models/order.dart';
 import '../../models/user.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_order_status_colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/shopper_button.dart';
@@ -63,17 +64,7 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
   }
 
   Color _getStatusColor(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.shopping:
-        return Colors.blue;
-      case OrderStatus.readyForDelivery:
-        return Colors.green;
-      case OrderStatus.confirmed:
-      case OrderStatus.shopperAssigned:
-        return AppColors.accent;
-      default:
-        return Colors.grey;
-    }
+    return AppOrderStatusColors.foreground(status);
   }
 
   String _getStatusText(OrderStatus status) {
@@ -141,9 +132,12 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
             onRefresh: _refresh,
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: shopper.activeTasks.length,
+              itemCount: shopper.activeTasks.length + 1,
               itemBuilder: (context, index) {
-                return _buildTaskCard(shopper.activeTasks[index]);
+                if (index == 0) {
+                  return _buildSummaryHeader(shopper.activeTasks);
+                }
+                return _buildTaskCard(shopper.activeTasks[index - 1]);
               },
             ),
           );
@@ -156,6 +150,7 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
     final itemCount = order.items.length;
     final statusColor = _getStatusColor(order.status);
     final statusText = _getStatusText(order.status);
+    final estimatedEarning = order.total * 0.10;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -171,13 +166,18 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '#${order.orderNumber}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                  Expanded(
+                    child: Text(
+                      '#${order.orderNumber}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -197,6 +197,11 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                Formatters.formatDate(order.createdAt),
+                style: TextStyle(color: Colors.grey[500], fontSize: 12),
               ),
               const SizedBox(height: 8),
               // Delivery address
@@ -237,6 +242,23 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(Icons.trending_up, size: 15, color: AppColors.success),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Estimated earning: ${Formatters.formatCurrency(estimatedEarning)}',
+                    style: const TextStyle(
+                      color: AppColors.success,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]),
+                ],
+              ),
               const SizedBox(height: 12),
               // Action button
               SizedBox(
@@ -247,9 +269,10 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
                         label: const Text('Awaiting Rider Pickup'),
                         onPressed: null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          disabledBackgroundColor: Colors.green.withValues(alpha: 0.3),
-                          disabledForegroundColor: Colors.green,
+                          backgroundColor: AppColors.primary,
+                          disabledBackgroundColor:
+                              AppColors.primary.withValues(alpha: 0.3),
+                          disabledForegroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -273,7 +296,7 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: order.status == OrderStatus.shopping
-                              ? Colors.blue
+                              ? AppColors.primary
                               : AppColors.accent,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
@@ -291,7 +314,7 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
                     icon: const Icon(Icons.cancel_outlined, size: 18),
                     label: const Text('Cancel Task'),
                     style: TextButton.styleFrom(
-                      foregroundColor: Colors.red,
+                      foregroundColor: AppColors.error,
                     ),
                     onPressed: () => _showCancelDialog(order),
                   ),
@@ -299,6 +322,51 @@ class _ShopperActiveTasksScreenState extends State<ShopperActiveTasksScreen> {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryHeader(List<Order> tasks) {
+    final assignedCount = tasks
+        .where((o) => o.status == OrderStatus.confirmed || o.status == OrderStatus.shopperAssigned)
+        .length;
+    final shoppingCount = tasks.where((o) => o.status == OrderStatus.shopping).length;
+    final readyCount = tasks.where((o) => o.status == OrderStatus.readyForDelivery).length;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _summaryChip('Assigned', assignedCount, AppColors.info),
+          _summaryChip('Shopping', shoppingCount, AppColors.primary),
+          _summaryChip('Ready', readyCount, AppColors.accent),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryChip(String label, int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$label: $count',
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

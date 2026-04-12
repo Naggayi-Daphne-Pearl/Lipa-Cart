@@ -21,12 +21,6 @@ class RiderHomeScreen extends StatefulWidget {
 class _RiderHomeScreenState extends State<RiderHomeScreen> {
   int _currentNavIndex = 0;
 
-  // Rider orange theme colors
-  static const Color _brandColor = AppColors.accent;
-
-  static const Color _brandColorSoft = AppColors.accentSoft;
-  static const Color _brandColorMuted = AppColors.accentMuted;
-
   @override
   void initState() {
     super.initState();
@@ -138,8 +132,12 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
             onRetry: () => setState(() {}),
             child: RefreshIndicator(
             onRefresh: _onRefresh,
-            color: _brandColor,
-            child: CustomScrollView(
+            color: AppColors.primary,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: AppColors.elegantBgGradient,
+              ),
+              child: CustomScrollView(
               slivers: [
                 // Custom App Bar
                 SliverAppBar(
@@ -187,13 +185,13 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                               horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: isOnline
-                                ? _brandColorSoft
+                                ? AppColors.primarySoft
                                 : AppColors.grey100,
                             borderRadius:
                                 BorderRadius.circular(AppSizes.radiusFull),
                             border: Border.all(
                               color: isOnline
-                                  ? _brandColor
+                                  ? AppColors.primary
                                   : AppColors.grey300,
                               width: 1,
                             ),
@@ -206,7 +204,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                                 height: 8,
                                 decoration: BoxDecoration(
                                   color: isOnline
-                                      ? _brandColor
+                                      ? AppColors.primary
                                       : AppColors.grey400,
                                   shape: BoxShape.circle,
                                 ),
@@ -218,7 +216,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: isOnline
-                                      ? _brandColor
+                                      ? AppColors.primary
                                       : AppColors.grey600,
                                 ),
                               ),
@@ -271,6 +269,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                 ),
               ],
             ),
+            ),
           ),
           );
         },
@@ -286,15 +285,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     return Container(
       padding: const EdgeInsets.all(AppSizes.md),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.accent, AppColors.accentLight],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: AppColors.accentGradient,
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
         boxShadow: [
           BoxShadow(
-            color: _brandColor.withValues(alpha: 0.3),
+            color: AppColors.accent.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -413,7 +408,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                 icon: Iconsax.timer_1,
                 title: 'Active',
                 value: '$activeCount',
-                color: _brandColor,
+                color: AppColors.primary,
                 bgColor: AppColors.cardOrange,
                 onTap: () => context.push('/rider/active-deliveries'),
               ),
@@ -439,7 +434,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                 icon: Iconsax.wallet_2,
                 title: 'Earnings',
                 value: _formatEarnings(earnings),
-                color: _brandColor,
+                color: AppColors.accent,
                 bgColor: AppColors.cardYellow,
                 onTap: () => context.push('/rider/earnings'),
               ),
@@ -454,20 +449,20 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(AppSizes.md),
               decoration: BoxDecoration(
-                color: _brandColorSoft,
+                color: AppColors.primarySoft,
                 borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                border: Border.all(color: _brandColorMuted),
+                border: Border.all(color: AppColors.primaryMuted),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: _brandColor.withValues(alpha: 0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                     ),
                     child: Icon(Iconsax.truck_fast,
-                        color: _brandColor, size: 20),
+                        color: AppColors.primary, size: 20),
                   ),
                   const SizedBox(width: AppSizes.sm),
                   Expanded(
@@ -478,7 +473,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                           'Start delivering today!',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            color: _brandColor,
+                            color: AppColors.primary,
                             fontSize: 14,
                           ),
                         ),
@@ -494,7 +489,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                     ),
                   ),
                   Icon(Icons.arrow_forward_ios,
-                      size: 14, color: _brandColor),
+                      size: 14, color: AppColors.primary),
                 ],
               ),
             ),
@@ -700,7 +695,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
               child: _buildQuickActionTile(
                 icon: Iconsax.task_square,
                 label: 'Active Orders',
-                color: _brandColor,
+                color: AppColors.primary,
                 bgColor: AppColors.cardOrange,
                 onTap: () => context.push('/rider/active-deliveries'),
               ),
@@ -714,7 +709,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
               child: _buildQuickActionTile(
                 icon: Iconsax.chart_2,
                 label: 'Earnings History',
-                color: _brandColor,
+                color: AppColors.accent,
                 bgColor: AppColors.cardYellow,
                 onTap: () => context.push('/rider/earnings'),
               ),
@@ -848,7 +843,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
               Icon(
                 isActive ? activeIcon : icon,
                 size: 24,
-                color: isActive ? _brandColor : AppColors.grey500,
+                color: isActive ? AppColors.primary : AppColors.grey500,
               ),
               const SizedBox(height: 4),
               Text(
@@ -856,7 +851,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                  color: isActive ? _brandColor : AppColors.grey500,
+                  color: isActive ? AppColors.primary : AppColors.grey500,
                 ),
               ),
             ],
