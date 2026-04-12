@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/order.dart';
-import '../services/imgbb_service.dart';
+import '../services/upload_service.dart';
 import '../services/strapi_service.dart';
 
 class RiderProvider extends ChangeNotifier {
@@ -216,9 +216,10 @@ class RiderProvider extends ChangeNotifier {
     try {
       String? proofUrl;
       if (proofPhotoBytes != null) {
-        proofUrl = await ImgBBService.uploadImageBytes(
+        proofUrl = await UploadService.uploadImageBytes(
           proofPhotoBytes,
           'delivery_proof_${DateTime.now().millisecondsSinceEpoch}.jpg',
+          token,
         );
       }
       final result = await StrapiService.updateRiderOrderStatus(

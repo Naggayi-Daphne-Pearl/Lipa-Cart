@@ -62,7 +62,6 @@ This flow allows users to explore products freely while ensuring secure, authent
    | `API_BASE_URL` | Backend API base URL (no trailing slash) | `http://localhost:1337` |
    | `SENTRY_DSN` | Sentry error tracking DSN | *(empty — Sentry disabled)* |
    | `SENTRY_ENV` | Sentry environment tag | `development` |
-   | `IMGBB_API_KEY` | ImgBB API key for image uploads | *(empty)* |
    | `GOOGLE_WEB_CLIENT_ID` | Google OAuth web client ID for the consent screen | `461833863082-gkset420arg3nqcip15jm9ptclom7g9e.apps.googleusercontent.com` |
 
    Pass them via `--dart-define` when running:
@@ -70,7 +69,6 @@ This flow allows users to explore products freely while ensuring secure, authent
    flutter run -d chrome --web-port 3000 \
      --dart-define=API_BASE_URL=http://localhost:1337 \
      --dart-define=SENTRY_DSN=https://your-key@sentry.io/123 \
-     --dart-define=IMGBB_API_KEY=your_key \
      --dart-define=GOOGLE_WEB_CLIENT_ID=461833863082-gkset420arg3nqcip15jm9ptclom7g9e.apps.googleusercontent.com
    ```
 
@@ -84,7 +82,6 @@ This flow allows users to explore products freely while ensuring secure, authent
 4. **CI/CD (GitHub Actions)** — Add these as repository secrets:
    - `API_BASE_URL` — production backend URL
    - `SENTRY_DSN` — Sentry DSN from your project settings
-   - `IMGBB_API_KEY` — ImgBB API key
 
    These are automatically passed as `--dart-define` flags during the Vercel web build.
 

@@ -254,7 +254,8 @@ class StrapiService {
     while (true) {
       final url =
           '$_apiUrl/recipes?pagination[page]=$page&pagination[pageSize]=$pageSize'
-          '&populate[ingredients][populate]=product'
+          '&populate[image]=*'
+          '&populate[ingredients][populate][product][populate]=image'
           '&populate[instructions]=*';
 
       final response = await http

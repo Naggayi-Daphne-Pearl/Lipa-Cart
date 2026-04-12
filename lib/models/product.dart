@@ -111,7 +111,7 @@ class Product {
   static String _resolveImageUrl(dynamic image, String? baseUrl) {
     if (image == null) return '';
 
-    // Handle plain string URL (imgbb or any external URL)
+    // Handle plain string URL (Cloudinary or any external URL)
     if (image is String) {
       if (image.isEmpty) return '';
       return image.startsWith('http') ? image : '${baseUrl ?? ""}$image';

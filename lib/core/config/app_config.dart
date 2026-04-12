@@ -41,12 +41,6 @@ class AppConfig {
     defaultValue: 'development',
   );
 
-  /// ImgBB API key for image uploads
-  static const String imgbbApiKey = String.fromEnvironment(
-    'IMGBB_API_KEY',
-    defaultValue: '',
-  );
-
   /// Google OAuth web client ID used by the consent screen / Google sign-in.
   static const String googleWebClientId = String.fromEnvironment(
     'GOOGLE_WEB_CLIENT_ID',

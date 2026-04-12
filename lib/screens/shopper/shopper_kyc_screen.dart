@@ -9,7 +9,7 @@ import 'dart:io';
 
 import '../../providers/auth_provider.dart';
 import '../../services/strapi_service.dart';
-import '../../services/imgbb_service.dart';
+import '../../services/upload_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -143,26 +143,28 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
         throw Exception('Not authenticated. Please log in again.');
       }
 
-      // Upload photos to ImgBB
+      // Upload photos through Strapi → Cloudinary
       final String? idPhotoUrl;
       final String? selfiePhotoUrl;
       if (kIsWeb) {
         final idBytes = await _idPhotoXFile!.readAsBytes();
-        idPhotoUrl = await ImgBBService.uploadImageBytes(
+        idPhotoUrl = await UploadService.uploadImageBytes(
           idBytes,
           _idPhotoXFile!.name,
+          token,
         );
 
         if (mounted) setState(() { _loadingMessage = 'Uploading selfie...'; });
         final selfieBytes = await _selfiePhotoXFile!.readAsBytes();
-        selfiePhotoUrl = await ImgBBService.uploadImageBytes(
+        selfiePhotoUrl = await UploadService.uploadImageBytes(
           selfieBytes,
           _selfiePhotoXFile!.name,
+          token,
         );
       } else {
-        idPhotoUrl = await ImgBBService.uploadImage(_idPhotoFile!);
+        idPhotoUrl = await UploadService.uploadImage(_idPhotoFile!, token);
         if (mounted) setState(() { _loadingMessage = 'Uploading selfie...'; });
-        selfiePhotoUrl = await ImgBBService.uploadImage(_selfiePhotoFile!);
+        selfiePhotoUrl = await UploadService.uploadImage(_selfiePhotoFile!, token);
       }
 
       if (idPhotoUrl == null || selfiePhotoUrl == null) {

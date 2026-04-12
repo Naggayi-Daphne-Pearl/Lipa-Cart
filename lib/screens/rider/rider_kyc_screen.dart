@@ -10,7 +10,7 @@ import 'dart:io';
 
 import '../../providers/auth_provider.dart';
 import '../../services/strapi_service.dart';
-import '../../services/imgbb_service.dart';
+import '../../services/upload_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
@@ -218,39 +218,42 @@ class _RiderKycScreenState extends State<RiderKycScreen> {
         throw Exception('Not authenticated. Please log in again.');
       }
 
-      // Upload photos to ImgBB
+      // Upload photos through Strapi → Cloudinary
       final String? idPhotoUrl;
       final String? selfiePhotoUrl;
       String? licensePhotoUrl;
 
       if (kIsWeb) {
         final idBytes = await _idPhotoXFile!.readAsBytes();
-        idPhotoUrl = await ImgBBService.uploadImageBytes(
+        idPhotoUrl = await UploadService.uploadImageBytes(
           idBytes,
           _idPhotoXFile!.name,
+          token,
         );
 
         if (mounted) setState(() { _loadingMessage = 'Uploading selfie...'; });
         final selfieBytes = await _selfiePhotoXFile!.readAsBytes();
-        selfiePhotoUrl = await ImgBBService.uploadImageBytes(
+        selfiePhotoUrl = await UploadService.uploadImageBytes(
           selfieBytes,
           _selfiePhotoXFile!.name,
+          token,
         );
         if (_licensePhotoXFile != null) {
           if (mounted) setState(() { _loadingMessage = 'Uploading license photo...'; });
           final licenseBytes = await _licensePhotoXFile!.readAsBytes();
-          licensePhotoUrl = await ImgBBService.uploadImageBytes(
+          licensePhotoUrl = await UploadService.uploadImageBytes(
             licenseBytes,
             _licensePhotoXFile!.name,
+            token,
           );
         }
       } else {
-        idPhotoUrl = await ImgBBService.uploadImage(_idPhotoFile!);
+        idPhotoUrl = await UploadService.uploadImage(_idPhotoFile!, token);
         if (mounted) setState(() { _loadingMessage = 'Uploading selfie...'; });
-        selfiePhotoUrl = await ImgBBService.uploadImage(_selfiePhotoFile!);
+        selfiePhotoUrl = await UploadService.uploadImage(_selfiePhotoFile!, token);
         if (_licensePhotoFile != null) {
           if (mounted) setState(() { _loadingMessage = 'Uploading license photo...'; });
-          licensePhotoUrl = await ImgBBService.uploadImage(_licensePhotoFile!);
+          licensePhotoUrl = await UploadService.uploadImage(_licensePhotoFile!, token);
         }
       }
 

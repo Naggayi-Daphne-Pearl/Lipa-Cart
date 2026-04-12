@@ -15,7 +15,6 @@ echo "==> Building web release..."
 flutter build web --release --base-href / --no-tree-shake-icons \
   --dart-define=API_BASE_URL="${API_BASE_URL:-https://lipa-cart-strapi-production.up.railway.app}" \
   --dart-define=SENTRY_DSN="${SENTRY_DSN:-}" \
-  --dart-define=SENTRY_ENV=production \
-  --dart-define=IMGBB_API_KEY="${IMGBB_API_KEY:-}"
+  --dart-define=SENTRY_ENV=production
 
 echo "==> Build complete!"

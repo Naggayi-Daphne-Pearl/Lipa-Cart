@@ -5,7 +5,6 @@ import '../../providers/cart_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/shopping_list_provider.dart';
 import '../../providers/recipe_provider.dart';
-import '../../providers/imgbb_upload_provider.dart';
 import '../../providers/shopper_provider.dart';
 import '../../services/order_service.dart';
 
@@ -19,7 +18,6 @@ class LogoutHelper {
   /// - Order history & tracking (OrderProvider)
   /// - Shopping lists (ShoppingListProvider)
   /// - Recipe favorites (RecipeProvider)
-  /// - Uploaded image cache (ImgBBUploadProvider)
   /// - Shopper-specific data (ShopperProvider)
   /// - Order service cache (OrderService)
   static Future<void> logoutAndClear(BuildContext context) async {
@@ -27,7 +25,6 @@ class LogoutHelper {
     final orderProvider = context.read<OrderProvider>();
     final shoppingListProvider = context.read<ShoppingListProvider>();
     final recipeProvider = context.read<RecipeProvider>();
-    final imgbbUploadProvider = context.read<ImgBBUploadProvider>();
     final shopperProvider = context.read<ShopperProvider>();
     final orderService = context.read<OrderService>();
     final authProvider = context.read<AuthProvider>();
@@ -38,7 +35,6 @@ class LogoutHelper {
       orderProvider.clearAll(),
       shoppingListProvider.clearAll(),
       recipeProvider.clearAll(),
-      imgbbUploadProvider.clearAll(),
       shopperProvider.clearAll(),
       orderService.clearAll(),
     ]);
