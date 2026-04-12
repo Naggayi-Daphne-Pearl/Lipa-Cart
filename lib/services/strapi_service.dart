@@ -527,9 +527,8 @@ class StrapiService {
       ),
       deliveredAt: DateTime.tryParse(attrs['delivered_at'] as String? ?? ''),
       cancellationReason: attrs['cancellation_reason'] as String?,
-      paymentMethod: PaymentMethod.values.firstWhere(
-        (p) => p.name == (attrs['payment_method'] as String? ?? ''),
-        orElse: () => PaymentMethod.mobileMoney,
+      paymentMethod: paymentMethodFromBackendValue(
+        attrs['payment_method'] as String?,
       ),
       isPaid: attrs['is_paid'] as bool? ?? false,
     );

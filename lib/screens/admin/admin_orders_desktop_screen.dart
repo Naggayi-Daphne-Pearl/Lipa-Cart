@@ -23,15 +23,11 @@ class _AdminOrdersDesktopScreenState extends State<AdminOrdersDesktopScreen> {
   String? _selectedStatus;
   final _searchController = TextEditingController();
 
-  final List<String> _statuses = [
+  // Derived from the enum so it stays in sync when new statuses are added.
+  // Keep 'All' first. Filter comparison uses the raw enum name.
+  static final List<String> _statuses = [
     'All',
-    'pending',
-    'confirmed',
-    'shopping',
-    'readyForDelivery',
-    'inTransit',
-    'delivered',
-    'cancelled',
+    ...OrderStatus.values.map((s) => s.name),
   ];
 
   @override
@@ -150,9 +146,14 @@ class _AdminOrdersDesktopScreenState extends State<AdminOrdersDesktopScreen> {
                                   horizontal: 12, vertical: 8),
                             ),
                             items: _statuses.map((status) {
+                              final label = status == 'All'
+                                  ? 'All'
+                                  : OrderStatus.values
+                                      .firstWhere((s) => s.name == status)
+                                      .displayName;
                               return DropdownMenuItem(
                                 value: status,
-                                child: Text(status),
+                                child: Text(label),
                               );
                             }).toList(),
                             onChanged: (value) {
