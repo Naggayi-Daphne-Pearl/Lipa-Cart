@@ -145,14 +145,16 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
       return;
     }
 
+    final clientLat = currentOrder.deliveryAddress.latitude;
+    final clientLng = currentOrder.deliveryAddress.longitude;
+    if (clientLat == null || clientLng == null) {
+      return;
+    }
     final riderPoint = LatLng(
       currentOrder.riderLatitude!,
       currentOrder.riderLongitude!,
     );
-    final clientPoint = LatLng(
-      currentOrder.deliveryAddress.latitude,
-      currentOrder.deliveryAddress.longitude,
-    );
+    final clientPoint = LatLng(clientLat, clientLng);
 
     final routeSignature =
         '${riderPoint.latitude.toStringAsFixed(5)},${riderPoint.longitude.toStringAsFixed(5)}|'
@@ -572,13 +574,12 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                   // Rider + client tracking map
                   if ((order.status == OrderStatus.riderAssigned ||
                           order.status == OrderStatus.inTransit) &&
-                      order.deliveryAddress.latitude != 0 &&
-                      order.deliveryAddress.longitude != 0)
+                      order.deliveryAddress.hasCoordinates)
                     Builder(
                       builder: (context) {
                         final clientPoint = LatLng(
-                          order.deliveryAddress.latitude,
-                          order.deliveryAddress.longitude,
+                          order.deliveryAddress.latitude!,
+                          order.deliveryAddress.longitude!,
                         );
                         final hasRiderLocation =
                             order.riderLatitude != null &&

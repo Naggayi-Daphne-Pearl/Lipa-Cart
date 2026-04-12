@@ -20,7 +20,17 @@ import 'package:geolocator/geolocator.dart';
 class AddressesScreen extends StatefulWidget {
   final String? returnRoute;
 
-  const AddressesScreen({super.key, this.returnRoute});
+  /// When true, the screen acts as a picker: each address card is tappable
+  /// and a tap returns to [returnRoute] with `?selectedAddress=<id>` so the
+  /// caller (e.g. checkout) can pre-select that address. CRUD actions remain
+  /// available so the user can add/edit before picking.
+  final bool selectMode;
+
+  const AddressesScreen({
+    super.key,
+    this.returnRoute,
+    this.selectMode = false,
+  });
 
   @override
   State<AddressesScreen> createState() => _AddressesScreenState();
@@ -102,14 +112,18 @@ class _AddressesScreenState extends State<AddressesScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Saved Addresses',
+                            widget.selectMode
+                                ? 'Choose Delivery Address'
+                                : 'Saved Addresses',
                             style: AppTextStyles.h5.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: AppSizes.sm),
                           Text(
-                            'Manage where your orders are delivered.',
+                            widget.selectMode
+                                ? 'Tap an address to use it for this order.'
+                                : 'Manage where your orders are delivered.',
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.textSecondary,
                             ),
@@ -160,6 +174,9 @@ class _AddressesScreenState extends State<AddressesScreen> {
                                       isDefault:
                                           addressService.defaultAddress?.id ==
                                           address.id,
+                                      onTap: widget.selectMode
+                                          ? () => _pickAddress(address)
+                                          : null,
                                       onEdit: () => _showAddressForm(
                                         context,
                                         auth,
@@ -365,6 +382,19 @@ class _AddressesScreenState extends State<AddressesScreen> {
     }
   }
 
+  void _pickAddress(Address address) {
+    final returnRoute = widget.returnRoute;
+    if (returnRoute == null || returnRoute.isEmpty) return;
+    final selectedId = address.documentId.isNotEmpty
+        ? address.documentId
+        : address.id.toString();
+    // Encode as a query param so the destination route can pick it up. We
+    // don't try to round-trip the full Address object via `extra` because
+    // GoRouter's `extra` doesn't survive a hard navigation.
+    final separator = returnRoute.contains('?') ? '&' : '?';
+    context.go('$returnRoute${separator}selectedAddress=$selectedId');
+  }
+
   Future<void> _setDefault(
     BuildContext context,
     AuthProvider auth,
@@ -397,6 +427,7 @@ class AddressCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onSetDefault;
+  final VoidCallback? onTap;
 
   const AddressCard({
     super.key,
@@ -405,17 +436,21 @@ class AddressCard extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onSetDefault,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       margin: const EdgeInsets.only(bottom: AppSizes.md),
       padding: const EdgeInsets.all(AppSizes.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        border: Border.all(color: AppColors.grey200),
+        border: Border.all(
+          color: onTap != null ? AppColors.primary : AppColors.grey200,
+          width: onTap != null ? 1.5 : 1,
+        ),
         boxShadow: AppColors.shadowSm,
       ),
       child: Column(
@@ -542,6 +577,17 @@ class AddressCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+
+    if (onTap == null) return card;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        child: card,
       ),
     );
   }

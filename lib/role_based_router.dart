@@ -458,7 +458,13 @@ class RoleBasedRouter {
           path: '/customer/addresses',
           builder: (context, state) {
             final returnRoute = state.uri.queryParameters['return'];
-            return _safeBack(AddressesScreen(returnRoute: returnRoute));
+            final selectMode = state.uri.queryParameters['select'] == 'true';
+            return _safeBack(
+              AddressesScreen(
+                returnRoute: returnRoute,
+                selectMode: selectMode,
+              ),
+            );
           },
         ),
         GoRoute(
@@ -473,7 +479,12 @@ class RoleBasedRouter {
             final isGuest =
                 extra?['guest'] == true ||
                 state.uri.queryParameters['guest'] == 'true';
-            return CheckoutScreen(isGuest: isGuest);
+            final selectedAddressId =
+                state.uri.queryParameters['selectedAddress'];
+            return CheckoutScreen(
+              isGuest: isGuest,
+              selectedAddressId: selectedAddressId,
+            );
           },
         ),
         GoRoute(

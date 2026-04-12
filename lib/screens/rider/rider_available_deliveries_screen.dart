@@ -433,7 +433,7 @@ class _RiderAvailableDeliveriesScreenState
   String _getDistanceAndEta(Order delivery) {
     final lat = delivery.deliveryAddress.latitude;
     final lng = delivery.deliveryAddress.longitude;
-    if (lat == 0 && lng == 0) {
+    if (lat == null || lng == null || (lat == 0 && lng == 0)) {
       return '';
     }
     final km = _haversineDistance(
