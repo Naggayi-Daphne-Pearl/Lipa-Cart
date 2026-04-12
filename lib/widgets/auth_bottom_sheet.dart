@@ -18,18 +18,23 @@ import 'custom_button.dart';
 Future<bool?> showAuthBottomSheet(
   BuildContext context, {
   bool startOnSignUp = false,
+  String? returnRoute,
 }) {
   return showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _AuthBottomSheet(startOnSignUp: startOnSignUp),
+    builder: (_) => _AuthBottomSheet(
+      startOnSignUp: startOnSignUp,
+      returnRoute: returnRoute,
+    ),
   );
 }
 
 class _AuthBottomSheet extends StatefulWidget {
   final bool startOnSignUp;
-  const _AuthBottomSheet({this.startOnSignUp = false});
+  final String? returnRoute;
+  const _AuthBottomSheet({this.startOnSignUp = false, this.returnRoute});
 
   @override
   State<_AuthBottomSheet> createState() => _AuthBottomSheetState();
@@ -127,7 +132,12 @@ class _AuthBottomSheetState extends State<_AuthBottomSheet> {
 
     final launched = await GoogleOAuthService.launchConsentScreen(
       callbackPath: '/auth/google/callback',
-      queryParameters: {'role': 'customer', 'source': _isSignUp ? 'signup' : 'login'},
+      queryParameters: {
+        'role': 'customer',
+        'source': _isSignUp ? 'signup' : 'login',
+        if (widget.returnRoute != null && widget.returnRoute!.isNotEmpty)
+          'return': widget.returnRoute,
+      },
     );
     if (!launched && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

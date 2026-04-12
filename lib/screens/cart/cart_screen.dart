@@ -908,7 +908,10 @@ class _GuestOrSignInSheet extends StatelessWidget {
               onPressed: () async {
                 Navigator.pop(context);
                 if (!parentContext.mounted) return;
-                final authenticated = await showAuthBottomSheet(parentContext);
+                final authenticated = await showAuthBottomSheet(
+                  parentContext,
+                  returnRoute: '/customer/checkout',
+                );
                 if (authenticated == true && parentContext.mounted) {
                   parentContext.go('/customer/checkout');
                 }
