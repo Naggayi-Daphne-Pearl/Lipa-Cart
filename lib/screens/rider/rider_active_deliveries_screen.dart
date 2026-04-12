@@ -516,31 +516,29 @@ class _RiderActiveDeliveriesScreenState
                       },
                     ),
                   ),
-                  const SizedBox(height: AppSizes.xs),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        if (order.customer != null &&
-                            order.customer!.phoneNumber.isNotEmpty) {
-                          _showCallDialog(
-                            'Customer',
-                            order.customer!.name ?? 'Customer',
-                            order.customer!.phoneNumber,
-                          );
-                        }
-                      },
-                      icon: const Icon(Iconsax.call, size: 16),
-                      label: const Text('Call Customer'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.accent,
-                        side: const BorderSide(color: AppColors.accent),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                  if (order.customer != null &&
+                      order.customer!.phoneNumber.isNotEmpty) ...[
+                    const SizedBox(height: AppSizes.xs),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showCallDialog(
+                          'Customer',
+                          order.customer!.name ?? 'Customer',
+                          order.customer!.phoneNumber,
+                        ),
+                        icon: const Icon(Iconsax.call, size: 16),
+                        label: const Text('Call Customer'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.accent,
+                          side: const BorderSide(color: AppColors.accent),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               )
             else if (order.status == OrderStatus.inTransit) ...[
