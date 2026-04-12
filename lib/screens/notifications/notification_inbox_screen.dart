@@ -9,6 +9,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/constants/app_constants.dart';
 import '../../providers/auth_provider.dart';
+import '../../models/user.dart';
 import '../../widgets/app_loading_indicator.dart';
 
 class NotificationInboxScreen extends StatefulWidget {
@@ -122,6 +123,10 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
         return Iconsax.shopping_bag;
       case 'new_delivery':
         return Iconsax.truck_fast;
+      case 'substitute_suggestion':
+        return Iconsax.arrow_swap_horizontal;
+      case 'substitute_response':
+        return Iconsax.message_text;
       case 'promo':
         return Iconsax.discount_shape;
       default:
@@ -137,6 +142,10 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
         return AppColors.info;
       case 'new_delivery':
         return AppColors.accent;
+      case 'substitute_suggestion':
+        return AppColors.warning;
+      case 'substitute_response':
+        return AppColors.success;
       case 'promo':
         return AppColors.warning;
       default:
@@ -161,10 +170,24 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
       _markAsRead(notification);
     }
 
-    final type = notification['type'] ?? notification['data']?['type'] ?? '';
+    final data = notification['data'] is Map<String, dynamic>
+        ? notification['data'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    final route = (data['route'] as String?) ?? '';
+    final type = (data['type'] as String?) ?? (notification['type'] as String?) ?? '';
+
+    if (route.isNotEmpty) {
+      context.go(route);
+      return;
+    }
+
     switch (type) {
       case 'order_status':
+      case 'substitute_suggestion':
         context.go('/customer/orders');
+        break;
+      case 'substitute_response':
+        context.go('/shopper/active-tasks');
         break;
       case 'new_task':
         context.go('/shopper/available-tasks');
@@ -188,7 +211,16 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/customer/home');
+              final role = context.read<AuthProvider>().user?.role;
+              if (role == UserRole.shopper) {
+                context.go('/shopper/home');
+              } else if (role == UserRole.rider) {
+                context.go('/rider/home');
+              } else if (role == UserRole.admin) {
+                context.go('/admin/dashboard');
+              } else {
+                context.go('/customer/home');
+              }
             }
           },
         ),

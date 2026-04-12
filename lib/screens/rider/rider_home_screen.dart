@@ -166,6 +166,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                     ],
                   ),
                   actions: [
+                    IconButton(
+                      onPressed: () => context.push('/rider/notifications'),
+                      icon: const Icon(Iconsax.notification),
+                      tooltip: 'Notifications',
+                    ),
                     // Online status indicator
                     Container(
                       margin: const EdgeInsets.only(right: 8),

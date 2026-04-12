@@ -114,12 +114,7 @@ class _AdminShellState extends State<AdminShell> {
           // Notification bell
           IconButton(
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('No new notifications'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
+              context.go('/admin/notifications');
             },
             icon: Badge(
               smallSize: 8,

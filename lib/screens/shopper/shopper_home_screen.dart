@@ -164,6 +164,11 @@ class _ShopperHomeScreenState extends State<ShopperHomeScreen> {
                     ],
                   ),
                   actions: [
+                    IconButton(
+                      onPressed: () => context.push('/shopper/notifications'),
+                      icon: const Icon(Iconsax.notification),
+                      tooltip: 'Notifications',
+                    ),
                     // Online status indicator
                     Container(
                       margin: const EdgeInsets.only(right: 8),

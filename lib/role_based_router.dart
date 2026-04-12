@@ -647,6 +647,11 @@ class RoleBasedRouter {
           builder: (context, state) =>
               AdminShell(child: const AdminRidersScreen()),
         ),
+        GoRoute(
+          path: '/admin/notifications',
+          builder: (context, state) =>
+              AdminShell(child: const NotificationInboxScreen()),
+        ),
 
         // Rider Routes
         GoRoute(
@@ -688,6 +693,10 @@ class RoleBasedRouter {
         GoRoute(
           path: '/rider/profile',
           builder: (context, state) => const RiderProfileScreen(),
+        ),
+        GoRoute(
+          path: '/rider/notifications',
+          builder: (context, state) => const NotificationInboxScreen(),
         ),
 
         // Shopper Routes
@@ -736,6 +745,10 @@ class RoleBasedRouter {
         GoRoute(
           path: '/shopper/profile',
           builder: (context, state) => const ShopperProfileScreen(),
+        ),
+        GoRoute(
+          path: '/shopper/notifications',
+          builder: (context, state) => const NotificationInboxScreen(),
         ),
         GoRoute(
           path: '/shopper/kyc',

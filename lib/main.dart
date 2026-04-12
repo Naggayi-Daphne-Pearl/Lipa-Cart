@@ -181,14 +181,14 @@ class _LipaCartAppState extends State<LipaCartApp> with WidgetsBindingObserver {
       return false;
     }
 
-    if (type == 'order_status' || type == 'substitute_suggestion') {
-      final openedLatest = await openLatestCustomerOrder();
-      if (openedLatest) return;
-    }
-
     if (route != null && route.isNotEmpty) {
       router.go(route);
       return;
+    }
+
+    if (type == 'order_status' || type == 'substitute_suggestion') {
+      final openedLatest = await openLatestCustomerOrder();
+      if (openedLatest) return;
     }
 
     switch (type) {
