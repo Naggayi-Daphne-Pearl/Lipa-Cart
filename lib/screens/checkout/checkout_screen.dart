@@ -278,51 +278,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           isDefault: true,
         );
 
-        final guestAddress = Address(
-          id: 'guest-${DateTime.now().millisecondsSinceEpoch}',
-          label: 'Delivery Address',
-          fullAddress: '$addressText, $resolvedCity',
-          latitude: 0.0,
-          longitude: 0.0,
-          isDefault: true,
-        );
-
-        final localOrder = await orderProvider.createOrder(
-          items: cartProvider.items,
-          deliveryAddress: guestAddress,
-          subtotal: cartProvider.subtotal,
-          serviceFee: cartProvider.serviceFee,
-          deliveryFee: cartProvider.deliveryFee,
-          paymentMethod: _selectedPayment,
-        );
-
+        // Backend-first: only mutate local state on a successful round-trip,
+        // so we don't show a fake success screen for an order the server
+        // never accepted.
         final backendGuestOrder = await orderService.createGuestOrder(
           guestName: nameText,
           guestPhone: '+256$phoneText',
           addressLine: addressText,
           city: resolvedCity,
-          subtotal: cartProvider.subtotal,
-          serviceFee: cartProvider.serviceFee,
-          deliveryFee: cartProvider.deliveryFee,
-          total: cartProvider.total,
+          items: cartProvider.items,
         );
 
         setState(() => _isLoading = false);
 
-        final createdOrder = localOrder ?? backendGuestOrder;
-        if (createdOrder != null && mounted) {
+        if (backendGuestOrder != null && mounted) {
+          // Mirror the order locally so the order list is populated immediately,
+          // then clear the cart atomically.
+          await orderProvider.adoptExistingOrder(backendGuestOrder);
+          if (!mounted) return;
           cartProvider.clearCart();
           context.push(
             '/customer/order-success',
-            extra: {'order': createdOrder, 'isGuest': true},
+            extra: {'order': backendGuestOrder, 'isGuest': true},
           );
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                orderProvider.errorMessage ??
-                    orderService.error ??
-                    'Failed to place order',
+                orderService.error ?? 'Failed to place order',
               ),
               backgroundColor: AppColors.error,
             ),

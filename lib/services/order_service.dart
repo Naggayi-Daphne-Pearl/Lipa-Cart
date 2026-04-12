@@ -702,19 +702,39 @@ class OrderService extends ChangeNotifier {
     }
   }
 
-  /// Create order as guest (no authentication required)
+  /// Create order as guest (no authentication required).
+  ///
+  /// The backend computes subtotal/service_fee/delivery_fee/total from the
+  /// products in [items] — the client is not allowed to influence the totals.
+  /// Returns the fully-populated order from the backend on success, or null
+  /// on failure (with [error] populated).
   Future<Order?> createGuestOrder({
     required String guestName,
     required String guestPhone,
     required String addressLine,
     String? city,
     String? landmark,
-    required double subtotal,
-    required double serviceFee,
-    required double deliveryFee,
-    required double total,
+    required List<CartItem> items,
   }) async {
     try {
+      final itemsPayload = items
+          .where((item) => item.product.strapiId != null || item.product.id.isNotEmpty)
+          .map((item) => {
+                'product': item.product.id,
+                'quantity': item.quantity,
+                'unit': item.product.unit,
+                if (item.specialInstructions != null &&
+                    item.specialInstructions!.isNotEmpty)
+                  'special_instructions': item.specialInstructions,
+              })
+          .toList();
+
+      if (itemsPayload.isEmpty) {
+        _error = 'Cart has no items the backend can recognise';
+        notifyListeners();
+        return null;
+      }
+
       final response = await http.post(
         Uri.parse('$baseUrl/api/orders/guest'),
         headers: {'Content-Type': 'application/json'},
@@ -722,24 +742,31 @@ class OrderService extends ChangeNotifier {
           'name': guestName,
           'phone': guestPhone,
           'address_line': addressLine,
-          'city': city,
-          'landmark': landmark,
-          'subtotal': subtotal,
-          'service_fee': serviceFee,
-          'delivery_fee': deliveryFee,
-          'total': total,
+          if (city != null) 'city': city,
+          if (landmark != null) 'landmark': landmark,
+          'items': itemsPayload,
         }),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
         final order = _fromStrapi(data['data']);
         _currentOrder = order;
         _orders.insert(0, order);
+        _error = null;
         notifyListeners();
         return order;
       }
-      _error = 'Failed to create guest order';
+
+      // Surface backend validation messages so the user knows why we rejected.
+      try {
+        final payload = jsonDecode(response.body) as Map<String, dynamic>;
+        final err = payload['error'] as Map<String, dynamic>?;
+        final msg = err?['message'] as String?;
+        _error = (msg != null && msg.isNotEmpty) ? msg : 'Failed to create guest order';
+      } catch (_) {
+        _error = 'Failed to create guest order (status ${response.statusCode})';
+      }
       notifyListeners();
       return null;
     } catch (e) {

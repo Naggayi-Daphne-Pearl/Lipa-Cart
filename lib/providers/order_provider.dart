@@ -176,6 +176,25 @@ class OrderProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Adopt an order that was just created on the backend (e.g. by the guest
+  /// checkout flow). Inserts it at the top of the local list, sets it as the
+  /// current order, and persists. Idempotent: if an order with the same id is
+  /// already present it is replaced rather than duplicated.
+  Future<void> adoptExistingOrder(Order order) async {
+    final existingIndex = _orders.indexWhere(
+      (o) => o.id == order.id ||
+          (order.documentId != null && o.documentId == order.documentId),
+    );
+    if (existingIndex >= 0) {
+      _orders[existingIndex] = order;
+    } else {
+      _orders.insert(0, order);
+    }
+    _currentOrder = order;
+    await _persistOrders();
+    notifyListeners();
+  }
+
   /// Sync orders from backend service
   void syncOrdersFromService(List<Order> backendOrders) {
     _orders
