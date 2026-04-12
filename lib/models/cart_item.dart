@@ -39,7 +39,7 @@ class CartItem {
 
   /// Parse substitute price from legacy "SUBSTITUTE: ... (UGX Price)" notes.
   static double? parseSubstitutePriceFromNotes(String? notes) {
-    if (notes == null) return null;
+    if (notes == null || !notes.startsWith('SUBSTITUTE:')) return null;
     final match = RegExp(r'UGX\s*([\d,]+)').firstMatch(notes);
     if (match == null) return null;
     return double.tryParse(match.group(1)!.replaceAll(',', ''));

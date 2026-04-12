@@ -11,7 +11,7 @@ import '../core/constants/app_sizes.dart';
 ///
 /// Desktop: two-column split with a branded left panel.
 /// Mobile: gradient background with centered content.
-class AuthShell extends StatelessWidget {
+class AuthShell extends StatefulWidget {
   /// The form content to display.
   final Widget child;
 
@@ -53,8 +53,32 @@ class AuthShell extends StatelessWidget {
     this.termsPrefix = 'By continuing, you agree to our ',
   });
 
+  @override
+  State<AuthShell> createState() => _AuthShellState();
+}
+
+class _AuthShellState extends State<AuthShell> {
+  late final TapGestureRecognizer _termsRecognizer;
+  late final TapGestureRecognizer _privacyRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _termsRecognizer = TapGestureRecognizer()
+      ..onTap = () => context.push('/terms-of-service');
+    _privacyRecognizer = TapGestureRecognizer()
+      ..onTap = () => context.push('/privacy-policy');
+  }
+
+  @override
+  void dispose() {
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
+    super.dispose();
+  }
+
   bool _isDesktop(BuildContext context) =>
-      MediaQuery.of(context).size.width >= _desktopBreakpoint;
+      MediaQuery.of(context).size.width >= AuthShell._desktopBreakpoint;
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +93,7 @@ class AuthShell extends StatelessWidget {
   Widget _buildDesktop(BuildContext context) {
     return Row(
       children: [
-        Expanded(flex: 5, child: _BrandPanel(headline: brandHeadline, subheadline: brandSubheadline)),
+        Expanded(flex: 5, child: _BrandPanel(headline: widget.brandHeadline, subheadline: widget.brandSubheadline)),
         Expanded(
           flex: 5,
           child: Container(
@@ -83,12 +107,12 @@ class AuthShell extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Text(
-                        altActionPrompt,
+                        widget.altActionPrompt,
                         style: AppTextStyles.bodySmall.copyWith(color: AppColors.textTertiary),
                       ),
                       const SizedBox(width: 8),
                       TextButton(
-                        onPressed: () => context.push(altActionRoute),
+                        onPressed: () => context.push(widget.altActionRoute),
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.primary,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -98,7 +122,7 @@ class AuthShell extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          altActionLabel,
+                          widget.altActionLabel,
                           style: AppTextStyles.labelMedium.copyWith(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w600,
@@ -114,11 +138,11 @@ class AuthShell extends StatelessWidget {
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.symmetric(horizontal: 40),
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: _formMaxWidth),
+                        constraints: const BoxConstraints(maxWidth: AuthShell._formMaxWidth),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            child,
+                            widget.child,
                             const SizedBox(height: AppSizes.md),
                             _buildTerms(context, isDesktop: true),
                             const SizedBox(height: AppSizes.lg),
@@ -150,7 +174,7 @@ class AuthShell extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
-            if (showBackButton)
+            if (widget.showBackButton)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: AppSizes.xs),
                 child: Row(
@@ -170,24 +194,24 @@ class AuthShell extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    child,
+                    widget.child,
                     const SizedBox(height: AppSizes.xl),
                     // Alt-action link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          altActionPrompt,
+                          widget.altActionPrompt,
                           style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                         ),
                         TextButton(
-                          onPressed: () => context.push(altActionRoute),
+                          onPressed: () => context.push(widget.altActionRoute),
                           style: TextButton.styleFrom(
                             minimumSize: const Size(AppSizes.touchTargetMin, AppSizes.touchTargetMin),
                             padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm),
                           ),
                           child: Text(
-                            altActionLabel,
+                            widget.altActionLabel,
                             style: AppTextStyles.bodyMedium.copyWith(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w700,
@@ -214,7 +238,7 @@ class AuthShell extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: isDesktop ? 0 : AppSizes.lg),
       child: Text.rich(
         TextSpan(
-          text: termsPrefix,
+          text: widget.termsPrefix,
           style: AppTextStyles.caption,
           children: [
             TextSpan(
@@ -223,7 +247,7 @@ class AuthShell extends StatelessWidget {
                 color: AppColors.primary,
                 fontWeight: FontWeight.w500,
               ),
-              recognizer: TapGestureRecognizer()..onTap = () => context.push('/terms-of-service'),
+              recognizer: _termsRecognizer,
             ),
             const TextSpan(text: ' and '),
             TextSpan(
@@ -232,7 +256,7 @@ class AuthShell extends StatelessWidget {
                 color: AppColors.primary,
                 fontWeight: FontWeight.w500,
               ),
-              recognizer: TapGestureRecognizer()..onTap = () => context.push('/privacy-policy'),
+              recognizer: _privacyRecognizer,
             ),
           ],
         ),

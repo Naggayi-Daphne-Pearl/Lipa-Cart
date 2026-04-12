@@ -36,7 +36,7 @@ class CartScreen extends StatelessWidget {
             top: Radius.circular(AppSizes.radiusXl),
           ),
         ),
-        builder: (context) => _GuestOrSignInSheet(),
+        builder: (_) => _GuestOrSignInSheet(parentContext: context),
       );
     }
   }
@@ -861,7 +861,9 @@ class CartScreen extends StatelessWidget {
 
 /// Modal sheet offering Sign In or Guest checkout options
 class _GuestOrSignInSheet extends StatelessWidget {
-  const _GuestOrSignInSheet();
+  const _GuestOrSignInSheet({required this.parentContext});
+
+  final BuildContext parentContext;
 
   @override
   Widget build(BuildContext context) {
@@ -905,9 +907,10 @@ class _GuestOrSignInSheet extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: () async {
                 Navigator.pop(context);
-                final authenticated = await showAuthBottomSheet(context);
-                if (authenticated == true && context.mounted) {
-                  context.go('/customer/checkout');
+                if (!parentContext.mounted) return;
+                final authenticated = await showAuthBottomSheet(parentContext);
+                if (authenticated == true && parentContext.mounted) {
+                  parentContext.go('/customer/checkout');
                 }
               },
               icon: const Icon(Iconsax.login),

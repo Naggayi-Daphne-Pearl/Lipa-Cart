@@ -21,9 +21,9 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Setup Flutter
-        # subosito/flutter-action v2 — tag-pinned in Phase 1; Dependabot github-actions
-        # will propose a SHA pin on the next bump. Track: https://github.com/subosito/flutter-action
-        uses: subosito/flutter-action@v2
+        # subosito/flutter-action v2.14.0 — SHA-pinned for supply-chain safety;
+        # Dependabot github-actions will propose bumps.
+        uses: subosito/flutter-action@62f096cacda5168a3bd7b95793373be14fa4fbaf
         with:
           channel: 'stable'
           flutter-version: '3.41.x'

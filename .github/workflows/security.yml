@@ -23,7 +23,7 @@ jobs:
     container:
       # Pinned to a specific Semgrep release for supply-chain safety.
       # Dependabot tracks container updates via the `semgrep/semgrep` image.
-      image: semgrep/semgrep:1.157.0
+      image: semgrep/semgrep:1.157.0@sha256:17d89ddd91a7729bbd5de09402f7f79a70204289e2a94635086e9db532a495f2
     steps:
       - name: Checkout
         # actions/checkout v4 — SHA-pinned; Dependabot will update.
