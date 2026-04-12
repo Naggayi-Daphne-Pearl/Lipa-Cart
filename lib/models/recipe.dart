@@ -75,7 +75,7 @@ class Recipe {
   double get estimatedCost {
     double total = 0;
     for (final ingredient in purchasableIngredients) {
-      if (ingredient.linkedProduct != null) {
+      if (!ingredient.isOptional && ingredient.linkedProduct != null) {
         total += ingredient.linkedProduct!.price;
       }
     }
@@ -109,6 +109,7 @@ class Recipe {
         name: i['name'] as String? ?? '',
         quantity: quantityStr,
         linkedProduct: linkedProduct,
+        isOptional: i['is_optional'] as bool? ?? i['isOptional'] as bool? ?? false,
       );
     }).toList();
 

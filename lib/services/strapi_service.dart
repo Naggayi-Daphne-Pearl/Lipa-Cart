@@ -126,7 +126,7 @@ class StrapiService {
   }) async {
     final response = await http
         .post(
-          Uri.parse('$_apiUrl/shopping-lists'),
+          Uri.parse('$_apiUrl/shopping-lists?populate=*'),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $authToken',
@@ -217,6 +217,7 @@ class StrapiService {
       'unit_price': item.unitPrice,
       'budget_amount': item.budgetAmount,
       'notes': item.description,
+      'is_checked': item.isChecked,
     };
 
     final productId = item.linkedProduct?.strapiId ?? item.linkedProduct?.id;
@@ -246,27 +247,44 @@ class StrapiService {
   }
 
   static Future<List<Recipe>> getRecipes() async {
-    // Simplified populate query - use wildcard instead of complex nested fields
-    final url = '$_apiUrl/recipes?populate=*';
+    const pageSize = 100;
+    var page = 1;
+    final allRecipes = <Recipe>[];
 
-    final response = await http
-        .get(Uri.parse(url))
-        .timeout(AppConstants.apiTimeout);
+    while (true) {
+      final url =
+          '$_apiUrl/recipes?pagination[page]=$page&pagination[pageSize]=$pageSize'
+          '&populate[ingredients][populate]=product'
+          '&populate[instructions]=*';
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load recipes: ${response.statusCode}');
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load recipes: ${response.statusCode}');
+      }
+
+      final body = json.decode(response.body) as Map<String, dynamic>;
+      final data = (body['data'] as List<dynamic>? ?? <dynamic>[])
+          .cast<Map<String, dynamic>>();
+
+      allRecipes.addAll(
+        data
+            .map((item) => Recipe.fromStrapi(item, baseUrl: _baseUrl))
+            .toList(),
+      );
+
+      final pagination = (body['meta'] as Map<String, dynamic>?)?['pagination']
+          as Map<String, dynamic>?;
+      final pageCount = (pagination?['pageCount'] as num?)?.toInt() ?? page;
+      if (page >= pageCount || data.isEmpty) {
+        break;
+      }
+      page += 1;
     }
 
-    final body = json.decode(response.body);
-    final data = body['data'] as List<dynamic>;
-    return data
-        .map(
-          (item) => Recipe.fromStrapi(
-            item as Map<String, dynamic>,
-            baseUrl: _baseUrl,
-          ),
-        )
-        .toList();
+    return allRecipes;
   }
 
   // =============== SHOPPER METHODS ===============
