@@ -450,7 +450,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
                     // Rate badge for unrated delivered orders
                     if (order.status == OrderStatus.delivered &&
-                        !order.hasBeenRated) ...[
+                      !order.hasBeenRated &&
+                      order.rating == null) ...[
                       const SizedBox(height: AppSizes.sm),
                       GestureDetector(
                         onTap: () {

@@ -371,7 +371,8 @@ class Order {
       rating: json['rating'] != null
           ? Rating.fromJson(json['rating'] as Map<String, dynamic>)
           : null,
-      hasBeenRated: json['hasBeenRated'] as bool? ?? false,
+      hasBeenRated: json['hasBeenRated'] as bool? ??
+          (json['rating'] != null), // derive from populated relation
       deliveryProofUrl: json['deliveryProofUrl'] as String?,
     );
   }

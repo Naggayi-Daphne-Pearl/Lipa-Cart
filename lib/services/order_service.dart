@@ -120,14 +120,17 @@ class OrderService extends ChangeNotifier {
       if (photoField is Map<String, dynamic>) {
         final url = photoField['url'] as String?;
         if (url != null && url.isNotEmpty) {
-          substitutePhotoUrl = url.startsWith('http') ? url : '${AppConstants.baseUrl}$url';
+          substitutePhotoUrl = url.startsWith('http')
+              ? url
+              : '${AppConstants.baseUrl}$url';
         }
       }
 
       final shopperNotes = itemAttrs['shopper_notes'] as String?;
       // Structured fields take priority over legacy notes parsing
       final structuredName = itemAttrs['substitute_name'] as String?;
-      final structuredPrice = (itemAttrs['substitute_price'] as num?)?.toDouble();
+      final structuredPrice = (itemAttrs['substitute_price'] as num?)
+          ?.toDouble();
 
       return CartItem(
         id: (item['documentId'] ?? item['id'] ?? '').toString(),
@@ -139,10 +142,17 @@ class OrderService extends ChangeNotifier {
         shopperNotes: shopperNotes,
         substitutionApproved: itemAttrs['substitution_approved'] as bool?,
         isSubstituted: itemAttrs['is_substituted'] as bool?,
-        substituteName: structuredName ?? CartItem.parseSubstituteNameFromNotes(shopperNotes),
-        substitutePrice: structuredPrice ?? CartItem.parseSubstitutePriceFromNotes(shopperNotes),
+        substituteName:
+            structuredName ??
+            CartItem.parseSubstituteNameFromNotes(shopperNotes),
+        substitutePrice:
+            structuredPrice ??
+            CartItem.parseSubstitutePriceFromNotes(shopperNotes),
         substitutePhotoUrl: substitutePhotoUrl,
-        substituteForItemId: (itemAttrs['substitute_for_item']?['documentId'] ?? itemAttrs['substitute_for_item']?['id'])?.toString(),
+        substituteForItemId:
+            (itemAttrs['substitute_for_item']?['documentId'] ??
+                    itemAttrs['substitute_for_item']?['id'])
+                ?.toString(),
       );
     }).toList();
 
@@ -339,9 +349,45 @@ class OrderService extends ChangeNotifier {
           attributes['cancelled_at'] as String? ?? '',
         ),
         cancellationReason: attributes['cancellation_reason'] as String?,
-        paymentMethod: PaymentMethod.mobileMoney,
-        isPaid: false,
+        paymentMethod: paymentMethodFromBackendValue(
+          attributes['payment_method'] as String?,
+        ),
+        isPaid: (attributes['status'] as String?) == 'payment_confirmed',
         deliveryProofUrl: attributes['delivery_proof_url'] as String?,
+        rating: () {
+          final ratingData = attributes['rating'];
+          if (ratingData == null) return null;
+          try {
+            Map<String, dynamic>? ratingMap;
+            if (ratingData is Map<String, dynamic>) {
+              // Strapi v5 flat format
+              if (ratingData.containsKey('data') &&
+                  ratingData['data'] is Map<String, dynamic>) {
+                final inner = ratingData['data'] as Map<String, dynamic>;
+                final attrs =
+                    inner['attributes'] as Map<String, dynamic>? ?? inner;
+                ratingMap = {...inner, ...attrs};
+              } else if (ratingData.containsKey('id') ||
+                  ratingData.containsKey('documentId')) {
+                ratingMap = ratingData;
+              }
+            }
+            if (ratingMap != null) return Rating.fromJson(ratingMap);
+          } catch (_) {}
+          return null;
+        }(),
+        hasBeenRated: () {
+          final ratingData = attributes['rating'];
+          if (ratingData == null) return false;
+          if (ratingData is Map<String, dynamic>) {
+            if (ratingData.containsKey('data')) {
+              return ratingData['data'] != null;
+            }
+            return ratingData.containsKey('id') ||
+                ratingData.containsKey('documentId');
+          }
+          return false;
+        }(),
       );
     } catch (e) {
       rethrow;
@@ -359,10 +405,10 @@ class OrderService extends ChangeNotifier {
 
       // Strapi v5 syntax: populate order_items and delivery_address
       final filters = isNumericId
-        ? 'filters[customer][id][\$eq]=$customerIdentifier'
-        : 'filters[customer][documentId][\$eq]=$customerIdentifier';
+          ? 'filters[customer][id][\$eq]=$customerIdentifier'
+          : 'filters[customer][documentId][\$eq]=$customerIdentifier';
       final url =
-        '$baseUrl/api/orders?$filters&populate[0]=order_items&populate[1]=delivery_address&populate[2]=customer&populate[3]=shopper&populate[4]=rider&sort[0]=createdAt:desc';
+          '$baseUrl/api/orders?$filters&populate[0]=order_items&populate[1]=delivery_address&populate[2]=customer&populate[3]=shopper&populate[4]=rider&populate[5]=rating&sort[0]=createdAt:desc';
 
       final response = await http.get(
         Uri.parse(url),
@@ -410,7 +456,7 @@ class OrderService extends ChangeNotifier {
     try {
       // Fetch all orders without customer filter - populate specific relations
       final url =
-          '$baseUrl/api/orders?populate[0]=order_items&populate[1]=customer&populate[2]=delivery_address&sort[0]=createdAt:desc';
+          '$baseUrl/api/orders?populate[0]=order_items&populate[1]=customer&populate[2]=delivery_address&populate[3]=rating&sort[0]=createdAt:desc';
 
       final response = await http.get(
         Uri.parse(url),
@@ -460,7 +506,7 @@ class OrderService extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse(
-          '$baseUrl/api/orders/$orderId?populate[0]=order_items&populate[1]=delivery_address&populate[2]=customer&populate[3]=shopper&populate[4]=rider',
+          '$baseUrl/api/orders/$orderId?populate[0]=order_items&populate[1]=delivery_address&populate[2]=customer&populate[3]=shopper&populate[4]=rider&populate[5]=rating',
         ),
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -539,17 +585,12 @@ class OrderService extends ChangeNotifier {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse(
-          '$baseUrl/api/order-items/$orderItemId/suggest-substitute',
-        ),
+        Uri.parse('$baseUrl/api/order-items/$orderItemId/suggest-substitute'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'substitute_name': name,
-          'substitute_price': price,
-        }),
+        body: jsonEncode({'substitute_name': name, 'substitute_price': price}),
       );
 
       if (response.statusCode == 200) {
@@ -573,9 +614,15 @@ class OrderService extends ChangeNotifier {
     try {
       final response = await http.patch(
         Uri.parse('$baseUrl/api/orders/$orderId/confirm-payment'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
-      if (response.statusCode == 200) { notifyListeners(); return true; }
+      if (response.statusCode == 200) {
+        notifyListeners();
+        return true;
+      }
       _error = 'Failed to confirm payment';
       notifyListeners();
       return false;
@@ -587,14 +634,24 @@ class OrderService extends ChangeNotifier {
   }
 
   /// Admin cancels an order from any status.
-  Future<bool> adminCancelOrder(String token, String orderId, String reason) async {
+  Future<bool> adminCancelOrder(
+    String token,
+    String orderId,
+    String reason,
+  ) async {
     try {
       final response = await http.patch(
         Uri.parse('$baseUrl/api/orders/$orderId/admin-cancel'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
         body: jsonEncode({'cancellation_reason': reason}),
       );
-      if (response.statusCode == 200) { notifyListeners(); return true; }
+      if (response.statusCode == 200) {
+        notifyListeners();
+        return true;
+      }
       _error = 'Failed to cancel order';
       notifyListeners();
       return false;
@@ -610,9 +667,15 @@ class OrderService extends ChangeNotifier {
     try {
       final response = await http.patch(
         Uri.parse('$baseUrl/api/orders/$orderId/reassign-shopper'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
-      if (response.statusCode == 200) { notifyListeners(); return true; }
+      if (response.statusCode == 200) {
+        notifyListeners();
+        return true;
+      }
       _error = 'Failed to reassign shopper';
       notifyListeners();
       return false;
@@ -628,9 +691,15 @@ class OrderService extends ChangeNotifier {
     try {
       final response = await http.patch(
         Uri.parse('$baseUrl/api/orders/$orderId/reassign-rider'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
-      if (response.statusCode == 200) { notifyListeners(); return true; }
+      if (response.statusCode == 200) {
+        notifyListeners();
+        return true;
+      }
       _error = 'Failed to reassign rider';
       notifyListeners();
       return false;
@@ -718,15 +787,20 @@ class OrderService extends ChangeNotifier {
   }) async {
     try {
       final itemsPayload = items
-          .where((item) => item.product.strapiId != null || item.product.id.isNotEmpty)
-          .map((item) => {
-                'product': item.product.id,
-                'quantity': item.quantity,
-                'unit': item.product.unit,
-                if (item.specialInstructions != null &&
-                    item.specialInstructions!.isNotEmpty)
-                  'special_instructions': item.specialInstructions,
-              })
+          .where(
+            (item) =>
+                item.product.strapiId != null || item.product.id.isNotEmpty,
+          )
+          .map(
+            (item) => {
+              'product': item.product.id,
+              'quantity': item.quantity,
+              'unit': item.product.unit,
+              if (item.specialInstructions != null &&
+                  item.specialInstructions!.isNotEmpty)
+                'special_instructions': item.specialInstructions,
+            },
+          )
           .toList();
 
       if (itemsPayload.isEmpty) {
@@ -763,7 +837,9 @@ class OrderService extends ChangeNotifier {
         final payload = jsonDecode(response.body) as Map<String, dynamic>;
         final err = payload['error'] as Map<String, dynamic>?;
         final msg = err?['message'] as String?;
-        _error = (msg != null && msg.isNotEmpty) ? msg : 'Failed to create guest order';
+        _error = (msg != null && msg.isNotEmpty)
+            ? msg
+            : 'Failed to create guest order';
       } catch (_) {
         _error = 'Failed to create guest order (status ${response.statusCode})';
       }
@@ -873,8 +949,10 @@ class OrderService extends ChangeNotifier {
           );
         }
 
-        // Update order in list
-        final index = _orders.indexWhere((o) => o.id == orderId);
+        // Update order in list — match by documentId or id
+        final index = _orders.indexWhere(
+          (o) => o.documentId == orderId || o.id == orderId,
+        );
         if (index != -1) {
           _orders[index] = _orders[index].copyWith(
             rating: rating,

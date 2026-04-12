@@ -28,23 +28,28 @@ class _ShopperRatingsScreenState extends State<ShopperRatingsScreen> {
     final authProvider = context.read<AuthProvider>();
 
     if (authProvider.user?.role != UserRole.shopper) {
-      Future.microtask(() {
-        GoRouter.of(context).go(
-          authProvider.user?.role == UserRole.admin
-              ? '/admin/dashboard'
-              : authProvider.user?.role == UserRole.rider
-                  ? '/rider/home'
-                  : '/customer/home',
-        );
-      });
+      if (!mounted) return;
+      GoRouter.of(context).go(
+        authProvider.user?.role == UserRole.admin
+            ? '/admin/dashboard'
+            : authProvider.user?.role == UserRole.rider
+                ? '/rider/home'
+                : '/customer/home',
+      );
       return;
     }
-
     final shopperProvider = context.read<ShopperProvider>();
     final token = authProvider.token;
     final shopperId = authProvider.user?.shopperId;
+    final userDocumentId = authProvider.user?.documentId;
+    final userId = authProvider.user?.id;
     if (token != null && shopperId != null) {
-      shopperProvider.loadShopperProfile(token, shopperId);
+      shopperProvider.loadShopperProfile(
+        token,
+        shopperId,
+        userDocumentId: userDocumentId,
+        userId: userId,
+      );
     }
   }
 
@@ -62,15 +67,23 @@ class _ShopperRatingsScreenState extends State<ShopperRatingsScreen> {
         builder: (context, shopper, _) {
           final rating = shopper.averageRating;
           final reviews = shopper.totalReviews;
+          final reviewItems = shopper.ratings;
+          final writtenReviews = reviewItems.where((review) {
+            final comment = (review['comment'] as String?) ?? '';
+            return comment.trim().isNotEmpty;
+          }).take(10).toList();
+          final breakdown = shopper.ratingBreakdown;
           final completedCount = shopper.completedOrders;
           final hasData = reviews > 0;
+          final ratingsWithoutComments = hasData
+              ? (reviews - writtenReviews.length).clamp(0, reviews)
+              : 0;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(AppSizes.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Rating Summary Card
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(AppSizes.lg),
@@ -104,14 +117,23 @@ class _ShopperRatingsScreenState extends State<ShopperRatingsScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: List.generate(5, (i) {
                                 if (i < rating.floor()) {
-                                  return const Icon(Icons.star_rounded,
-                                      size: 28, color: Colors.amber);
+                                  return const Icon(
+                                    Icons.star_rounded,
+                                    size: 28,
+                                    color: Colors.amber,
+                                  );
                                 } else if (i < rating) {
-                                  return const Icon(Icons.star_half_rounded,
-                                      size: 28, color: Colors.amber);
+                                  return const Icon(
+                                    Icons.star_half_rounded,
+                                    size: 28,
+                                    color: Colors.amber,
+                                  );
                                 }
-                                return Icon(Icons.star_outline_rounded,
-                                    size: 28, color: AppColors.grey300);
+                                return Icon(
+                                  Icons.star_outline_rounded,
+                                  size: 28,
+                                  color: AppColors.grey300,
+                                );
                               }),
                             ),
                             const SizedBox(height: AppSizes.sm),
@@ -132,8 +154,11 @@ class _ShopperRatingsScreenState extends State<ShopperRatingsScreen> {
                                 color: AppColors.primarySoft,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Iconsax.star_1,
-                                  size: 40, color: AppColors.primary),
+                              child: const Icon(
+                                Iconsax.star_1,
+                                size: 40,
+                                color: AppColors.primary,
+                              ),
                             ),
                             const SizedBox(height: AppSizes.md),
                             const Text(
@@ -157,8 +182,6 @@ class _ShopperRatingsScreenState extends State<ShopperRatingsScreen> {
                         ),
                 ),
                 const SizedBox(height: AppSizes.lg),
-
-                // Performance Stats
                 Text(
                   'Performance Stats',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -201,8 +224,6 @@ class _ShopperRatingsScreenState extends State<ShopperRatingsScreen> {
                   ],
                 ),
                 const SizedBox(height: AppSizes.lg),
-
-                // Rating Breakdown
                 if (hasData) ...[
                   Text(
                     'Rating Breakdown',
@@ -221,15 +242,13 @@ class _ShopperRatingsScreenState extends State<ShopperRatingsScreen> {
                       boxShadow: AppColors.shadowSm,
                     ),
                     child: Column(
-                      children: _buildRatingBreakdown(rating, reviews),
+                      children: _buildRatingBreakdown(breakdown, reviews),
                     ),
                   ),
                   const SizedBox(height: AppSizes.lg),
                 ],
-
-                // Customer Reviews placeholder
                 Text(
-                  'Customer Reviews',
+                  'Written Reviews',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
@@ -244,29 +263,27 @@ class _ShopperRatingsScreenState extends State<ShopperRatingsScreen> {
                     borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                     border: Border.all(color: AppColors.grey200),
                   ),
-                  child: Column(
-                    children: [
-                      Icon(Iconsax.message_text_1,
-                          size: 36, color: AppColors.grey300),
-                      const SizedBox(height: AppSizes.sm),
-                      const Text(
-                        'No reviews yet',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
+                  child: writtenReviews.isEmpty
+                      ? _buildWrittenReviewEmptyState(hasData, ratingsWithoutComments)
+                      : Column(
+                          children: [
+                            ...writtenReviews.map(_buildReviewCard),
+                            if (ratingsWithoutComments > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: AppSizes.xs),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    '$ratingsWithoutComments more rating${ratingsWithoutComments == 1 ? '' : 's'} without written feedback.',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textTertiary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Customer feedback will appear here',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textTertiary,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ],
             ),
@@ -276,23 +293,11 @@ class _ShopperRatingsScreenState extends State<ShopperRatingsScreen> {
     );
   }
 
-  /// Estimate breakdown distribution from average rating and total count.
-  /// Real per-star counts would come from backend when available.
-  List<Widget> _buildRatingBreakdown(double avgRating, int totalReviews) {
-    // Approximate distribution centered around the average
-    final Map<int, double> distribution = {};
-    double totalWeight = 0;
-    for (int star = 1; star <= 5; star++) {
-      // Weight each star by proximity to the average
-      final diff = (star - avgRating).abs();
-      final weight = diff < 1 ? 2.0 : (diff < 2 ? 0.8 : 0.2);
-      distribution[star] = weight;
-      totalWeight += weight;
-    }
-
+  List<Widget> _buildRatingBreakdown(Map<int, int> breakdown, int totalReviews) {
     return List.generate(5, (i) {
       final star = 5 - i;
-      final fraction = distribution[star]! / totalWeight;
+      final count = breakdown[star] ?? 0;
+      final fraction = totalReviews > 0 ? count / totalReviews : 0.0;
       return _buildRatingBar('$star', fraction);
     });
   }
@@ -388,5 +393,133 @@ class _ShopperRatingsScreenState extends State<ShopperRatingsScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildWrittenReviewEmptyState(bool hasRatings, int ratingsWithoutComments) {
+    return Column(
+      children: [
+        Icon(Iconsax.message_text_1, size: 36, color: AppColors.grey300),
+        const SizedBox(height: AppSizes.sm),
+        Text(
+          hasRatings ? 'No written reviews yet' : 'No reviews yet',
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          hasRatings
+              ? 'Customers have rated your work, but they have not left written feedback yet.'
+              : 'Customer feedback will appear here once orders are rated.',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppColors.textTertiary,
+          ),
+        ),
+        if (hasRatings && ratingsWithoutComments > 0) ...[
+          const SizedBox(height: 6),
+          Text(
+            '$ratingsWithoutComments rating${ratingsWithoutComments == 1 ? '' : 's'} without comments so far.',
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textTertiary,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildReviewCard(Map<String, dynamic> review) {
+    final stars = (review['stars'] as int?) ?? 0;
+    final comment = ((review['comment'] as String?) ?? '').trim();
+    final customer = _maskReviewerName(
+      (review['customerName'] as String?) ?? 'Customer',
+    );
+    final orderNumber = (review['orderNumber'] as String?) ?? '';
+    final createdAt = _formatReviewDate((review['createdAt'] as String?) ?? '');
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  customer,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              if (createdAt.isNotEmpty)
+                Text(
+                  createdAt,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: List.generate(
+              5,
+              (i) => Icon(
+                i < stars ? Icons.star_rounded : Icons.star_outline_rounded,
+                size: 16,
+                color: Colors.amber,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            comment,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          if (orderNumber.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Order #$orderNumber',
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textTertiary,
+              ),
+            ),
+          ],
+          const Divider(height: 20),
+        ],
+      ),
+    );
+  }
+
+  String _maskReviewerName(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return 'Customer';
+
+    final parts = trimmed.split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
+    if (parts.isEmpty) return 'Customer';
+    if (parts.length == 1) {
+      return '${parts.first[0].toUpperCase()}.';
+    }
+
+    return '${parts.first[0].toUpperCase()}. ${parts.last[0].toUpperCase()}.';
+  }
+
+  String _formatReviewDate(String createdAt) {
+    if (createdAt.isEmpty) return '';
+    final date = DateTime.tryParse(createdAt);
+    if (date == null) return createdAt.split('T').first;
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

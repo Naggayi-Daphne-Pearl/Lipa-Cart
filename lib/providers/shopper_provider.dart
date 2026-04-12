@@ -3,50 +3,86 @@ import '../models/order.dart';
 import '../services/strapi_service.dart';
 
 class ShopperProvider extends ChangeNotifier {
-  // Shopper data
   Map<String, dynamic>? _shopperProfile;
+  List<Map<String, dynamic>> _ratings = [];
   List<Order> _availableTasks = [];
   List<Order> _activeTasks = [];
   List<Order> _completedTasks = [];
 
   bool _isLoading = false;
+  bool _hasLoadedRatings = false;
   String? _error;
 
-  // Getters
   Map<String, dynamic>? get shopperProfile => _shopperProfile;
+  List<Map<String, dynamic>> get ratings => _ratings;
   List<Order> get availableTasks => _availableTasks;
   List<Order> get activeTasks => _activeTasks;
   List<Order> get completedTasks => _completedTasks;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Summary stats
-  int get totalReviews => _shopperProfile?['total_ratings'] ?? 0;
-  double get averageRating => (_shopperProfile?['rating'] ?? 0).toDouble();
+  int get totalReviews {
+    if (_hasLoadedRatings) {
+      return _ratings.length;
+    }
+    return (_shopperProfile?['total_ratings'] as num? ?? 0).toInt();
+  }
+
+  double get averageRating {
+    if (_hasLoadedRatings) {
+      final stars = _ratings
+          .map((r) => (r['stars'] as num?)?.toDouble() ?? 0)
+          .where((s) => s > 0)
+          .toList();
+      if (stars.isEmpty) return 0;
+      final sum = stars.reduce((a, b) => a + b);
+      return sum / stars.length;
+    }
+    return (_shopperProfile?['rating'] as num? ?? 0).toDouble();
+  }
+
   int get completedOrders => _shopperProfile?['total_orders_completed'] ?? 0;
   double get totalEarnings =>
       (_shopperProfile?['total_earnings'] ?? 0).toDouble();
   bool get isOnline => _shopperProfile?['is_online'] ?? false;
 
-  /// Load shopper profile
-  Future<bool> loadShopperProfile(String token, String shopperId) async {
+  Future<bool> loadShopperProfile(
+    String token,
+    String shopperId, {
+    String? userDocumentId,
+    String? userId,
+  }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final response = await StrapiService.getShopperProfile(shopperId, token);
+      final ratingsOwnerId = userDocumentId ?? userId ?? shopperId;
+      final responses = await Future.wait([
+        StrapiService.getShopperProfile(shopperId, token),
+        StrapiService.getShopperRatings(
+          ratingsOwnerId,
+          token,
+        ),
+      ]);
+      final response = responses[0] as Map<String, dynamic>?;
+      final ratings = responses[1] as List<Map<String, dynamic>>;
+      _hasLoadedRatings = true;
       if (response != null) {
         _shopperProfile = response;
+        _ratings = ratings;
         _isLoading = false;
         notifyListeners();
         return true;
       }
+      _ratings = ratings;
       _error = 'Failed to load profile';
       _isLoading = false;
       notifyListeners();
       return false;
     } catch (e) {
+      _hasLoadedRatings = true;
+      _ratings = [];
       _error = 'Error: $e';
       _isLoading = false;
       notifyListeners();
@@ -54,7 +90,6 @@ class ShopperProvider extends ChangeNotifier {
     }
   }
 
-  /// Fetch available tasks (orders with status = payment_confirmed)
   Future<bool> fetchAvailableTasks(String token) async {
     _isLoading = true;
     _error = null;
@@ -74,7 +109,6 @@ class ShopperProvider extends ChangeNotifier {
     }
   }
 
-  /// Fetch active tasks (orders assigned to shopper)
   Future<bool> fetchActiveTasks(String token, String shopperId) async {
     _isLoading = true;
     _error = null;
@@ -97,7 +131,6 @@ class ShopperProvider extends ChangeNotifier {
     }
   }
 
-  /// Fetch completed tasks (delivered/cancelled orders)
   Future<bool> fetchCompletedTasks(String token, String shopperId) async {
     _isLoading = true;
     _error = null;
@@ -120,7 +153,6 @@ class ShopperProvider extends ChangeNotifier {
     }
   }
 
-  /// Unclaim/cancel an active task
   Future<bool> unclaimTask(String token, String orderId, String userDocId) async {
     try {
       final success = await StrapiService.unclaimOrder(orderId, token);
@@ -140,7 +172,6 @@ class ShopperProvider extends ChangeNotifier {
     }
   }
 
-  /// Accept an available task
   Future<bool> acceptTask(
     String token,
     String orderId,
@@ -154,12 +185,8 @@ class ShopperProvider extends ChangeNotifier {
       );
 
       if (success) {
-        // Remove from available, add to active
         _availableTasks.removeWhere((o) => o.id == orderId || o.documentId == orderId);
-
-        // Refresh active tasks
         await fetchActiveTasks(token, userDocumentId);
-
         notifyListeners();
         return true;
       }
@@ -173,7 +200,6 @@ class ShopperProvider extends ChangeNotifier {
     }
   }
 
-  /// Update shopper online status
   Future<bool> toggleOnlineStatus(
     String token,
     String shopperId,
@@ -199,7 +225,6 @@ class ShopperProvider extends ChangeNotifier {
     }
   }
 
-  /// Start shopping an order (transition: shopper_assigned -> shopping)
   Future<bool> startShopping(String token, String orderId) async {
     try {
       final result = await StrapiService.updateShopperOrderStatus(
@@ -208,7 +233,6 @@ class ShopperProvider extends ChangeNotifier {
         token,
       );
       if (result != null) {
-        // Update the local order status
         final idx = _activeTasks.indexWhere(
           (o) => o.documentId == orderId || o.id == orderId,
         );
@@ -230,7 +254,6 @@ class ShopperProvider extends ChangeNotifier {
     }
   }
 
-  /// Mark order as ready for pickup (transition: shopping -> ready_for_pickup)
   Future<bool> markOrderReady(String token, String orderId) async {
     try {
       final result = await StrapiService.updateShopperOrderStatus(
@@ -255,7 +278,6 @@ class ShopperProvider extends ChangeNotifier {
     }
   }
 
-  /// Batch update order items (mark found, set actual prices)
   Future<bool> updateOrderItems(
     String token,
     List<Map<String, dynamic>> itemUpdates,
@@ -274,13 +296,25 @@ class ShopperProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Clear all shopper data (for logout)
+  Map<int, int> get ratingBreakdown {
+    final map = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
+    for (final r in _ratings) {
+      final stars = (r['stars'] as num?)?.toInt();
+      if (stars != null && map.containsKey(stars)) {
+        map[stars] = map[stars]! + 1;
+      }
+    }
+    return map;
+  }
+
   Future<void> clearAll() async {
     _shopperProfile = null;
+    _ratings = [];
     _availableTasks = [];
     _activeTasks = [];
     _completedTasks = [];
     _isLoading = false;
+    _hasLoadedRatings = false;
     _error = null;
     notifyListeners();
   }

@@ -17,6 +17,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../services/order_service.dart';
 import '../../services/address_service.dart';
+import '../../services/payment_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/app_bottom_nav.dart';
 
@@ -240,6 +241,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return submittedPhone;
   }
 
+  String? _resolvePaymentPhoneNumber(AuthProvider authProvider) {
+    final raw = authProvider.user?.phoneNumber.trim() ?? '';
+    if (raw.isEmpty) return null;
+
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('256') && digits.length == 12) return '+$digits';
+    if (digits.startsWith('0') && digits.length == 10) {
+      return '+256${digits.substring(1)}';
+    }
+    if (digits.length == 9) return '+256$digits';
+    return null;
+  }
+
   Future<void> _placeOrder() async {
     setState(() => _isLoading = true);
 
@@ -448,6 +462,41 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         if (backendOrder != null) {
           orderProvider.syncOrdersFromService(orderService.orders);
           orderProvider.setCurrentOrder(backendOrder);
+
+          if (_selectedPayment == PaymentMethod.mobileMoney) {
+            final paymentPhone = _resolvePaymentPhoneNumber(authProvider);
+            if (paymentPhone != null) {
+              try {
+                final orderRef = backendOrder.documentId ?? backendOrder.id;
+                await PaymentService.initiatePawaPayMobileMoney(
+                  token: authProvider.token!,
+                  orderId: orderRef,
+                  phoneNumber: paymentPhone,
+                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Payment prompt sent. Please approve on your phone.',
+                      ),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Order placed, but payment prompt failed. You can retry from your order details. ($e)',
+                      ),
+                      backgroundColor: AppColors.warning,
+                    ),
+                  );
+                }
+              }
+            }
+          }
         }
 
         setState(() => _isLoading = false);

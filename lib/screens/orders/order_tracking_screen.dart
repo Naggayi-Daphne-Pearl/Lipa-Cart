@@ -2065,6 +2065,88 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                     const SizedBox(height: AppSizes.md),
                   ],
 
+                  // Rate This Order button (delivered, unrated)
+                  if (order.status == OrderStatus.delivered &&
+                      order.rating == null &&
+                      !order.hasBeenRated)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSizes.md),
+                      child: ElevatedButton.icon(
+                        onPressed: () => context.push(
+                          '/customer/order-rating',
+                          extra: order,
+                        ),
+                        icon: const Icon(Iconsax.star, size: 18),
+                        label: const Text('Rate This Order'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Rating display (delivered, already rated)
+                  if (order.status == OrderStatus.delivered &&
+                      order.rating != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSizes.md),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSizes.md),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          border: Border.all(
+                            color: Colors.amber.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.star_rounded,
+                                  color: Colors.amber,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Your Rating',
+                                  style: AppTextStyles.labelMedium.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            if (order.rating!.shopperRating != null)
+                              _ratingTrackingRow('Shopper', order.rating!.shopperRating!),
+                            if (order.rating!.riderRating != null)
+                              _ratingTrackingRow('Rider', order.rating!.riderRating!),
+                            if (order.rating!.overallRating != null)
+                              _ratingTrackingRow('Overall', order.rating!.overallRating!),
+                            if (order.rating!.comment != null &&
+                                order.rating!.comment!.isNotEmpty) ...
+                              [
+                                const SizedBox(height: 8),
+                                Text(
+                                  '"${order.rating!.comment}"',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                          ],
+                        ),
+                      ),
+                    ),
+
                   // Report Issue button (delivered orders)
                   if (order.status == OrderStatus.delivered)
                     Padding(
@@ -2105,6 +2187,34 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _ratingTrackingRow(String label, int stars) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(
+              5,
+              (i) => Icon(
+                i < stars ? Icons.star_rounded : Icons.star_outline_rounded,
+                color: Colors.amber,
+                size: 15,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -42,7 +42,9 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
         .toList();
 
     final ratedOrders = deliveredOrders.where((o) => o.hasBeenRated).toList();
-    final unratedOrders = deliveredOrders.where((o) => !o.hasBeenRated).toList();
+    final unratedOrders = deliveredOrders
+        .where((o) => !o.hasBeenRated)
+        .toList();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -61,7 +63,11 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
         ),
         title: const Text(
           'Ratings & Reviews',
-          style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       body: deliveredOrders.isEmpty
@@ -77,7 +83,9 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -88,7 +96,11 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
                             color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Iconsax.star1, color: AppColors.primaryOrange, size: 24),
+                          child: const Icon(
+                            Iconsax.star1,
+                            color: AppColors.primaryOrange,
+                            size: 24,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Column(
@@ -96,14 +108,20 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
                           children: [
                             Text(
                               '${ratedOrders.length} of ${deliveredOrders.length} orders rated',
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               unratedOrders.isEmpty
                                   ? 'All orders rated!'
                                   : '${unratedOrders.length} order${unratedOrders.length != 1 ? 's' : ''} waiting for your review',
-                              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 13,
+                              ),
                             ),
                           ],
                         ),
@@ -116,10 +134,17 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
                     const SizedBox(height: 24),
                     const Text(
                       'PENDING REVIEWS',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey, letterSpacing: 0.5),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    ...unratedOrders.map((order) => _buildOrderCard(order, rated: false)),
+                    ...unratedOrders.map(
+                      (order) => _buildOrderCard(order, rated: false),
+                    ),
                   ],
 
                   // Rated section
@@ -127,10 +152,17 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
                     const SizedBox(height: 24),
                     const Text(
                       'COMPLETED REVIEWS',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey, letterSpacing: 0.5),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    ...ratedOrders.map((order) => _buildOrderCard(order, rated: true)),
+                    ...ratedOrders.map(
+                      (order) => _buildOrderCard(order, rated: true),
+                    ),
                   ],
                 ],
               ),
@@ -145,9 +177,15 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
         children: [
           Icon(Iconsax.star, size: 64, color: Colors.grey[300]),
           const SizedBox(height: 16),
-          const Text('No reviews yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+          const Text(
+            'No reviews yet',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 8),
-          Text('Your reviews will appear here after delivery', style: TextStyle(color: Colors.grey[500])),
+          Text(
+            'Your reviews will appear here after delivery',
+            style: TextStyle(color: Colors.grey[500]),
+          ),
         ],
       ),
     );
@@ -174,7 +212,10 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
                   children: [
                     Text(
                       'Order #${order.orderNumber}',
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -187,11 +228,18 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
               if (rated && order.rating != null)
                 Row(
                   children: [
-                    const Icon(Icons.star_rounded, size: 18, color: Color(0xFFFFA726)),
+                    const Icon(
+                      Icons.star_rounded,
+                      size: 18,
+                      color: Color(0xFFFFA726),
+                    ),
                     const SizedBox(width: 4),
                     Text(
-                      order.rating!.stars.toStringAsFixed(1),
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                      (order.rating!.overallRating ?? 5).toStringAsFixed(0),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
                     ),
                   ],
                 ),
@@ -212,14 +260,27 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
             Row(
               children: [
                 if (order.shopperName != null) ...[
-                  _buildMiniRating(Iconsax.shopping_bag, order.shopperName!, order.rating!.stars.toInt()),
+                  _buildMiniRating(
+                    Iconsax.shopping_bag,
+                    order.shopperName!,
+                    order.rating!.shopperRating ??
+                        order.rating!.overallRating ??
+                        0,
+                  ),
                   const SizedBox(width: 16),
                 ],
                 if (order.riderName != null)
-                  _buildMiniRating(Iconsax.truck_fast, order.riderName!, order.rating!.stars.toInt()),
+                  _buildMiniRating(
+                    Iconsax.truck_fast,
+                    order.riderName!,
+                    order.rating!.riderRating ??
+                        order.rating!.overallRating ??
+                        0,
+                  ),
               ],
             ),
-            if (order.rating!.comment != null && order.rating!.comment!.isNotEmpty) ...[
+            if (order.rating!.comment != null &&
+                order.rating!.comment!.isNotEmpty) ...[
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(10),
@@ -235,7 +296,11 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
                     Expanded(
                       child: Text(
                         order.rating!.comment!,
-                        style: TextStyle(color: Colors.grey[700], fontSize: 13, fontStyle: FontStyle.italic),
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 13,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ),
                   ],
@@ -247,7 +312,8 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => context.push('/customer/order-rating', extra: order),
+                onPressed: () =>
+                    context.push('/customer/order-rating', extra: order),
                 icon: const Icon(Icons.star_rounded, size: 18),
                 label: const Text('Rate this order'),
                 style: ElevatedButton.styleFrom(
@@ -255,7 +321,9 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ),
@@ -272,11 +340,14 @@ class _RatingsReviewsScreenState extends State<RatingsReviewsScreen> {
         const SizedBox(width: 4),
         Text(name, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
         const SizedBox(width: 6),
-        ...List.generate(5, (i) => Icon(
-          i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
-          size: 14,
-          color: i < rating ? const Color(0xFFFFA726) : Colors.grey[300],
-        )),
+        ...List.generate(
+          5,
+          (i) => Icon(
+            i < rating ? Icons.star_rounded : Icons.star_outline_rounded,
+            size: 14,
+            color: i < rating ? const Color(0xFFFFA726) : Colors.grey[300],
+          ),
+        ),
       ],
     );
   }
