@@ -195,11 +195,44 @@ class OrderProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Sync orders from backend service
+  /// Sync orders from backend service.
+  ///
+  /// Merges by `documentId` (or `id` fallback) instead of replace-all so that
+  /// in-flight optimistic updates aren't wiped by a background poll. Backend
+  /// orders win on conflict — they're authoritative — but orders only present
+  /// locally (e.g. a just-created optimistic order that hasn't hit the backend
+  /// yet) are preserved. Result is sorted by createdAt desc to match the prior
+  /// display ordering.
   void syncOrdersFromService(List<Order> backendOrders) {
+    String keyOf(Order o) => o.documentId ?? o.id;
+    final backendByKey = {for (final o in backendOrders) keyOf(o): o};
+
+    final merged = <Order>[];
+    final seenKeys = <String>{};
+
+    // Replace existing entries in place so new backend data wins but local-only
+    // orders survive.
+    for (final local in _orders) {
+      final key = keyOf(local);
+      if (backendByKey.containsKey(key)) {
+        merged.add(backendByKey[key]!);
+        seenKeys.add(key);
+      } else {
+        merged.add(local);
+      }
+    }
+    // Append any backend orders we hadn't seen locally.
+    for (final entry in backendByKey.entries) {
+      if (!seenKeys.contains(entry.key)) {
+        merged.add(entry.value);
+      }
+    }
+
+    merged.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
     _orders
       ..clear()
-      ..addAll(backendOrders);
+      ..addAll(merged);
     _persistOrders();
     notifyListeners();
   }
