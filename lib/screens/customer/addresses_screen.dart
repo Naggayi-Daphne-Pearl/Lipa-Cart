@@ -323,10 +323,34 @@ class _AddressesScreenState extends State<AddressesScreen> {
               Navigator.of(sheetContext).pop();
               if (widget.returnRoute != null &&
                   widget.returnRoute!.isNotEmpty) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (pageContext.mounted) {
-                    pageContext.go(widget.returnRoute!);
+                // In select mode, the user added/edited this address intending
+                // to use it right now. Resolve it from the refreshed list and
+                // hand it back to the origin route via selectedAddress=<id> so
+                // the caller (typically checkout) pre-selects it. Falls back to
+                // a plain navigation if we can't find a match.
+                Address? resolved;
+                if (widget.selectMode) {
+                  if (address != null) {
+                    resolved = addressService.addresses.firstWhere(
+                      (a) => a.id == address.id,
+                      orElse: () => address,
+                    );
+                  } else {
+                    // Best-effort match for a just-created address — label +
+                    // addressLine + city is unique enough in practice.
+                    for (final a in addressService.addresses.reversed) {
+                      if (a.label == label &&
+                          a.addressLine == addressLine &&
+                          a.city == city) {
+                        resolved = a;
+                        break;
+                      }
+                    }
                   }
+                }
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!pageContext.mounted) return;
+                  _returnToRoute(pageContext, pickedAddress: resolved);
                 });
               }
             },
@@ -383,16 +407,27 @@ class _AddressesScreenState extends State<AddressesScreen> {
   }
 
   void _pickAddress(Address address) {
+    _returnToRoute(context, pickedAddress: address);
+  }
+
+  /// Navigate back to [widget.returnRoute]. In select mode, when [pickedAddress]
+  /// is non-null, append `selectedAddress=<id>` so the origin route (typically
+  /// checkout) can pre-select it. We encode as a query param because GoRouter's
+  /// `extra` doesn't survive a hard navigation.
+  void _returnToRoute(BuildContext context, {Address? pickedAddress}) {
     final returnRoute = widget.returnRoute;
     if (returnRoute == null || returnRoute.isEmpty) return;
-    final selectedId = address.documentId.isNotEmpty
-        ? address.documentId
-        : address.id.toString();
-    // Encode as a query param so the destination route can pick it up. We
-    // don't try to round-trip the full Address object via `extra` because
-    // GoRouter's `extra` doesn't survive a hard navigation.
-    final separator = returnRoute.contains('?') ? '&' : '?';
-    context.go('$returnRoute${separator}selectedAddress=$selectedId');
+
+    if (widget.selectMode && pickedAddress != null) {
+      final selectedId = pickedAddress.documentId.isNotEmpty
+          ? pickedAddress.documentId
+          : pickedAddress.id.toString();
+      final separator = returnRoute.contains('?') ? '&' : '?';
+      context.go('$returnRoute${separator}selectedAddress=$selectedId');
+      return;
+    }
+
+    context.go(returnRoute);
   }
 
   Future<void> _setDefault(
@@ -408,6 +443,11 @@ class _AddressesScreenState extends State<AddressesScreen> {
       addressDocumentId: documentId,
     );
     await _refreshAddresses(auth, addressService);
+
+    // In select mode, setting default is a config action that shouldn't
+    // auto-exit the picker — the user still needs to tap to pick. Only the
+    // profile-side usage navigates back to returnRoute on success.
+    if (widget.selectMode) return;
 
     if (widget.returnRoute != null &&
         widget.returnRoute!.isNotEmpty &&

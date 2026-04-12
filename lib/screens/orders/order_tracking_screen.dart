@@ -119,9 +119,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     final isTrackable =
         currentOrder.status == OrderStatus.riderAssigned ||
         currentOrder.status == OrderStatus.inTransit;
-    final hasClientLocation =
-        currentOrder.deliveryAddress.latitude != 0 &&
-        currentOrder.deliveryAddress.longitude != 0;
+    final hasClientLocation = currentOrder.deliveryAddress.hasCoordinates;
     final hasRiderLocation =
         currentOrder.riderLatitude != null &&
         currentOrder.riderLongitude != null &&
@@ -242,9 +240,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   }
 
   Future<void> _openTrackingInMaps() async {
-    final hasClientCoordinates =
-        order.deliveryAddress.latitude != 0 &&
-        order.deliveryAddress.longitude != 0;
+    final hasClientCoordinates = order.deliveryAddress.hasCoordinates;
     final hasRiderCoordinates =
         order.riderLatitude != null &&
         order.riderLongitude != null &&
@@ -254,11 +250,11 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     Uri uri;
     if (hasClientCoordinates && hasRiderCoordinates) {
       uri = Uri.parse(
-        'https://www.google.com/maps/dir/?api=1&origin=${order.riderLatitude},${order.riderLongitude}&destination=${order.deliveryAddress.latitude},${order.deliveryAddress.longitude}&travelmode=driving',
+        'https://www.google.com/maps/dir/?api=1&origin=${order.riderLatitude},${order.riderLongitude}&destination=${order.deliveryAddress.latitude!},${order.deliveryAddress.longitude!}&travelmode=driving',
       );
     } else if (hasClientCoordinates) {
       uri = Uri.parse(
-        'https://www.google.com/maps/search/?api=1&query=${order.deliveryAddress.latitude},${order.deliveryAddress.longitude}',
+        'https://www.google.com/maps/search/?api=1&query=${order.deliveryAddress.latitude!},${order.deliveryAddress.longitude!}',
       );
     } else {
       uri = Uri.parse(

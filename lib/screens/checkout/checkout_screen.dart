@@ -128,7 +128,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     if (!mounted) return;
-    setState(() => _selectedAddress = addressService.defaultUserAddress);
+    // If the user explicitly picked an address on the addresses screen, keep
+    // it selected after the fetch completes. Otherwise fall back to default.
+    final picked = _resolveSelectedAddress(addressService);
+    setState(() => _selectedAddress = picked ?? addressService.defaultUserAddress);
 
     if (_selectedAddress == null && !_didAutoRedirectForMissingAddress) {
       _didAutoRedirectForMissingAddress = true;
