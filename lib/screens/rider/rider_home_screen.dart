@@ -9,7 +9,7 @@ import '../../models/user.dart';
 import '../../widgets/error_boundary.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
-
+import '../../services/notification_service.dart';
 
 class RiderHomeScreen extends StatefulWidget {
   const RiderHomeScreen({super.key});
@@ -20,6 +20,7 @@ class RiderHomeScreen extends StatefulWidget {
 
 class _RiderHomeScreenState extends State<RiderHomeScreen> {
   int _currentNavIndex = 0;
+  int _unreadNotifications = 0;
 
   @override
   void initState() {
@@ -37,8 +38,8 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
         authProvider.user?.role == UserRole.admin
             ? '/admin/dashboard'
             : authProvider.user?.role == UserRole.shopper
-                ? '/shopper/home'
-                : '/customer/home',
+            ? '/shopper/home'
+            : '/customer/home',
       );
       return;
     }
@@ -51,6 +52,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     final riderProvider = context.read<RiderProvider>();
 
     if (authProvider.token != null && authProvider.user?.id != null) {
+      _refreshUnreadCount();
       if (authProvider.user!.riderId != null) {
         riderProvider.loadRiderProfile(
           authProvider.token!,
@@ -62,6 +64,15 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
       riderProvider.fetchActiveDeliveries(authProvider.token!, userDocId);
       riderProvider.fetchCompletedDeliveries(authProvider.token!, userDocId);
     }
+  }
+
+  Future<void> _refreshUnreadCount() async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    final unread = await NotificationService().getUnreadCount(token);
+    if (!mounted) return;
+    setState(() => _unreadNotifications = unread);
   }
 
   Future<void> _onRefresh() async {
@@ -82,9 +93,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
     if (name == null || name.isEmpty) return 'Rider';
     return name
         .split(' ')
-        .map((w) => w.isNotEmpty
-            ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}'
-            : '')
+        .map(
+          (w) => w.isNotEmpty
+              ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}'
+              : '',
+        )
         .join(' ');
   }
 
@@ -131,146 +144,166 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
           return ErrorBoundary(
             onRetry: () => setState(() {}),
             child: RefreshIndicator(
-            onRefresh: _onRefresh,
-            color: AppColors.primary,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: AppColors.elegantBgGradient,
-              ),
-              child: CustomScrollView(
-              slivers: [
-                // Custom App Bar
-                SliverAppBar(
-                  expandedHeight: 0,
-                  floating: true,
-                  backgroundColor: AppColors.surface,
-                  surfaceTintColor: Colors.transparent,
-                  title: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Dashboard',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        DateFormat('EEEE, MMM d').format(DateTime.now()),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textTertiary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    // Online status indicator
-                    Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () {
-                          if (authProvider.token != null &&
-                              user?.id != null) {
-                            riderProvider.toggleOnlineStatus(
-                              authProvider.token!,
-                              user!.id,
-                              !isOnline,
-                            );
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isOnline
-                                ? AppColors.primarySoft
-                                : AppColors.grey100,
-                            borderRadius:
-                                BorderRadius.circular(AppSizes.radiusFull),
-                            border: Border.all(
-                              color: isOnline
-                                  ? AppColors.primary
-                                  : AppColors.grey300,
-                              width: 1,
+              onRefresh: _onRefresh,
+              color: AppColors.primary,
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: AppColors.elegantBgGradient,
+                ),
+                child: CustomScrollView(
+                  slivers: [
+                    // Custom App Bar
+                    SliverAppBar(
+                      expandedHeight: 0,
+                      floating: true,
+                      backgroundColor: AppColors.surface,
+                      surfaceTintColor: Colors.transparent,
+                      title: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Dashboard',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
+                          Text(
+                            DateFormat('EEEE, MMM d').format(DateTime.now()),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      actions: [
+                        IconButton(
+                          onPressed: () async {
+                            await context.push('/rider/notifications');
+                            _refreshUnreadCount();
+                          },
+                          icon: _unreadNotifications > 0
+                              ? Badge(
+                                  label: Text(
+                                    _unreadNotifications > 99
+                                        ? '99+'
+                                        : '$_unreadNotifications',
+                                  ),
+                                  child: const Icon(Iconsax.notification),
+                                )
+                              : const Icon(Iconsax.notification),
+                          tooltip: 'Notifications',
+                        ),
+                        // Online status indicator
+                        Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          child: GestureDetector(
+                            onTap: () {
+                              if (authProvider.token != null &&
+                                  user?.id != null) {
+                                riderProvider.toggleOnlineStatus(
+                                  authProvider.token!,
+                                  user!.id,
+                                  !isOnline,
+                                );
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isOnline
+                                    ? AppColors.primarySoft
+                                    : AppColors.grey100,
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusFull,
+                                ),
+                                border: Border.all(
                                   color: isOnline
                                       ? AppColors.primary
-                                      : AppColors.grey400,
-                                  shape: BoxShape.circle,
+                                      : AppColors.grey300,
+                                  width: 1,
                                 ),
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                isOnline ? 'Online' : 'Offline',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: isOnline
-                                      ? AppColors.primary
-                                      : AppColors.grey600,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: isOnline
+                                          ? AppColors.primary
+                                          : AppColors.grey400,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    isOnline ? 'Online' : 'Offline',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: isOnline
+                                          ? AppColors.primary
+                                          : AppColors.grey600,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 4),
+                      ],
+                    ),
+
+                    // Body content
+                    SliverPadding(
+                      padding: const EdgeInsets.all(AppSizes.md),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          // Welcome Card
+                          _buildWelcomeCard(user, isOnline),
+                          const SizedBox(height: AppSizes.lg),
+
+                          // Today's Summary
+                          _buildSectionHeader(
+                            'Today\'s Summary',
+                            icon: Iconsax.chart_1,
+                          ),
+                          const SizedBox(height: AppSizes.sm),
+                          _buildStatsGrid(riderProvider),
+                          const SizedBox(height: AppSizes.lg),
+
+                          // Performance Section
+                          _buildSectionHeader(
+                            'Your Performance',
+                            icon: Iconsax.star_1,
+                          ),
+                          const SizedBox(height: AppSizes.sm),
+                          _buildPerformanceCard(riderProvider),
+                          const SizedBox(height: AppSizes.lg),
+
+                          // Quick Actions
+                          _buildSectionHeader(
+                            'Quick Actions',
+                            icon: Iconsax.flash_1,
+                          ),
+                          const SizedBox(height: AppSizes.sm),
+                          _buildQuickActions(context),
+                          const SizedBox(height: AppSizes.lg),
+                        ]),
                       ),
                     ),
-                    const SizedBox(width: 4),
                   ],
                 ),
-
-                // Body content
-                SliverPadding(
-                  padding: const EdgeInsets.all(AppSizes.md),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      // Welcome Card
-                      _buildWelcomeCard(user, isOnline),
-                      const SizedBox(height: AppSizes.lg),
-
-                      // Today's Summary
-                      _buildSectionHeader(
-                        'Today\'s Summary',
-                        icon: Iconsax.chart_1,
-                      ),
-                      const SizedBox(height: AppSizes.sm),
-                      _buildStatsGrid(riderProvider),
-                      const SizedBox(height: AppSizes.lg),
-
-                      // Performance Section
-                      _buildSectionHeader(
-                        'Your Performance',
-                        icon: Iconsax.star_1,
-                      ),
-                      const SizedBox(height: AppSizes.sm),
-                      _buildPerformanceCard(riderProvider),
-                      const SizedBox(height: AppSizes.lg),
-
-                      // Quick Actions
-                      _buildSectionHeader(
-                        'Quick Actions',
-                        icon: Iconsax.flash_1,
-                      ),
-                      const SizedBox(height: AppSizes.sm),
-                      _buildQuickActions(context),
-                      const SizedBox(height: AppSizes.lg),
-                    ]),
-                  ),
-                ),
-              ],
+              ),
             ),
-            ),
-          ),
           );
         },
       ),
@@ -461,8 +494,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                       color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                     ),
-                    child: Icon(Iconsax.truck_fast,
-                        color: AppColors.primary, size: 20),
+                    child: Icon(
+                      Iconsax.truck_fast,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: AppSizes.sm),
                   Expanded(
@@ -488,8 +524,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                       ],
                     ),
                   ),
-                  Icon(Icons.arrow_forward_ios,
-                      size: 14, color: AppColors.primary),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 14,
+                    color: AppColors.primary,
+                  ),
                 ],
               ),
             ),
@@ -531,8 +570,11 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                   ),
                   child: Icon(icon, color: color, size: 18),
                 ),
-                Icon(Icons.arrow_forward_ios,
-                    size: 12, color: AppColors.grey400),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                  color: AppColors.grey400,
+                ),
               ],
             ),
             const SizedBox(height: AppSizes.sm),
@@ -599,24 +641,29 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(5, (i) {
                           if (i < rating.floor()) {
-                            return const Icon(Icons.star_rounded,
-                                size: 18, color: Colors.amber);
+                            return const Icon(
+                              Icons.star_rounded,
+                              size: 18,
+                              color: Colors.amber,
+                            );
                           } else if (i < rating) {
-                            return const Icon(Icons.star_half_rounded,
-                                size: 18, color: Colors.amber);
+                            return const Icon(
+                              Icons.star_half_rounded,
+                              size: 18,
+                              color: Colors.amber,
+                            );
                           }
-                          return Icon(Icons.star_outline_rounded,
-                              size: 18, color: AppColors.grey300);
+                          return Icon(
+                            Icons.star_outline_rounded,
+                            size: 18,
+                            color: AppColors.grey300,
+                          );
                         }),
                       ),
                     ],
                   ),
                 ),
-                Container(
-                  width: 1,
-                  height: 60,
-                  color: AppColors.grey200,
-                ),
+                Container(width: 1, height: 60, color: AppColors.grey200),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -666,10 +713,7 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
                 const Text(
                   'Complete your first delivery to start building your reputation!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textTertiary,
-                  ),
+                  style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
                 ),
               ],
             ),
@@ -741,7 +785,9 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
-            vertical: AppSizes.md, horizontal: AppSizes.sm),
+          vertical: AppSizes.md,
+          horizontal: AppSizes.sm,
+        ),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
@@ -860,5 +906,4 @@ class _RiderHomeScreenState extends State<RiderHomeScreen> {
       ),
     );
   }
-
 }

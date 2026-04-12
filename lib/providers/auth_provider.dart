@@ -351,7 +351,8 @@ class AuthProvider extends ChangeNotifier {
       _token = jwt;
       _user = User(
         id: (userData['id'] ?? userData['documentId'] ?? '').toString(),
-        documentId: userData['document_id']?.toString(),
+        documentId: (userData['documentId'] ?? userData['document_id'])
+            ?.toString(),
         phoneNumber: (userData['phone'] ?? phoneNumber).toString(),
         email: userData['email'],
         role: UserRoleExtension.fromString(userData['user_type'] ?? userType),
@@ -415,7 +416,8 @@ class AuthProvider extends ChangeNotifier {
       _token = jwt;
       _user = User(
         id: (userData['id'] ?? userData['documentId'] ?? '').toString(),
-        documentId: userData['document_id']?.toString(),
+        documentId: (userData['documentId'] ?? userData['document_id'])
+            ?.toString(),
         phoneNumber: (userData['phone'] ?? phoneNumber).toString(),
         email: userData['email'],
         role: UserRoleExtension.fromString(userData['user_type'] ?? 'customer'),
@@ -492,7 +494,8 @@ class AuthProvider extends ChangeNotifier {
       _token = jwt;
       _user = User(
         id: (userData['id'] ?? userData['documentId'] ?? '').toString(),
-        documentId: userData['document_id']?.toString(),
+        documentId: (userData['documentId'] ?? userData['document_id'])
+            ?.toString(),
         phoneNumber: (userData['phone'] ?? '').toString(),
         email: userData['email'],
         role: UserRoleExtension.fromString(userData['user_type'] ?? userType),
@@ -611,7 +614,8 @@ class AuthProvider extends ChangeNotifier {
       _token = jwt;
       _user = User(
         id: (userData['id'] ?? userData['documentId'] ?? '').toString(),
-        documentId: userData['document_id']?.toString(),
+        documentId: (userData['documentId'] ?? userData['document_id'])
+            ?.toString(),
         phoneNumber: (userData['phone'] ?? phoneNumber).toString(),
         email: userData['email'],
         role: UserRoleExtension.fromString(userData['user_type'] ?? 'customer'),
@@ -754,7 +758,8 @@ class AuthProvider extends ChangeNotifier {
       if (_user == null) {
         _user = User(
           id: (response['id'] ?? response['documentId'] ?? '').toString(),
-          documentId: response['document_id']?.toString(),
+          documentId: (response['documentId'] ?? response['document_id'])
+              ?.toString(),
           phoneNumber: (response['phone'] ?? '').toString(),
           email: response['email'],
           role: UserRoleExtension.fromString(
@@ -777,7 +782,9 @@ class AuthProvider extends ChangeNotifier {
         _user = _user!.copyWith(
           id: (response['id'] ?? response['documentId'] ?? _user!.id)
               .toString(),
-          documentId: response['document_id']?.toString() ?? _user!.documentId,
+          documentId:
+              (response['documentId'] ?? response['document_id'])?.toString() ??
+              _user!.documentId,
           phoneNumber: (response['phone'] ?? _user!.phoneNumber).toString(),
           email: response['email'] ?? _user!.email,
           role: UserRoleExtension.fromString(
@@ -814,6 +821,10 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final refreshToken = await _readRefreshToken();
+
+      if (_token != null) {
+        await NotificationService().unregisterTokenWithBackend(_token!);
+      }
 
       if (_token != null && _user != null) {
         if (_user!.role == UserRole.shopper && _user!.shopperId != null) {

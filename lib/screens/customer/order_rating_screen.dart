@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/order.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/order_provider.dart';
 import '../../services/order_service.dart';
 
 class OrderRatingScreen extends StatefulWidget {
@@ -31,7 +32,9 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
   Future<void> _submitRating() async {
     if (_shopperRating == 0 && _riderRating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please rate at least the shopper or rider')),
+        const SnackBar(
+          content: Text('Please rate at least the shopper or rider'),
+        ),
       );
       return;
     }
@@ -42,13 +45,34 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
       final authProvider = context.read<AuthProvider>();
       final orderService = context.read<OrderService>();
 
+      // Calculate overall rating: only count non-zero ratings
+      final ratedCount =
+          (_shopperRating > 0 ? 1 : 0) + (_riderRating > 0 ? 1 : 0);
+      final overallRating = ratedCount > 0
+          ? ((_shopperRating + _riderRating) ~/ ratedCount).clamp(1, 5)
+          : 5; // Default to 5 if neither is rated (though validation prevents this)
+
+      // Require comment for low ratings (below 2 stars)
+      if (overallRating < 2 && _commentController.text.trim().isEmpty) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please add a comment to explain your low rating'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+        return;
+      }
+
       final success = await orderService.submitRating(
         token: authProvider.token ?? '',
         orderId: widget.order.documentId ?? widget.order.id,
-        overallRating: ((_shopperRating + _riderRating) / 2).round().clamp(1, 5),
+        overallRating: overallRating,
         shopperRating: _shopperRating > 0 ? _shopperRating : null,
         riderRating: _riderRating > 0 ? _riderRating : null,
-        comment: _commentController.text.isEmpty ? null : _commentController.text,
+        comment: _commentController.text.isEmpty
+            ? null
+            : _commentController.text,
         customerId: authProvider.user?.id,
       );
 
@@ -56,18 +80,49 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Thank you for your rating!'), backgroundColor: AppColors.success),
+          const SnackBar(
+            content: Text('Thank you for your feedback!'),
+            backgroundColor: AppColors.success,
+          ),
         );
-        context.go('/customer/orders');
+        // Refresh orders from backend immediately so the orders list
+        // no longer shows the 'Rate this order' CTA.
+        final user = authProvider.user;
+        if (user != null) {
+          final orderProvider = context.read<OrderProvider>();
+          await orderService.fetchOrders(
+            authProvider.token!,
+            user.documentId ?? user.id.toString(),
+          );
+          if (mounted) {
+            orderProvider.syncOrdersFromService(orderService.orders);
+          }
+        }
+        if (!mounted) return;
+        // Re-fetch the updated order and navigate to tracking
+        await orderService.getOrder(
+          authProvider.token!,
+          widget.order.documentId ?? widget.order.id,
+        );
+        if (!mounted) return;
+        context.pushReplacement(
+          '/customer/order-tracking',
+          extra: orderService.currentOrder ?? widget.order,
+        );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(orderService.error ?? 'Failed to submit rating'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text(orderService.error ?? 'Failed to submit rating'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } catch (e) {
       setState(() => _isSubmitting = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -91,7 +146,11 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
         ),
         title: const Text(
           'Rate Your Order',
-          style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -116,7 +175,11 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
                       color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Iconsax.receipt_1, color: AppColors.primary, size: 20),
+                    child: const Icon(
+                      Iconsax.receipt_1,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -125,12 +188,18 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
                       children: [
                         Text(
                           'Order #${widget.order.orderNumber}',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Delivered on ${widget.order.deliveredAt?.toString().split(' ')[0] ?? 'Recently'}',
-                          style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -168,7 +237,8 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
             ],
 
             // Fallback if no names
-            if (widget.order.shopperName == null && widget.order.riderName == null) ...[
+            if (widget.order.shopperName == null &&
+                widget.order.riderName == null) ...[
               _buildRatingCard(
                 icon: Iconsax.star,
                 iconColor: AppColors.primaryOrange,
@@ -214,7 +284,10 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 1.5,
+                  ),
                 ),
                 contentPadding: const EdgeInsets.all(14),
                 counterStyle: TextStyle(color: Colors.grey[400], fontSize: 11),
@@ -233,11 +306,26 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: _isSubmitting
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text('Submit Rating', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Submit Rating',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
             ),
 
@@ -248,8 +336,13 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
               width: double.infinity,
               height: 44,
               child: TextButton(
-                onPressed: _isSubmitting ? null : () => context.go('/customer/orders'),
-                child: Text('Skip for Now', style: TextStyle(color: Colors.grey[500], fontSize: 14)),
+                onPressed: _isSubmitting
+                    ? null
+                    : () => context.go('/customer/orders'),
+                child: Text(
+                  'Skip for Now',
+                  style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                ),
               ),
             ),
 
@@ -294,9 +387,18 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(subtitle, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(title, style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+                    Text(
+                      title,
+                      style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                    ),
                   ],
                 ),
               ),
@@ -325,9 +427,13 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Icon(
-                    rating >= star ? Icons.star_rounded : Icons.star_outline_rounded,
+                    rating >= star
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
                     size: 36,
-                    color: rating >= star ? const Color(0xFFFFA726) : Colors.grey[300],
+                    color: rating >= star
+                        ? const Color(0xFFFFA726)
+                        : Colors.grey[300],
                   ),
                 ),
               );
@@ -351,12 +457,18 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
 
   String _getRatingLabel(int rating) {
     switch (rating) {
-      case 1: return 'Poor';
-      case 2: return 'Fair';
-      case 3: return 'Good';
-      case 4: return 'Very Good';
-      case 5: return 'Excellent!';
-      default: return '';
+      case 1:
+        return 'Poor';
+      case 2:
+        return 'Fair';
+      case 3:
+        return 'Good';
+      case 4:
+        return 'Very Good';
+      case 5:
+        return 'Excellent!';
+      default:
+        return '';
     }
   }
 }

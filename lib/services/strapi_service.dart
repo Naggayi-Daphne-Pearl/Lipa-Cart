@@ -319,6 +319,83 @@ class StrapiService {
     }
   }
 
+  /// Get shopper ratings and comments from customers.
+  static Future<List<Map<String, dynamic>>> getShopperRatings(
+    String shopperId,
+    String token,
+  ) async {
+    try {
+      final isNumeric = int.tryParse(shopperId) != null;
+      final shopperFilter = isNumeric
+          ? 'filters[shopper][id][\$eq]=$shopperId'
+          : 'filters[shopper][documentId][\$eq]=$shopperId';
+
+      final list = <Map<String, dynamic>>[];
+      var page = 1;
+      var pageCount = 1;
+
+      do {
+        final response = await http
+            .get(
+              Uri.parse(
+                '$_apiUrl/orders?filters[status][\$eq]=delivered&$shopperFilter&populate[0]=customer&populate[1]=rating&sort[0]=createdAt:desc&pagination[page]=$page&pagination[pageSize]=100',
+              ),
+              headers: {'Authorization': 'Bearer $token'},
+            )
+            .timeout(AppConstants.apiTimeout);
+
+        if (_handleAuthError(response) || response.statusCode != 200) return [];
+
+        final body = json.decode(response.body) as Map<String, dynamic>;
+        final pageList =
+            (body['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+        list.addAll(pageList);
+
+        final pagination = body['meta']?['pagination'] as Map<String, dynamic>?;
+        pageCount = (pagination?['pageCount'] as num?)?.toInt() ?? page;
+        page += 1;
+      } while (page <= pageCount);
+
+      return list.map((raw) {
+        final item = (raw['attributes'] as Map<String, dynamic>?) ?? raw;
+        final customerRaw = item['customer'];
+        Map<String, dynamic> customer = <String, dynamic>{};
+        if (customerRaw is Map<String, dynamic>) {
+          if (customerRaw['data'] is Map<String, dynamic>) {
+            final data = customerRaw['data'] as Map<String, dynamic>;
+            customer = (data['attributes'] as Map<String, dynamic>?) ?? data;
+          } else {
+            customer =
+                (customerRaw['attributes'] as Map<String, dynamic>?) ?? customerRaw;
+          }
+        }
+        final ratingRaw = item['rating'];
+        Map<String, dynamic> rating = <String, dynamic>{};
+        if (ratingRaw is Map<String, dynamic>) {
+          if (ratingRaw['data'] is Map<String, dynamic>) {
+            final data = ratingRaw['data'] as Map<String, dynamic>;
+            rating = (data['attributes'] as Map<String, dynamic>?) ?? data;
+          } else {
+            rating = (ratingRaw['attributes'] as Map<String, dynamic>?) ?? ratingRaw;
+          }
+        }
+
+        return {
+          'id': (rating['documentId'] ?? rating['id'] ?? '').toString(),
+          'stars': (rating['shopper_rating'] as num?)?.toInt(),
+          'overall_rating': (rating['overall_rating'] as num?)?.toInt(),
+          'comment': (rating['comment'] as String?) ?? '',
+          'createdAt': (rating['createdAt'] as String?) ?? '',
+          'customerName':
+              (customer['name'] as String?) ?? (customer['phone'] as String?) ?? 'Customer',
+          'orderNumber': (item['order_number'] as String?) ?? '',
+        };
+      }).where((e) => e['stars'] != null).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   /// Parse a Strapi v5 order response into an Order model
   /// Handles both flat (v5) and wrapped (v4 attributes) formats
   static Order _parseOrderFromStrapi(Map<String, dynamic> data) {
@@ -1228,6 +1305,83 @@ class StrapiService {
     } catch (e) {
       // ignored
       return null;
+    }
+  }
+
+  /// Get rider ratings and comments from customers.
+  static Future<List<Map<String, dynamic>>> getRiderRatings(
+    String riderId,
+    String token,
+  ) async {
+    try {
+      final isNumeric = int.tryParse(riderId) != null;
+      final riderFilter = isNumeric
+          ? 'filters[rider][id][\$eq]=$riderId'
+          : 'filters[rider][documentId][\$eq]=$riderId';
+
+      final list = <Map<String, dynamic>>[];
+      var page = 1;
+      var pageCount = 1;
+
+      do {
+        final response = await http
+            .get(
+              Uri.parse(
+                '$_apiUrl/orders?filters[status][\$eq]=delivered&$riderFilter&populate[0]=customer&populate[1]=rating&sort[0]=createdAt:desc&pagination[page]=$page&pagination[pageSize]=100',
+              ),
+              headers: {'Authorization': 'Bearer $token'},
+            )
+            .timeout(AppConstants.apiTimeout);
+
+        if (_handleAuthError(response) || response.statusCode != 200) return [];
+
+        final body = json.decode(response.body) as Map<String, dynamic>;
+        final pageList =
+            (body['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+        list.addAll(pageList);
+
+        final pagination = body['meta']?['pagination'] as Map<String, dynamic>?;
+        pageCount = (pagination?['pageCount'] as num?)?.toInt() ?? page;
+        page += 1;
+      } while (page <= pageCount);
+
+      return list.map((raw) {
+        final item = (raw['attributes'] as Map<String, dynamic>?) ?? raw;
+        final customerRaw = item['customer'];
+        Map<String, dynamic> customer = <String, dynamic>{};
+        if (customerRaw is Map<String, dynamic>) {
+          if (customerRaw['data'] is Map<String, dynamic>) {
+            final data = customerRaw['data'] as Map<String, dynamic>;
+            customer = (data['attributes'] as Map<String, dynamic>?) ?? data;
+          } else {
+            customer =
+                (customerRaw['attributes'] as Map<String, dynamic>?) ?? customerRaw;
+          }
+        }
+        final ratingRaw = item['rating'];
+        Map<String, dynamic> rating = <String, dynamic>{};
+        if (ratingRaw is Map<String, dynamic>) {
+          if (ratingRaw['data'] is Map<String, dynamic>) {
+            final data = ratingRaw['data'] as Map<String, dynamic>;
+            rating = (data['attributes'] as Map<String, dynamic>?) ?? data;
+          } else {
+            rating = (ratingRaw['attributes'] as Map<String, dynamic>?) ?? ratingRaw;
+          }
+        }
+
+        return {
+          'id': (rating['documentId'] ?? rating['id'] ?? '').toString(),
+          'stars': (rating['rider_rating'] as num?)?.toInt(),
+          'overall_rating': (rating['overall_rating'] as num?)?.toInt(),
+          'comment': (rating['comment'] as String?) ?? '',
+          'createdAt': (rating['createdAt'] as String?) ?? '',
+          'customerName':
+              (customer['name'] as String?) ?? (customer['phone'] as String?) ?? 'Customer',
+          'orderNumber': (item['order_number'] as String?) ?? '',
+        };
+      }).where((e) => e['stars'] != null).toList();
+    } catch (_) {
+      return [];
     }
   }
 

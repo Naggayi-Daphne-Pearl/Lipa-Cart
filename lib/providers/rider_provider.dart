@@ -4,26 +4,44 @@ import '../services/upload_service.dart';
 import '../services/strapi_service.dart';
 
 class RiderProvider extends ChangeNotifier {
-  // Rider data
   Map<String, dynamic>? _riderProfile;
+  List<Map<String, dynamic>> _ratings = [];
   List<Order> _availableDeliveries = [];
   List<Order> _activeDeliveries = [];
   List<Order> _completedDeliveries = [];
 
   bool _isLoading = false;
+  bool _hasLoadedRatings = false;
   String? _error;
 
-  // Getters
   Map<String, dynamic>? get riderProfile => _riderProfile;
+  List<Map<String, dynamic>> get ratings => _ratings;
   List<Order> get availableDeliveries => _availableDeliveries;
   List<Order> get activeDeliveries => _activeDeliveries;
   List<Order> get completedDeliveries => _completedDeliveries;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // Summary stats
-  int get totalReviews => _riderProfile?['total_ratings'] ?? 0;
-  double get averageRating => (_riderProfile?['rating'] ?? 0).toDouble();
+  int get totalReviews {
+    if (_hasLoadedRatings) {
+      return _ratings.length;
+    }
+    return (_riderProfile?['total_ratings'] as num? ?? 0).toInt();
+  }
+
+  double get averageRating {
+    if (_hasLoadedRatings) {
+      final stars = _ratings
+          .map((r) => (r['stars'] as num?)?.toDouble() ?? 0)
+          .where((s) => s > 0)
+          .toList();
+      if (stars.isEmpty) return 0;
+      final sum = stars.reduce((a, b) => a + b);
+      return sum / stars.length;
+    }
+    return (_riderProfile?['rating'] as num? ?? 0).toDouble();
+  }
+
   int get completedOrders =>
       _riderProfile?['total_deliveries_completed'] ??
       _riderProfile?['total_orders_completed'] ??
@@ -32,21 +50,35 @@ class RiderProvider extends ChangeNotifier {
       (_riderProfile?['total_earnings'] ?? 0).toDouble();
   bool get isOnline => _riderProfile?['is_online'] ?? false;
 
-  /// Load rider profile
-  Future<bool> loadRiderProfile(String token, String riderId) async {
+  Future<bool> loadRiderProfile(
+    String token,
+    String riderId, {
+    String? userDocumentId,
+    String? userId,
+  }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final response = await StrapiService.getRiderProfile(riderId, token);
+      final ratingsOwnerId = userDocumentId ?? userId ?? riderId;
+      final responses = await Future.wait([
+        StrapiService.getRiderProfile(riderId, token),
+        StrapiService.getRiderRatings(
+          ratingsOwnerId,
+          token,
+        ),
+      ]);
+      final response = responses[0] as Map<String, dynamic>?;
+      final ratings = responses[1] as List<Map<String, dynamic>>;
+      _hasLoadedRatings = true;
       if (response != null) {
         _riderProfile = response;
+        _ratings = ratings;
         _isLoading = false;
         notifyListeners();
         return true;
       }
-      // Fallback defaults if API returns null
       _riderProfile = {
         'total_ratings': 0,
         'rating': 0.0,
@@ -54,11 +86,14 @@ class RiderProvider extends ChangeNotifier {
         'total_earnings': 0.0,
         'is_online': false,
       };
+      _ratings = ratings;
       _error = 'Failed to load profile';
       _isLoading = false;
       notifyListeners();
       return false;
     } catch (e) {
+      _hasLoadedRatings = true;
+      _ratings = [];
       _error = 'Error: $e';
       _isLoading = false;
       notifyListeners();
@@ -66,7 +101,17 @@ class RiderProvider extends ChangeNotifier {
     }
   }
 
-  /// Fetch available deliveries (orders ready for pickup)
+  Map<int, int> get ratingBreakdown {
+    final map = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
+    for (final r in _ratings) {
+      final stars = (r['stars'] as num?)?.toInt();
+      if (stars != null && map.containsKey(stars)) {
+        map[stars] = map[stars]! + 1;
+      }
+    }
+    return map;
+  }
+
   Future<bool> fetchAvailableDeliveries(String token) async {
     _isLoading = true;
     _error = null;
@@ -85,7 +130,6 @@ class RiderProvider extends ChangeNotifier {
     }
   }
 
-  /// Fetch active deliveries assigned to this rider
   Future<bool> fetchActiveDeliveries(String token, String riderId) async {
     _isLoading = true;
     _error = null;
@@ -107,7 +151,6 @@ class RiderProvider extends ChangeNotifier {
     }
   }
 
-  /// Fetch completed deliveries
   Future<bool> fetchCompletedDeliveries(String token, String riderId) async {
     _isLoading = true;
     _error = null;
@@ -129,7 +172,6 @@ class RiderProvider extends ChangeNotifier {
     }
   }
 
-  /// Accept a delivery
   Future<bool> acceptDelivery(
     String token,
     String orderId,
@@ -155,7 +197,6 @@ class RiderProvider extends ChangeNotifier {
     }
   }
 
-  /// Mark delivery as in transit (picked up from shopper)
   Future<bool> markInTransit(
     String token,
     String orderId,
@@ -182,7 +223,6 @@ class RiderProvider extends ChangeNotifier {
     }
   }
 
-  /// Cancel a claimed delivery before transit starts.
   Future<bool> cancelDelivery(
     String token,
     String orderId,
@@ -206,7 +246,6 @@ class RiderProvider extends ChangeNotifier {
     }
   }
 
-  /// Mark delivery as complete (delivered to customer)
   Future<bool> completeDelivery(
     String token,
     String orderId,
@@ -243,7 +282,6 @@ class RiderProvider extends ChangeNotifier {
     }
   }
 
-  /// Toggle online/offline status
   Future<bool> toggleOnlineStatus(
     String token,
     String riderId,
@@ -270,5 +308,17 @@ class RiderProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  Future<void> clearAll() async {
+    _riderProfile = null;
+    _ratings = [];
+    _availableDeliveries = [];
+    _activeDeliveries = [];
+    _completedDeliveries = [];
+    _isLoading = false;
+    _hasLoadedRatings = false;
+    _error = null;
+    notifyListeners();
   }
 }

@@ -371,7 +371,19 @@ class Order {
       rating: json['rating'] != null
           ? Rating.fromJson(json['rating'] as Map<String, dynamic>)
           : null,
-      hasBeenRated: json['hasBeenRated'] as bool? ?? false,
+      hasBeenRated: json['hasBeenRated'] as bool? ??
+          (() {
+            final ratingData = json['rating'];
+            if (ratingData == null) return false;
+            if (ratingData is Map<String, dynamic>) {
+              if (ratingData.containsKey('data')) {
+                return ratingData['data'] != null;
+              }
+              return ratingData.containsKey('id') ||
+                  ratingData.containsKey('documentId');
+            }
+            return false;
+          }()),
       deliveryProofUrl: json['deliveryProofUrl'] as String?,
     );
   }

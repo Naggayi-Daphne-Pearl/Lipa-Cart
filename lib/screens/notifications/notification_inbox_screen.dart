@@ -9,13 +9,15 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/constants/app_constants.dart';
 import '../../providers/auth_provider.dart';
+import '../../models/user.dart';
 import '../../widgets/app_loading_indicator.dart';
 
 class NotificationInboxScreen extends StatefulWidget {
   const NotificationInboxScreen({super.key});
 
   @override
-  State<NotificationInboxScreen> createState() => _NotificationInboxScreenState();
+  State<NotificationInboxScreen> createState() =>
+      _NotificationInboxScreenState();
 }
 
 class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
@@ -41,13 +43,15 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
     }
 
     try {
-      final response = await http.get(
-        Uri.parse('${AppConstants.apiUrl}/notifications/mine?pageSize=50'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(AppConstants.apiTimeout);
+      final response = await http
+          .get(
+            Uri.parse('${AppConstants.apiUrl}/notifications/mine?pageSize=50'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(AppConstants.apiTimeout);
 
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
@@ -122,6 +126,10 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
         return Iconsax.shopping_bag;
       case 'new_delivery':
         return Iconsax.truck_fast;
+      case 'substitute_suggestion':
+        return Iconsax.arrow_swap_horizontal;
+      case 'substitute_response':
+        return Iconsax.message_text;
       case 'promo':
         return Iconsax.discount_shape;
       default:
@@ -137,6 +145,10 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
         return AppColors.info;
       case 'new_delivery':
         return AppColors.accent;
+      case 'substitute_suggestion':
+        return AppColors.warning;
+      case 'substitute_response':
+        return AppColors.success;
       case 'promo':
         return AppColors.warning;
       default:
@@ -161,10 +173,25 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
       _markAsRead(notification);
     }
 
-    final type = notification['type'] ?? notification['data']?['type'] ?? '';
+    final data = notification['data'] is Map<String, dynamic>
+        ? notification['data'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    final route = (data['route'] as String?) ?? '';
+    final type =
+        (data['type'] as String?) ?? (notification['type'] as String?) ?? '';
+
+    if (route.isNotEmpty) {
+      context.go(route);
+      return;
+    }
+
     switch (type) {
       case 'order_status':
+      case 'substitute_suggestion':
         context.go('/customer/orders');
+        break;
+      case 'substitute_response':
+        context.go('/shopper/active-tasks');
         break;
       case 'new_task':
         context.go('/shopper/available-tasks');
@@ -188,7 +215,16 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/customer/home');
+              final role = context.read<AuthProvider>().user?.role;
+              if (role == UserRole.shopper) {
+                context.go('/shopper/home');
+              } else if (role == UserRole.rider) {
+                context.go('/rider/home');
+              } else if (role == UserRole.admin) {
+                context.go('/admin/dashboard');
+              } else {
+                context.go('/customer/home');
+              }
             }
           },
         ),
@@ -199,7 +235,9 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
               onPressed: _markAllRead,
               child: Text(
                 'Mark all read',
-                style: AppTextStyles.labelMedium.copyWith(color: AppColors.primary),
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.primary,
+                ),
               ),
             ),
         ],
@@ -207,24 +245,25 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
       body: _isLoading
           ? const AppLoadingIndicator.page()
           : _error != null
-              ? _buildError()
-              : _notifications.isEmpty
-                  ? _buildEmpty()
-                  : RefreshIndicator(
-                      onRefresh: _loadNotifications,
-                      color: AppColors.accent,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSizes.md,
-                          vertical: AppSizes.sm,
-                        ),
-                        itemCount: _notifications.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: AppSizes.xs),
-                        itemBuilder: (context, index) {
-                          return _buildNotificationCard(_notifications[index]);
-                        },
-                      ),
-                    ),
+          ? _buildError()
+          : _notifications.isEmpty
+          ? _buildEmpty()
+          : RefreshIndicator(
+              onRefresh: _loadNotifications,
+              color: AppColors.accent,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSizes.md,
+                  vertical: AppSizes.sm,
+                ),
+                itemCount: _notifications.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AppSizes.xs),
+                itemBuilder: (context, index) {
+                  return _buildNotificationCard(_notifications[index]);
+                },
+              ),
+            ),
     );
   }
 
@@ -272,7 +311,9 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
                         child: Text(
                           notification['title'] ?? '',
                           style: AppTextStyles.labelLarge.copyWith(
-                            fontWeight: isRead ? FontWeight.w500 : FontWeight.w700,
+                            fontWeight: isRead
+                                ? FontWeight.w500
+                                : FontWeight.w700,
                           ),
                         ),
                       ),

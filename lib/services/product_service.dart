@@ -5,6 +5,7 @@ import '../models/product.dart';
 
 class ProductService {
   static String get _apiUrl => AppConstants.apiUrl;
+  static String get _baseUrl => AppConstants.baseUrl;
 
   /// Get all products with pagination and filters
   static Future<List<Product>> getProducts({
@@ -45,7 +46,9 @@ class ProductService {
       final body = jsonDecode(response.body);
       final List<dynamic> data = body['data'] ?? [];
 
-      return data.map((item) => Product.fromStrapi(item)).toList();
+        return data
+          .map((item) => Product.fromStrapi(item, baseUrl: _baseUrl))
+          .toList();
     } catch (e) {
       throw Exception('Error loading products: $e');
     }
@@ -70,7 +73,7 @@ class ProductService {
       }
 
       final body = jsonDecode(response.body);
-      return Product.fromStrapi(body['data']);
+      return Product.fromStrapi(body['data'], baseUrl: _baseUrl);
     } catch (e) {
       throw Exception('Error loading product: $e');
     }
@@ -111,7 +114,7 @@ class ProductService {
       }
 
       final body = jsonDecode(response.body);
-      return Product.fromStrapi(body['data']);
+      return Product.fromStrapi(body['data'], baseUrl: _baseUrl);
     } catch (e) {
       throw Exception('Error creating product: $e');
     }
@@ -153,7 +156,7 @@ class ProductService {
       }
 
       final body = jsonDecode(response.body);
-      return Product.fromStrapi(body['data']);
+      return Product.fromStrapi(body['data'], baseUrl: _baseUrl);
     } catch (e) {
       throw Exception('Error updating product: $e');
     }

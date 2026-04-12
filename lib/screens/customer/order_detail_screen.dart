@@ -284,7 +284,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ),
                   ),
 
-                if (order.isDelivered)
+                if (order.isDelivered && order.rating == null && !order.hasBeenRated)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
@@ -292,11 +292,78 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () => _showRatingDialog(context),
+                            onPressed: () => context.push(
+                              '/customer/order-rating',
+                              extra: order,
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                             ),
                             child: const Text('Rate This Order'),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+                  ),
+
+                // Rating summary (after rating is submitted)
+                if (order.isDelivered && order.rating != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.amber.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    color: Colors.amber,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Your Rating',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              if (order.rating!.shopperRating != null)
+                                _ratingRow('Shopper', order.rating!.shopperRating!),
+                              if (order.rating!.riderRating != null)
+                                _ratingRow('Rider', order.rating!.riderRating!),
+                              if (order.rating!.overallRating != null)
+                                _ratingRow('Overall', order.rating!.overallRating!),
+                              if (order.rating!.comment != null &&
+                                  order.rating!.comment!.isNotEmpty) ...
+                                [
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '"${order.rating!.comment}"',
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontStyle: FontStyle.italic,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                            ],
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -374,28 +441,31 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
-  void _showRatingDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rate This Order'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('How satisfied are you with this order?'),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(
-                5,
-                (index) => IconButton(
-                  icon: Icon(Icons.star, color: Colors.amber, size: 32),
-                  onPressed: () => Navigator.pop(context),
-                ),
+  Widget _ratingRow(String label, int stars) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(
+              5,
+              (i) => Icon(
+                i < stars ? Icons.star_rounded : Icons.star_outline_rounded,
+                color: Colors.amber,
+                size: 16,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

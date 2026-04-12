@@ -163,6 +163,58 @@ class NotificationService {
     }
   }
 
+  /// Unregister current device token from backend (best effort).
+  Future<void> unregisterTokenWithBackend(String authToken) async {
+    final fcmToken = await getToken();
+
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConstants.apiUrl}/user/unregister-device'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $authToken',
+        },
+        body: jsonEncode({
+          if (fcmToken != null && fcmToken.isNotEmpty) 'fcm_token': fcmToken,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        debugPrint(
+          '[notifications] Device token unregister failed: '
+          '${response.statusCode} ${response.body}',
+        );
+      }
+    } catch (e) {
+      debugPrint('[notifications] Failed to unregister device token: $e');
+    }
+  }
+
+  /// Fetch unread notification count for current authenticated user.
+  Future<int> getUnreadCount(String authToken) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse(
+              '${AppConstants.apiUrl}/notifications/mine?page=1&pageSize=1',
+            ),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $authToken',
+            },
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode != 200) return 0;
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final unread = body['meta']?['unreadCount'];
+      return unread is num ? unread.toInt() : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   /// Listen for token refresh and re-register with backend.
   void listenForTokenRefresh(String authToken) {
     _messaging?.onTokenRefresh.listen((newToken) async {
