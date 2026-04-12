@@ -20,7 +20,17 @@ import 'package:geolocator/geolocator.dart';
 class AddressesScreen extends StatefulWidget {
   final String? returnRoute;
 
-  const AddressesScreen({super.key, this.returnRoute});
+  /// When true, the screen acts as a picker: each address card is tappable
+  /// and a tap returns to [returnRoute] with `?selectedAddress=<id>` so the
+  /// caller (e.g. checkout) can pre-select that address. CRUD actions remain
+  /// available so the user can add/edit before picking.
+  final bool selectMode;
+
+  const AddressesScreen({
+    super.key,
+    this.returnRoute,
+    this.selectMode = false,
+  });
 
   @override
   State<AddressesScreen> createState() => _AddressesScreenState();
@@ -102,14 +112,18 @@ class _AddressesScreenState extends State<AddressesScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Saved Addresses',
+                            widget.selectMode
+                                ? 'Choose Delivery Address'
+                                : 'Saved Addresses',
                             style: AppTextStyles.h5.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: AppSizes.sm),
                           Text(
-                            'Manage where your orders are delivered.',
+                            widget.selectMode
+                                ? 'Tap an address to use it for this order.'
+                                : 'Manage where your orders are delivered.',
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.textSecondary,
                             ),
@@ -160,6 +174,9 @@ class _AddressesScreenState extends State<AddressesScreen> {
                                       isDefault:
                                           addressService.defaultAddress?.id ==
                                           address.id,
+                                      onTap: widget.selectMode
+                                          ? () => _pickAddress(address)
+                                          : null,
                                       onEdit: () => _showAddressForm(
                                         context,
                                         auth,
@@ -306,10 +323,34 @@ class _AddressesScreenState extends State<AddressesScreen> {
               Navigator.of(sheetContext).pop();
               if (widget.returnRoute != null &&
                   widget.returnRoute!.isNotEmpty) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (pageContext.mounted) {
-                    pageContext.go(widget.returnRoute!);
+                // In select mode, the user added/edited this address intending
+                // to use it right now. Resolve it from the refreshed list and
+                // hand it back to the origin route via selectedAddress=<id> so
+                // the caller (typically checkout) pre-selects it. Falls back to
+                // a plain navigation if we can't find a match.
+                Address? resolved;
+                if (widget.selectMode) {
+                  if (address != null) {
+                    resolved = addressService.addresses.firstWhere(
+                      (a) => a.id == address.id,
+                      orElse: () => address,
+                    );
+                  } else {
+                    // Best-effort match for a just-created address — label +
+                    // addressLine + city is unique enough in practice.
+                    for (final a in addressService.addresses.reversed) {
+                      if (a.label == label &&
+                          a.addressLine == addressLine &&
+                          a.city == city) {
+                        resolved = a;
+                        break;
+                      }
+                    }
                   }
+                }
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!pageContext.mounted) return;
+                  _returnToRoute(pageContext, pickedAddress: resolved);
                 });
               }
             },
@@ -365,6 +406,30 @@ class _AddressesScreenState extends State<AddressesScreen> {
     }
   }
 
+  void _pickAddress(Address address) {
+    _returnToRoute(context, pickedAddress: address);
+  }
+
+  /// Navigate back to [widget.returnRoute]. In select mode, when [pickedAddress]
+  /// is non-null, append `selectedAddress=<id>` so the origin route (typically
+  /// checkout) can pre-select it. We encode as a query param because GoRouter's
+  /// `extra` doesn't survive a hard navigation.
+  void _returnToRoute(BuildContext context, {Address? pickedAddress}) {
+    final returnRoute = widget.returnRoute;
+    if (returnRoute == null || returnRoute.isEmpty) return;
+
+    if (widget.selectMode && pickedAddress != null) {
+      final selectedId = pickedAddress.documentId.isNotEmpty
+          ? pickedAddress.documentId
+          : pickedAddress.id.toString();
+      final separator = returnRoute.contains('?') ? '&' : '?';
+      context.go('$returnRoute${separator}selectedAddress=$selectedId');
+      return;
+    }
+
+    context.go(returnRoute);
+  }
+
   Future<void> _setDefault(
     BuildContext context,
     AuthProvider auth,
@@ -378,6 +443,11 @@ class _AddressesScreenState extends State<AddressesScreen> {
       addressDocumentId: documentId,
     );
     await _refreshAddresses(auth, addressService);
+
+    // In select mode, setting default is a config action that shouldn't
+    // auto-exit the picker — the user still needs to tap to pick. Only the
+    // profile-side usage navigates back to returnRoute on success.
+    if (widget.selectMode) return;
 
     if (widget.returnRoute != null &&
         widget.returnRoute!.isNotEmpty &&
@@ -397,6 +467,7 @@ class AddressCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onSetDefault;
+  final VoidCallback? onTap;
 
   const AddressCard({
     super.key,
@@ -405,17 +476,21 @@ class AddressCard extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onSetDefault,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       margin: const EdgeInsets.only(bottom: AppSizes.md),
       padding: const EdgeInsets.all(AppSizes.md),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        border: Border.all(color: AppColors.grey200),
+        border: Border.all(
+          color: onTap != null ? AppColors.primary : AppColors.grey200,
+          width: onTap != null ? 1.5 : 1,
+        ),
         boxShadow: AppColors.shadowSm,
       ),
       child: Column(
@@ -542,6 +617,17 @@ class AddressCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+
+    if (onTap == null) return card;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        child: card,
       ),
     );
   }

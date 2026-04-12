@@ -58,8 +58,11 @@ class AddressService extends ChangeNotifier {
       label: address.label,
       fullAddress: fullAddress,
       landmark: landmark,
-      latitude: address.gpsLat ?? 0.0,
-      longitude: address.gpsLng ?? 0.0,
+      // Pass through null instead of coercing missing GPS to (0, 0). The
+      // backend service-area check will reject (0, 0), and downstream code
+      // (route preview, dispatch) needs to know when we genuinely lack a pin.
+      latitude: address.gpsLat,
+      longitude: address.gpsLng,
       isDefault: address.isDefault,
     );
   }
@@ -352,7 +355,13 @@ class AddressService extends ChangeNotifier {
     }
   }
 
-  /// Set address as default
+  /// Set address as default.
+  ///
+  /// Calls the atomic backend endpoint `POST /api/addresses/:id/set-default`,
+  /// which clears all other defaults and sets the target inside a single DB
+  /// transaction. The previous client-side implementation issued two separate
+  /// PUTs and could leave the customer with zero or two defaults if the second
+  /// call failed or interleaved with another setDefault.
   Future<bool> setDefaultAddress({
     required String token,
     required int addressId,
@@ -362,45 +371,27 @@ class AddressService extends ChangeNotifier {
       final targetId = addressDocumentId.isNotEmpty
           ? addressDocumentId
           : addressId.toString();
-      // Unset previous default
-      if (_defaultAddress != null) {
-        final previousId = _defaultAddress!.documentId.isNotEmpty
-            ? _defaultAddress!.documentId
-            : _defaultAddress!.id.toString();
-        await http.put(
-          Uri.parse('$baseUrl/api/addresses/$previousId'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({
-            'data': {'is_default': false},
-          }),
-        );
-      }
-
-      // Set new default
-      final response = await http.put(
-        Uri.parse('$baseUrl/api/addresses/$targetId'),
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/addresses/$targetId/set-default'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'data': {'is_default': true},
-        }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final index = _addresses.indexWhere((a) => a.id == addressId);
-        if (index != -1) {
-          _addresses[index] = Address.fromJson(data['data']);
-          _defaultAddress = _addresses[index];
-        }
+        final updated = Address.fromJson(data['data']);
+        // Refresh local cache: the chosen one is the only default now.
+        _addresses = _addresses
+            .map((a) => a.id == updated.id ? updated : a.copyWith(isDefault: false))
+            .toList();
+        _defaultAddress = updated;
         notifyListeners();
         return true;
       }
+      _error = 'Failed to set default address';
+      notifyListeners();
       return false;
     } catch (e) {
       _error = 'Error setting default address: $e';

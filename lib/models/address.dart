@@ -62,4 +62,34 @@ class Address {
 
   String get fullAddress =>
       '$addressLine, $city${landmark != null ? ', $landmark' : ''}';
+
+  Address copyWith({
+    int? id,
+    String? documentId,
+    int? customerId,
+    String? label,
+    String? addressLine,
+    String? city,
+    String? landmark,
+    String? deliveryInstructions,
+    double? gpsLat,
+    double? gpsLng,
+    bool? isDefault,
+    DateTime? createdAt,
+  }) {
+    return Address(
+      id: id ?? this.id,
+      documentId: documentId ?? this.documentId,
+      customerId: customerId ?? this.customerId,
+      label: label ?? this.label,
+      addressLine: addressLine ?? this.addressLine,
+      city: city ?? this.city,
+      landmark: landmark ?? this.landmark,
+      deliveryInstructions: deliveryInstructions ?? this.deliveryInstructions,
+      gpsLat: gpsLat ?? this.gpsLat,
+      gpsLng: gpsLng ?? this.gpsLng,
+      isDefault: isDefault ?? this.isDefault,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }

@@ -119,12 +119,12 @@ class RoleBasedRouter {
   /// Creates a fade transition page for smoother navigation.
   /// Wraps a screen so that back navigation goes to customer home
   /// instead of popping an empty stack (which crashes on web).
-  static Widget _safeBack(Widget child) {
+  static Widget _safeBack(Widget child, {String fallbackRoute = '/customer/home'}) {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
-          _router?.go('/customer/home');
+          _router?.go(fallbackRoute);
         }
       },
       child: child,
@@ -458,7 +458,20 @@ class RoleBasedRouter {
           path: '/customer/addresses',
           builder: (context, state) {
             final returnRoute = state.uri.queryParameters['return'];
-            return _safeBack(AddressesScreen(returnRoute: returnRoute));
+            final selectMode = state.uri.queryParameters['select'] == 'true';
+            // In select mode the user came from another screen (usually
+            // checkout) via context.go, so there's nothing to pop back to.
+            // System back should land on that origin route, not home.
+            final fallback = selectMode && returnRoute != null && returnRoute.isNotEmpty
+                ? returnRoute
+                : '/customer/home';
+            return _safeBack(
+              AddressesScreen(
+                returnRoute: returnRoute,
+                selectMode: selectMode,
+              ),
+              fallbackRoute: fallback,
+            );
           },
         ),
         GoRoute(
@@ -473,7 +486,12 @@ class RoleBasedRouter {
             final isGuest =
                 extra?['guest'] == true ||
                 state.uri.queryParameters['guest'] == 'true';
-            return CheckoutScreen(isGuest: isGuest);
+            final selectedAddressId =
+                state.uri.queryParameters['selectedAddress'];
+            return CheckoutScreen(
+              isGuest: isGuest,
+              selectedAddressId: selectedAddressId,
+            );
           },
         ),
         GoRoute(

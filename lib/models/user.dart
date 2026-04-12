@@ -160,8 +160,11 @@ class Address {
   final String label;
   final String fullAddress;
   final String? landmark;
-  final double latitude;
-  final double longitude;
+  // Nullable so callers can distinguish "no GPS captured" from a real (0, 0)
+  // pin in the Gulf of Guinea. Backend service-area enforcement rejects orders
+  // with missing coordinates, so we must surface that state honestly here.
+  final double? latitude;
+  final double? longitude;
   final bool isDefault;
 
   Address({
@@ -169,10 +172,15 @@ class Address {
     required this.label,
     required this.fullAddress,
     this.landmark,
-    required this.latitude,
-    required this.longitude,
+    this.latitude,
+    this.longitude,
     this.isDefault = false,
   });
+
+  bool get hasCoordinates =>
+      latitude != null &&
+      longitude != null &&
+      !(latitude == 0 && longitude == 0);
 
   Address copyWith({
     String? id,
@@ -212,8 +220,8 @@ class Address {
       label: json['label'] as String,
       fullAddress: json['fullAddress'] as String,
       landmark: json['landmark'] as String?,
-      latitude: (json['latitude'] as num).toDouble(),
-      longitude: (json['longitude'] as num).toDouble(),
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
       isDefault: json['isDefault'] as bool? ?? false,
     );
   }

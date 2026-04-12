@@ -22,7 +22,17 @@ import '../../widgets/app_bottom_nav.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final bool isGuest;
-  const CheckoutScreen({super.key, this.isGuest = false});
+
+  /// Optional address documentId/id passed via the route query param when the
+  /// user picks an address on the addresses screen in select mode. We resolve
+  /// it against AddressService in initState and pre-select.
+  final String? selectedAddressId;
+
+  const CheckoutScreen({
+    super.key,
+    this.isGuest = false,
+    this.selectedAddressId,
+  });
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -77,9 +87,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     });
 
     if (!widget.isGuest) {
-      _selectedAddress = context.read<AddressService>().defaultUserAddress;
+      final addressService = context.read<AddressService>();
+      // Prefer an explicit pick from the addresses screen over the default.
+      final picked = _resolveSelectedAddress(addressService);
+      _selectedAddress = picked ?? addressService.defaultUserAddress;
       _loadSavedAddresses();
     }
+  }
+
+  /// Look up the address the user picked on the addresses screen by matching
+  /// either the documentId-as-id we encoded or the numeric Strapi id.
+  Address? _resolveSelectedAddress(AddressService addressService) {
+    final id = widget.selectedAddressId;
+    if (id == null || id.isEmpty) return null;
+    for (final a in addressService.addresses) {
+      if (a.documentId == id || a.id.toString() == id) {
+        // Convert via the existing Address -> user_models.Address mapper.
+        return addressService.userAddresses.firstWhere(
+          (u) => u.id == a.id.toString(),
+          orElse: () => addressService.defaultUserAddress!,
+        );
+      }
+    }
+    return null;
   }
 
   Future<void> _loadSavedAddresses() async {
@@ -98,7 +128,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     if (!mounted) return;
-    setState(() => _selectedAddress = addressService.defaultUserAddress);
+    // If the user explicitly picked an address on the addresses screen, keep
+    // it selected after the fetch completes. Otherwise fall back to default.
+    final picked = _resolveSelectedAddress(addressService);
+    setState(() => _selectedAddress = picked ?? addressService.defaultUserAddress);
 
     if (_selectedAddress == null && !_didAutoRedirectForMissingAddress) {
       _didAutoRedirectForMissingAddress = true;
@@ -357,12 +390,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           return;
         }
 
-        // Service area validation — check if address is within delivery zone
-        if (_selectedAddress!.latitude != 0.0 &&
-            _selectedAddress!.longitude != 0.0) {
+        // Service area validation — check if address is within delivery zone.
+        // Backend also enforces this; the client check is just for fast UX.
+        final lat = _selectedAddress!.latitude;
+        final lng = _selectedAddress!.longitude;
+        if (lat != null && lng != null && !(lat == 0 && lng == 0)) {
           final distanceKm = _haversineDistance(
-            _selectedAddress!.latitude,
-            _selectedAddress!.longitude,
+            lat,
+            lng,
             AppConstants.serviceAreaCenterLat,
             AppConstants.serviceAreaCenterLng,
           );
@@ -780,7 +815,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
           ),
           TextButton(
-            onPressed: () => _showAddressSelector(),
+            onPressed: () => _goToAddressSelection(announce: false),
             child: const Text('Change'),
           ),
         ],
@@ -788,15 +823,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  void _goToAddressSelection() {
+  /// Navigate to the addresses screen in select mode. Used both when no
+  /// address is selected yet (auto-redirect from build) and when the user
+  /// taps "Change". The addresses screen returns here via the `return` query
+  /// param with `&selectedAddress=<id>` so we can pre-select on rebuild.
+  void _goToAddressSelection({bool announce = true}) {
     final returnRoute = Uri.encodeComponent('/customer/checkout');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please add or select a delivery address to continue.'),
-        backgroundColor: AppColors.warning,
-      ),
-    );
-    context.go('/customer/addresses?return=$returnRoute');
+    if (announce) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add or select a delivery address to continue.'),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+    }
+    context.go('/customer/addresses?return=$returnRoute&select=true');
   }
 
   Widget _buildAddAddressButton() {
@@ -1183,50 +1224,4 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  void _showAddressSelector() {
-    final addressService = context.read<AddressService>();
-    final addresses = addressService.userAddresses;
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppSizes.radiusXl),
-        ),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(AppSizes.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Select Address', style: AppTextStyles.h5),
-              const SizedBox(height: AppSizes.md),
-              if (addresses.isEmpty)
-                const Center(child: Text('No saved addresses'))
-              else
-                ...addresses.map((address) {
-                  return ListTile(
-                    onTap: () {
-                      setState(() => _selectedAddress = address);
-                      Navigator.pop(context);
-                    },
-                    leading: const Icon(Iconsax.location),
-                    title: Text(address.label),
-                    subtitle: Text(address.fullAddress),
-                    trailing: _selectedAddress?.id == address.id
-                        ? const Icon(
-                            Iconsax.tick_circle5,
-                            color: AppColors.primaryOrange,
-                          )
-                        : null,
-                  );
-                }),
-              const SizedBox(height: AppSizes.md),
-            ],
-          ),
-        );
-      },
-    );
-  }
 }
