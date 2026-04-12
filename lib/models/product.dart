@@ -117,8 +117,49 @@ class Product {
       return image.startsWith('http') ? image : '${baseUrl ?? ""}$image';
     }
 
-    // Fallback: handle legacy Strapi media object format
+    // Handle list payloads (some Strapi responses expose media as arrays).
+    if (image is List) {
+      for (final item in image) {
+        final resolved = _resolveImageUrl(item, baseUrl);
+        if (resolved.isNotEmpty) return resolved;
+      }
+      return '';
+    }
+
+    // Fallback: handle v4/v5 Strapi media object formats.
     if (image is Map<String, dynamic>) {
+      final directUrl = image['url'] as String?;
+      if (directUrl != null && directUrl.isNotEmpty) {
+        return directUrl.startsWith('http') ? directUrl : '${baseUrl ?? ""}$directUrl';
+      }
+
+      final formats = image['formats'];
+      if (formats is Map<String, dynamic>) {
+        for (final key in ['medium', 'small', 'thumbnail']) {
+          final candidate = formats[key];
+          if (candidate is Map<String, dynamic>) {
+            final formatUrl = candidate['url'] as String?;
+            if (formatUrl != null && formatUrl.isNotEmpty) {
+              return formatUrl.startsWith('http')
+                  ? formatUrl
+                  : '${baseUrl ?? ""}$formatUrl';
+            }
+          }
+        }
+      }
+
+      final nestedData = image['data'];
+      if (nestedData != null) {
+        final resolvedNested = _resolveImageUrl(nestedData, baseUrl);
+        if (resolvedNested.isNotEmpty) return resolvedNested;
+      }
+
+      final attributesNode = image['attributes'];
+      if (attributesNode != null) {
+        final resolvedAttrs = _resolveImageUrl(attributesNode, baseUrl);
+        if (resolvedAttrs.isNotEmpty) return resolvedAttrs;
+      }
+
       final data = (image['data'] as Map<String, dynamic>?) ?? image;
       final attrs = (data['attributes'] as Map<String, dynamic>?) ?? data;
       final url = attrs['url'] as String? ?? '';
