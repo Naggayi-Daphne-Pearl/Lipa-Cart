@@ -233,6 +233,16 @@ class OrderProvider extends ChangeNotifier {
     _orders
       ..clear()
       ..addAll(merged);
+
+    // Re-bind _currentOrder to the merged backend-authoritative instance, so
+    // detail screens watching it don't show stale fields after a sync.
+    if (_currentOrder != null) {
+      final currentKey = _currentOrder!.documentId ?? _currentOrder!.id;
+      if (backendByKey.containsKey(currentKey)) {
+        _currentOrder = backendByKey[currentKey];
+      }
+    }
+
     _persistOrders();
     notifyListeners();
   }
