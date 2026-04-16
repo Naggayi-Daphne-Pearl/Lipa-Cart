@@ -50,7 +50,7 @@ class StrapiService {
 
   static Future<List<Category>> getCategories() async {
     final response = await http
-        .get(Uri.parse('$_apiUrl/categories?populate=*'))
+        .get(Uri.parse('$_apiUrl/categories?populate[image]=*'))
         .timeout(AppConstants.apiTimeout);
 
     if (response.statusCode != 200) {
@@ -71,7 +71,13 @@ class StrapiService {
 
   static Future<List<Product>> getProducts() async {
     final response = await http
-        .get(Uri.parse('$_apiUrl/products?populate=*&pagination[pageSize]=100'))
+        .get(Uri.parse(
+          '$_apiUrl/products'
+          '?populate[image]=*'
+          '&populate[category][fields][0]=name&populate[category][fields][1]=slug'
+          '&populate[subcategory][fields][0]=name&populate[subcategory][fields][1]=slug'
+          '&pagination[pageSize]=100',
+        ))
         .timeout(AppConstants.apiTimeout);
 
     if (response.statusCode != 200) {
@@ -93,9 +99,14 @@ class StrapiService {
   static Future<List<ShoppingList>> getShoppingLists({
     String? authToken,
   }) async {
-    // Simplified populate query - use wildcard instead of complex nested fields
-    // Note: /me endpoint not needed since find() is already filtered by authenticated user
-    final url = '$_apiUrl/shopping-lists?populate=*&publicationState=preview';
+    // status=draft fetches both draft and published lists (Strapi 5 syntax —
+    // publicationState=preview was the deprecated Strapi v4 equivalent).
+    final url = '$_apiUrl/shopping-lists'
+        '?status=draft'
+        '&populate[items][fields][0]=name&populate[items][fields][1]=quantity'
+        '&populate[items][fields][2]=unit&populate[items][fields][3]=budget_amount'
+        '&populate[items][populate][product][fields][0]=name'
+        '&populate[items][populate][product][populate][image]=*';
 
     final headers = <String, String>{
       if (authToken != null) 'Authorization': 'Bearer $authToken',
@@ -255,7 +266,7 @@ class StrapiService {
       final url =
           '$_apiUrl/recipes?pagination[page]=$page&pagination[pageSize]=$pageSize'
           '&populate[image]=*'
-          '&populate[ingredients][populate][product][populate]=image'
+          '&populate[ingredients][populate][product][populate][image]=*'
           '&populate[instructions]=*';
 
       final response = await http
