@@ -40,7 +40,9 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  PaymentMethod _selectedPayment = PaymentMethod.mobileMoney;
+  // MVP: only Cash on Delivery exposed. See .claude/playbooks/payments_todo.md
+  // for the plan to re-enable mobile money (Flutterwave v4 already scaffolded).
+  PaymentMethod _selectedPayment = PaymentMethod.cashOnDelivery;
   Address? _selectedAddress;
   bool _isLoading = false;
   bool _consentChecked = false;
@@ -468,29 +470,41 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             if (paymentPhone != null) {
               try {
                 final orderRef = backendOrder.documentId ?? backendOrder.id;
-                await PaymentService.initiatePawaPayMobileMoney(
+                final result =
+                    await PaymentService.initiateFlutterwaveMobileMoney(
                   token: authProvider.token!,
                   orderId: orderRef,
                   phoneNumber: paymentPhone,
                 );
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Payment prompt sent. Please approve on your phone.',
-                      ),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                }
+
+                setState(() => _isLoading = false);
+                if (!mounted) return;
+
+                final data = result['data'] as Map<String, dynamic>? ?? {};
+                final payment = data['payment'] as Map<String, dynamic>? ?? {};
+                final paymentId = payment['documentId'] as String? ??
+                    payment['id']?.toString() ??
+                    '';
+
+                cartProvider.clearCart();
+                context.pushReplacement(
+                  '/customer/payment-pending',
+                  extra: {
+                    'order': backendOrder,
+                    'paymentId': paymentId,
+                    'phoneNumber': paymentPhone,
+                  },
+                );
+                return;
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        'Order placed, but payment prompt failed. You can retry from your order details. ($e)',
+                        'Order placed, but payment prompt failed. You can retry from your order details.',
                       ),
                       backgroundColor: AppColors.warning,
+                      duration: const Duration(seconds: 5),
                     ),
                   );
                 }
@@ -504,7 +518,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         final orderForSuccess = backendOrder ?? localOrder;
         if (orderForSuccess != null && mounted) {
           cartProvider.clearCart();
-          context.push('/customer/order-success', extra: orderForSuccess);
+          context.pushReplacement(
+            '/customer/order-success',
+            extra: orderForSuccess,
+          );
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -615,14 +632,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                       const SizedBox(height: AppSizes.md),
 
-                      // Payment method
+                      // Payment method — MVP exposes CoD only.
                       _buildSection(
                         title: 'Payment Method',
                         icon: Iconsax.card,
                         child: Column(
-                          children: PaymentMethod.values.map((method) {
-                            return _buildPaymentOption(method);
-                          }).toList(),
+                          children: PaymentMethod.values
+                              .where((m) => m == PaymentMethod.cashOnDelivery)
+                              .map(_buildPaymentOption)
+                              .toList(),
                         ),
                       ),
                       const SizedBox(height: AppSizes.md),

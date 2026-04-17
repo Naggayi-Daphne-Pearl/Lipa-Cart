@@ -50,7 +50,7 @@ class StrapiService {
 
   static Future<List<Category>> getCategories() async {
     final response = await http
-        .get(Uri.parse('$_apiUrl/categories?populate[image]=*'))
+        .get(Uri.parse('$_apiUrl/categories?populate[image]=true'))
         .timeout(AppConstants.apiTimeout);
 
     if (response.statusCode != 200) {
@@ -71,13 +71,15 @@ class StrapiService {
 
   static Future<List<Product>> getProducts() async {
     final response = await http
-        .get(Uri.parse(
-          '$_apiUrl/products'
-          '?populate[image]=*'
-          '&populate[category][fields][0]=name&populate[category][fields][1]=slug'
-          '&populate[subcategory][fields][0]=name&populate[subcategory][fields][1]=slug'
-          '&pagination[pageSize]=100',
-        ))
+        .get(
+          Uri.parse(
+            '$_apiUrl/products'
+            '?populate[image]=true'
+            '&populate[category][fields][0]=name&populate[category][fields][1]=slug'
+            '&populate[subcategory][fields][0]=name&populate[subcategory][fields][1]=slug'
+            '&pagination[pageSize]=100',
+          ),
+        )
         .timeout(AppConstants.apiTimeout);
 
     if (response.statusCode != 200) {
@@ -101,12 +103,14 @@ class StrapiService {
   }) async {
     // status=draft fetches both draft and published lists (Strapi 5 syntax —
     // publicationState=preview was the deprecated Strapi v4 equivalent).
-    final url = '$_apiUrl/shopping-lists'
+    final url =
+        '$_apiUrl/shopping-lists'
         '?status=draft'
         '&populate[items][fields][0]=name&populate[items][fields][1]=quantity'
         '&populate[items][fields][2]=unit&populate[items][fields][3]=budget_amount'
+        '&populate[items][fields][4]=unit_price'
         '&populate[items][populate][product][fields][0]=name'
-        '&populate[items][populate][product][populate][image]=*';
+        '&populate[items][populate][product][populate][image]=true';
 
     final headers = <String, String>{
       if (authToken != null) 'Authorization': 'Bearer $authToken',
@@ -265,8 +269,8 @@ class StrapiService {
     while (true) {
       final url =
           '$_apiUrl/recipes?pagination[page]=$page&pagination[pageSize]=$pageSize'
-          '&populate[image]=*'
-          '&populate[ingredients][populate][product][populate][image]=*'
+          '&populate[image]=true'
+          '&populate[ingredients][populate][product][populate][image]=true'
           '&populate[instructions]=*';
 
       final response = await http
@@ -282,13 +286,12 @@ class StrapiService {
           .cast<Map<String, dynamic>>();
 
       allRecipes.addAll(
-        data
-            .map((item) => Recipe.fromStrapi(item, baseUrl: _baseUrl))
-            .toList(),
+        data.map((item) => Recipe.fromStrapi(item, baseUrl: _baseUrl)).toList(),
       );
 
-      final pagination = (body['meta'] as Map<String, dynamic>?)?['pagination']
-          as Map<String, dynamic>?;
+      final pagination =
+          (body['meta'] as Map<String, dynamic>?)?['pagination']
+              as Map<String, dynamic>?;
       final pageCount = (pagination?['pageCount'] as num?)?.toInt() ?? page;
       if (page >= pageCount || data.isEmpty) {
         break;
@@ -359,7 +362,8 @@ class StrapiService {
 
         final body = json.decode(response.body) as Map<String, dynamic>;
         final pageList =
-            (body['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+            (body['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
+            [];
         list.addAll(pageList);
 
         final pagination = body['meta']?['pagination'] as Map<String, dynamic>?;
@@ -367,41 +371,50 @@ class StrapiService {
         page += 1;
       } while (page <= pageCount);
 
-      return list.map((raw) {
-        final item = (raw['attributes'] as Map<String, dynamic>?) ?? raw;
-        final customerRaw = item['customer'];
-        Map<String, dynamic> customer = <String, dynamic>{};
-        if (customerRaw is Map<String, dynamic>) {
-          if (customerRaw['data'] is Map<String, dynamic>) {
-            final data = customerRaw['data'] as Map<String, dynamic>;
-            customer = (data['attributes'] as Map<String, dynamic>?) ?? data;
-          } else {
-            customer =
-                (customerRaw['attributes'] as Map<String, dynamic>?) ?? customerRaw;
-          }
-        }
-        final ratingRaw = item['rating'];
-        Map<String, dynamic> rating = <String, dynamic>{};
-        if (ratingRaw is Map<String, dynamic>) {
-          if (ratingRaw['data'] is Map<String, dynamic>) {
-            final data = ratingRaw['data'] as Map<String, dynamic>;
-            rating = (data['attributes'] as Map<String, dynamic>?) ?? data;
-          } else {
-            rating = (ratingRaw['attributes'] as Map<String, dynamic>?) ?? ratingRaw;
-          }
-        }
+      return list
+          .map((raw) {
+            final item = (raw['attributes'] as Map<String, dynamic>?) ?? raw;
+            final customerRaw = item['customer'];
+            Map<String, dynamic> customer = <String, dynamic>{};
+            if (customerRaw is Map<String, dynamic>) {
+              if (customerRaw['data'] is Map<String, dynamic>) {
+                final data = customerRaw['data'] as Map<String, dynamic>;
+                customer =
+                    (data['attributes'] as Map<String, dynamic>?) ?? data;
+              } else {
+                customer =
+                    (customerRaw['attributes'] as Map<String, dynamic>?) ??
+                    customerRaw;
+              }
+            }
+            final ratingRaw = item['rating'];
+            Map<String, dynamic> rating = <String, dynamic>{};
+            if (ratingRaw is Map<String, dynamic>) {
+              if (ratingRaw['data'] is Map<String, dynamic>) {
+                final data = ratingRaw['data'] as Map<String, dynamic>;
+                rating = (data['attributes'] as Map<String, dynamic>?) ?? data;
+              } else {
+                rating =
+                    (ratingRaw['attributes'] as Map<String, dynamic>?) ??
+                    ratingRaw;
+              }
+            }
 
-        return {
-          'id': (rating['documentId'] ?? rating['id'] ?? '').toString(),
-          'stars': (rating['shopper_rating'] as num?)?.toInt(),
-          'overall_rating': (rating['overall_rating'] as num?)?.toInt(),
-          'comment': (rating['comment'] as String?) ?? '',
-          'createdAt': (rating['createdAt'] as String?) ?? '',
-          'customerName':
-              (customer['name'] as String?) ?? (customer['phone'] as String?) ?? 'Customer',
-          'orderNumber': (item['order_number'] as String?) ?? '',
-        };
-      }).where((e) => e['stars'] != null).toList();
+            return {
+              'id': (rating['documentId'] ?? rating['id'] ?? '').toString(),
+              'stars': (rating['shopper_rating'] as num?)?.toInt(),
+              'overall_rating': (rating['overall_rating'] as num?)?.toInt(),
+              'comment': (rating['comment'] as String?) ?? '',
+              'createdAt': (rating['createdAt'] as String?) ?? '',
+              'customerName':
+                  (customer['name'] as String?) ??
+                  (customer['phone'] as String?) ??
+                  'Customer',
+              'orderNumber': (item['order_number'] as String?) ?? '',
+            };
+          })
+          .where((e) => e['stars'] != null)
+          .toList();
     } catch (_) {
       return [];
     }
@@ -439,13 +452,16 @@ class StrapiService {
         if (photoField is Map<String, dynamic>) {
           final url = photoField['url'] as String?;
           if (url != null && url.isNotEmpty) {
-            substitutePhotoUrl = url.startsWith('http') ? url : '${AppConstants.baseUrl}$url';
+            substitutePhotoUrl = url.startsWith('http')
+                ? url
+                : '${AppConstants.baseUrl}$url';
           }
         }
 
         final shopperNotes = itemAttrs['shopper_notes'] as String?;
         final structuredName = itemAttrs['substitute_name'] as String?;
-        final structuredPrice = (itemAttrs['substitute_price'] as num?)?.toDouble();
+        final structuredPrice = (itemAttrs['substitute_price'] as num?)
+            ?.toDouble();
 
         return CartItem(
           id: (item['documentId'] ?? item['id'] ?? '').toString(),
@@ -467,8 +483,12 @@ class StrapiService {
           shopperNotes: shopperNotes,
           substitutionApproved: itemAttrs['substitution_approved'] as bool?,
           isSubstituted: itemAttrs['is_substituted'] as bool?,
-          substituteName: structuredName ?? CartItem.parseSubstituteNameFromNotes(shopperNotes),
-          substitutePrice: structuredPrice ?? CartItem.parseSubstitutePriceFromNotes(shopperNotes),
+          substituteName:
+              structuredName ??
+              CartItem.parseSubstituteNameFromNotes(shopperNotes),
+          substitutePrice:
+              structuredPrice ??
+              CartItem.parseSubstitutePriceFromNotes(shopperNotes),
           substitutePhotoUrl: substitutePhotoUrl,
         );
       }).toList();
@@ -499,8 +519,12 @@ class StrapiService {
           shopperNotes: shopperNotes,
           substitutionApproved: itemAttrs['substitution_approved'] as bool?,
           isSubstituted: itemAttrs['is_substituted'] as bool?,
-          substituteName: itemAttrs['substitute_name'] as String? ?? CartItem.parseSubstituteNameFromNotes(shopperNotes),
-          substitutePrice: (itemAttrs['substitute_price'] as num?)?.toDouble() ?? CartItem.parseSubstitutePriceFromNotes(shopperNotes),
+          substituteName:
+              itemAttrs['substitute_name'] as String? ??
+              CartItem.parseSubstituteNameFromNotes(shopperNotes),
+          substitutePrice:
+              (itemAttrs['substitute_price'] as num?)?.toDouble() ??
+              CartItem.parseSubstitutePriceFromNotes(shopperNotes),
         );
       }).toList();
     }
@@ -796,7 +820,10 @@ class StrapiService {
         return data['data'] as Map<String, dynamic>?;
       }
       throw Exception(
-        _extractErrorMessage(response, fallback: 'Failed to update order status'),
+        _extractErrorMessage(
+          response,
+          fallback: 'Failed to update order status',
+        ),
       );
     } catch (e) {
       if (e is Exception) rethrow;
@@ -1178,7 +1205,10 @@ class StrapiService {
         return data['data'] as Map<String, dynamic>?;
       }
       throw Exception(
-        _extractErrorMessage(response, fallback: 'Failed to update delivery status'),
+        _extractErrorMessage(
+          response,
+          fallback: 'Failed to update delivery status',
+        ),
       );
     } catch (e) {
       if (e is Exception) rethrow;
@@ -1348,7 +1378,8 @@ class StrapiService {
 
         final body = json.decode(response.body) as Map<String, dynamic>;
         final pageList =
-            (body['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+            (body['data'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ??
+            [];
         list.addAll(pageList);
 
         final pagination = body['meta']?['pagination'] as Map<String, dynamic>?;
@@ -1356,41 +1387,50 @@ class StrapiService {
         page += 1;
       } while (page <= pageCount);
 
-      return list.map((raw) {
-        final item = (raw['attributes'] as Map<String, dynamic>?) ?? raw;
-        final customerRaw = item['customer'];
-        Map<String, dynamic> customer = <String, dynamic>{};
-        if (customerRaw is Map<String, dynamic>) {
-          if (customerRaw['data'] is Map<String, dynamic>) {
-            final data = customerRaw['data'] as Map<String, dynamic>;
-            customer = (data['attributes'] as Map<String, dynamic>?) ?? data;
-          } else {
-            customer =
-                (customerRaw['attributes'] as Map<String, dynamic>?) ?? customerRaw;
-          }
-        }
-        final ratingRaw = item['rating'];
-        Map<String, dynamic> rating = <String, dynamic>{};
-        if (ratingRaw is Map<String, dynamic>) {
-          if (ratingRaw['data'] is Map<String, dynamic>) {
-            final data = ratingRaw['data'] as Map<String, dynamic>;
-            rating = (data['attributes'] as Map<String, dynamic>?) ?? data;
-          } else {
-            rating = (ratingRaw['attributes'] as Map<String, dynamic>?) ?? ratingRaw;
-          }
-        }
+      return list
+          .map((raw) {
+            final item = (raw['attributes'] as Map<String, dynamic>?) ?? raw;
+            final customerRaw = item['customer'];
+            Map<String, dynamic> customer = <String, dynamic>{};
+            if (customerRaw is Map<String, dynamic>) {
+              if (customerRaw['data'] is Map<String, dynamic>) {
+                final data = customerRaw['data'] as Map<String, dynamic>;
+                customer =
+                    (data['attributes'] as Map<String, dynamic>?) ?? data;
+              } else {
+                customer =
+                    (customerRaw['attributes'] as Map<String, dynamic>?) ??
+                    customerRaw;
+              }
+            }
+            final ratingRaw = item['rating'];
+            Map<String, dynamic> rating = <String, dynamic>{};
+            if (ratingRaw is Map<String, dynamic>) {
+              if (ratingRaw['data'] is Map<String, dynamic>) {
+                final data = ratingRaw['data'] as Map<String, dynamic>;
+                rating = (data['attributes'] as Map<String, dynamic>?) ?? data;
+              } else {
+                rating =
+                    (ratingRaw['attributes'] as Map<String, dynamic>?) ??
+                    ratingRaw;
+              }
+            }
 
-        return {
-          'id': (rating['documentId'] ?? rating['id'] ?? '').toString(),
-          'stars': (rating['rider_rating'] as num?)?.toInt(),
-          'overall_rating': (rating['overall_rating'] as num?)?.toInt(),
-          'comment': (rating['comment'] as String?) ?? '',
-          'createdAt': (rating['createdAt'] as String?) ?? '',
-          'customerName':
-              (customer['name'] as String?) ?? (customer['phone'] as String?) ?? 'Customer',
-          'orderNumber': (item['order_number'] as String?) ?? '',
-        };
-      }).where((e) => e['stars'] != null).toList();
+            return {
+              'id': (rating['documentId'] ?? rating['id'] ?? '').toString(),
+              'stars': (rating['rider_rating'] as num?)?.toInt(),
+              'overall_rating': (rating['overall_rating'] as num?)?.toInt(),
+              'comment': (rating['comment'] as String?) ?? '',
+              'createdAt': (rating['createdAt'] as String?) ?? '',
+              'customerName':
+                  (customer['name'] as String?) ??
+                  (customer['phone'] as String?) ??
+                  'Customer',
+              'orderNumber': (item['order_number'] as String?) ?? '',
+            };
+          })
+          .where((e) => e['stars'] != null)
+          .toList();
     } catch (_) {
       return [];
     }

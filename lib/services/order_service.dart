@@ -736,10 +736,9 @@ class OrderService extends ChangeNotifier {
       final orderNumber =
           'LC${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
 
-      // TODO: Once payment integration is set up, use this logic instead:
-      // final status = paymentMethod == 'cashOnDelivery' ? 'payment_confirmed' : 'pending';
-      // For now, all orders default to payment_confirmed so shoppers can see them
-      final status = 'payment_confirmed';
+      final status = paymentMethod == 'cashOnDelivery'
+          ? 'payment_confirmed'
+          : 'pending';
 
       final response = await http.post(
         Uri.parse('$baseUrl/api/orders'),
@@ -1020,10 +1019,11 @@ class OrderService extends ChangeNotifier {
         final item = entry.value;
         final productId = item.product.id;
 
+        final isCustomStub =
+            item.product.strapiId == null || productId.startsWith('custom_');
         return {
           'order': orderDocumentId, // Use documentId for Strapi v5 relations
-          // Only include product if it's a real linked product (strapiId != null)
-          if (item.product.strapiId != null) 'product': productId,
+          if (!isCustomStub && productId.isNotEmpty) 'product': productId,
           'product_name': item.product.name,
           'quantity': item.quantity,
           'unit': item.product.unit,

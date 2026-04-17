@@ -11,6 +11,7 @@ import '../../models/product.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../services/order_service.dart';
+import '../../services/payment_service.dart';
 import '../../services/delivery_route_service.dart';
 import '../../widgets/error_boundary.dart';
 import 'package:iconsax/iconsax.dart';
@@ -48,6 +49,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   LatLng? _animationStartPoint;
   LatLng? _animationEndPoint;
   bool _isTrackingMapReady = false;
+  bool _isRetryingPayment = false;
 
   @override
   void initState() {
@@ -1806,8 +1808,46 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                       ),
                     ),
 
+                  // Complete Payment button (for unpaid mobile money orders)
+                  if ((order.status == OrderStatus.pending ||
+                          order.status == OrderStatus.paymentProcessing) &&
+                      order.paymentMethod == PaymentMethod.mobileMoney)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSizes.md),
+                      child: ElevatedButton.icon(
+                        onPressed: _isRetryingPayment ? null : _retryPayment,
+                        icon: _isRetryingPayment
+                            ? SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.white,
+                                ),
+                              )
+                            : const Icon(Iconsax.money_send, size: 18),
+                        label: Text(
+                          _isRetryingPayment
+                              ? 'Sending...'
+                              : 'Complete Payment',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.white,
+                          minimumSize: const Size(double.infinity, 48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusMd,
+                            ),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+
                   // Cancel order button (only for early statuses)
                   if (order.status == OrderStatus.pending ||
+                      order.status == OrderStatus.paymentProcessing ||
                       order.status == OrderStatus.confirmed ||
                       order.status == OrderStatus.shopperAssigned)
                     Padding(
@@ -2405,6 +2445,77 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
         ),
       ],
     );
+  }
+
+  String? _resolvePaymentPhone() {
+    final authProvider = context.read<AuthProvider>();
+    final raw = authProvider.user?.phoneNumber.trim() ?? '';
+    if (raw.isEmpty) return null;
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('256') && digits.length == 12) return '+$digits';
+    if (digits.startsWith('0') && digits.length == 10) {
+      return '+256${digits.substring(1)}';
+    }
+    if (digits.length == 9) return '+256$digits';
+    return null;
+  }
+
+  Future<void> _retryPayment() async {
+    if (_isRetryingPayment || !mounted) return;
+    setState(() => _isRetryingPayment = true);
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final token = authProvider.token;
+      if (token == null) return;
+
+      final paymentPhone = _resolvePaymentPhone();
+      if (paymentPhone == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No phone number found on your account.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      final orderRef = order.documentId ?? order.id;
+      final result = await PaymentService.initiateFlutterwaveMobileMoney(
+        token: token,
+        orderId: orderRef,
+        phoneNumber: paymentPhone,
+      );
+
+      if (!mounted) return;
+
+      final data = result['data'] as Map<String, dynamic>? ?? {};
+      final payment = data['payment'] as Map<String, dynamic>? ?? {};
+      final paymentId =
+          payment['documentId'] as String? ?? payment['id']?.toString() ?? '';
+
+      context.push(
+        '/customer/payment-pending',
+        extra: {
+          'order': order,
+          'paymentId': paymentId,
+          'phoneNumber': paymentPhone,
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not send payment prompt. Please try again.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isRetryingPayment = false);
+    }
   }
 
   void _showCancelDialog(BuildContext context) {
