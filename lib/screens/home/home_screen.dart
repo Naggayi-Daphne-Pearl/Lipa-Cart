@@ -28,6 +28,7 @@ import '../../widgets/adaptive_product_section.dart';
 import '../../widgets/adaptive_category_section.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
+import '../../widgets/desktop_footer.dart';
 import '../../widgets/feature_spotlight_card.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -854,6 +855,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         .toList(),
                   ),
 
+                const SizedBox(height: AppSizes.xl),
+                const DesktopFooter(),
                 const SizedBox(height: 100),
               ],
             ),
