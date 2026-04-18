@@ -52,11 +52,11 @@ jobs:
         continue-on-error: true
         run: dart format --output=none --set-exit-if-changed .
 
-      # Phase 1: tests are non-blocking. The default widget_test.dart is a scaffold
-      # and real test coverage is still being built up. Flip to blocking once the
-      # test suite reflects real coverage on auth, cart, checkout, and orders.
+      # Tests are BLOCKING — the scaffold widget_test.dart has been removed and
+      # the remaining 100+ tests cover models, providers, and auth. Any regression
+      # in those fails the PR. Integration + widget tests for checkout/orders
+      # are tracked in .claude/standards/e2e_test_strategy.md.
       - name: Run tests
-        continue-on-error: true
         run: flutter test
 
   build-web:
