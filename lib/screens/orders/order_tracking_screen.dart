@@ -21,6 +21,7 @@ import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order.dart';
 import '../../widgets/custom_button.dart';
+import '../../core/utils/responsive.dart';
 
 class OrderTrackingScreen extends StatefulWidget {
   final Order order;
@@ -423,7 +424,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
           child: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppSizes.md),
-              child: Column(
+              child: ResponsiveContainer(
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Order header card
@@ -2223,6 +2225,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                   ),
                   const SizedBox(height: AppSizes.xl),
                 ],
+              ),
               ),
             ),
           ),

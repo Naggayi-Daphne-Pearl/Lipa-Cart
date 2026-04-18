@@ -52,67 +52,44 @@ class CategoryCard extends StatelessWidget {
 
         return GestureDetector(
           onTap: onTap,
+          behavior: HitTestBehavior.opaque,
           child: SizedBox(
-            width: cardSize + 12,
+            width: cardSize + 16,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Enhanced circular container with gradient and shadow
-                Container(
-                  width: cardSize,
-                  height: cardSize,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        categoryBgColor,
-                        Color.lerp(categoryBgColor, categoryColor, 0.1)!,
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: categoryColor.withValues(alpha: 0.15),
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: categoryColor.withValues(alpha: 0.15),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                        spreadRadius: 0,
+                // Clean circular image — no gradient/border/shadow.
+                // Design direction: let the product photo carry the visual weight.
+                ClipOval(
+                  child: SizedBox(
+                    width: cardSize,
+                    height: cardSize,
+                    child: CachedNetworkImage(
+                      imageUrl: category.image,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: AppColors.grey100,
+                        alignment: Alignment.center,
+                        child: const AppLoadingIndicator.small(),
                       ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: Padding(
-                      padding: const EdgeInsets.all(6),
-                      child: CachedNetworkImage(
-                        imageUrl: category.image,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) =>
-                            const Center(child: AppLoadingIndicator.small()),
-                        errorWidget: (context, url, error) => Icon(
+                      errorWidget: (context, url, error) => Container(
+                        color: AppColors.grey100,
+                        alignment: Alignment.center,
+                        child: Icon(
                           Icons.category_outlined,
-                          color: categoryColor,
+                          color: AppColors.textTertiary,
                           size: 24,
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 6),
-                // Category name with better typography
+                const SizedBox(height: 8),
                 Text(
                   category.name,
-                  style: TextStyle(
-                    fontSize: context.responsive<double>(
-                      mobile: 12.0,
-                      tablet: 13.0,
-                      desktop: 14.0,
-                    ),
+                  style: AppTextStyles.labelSmall.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF2C2C2C),
+                    color: AppColors.textPrimary,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,

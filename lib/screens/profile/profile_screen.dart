@@ -269,13 +269,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               Text(
                                 'Welcome ${user?.name?.split(' ')[0] ?? 'User'}!',
-                                style: AppTextStyles.screenTitle.copyWith(
-                                  fontSize: context.responsive<double>(
-                                    mobile: 26.0,
-                                    tablet: 30.0,
-                                    desktop: 34.0,
-                                  ),
-                                ),
+                                style: AppTextStyles.displayMd,
                               ),
                               const SizedBox(height: 4),
                               Text(
@@ -606,10 +600,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Icon(Iconsax.user, size: 40, color: AppColors.primary),
           ),
           const SizedBox(height: AppSizes.lg),
-          Text(
-            'Welcome to LipaCart',
-            style: AppTextStyles.screenTitle.copyWith(fontSize: 24),
-          ),
+          Text('Welcome to LipaCart', style: AppTextStyles.displayMd),
           const SizedBox(height: 8),
           Text(
             'Sign in to track orders, save addresses,\nand get personalised recommendations.',
@@ -691,10 +682,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Icon(Iconsax.money_recive, color: AppColors.primary, size: 32),
                 const SizedBox(height: AppSizes.md),
-                Text(
-                  'Earn with LipaCart',
-                  style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700),
-                ),
+                Text('Earn with LipaCart', style: AppTextStyles.displaySm),
                 const SizedBox(height: 6),
                 Text(
                   'Become a Personal Shopper or Delivery Rider and start earning today.',
@@ -926,7 +914,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: AppSizes.lg),
-              Text('Payment Methods', style: AppTextStyles.h5),
+              Text('Payment Methods', style: AppTextStyles.displaySm),
               const SizedBox(height: AppSizes.lg),
               _buildPaymentMethodTile(
                 icon: Iconsax.mobile,

@@ -76,18 +76,12 @@ flutter:
     - assets/images/logos/
     - assets/icons/
 
-  # Fonts (uncomment and add font files to enable custom fonts)
-  # fonts:
-  #   - family: Inter
-  #     fonts:
-  #       - asset: assets/fonts/Inter-Regular.ttf
-  #         weight: 400
-  #       - asset: assets/fonts/Inter-Medium.ttf
-  #         weight: 500
-  #       - asset: assets/fonts/Inter-SemiBold.ttf
-  #         weight: 600
-  #       - asset: assets/fonts/Inter-Bold.ttf
-  #         weight: 700
+  # Fraunces — display face, hero headlines only.
+  # Variable font covers all weights; Flutter picks the axis via FontWeight.
+  fonts:
+    - family: Fraunces
+      fonts:
+        - asset: assets/fonts/Fraunces.ttf
 
 # App Icon Configuration
 flutter_launcher_icons:

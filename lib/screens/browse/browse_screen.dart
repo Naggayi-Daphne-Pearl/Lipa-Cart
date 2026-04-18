@@ -99,13 +99,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                 ),
                 child: Text(
                   'Browse Products',
-                  style: AppTextStyles.screenTitle.copyWith(
-                    fontSize: context.responsive<double>(
-                      mobile: 26.0,
-                      tablet: 30.0,
-                      desktop: 34.0,
-                    ),
-                  ),
+                  style: AppTextStyles.displayMd,
                 ),
               ),
 
@@ -858,17 +852,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
               ),
             ),
             const SizedBox(height: AppSizes.xl),
-            Text(
-              'No products found',
-              style: AppTextStyles.h5.copyWith(
-                fontWeight: FontWeight.w700,
-                fontSize: context.responsive<double>(
-                  mobile: 20.0,
-                  tablet: 22.0,
-                  desktop: 24.0,
-                ),
-              ),
-            ),
+            Text('No products found', style: AppTextStyles.displaySm),
             const SizedBox(height: AppSizes.xs),
             Text(
               'Try adjusting your search or filters',

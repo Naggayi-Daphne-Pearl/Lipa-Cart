@@ -94,80 +94,87 @@ class FeatureSpotlightCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSizes.md),
-          Wrap(
-            spacing: AppSizes.sm,
-            runSpacing: AppSizes.sm,
-            children: highlights
-                .map(
-                  (item) => Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface.withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                      border: Border.all(
-                        color: accentColor.withValues(alpha: 0.14),
-                      ),
-                    ),
+          // 2-column grid of feature highlights — scannable in one glance.
+          // Odd counts: last item spans both columns via LayoutBuilder width.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const spacing = AppSizes.sm;
+              final itemWidth = (constraints.maxWidth - spacing) / 2;
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: highlights.map((item) {
+                  return SizedBox(
+                    width: itemWidth,
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Iconsax.tick_circle, size: 14, color: accentColor),
-                        const SizedBox(width: 6),
-                        Text(
-                          item,
-                          style: AppTextStyles.labelSmall.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
+                        Icon(
+                          Iconsax.tick_circle5,
+                          size: 16,
+                          color: accentColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            item,
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                )
-                .toList(),
+                  );
+                }).toList(),
+              );
+            },
           ),
-          const SizedBox(height: AppSizes.md),
-          Wrap(
-            spacing: AppSizes.sm,
-            runSpacing: AppSizes.sm,
+          const SizedBox(height: AppSizes.lg),
+          Row(
             children: [
-              ElevatedButton.icon(
-                onPressed: onPrimaryTap,
-                icon: const Icon(Iconsax.arrow_right_3, size: 16),
-                label: Text(primaryLabel),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSizes.md,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                  ),
-                ),
-              ),
-              if (secondaryLabel != null && onSecondaryTap != null)
-                OutlinedButton(
-                  onPressed: onSecondaryTap,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
-                    side: BorderSide(
-                      color: accentColor.withValues(alpha: 0.22),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSizes.md,
-                      vertical: 12,
-                    ),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: onPrimaryTap,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppSizes.radiusFull),
                     ),
+                    textStyle: AppTextStyles.labelMedium.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    elevation: 0,
                   ),
-                  child: Text(secondaryLabel!),
+                  child: Text(primaryLabel),
                 ),
+              ),
+              if (secondaryLabel != null && onSecondaryTap != null) ...[
+                const SizedBox(width: AppSizes.sm),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onSecondaryTap,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: accentColor,
+                      side: BorderSide(color: accentColor, width: 1.5),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppSizes.radiusFull,
+                        ),
+                      ),
+                      textStyle: AppTextStyles.labelMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    child: Text(secondaryLabel!),
+                  ),
+                ),
+              ],
             ],
           ),
         ],

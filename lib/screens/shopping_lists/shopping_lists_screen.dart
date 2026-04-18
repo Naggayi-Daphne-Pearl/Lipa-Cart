@@ -16,6 +16,7 @@ import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
 import '../../widgets/feature_spotlight_card.dart';
 import '../../widgets/auth_bottom_sheet.dart';
+import '../../widgets/web_layout_wrapper.dart';
 
 class ShoppingListsScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -124,7 +125,9 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
         child: SafeArea(
-          child: Column(
+          child: WebLayoutWrapper(
+            addPadding: false,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const DesktopTopNavBar(activeSection: 'lists'),
@@ -165,9 +168,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                         children: [
                           Text(
                             'My Shopping Lists',
-                            style: AppTextStyles.h4.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: AppTextStyles.displayMd,
                           ),
                           Text(
                             '${visibleLists.length} ${searchQuery.isEmpty ? 'lists' : 'matches'}',
@@ -373,6 +374,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
               ),
             ],
           ),
+          ),
         ),
       ),
       floatingActionButton: authProvider.isAuthenticated
@@ -475,10 +477,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
       children: [
         const Icon(Iconsax.search_status, size: 48, color: AppColors.grey400),
         const SizedBox(height: AppSizes.md),
-        Text(
-          'No matching lists found',
-          style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700),
-        ),
+        Text('No matching lists found', style: AppTextStyles.displaySm),
         const SizedBox(height: AppSizes.xs),
         Text(
           'Try a different keyword or create a new quick list from the templates above.',
@@ -724,7 +723,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
         const SizedBox(height: AppSizes.lg),
         Text(
           'No Shopping Lists Yet',
-          style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600),
+          style: AppTextStyles.displaySm,
         ),
         const SizedBox(height: AppSizes.sm),
         Text(

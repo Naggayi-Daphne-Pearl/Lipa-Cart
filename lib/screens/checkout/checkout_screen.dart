@@ -20,6 +20,7 @@ import '../../services/address_service.dart';
 import '../../services/payment_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/web_layout_wrapper.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final bool isGuest;
@@ -568,12 +569,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             }
           },
         ),
-        title: const Text('Checkout'),
+        title: const Text('Checkout', style: AppTextStyles.displaySm),
       ),
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
         child: SafeArea(
-          child: Column(
+          child: WebLayoutWrapper(
+            addPadding: false,
+            child: Column(
             children: [
               // Progress Stepper
               _buildProgressStepper(),
@@ -734,6 +737,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),
