@@ -569,7 +569,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             }
           },
         ),
-        title: const Text('Checkout'),
+        title: const Text('Checkout', style: AppTextStyles.displaySm),
       ),
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),

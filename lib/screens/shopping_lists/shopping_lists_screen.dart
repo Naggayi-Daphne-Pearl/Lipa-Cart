@@ -168,9 +168,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                         children: [
                           Text(
                             'My Shopping Lists',
-                            style: AppTextStyles.h4.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: AppTextStyles.displayMd,
                           ),
                           Text(
                             '${visibleLists.length} ${searchQuery.isEmpty ? 'lists' : 'matches'}',
@@ -479,10 +477,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
       children: [
         const Icon(Iconsax.search_status, size: 48, color: AppColors.grey400),
         const SizedBox(height: AppSizes.md),
-        Text(
-          'No matching lists found',
-          style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700),
-        ),
+        Text('No matching lists found', style: AppTextStyles.displaySm),
         const SizedBox(height: AppSizes.xs),
         Text(
           'Try a different keyword or create a new quick list from the templates above.',
@@ -728,7 +723,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
         const SizedBox(height: AppSizes.lg),
         Text(
           'No Shopping Lists Yet',
-          style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600),
+          style: AppTextStyles.displaySm,
         ),
         const SizedBox(height: AppSizes.sm),
         Text(
