@@ -16,6 +16,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/web_layout_wrapper.dart';
 
 class ShoppingListDetailScreen extends StatefulWidget {
   final String listId;
@@ -73,7 +74,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
       backgroundColor: AppColors.background,
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
-        child: Column(
+        child: WebLayoutWrapper(
+          addPadding: false,
+          child: Column(
           children: [
             // Header with colored background
             Container(
@@ -350,6 +353,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                     ),
             ),
           ],
+        ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -700,41 +704,6 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                                         ),
                                         maxLines: 3,
                                         overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ] else if (!item.isChecked) ...[
-                            const SizedBox(height: 8),
-                            GestureDetector(
-                              onTap: () =>
-                                  _showEditDescriptionDialog(item, list),
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(AppSizes.sm),
-                                decoration: BoxDecoration(
-                                  color: AppColors.grey50,
-                                  borderRadius: BorderRadius.circular(
-                                    AppSizes.radiusMd,
-                                  ),
-                                  border: Border.all(color: AppColors.grey200),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.note_alt_outlined,
-                                      size: 16,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'Add a note for brand, size, ripeness, or other preferences',
-                                        style: AppTextStyles.bodySmall.copyWith(
-                                          color: AppColors.textSecondary,
-                                        ),
                                       ),
                                     ),
                                   ],

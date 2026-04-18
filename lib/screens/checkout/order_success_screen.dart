@@ -12,6 +12,7 @@ import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/shopping_list_provider.dart';
 import '../../widgets/custom_button.dart';
+import '../../core/utils/responsive.dart';
 
 class OrderSuccessScreen extends StatefulWidget {
   final Order? order;
@@ -105,7 +106,8 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
           child: Padding(
             padding: const EdgeInsets.all(AppSizes.lg),
             child: SingleChildScrollView(
-              child: Column(
+              child: ResponsiveContainer(
+                child: Column(
               children: [
                 const SizedBox(height: AppSizes.xl),
                 // Animated Success icon
@@ -314,6 +316,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                     ],
                   ),
               ],
+            ),
             ),
             ),
           ),

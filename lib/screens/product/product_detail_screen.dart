@@ -15,6 +15,7 @@ import '../../providers/shopping_list_provider.dart';
 import '../../models/shopping_list.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../core/utils/responsive.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -190,7 +191,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         children: [
           Expanded(
             child: SingleChildScrollView(
-              child: Column(
+              child: ResponsiveContainer(
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Product Image Section
@@ -493,6 +495,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                   ),
                 ],
+              ),
               ),
             ),
           ),

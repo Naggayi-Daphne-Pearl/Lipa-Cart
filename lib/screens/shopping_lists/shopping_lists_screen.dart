@@ -16,6 +16,7 @@ import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
 import '../../widgets/feature_spotlight_card.dart';
 import '../../widgets/auth_bottom_sheet.dart';
+import '../../widgets/web_layout_wrapper.dart';
 
 class ShoppingListsScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -124,7 +125,9 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
         child: SafeArea(
-          child: Column(
+          child: WebLayoutWrapper(
+            addPadding: false,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const DesktopTopNavBar(activeSection: 'lists'),
@@ -372,6 +375,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                       ),
               ),
             ],
+          ),
           ),
         ),
       ),
