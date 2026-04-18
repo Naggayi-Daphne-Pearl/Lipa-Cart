@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'core/utils/web_location.dart';
 import 'models/category.dart';
 import 'models/order.dart';
 import 'models/product.dart';
@@ -74,6 +76,51 @@ import 'screens/shopper/shopper_pending_approval_screen.dart';
 import 'screens/shopper/shopping_checklist_screen.dart';
 import 'screens/shopper/shopper_profile_screen.dart';
 import 'screens/shopper/shopper_ratings_screen.dart';
+
+/// Matches any `.lipacart.com` host served over https in production.
+/// Used to gate subdomain scoping so localhost + Vercel preview URLs keep the
+/// unified role-router behaviour (useful for staging).
+bool _isProdLipaHost() {
+  if (!kIsWeb) return false;
+  final host = Uri.base.host.toLowerCase();
+  return host == 'lipacart.com' ||
+      host == 'www.lipacart.com' ||
+      host.endsWith('.lipacart.com');
+}
+
+/// Returns the role this subdomain is locked to, or null for the customer root
+/// (`lipacart.com` / `www.lipacart.com`) and any non-prod host.
+UserRole? _scopeForWebHost() {
+  if (!_isProdLipaHost()) return null;
+  final host = Uri.base.host.toLowerCase();
+  if (host.startsWith('shopper.')) return UserRole.shopper;
+  if (host.startsWith('rider.')) return UserRole.rider;
+  if (host.startsWith('admin.')) return UserRole.admin;
+  return null;
+}
+
+/// Builds a full `scheme://host[:port]` URL for [role], preserving the current
+/// scheme and port so this works identically on prod and local dev mirrors.
+String _originForRole(UserRole role) {
+  final current = Uri.base;
+  final rootHost = current.host
+      .toLowerCase()
+      .replaceFirst(RegExp(r'^(shopper|rider|admin|www)\.'), '');
+  final port = current.hasPort && current.port != 80 && current.port != 443
+      ? ':${current.port}'
+      : '';
+  final scheme = current.scheme;
+  switch (role) {
+    case UserRole.customer:
+      return '$scheme://$rootHost$port';
+    case UserRole.shopper:
+      return '$scheme://shopper.$rootHost$port';
+    case UserRole.rider:
+      return '$scheme://rider.$rootHost$port';
+    case UserRole.admin:
+      return '$scheme://admin.$rootHost$port';
+  }
+}
 
 /// Helper to get home route based on user role
 String _homeForRole(UserRole? role, {String? kycStatus}) {
@@ -170,6 +217,29 @@ class RoleBasedRouter {
         // Still loading — only allow splash, redirect everything else to splash
         if (isInitial) {
           return isSplash ? null : '/';
+        }
+
+        // === HOST-BASED ROLE SCOPING (production web only) ===
+        // On *.lipacart.com, each role subdomain is locked to a specific role.
+        // An authenticated user whose role doesn't match the current host is
+        // bounced to their correct origin via a full-page navigation. Non-prod
+        // hosts (localhost, Vercel previews) skip this so the unified router
+        // remains usable for staging.
+        if (isAuthenticated && userRole != null) {
+          final hostScope = _scopeForWebHost();
+          final onCustomerRoot = _isProdLipaHost() && hostScope == null;
+          final needsBounce =
+              (hostScope != null && userRole != hostScope) ||
+              (onCustomerRoot && userRole != UserRole.customer);
+
+          if (needsBounce) {
+            final homePath = _homeForRole(
+              userRole,
+              kycStatus: authProvider.user?.kycStatus,
+            );
+            assignWebLocation('${_originForRole(userRole)}$homePath');
+            return null;
+          }
         }
 
         // After initial load, never go back to splash
