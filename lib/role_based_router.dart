@@ -49,6 +49,7 @@ import 'screens/settings/app_settings_screen.dart';
 import 'screens/admin/admin_shell.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/admin_products_screen.dart';
+import 'screens/admin/admin_categories_screen.dart';
 import 'screens/admin/admin_users_screen.dart';
 import 'screens/admin/admin_riders_screen.dart';
 import 'screens/admin/admin_orders_screen.dart';
@@ -692,6 +693,11 @@ class RoleBasedRouter {
           path: '/admin/products',
           builder: (context, state) =>
               AdminShell(child: const AdminProductsScreen()),
+        ),
+        GoRoute(
+          path: '/admin/categories',
+          builder: (context, state) =>
+              AdminShell(child: const AdminCategoriesScreen()),
         ),
         GoRoute(
           path: '/admin/users',

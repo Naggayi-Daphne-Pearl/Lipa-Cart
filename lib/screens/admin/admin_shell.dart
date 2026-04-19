@@ -47,6 +47,7 @@ class _AdminShellState extends State<AdminShell> {
   String _getPageTitle(String route) {
     if (route.contains('/admin/dashboard')) return 'Dashboard';
     if (route.contains('/admin/products')) return 'Products';
+    if (route.contains('/admin/categories')) return 'Categories';
     if (route.contains('/admin/orders')) return 'Orders';
     if (route.contains('/admin/users')) return 'Shoppers';
     if (route.contains('/admin/riders')) return 'Riders';
@@ -57,6 +58,7 @@ class _AdminShellState extends State<AdminShell> {
   IconData _getPageIcon(String route) {
     if (route.contains('/admin/dashboard')) return Iconsax.category;
     if (route.contains('/admin/products')) return Iconsax.box;
+    if (route.contains('/admin/categories')) return Iconsax.category_2;
     if (route.contains('/admin/orders')) return Iconsax.bag_2;
     if (route.contains('/admin/users')) return Iconsax.shop;
     if (route.contains('/admin/riders')) return Iconsax.truck_fast;
@@ -357,6 +359,15 @@ class _AdminShellState extends State<AdminShell> {
                 isActive: _currentRoute.contains('/admin/products'),
                 onTap: () {
                   _navigate('/admin/products');
+                  Navigator.of(context).maybePop();
+                },
+              ),
+              _SidebarItem(
+                icon: Iconsax.category_2,
+                label: 'Categories',
+                isActive: _currentRoute.contains('/admin/categories'),
+                onTap: () {
+                  _navigate('/admin/categories');
                   Navigator.of(context).maybePop();
                 },
               ),
