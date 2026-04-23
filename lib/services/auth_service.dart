@@ -6,7 +6,8 @@ import 'http_client_factory.dart';
 
 /// Extracts a user-friendly message from any exception.
 String _friendlyError(Object e, String fallback) {
-  if (e is http.ClientException) return 'Could not reach the server. Please try again.';
+  if (e is http.ClientException)
+    return 'Could not reach the server. Please try again.';
   if (e is TimeoutException) return 'Request timed out. Please try again.';
   final msg = e.toString().replaceAll(RegExp(r'Exception:\s*'), '');
   return msg.isNotEmpty ? msg : fallback;
@@ -293,7 +294,9 @@ class AuthService {
       final body = jsonDecode(response.body);
       return body as Map<String, dynamic>;
     } catch (e) {
-      throw Exception(_friendlyError(e, 'Session expired — please sign in again'));
+      throw Exception(
+        _friendlyError(e, 'Session expired — please sign in again'),
+      );
     }
   }
 
