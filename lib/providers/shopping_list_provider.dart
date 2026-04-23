@@ -11,25 +11,36 @@ class ShoppingListProvider extends ChangeNotifier {
 
   List<ShoppingList> _lists = [];
   bool _isLoading = false;
-  bool _didBootstrap = false;
+  String? _activeUserId;
 
-  ShoppingListProvider() {
-    _bootstrap();
-  }
+  ShoppingListProvider();
 
   List<ShoppingList> get lists => _lists;
   bool get isLoading => _isLoading;
 
-  Future<void> _bootstrap() async {
-    if (_didBootstrap) return;
-    _didBootstrap = true;
-    await _restoreLists();
+  String _storageKeyForUser(String? userId) {
+    if (userId == null || userId.isEmpty) {
+      return AppConstants.shoppingListsKey;
+    }
+    return '${AppConstants.shoppingListsKey}_$userId';
   }
 
-  Future<void> _restoreLists() async {
+  Future<void> restoreListsForUser(String? userId) async {
+    _activeUserId = userId;
+
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(AppConstants.shoppingListsKey);
+      final storageKey = _storageKeyForUser(userId);
+      var raw = prefs.getString(storageKey);
+
+      if ((raw == null || raw.isEmpty) && userId != null && userId.isNotEmpty) {
+        raw = prefs.getString(AppConstants.shoppingListsKey);
+        if (raw != null && raw.isNotEmpty) {
+          await prefs.setString(storageKey, raw);
+          await prefs.remove(AppConstants.shoppingListsKey);
+        }
+      }
+
       if (raw == null || raw.isEmpty) return;
       final data = jsonDecode(raw) as List<dynamic>;
       _lists = data
@@ -45,7 +56,7 @@ class ShoppingListProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final payload = jsonEncode(_lists.map((l) => l.toJson()).toList());
-      await prefs.setString(AppConstants.shoppingListsKey, payload);
+      await prefs.setString(_storageKeyForUser(_activeUserId), payload);
     } catch (_) {
       // Ignore persistence errors
     }
@@ -82,19 +93,29 @@ class ShoppingListProvider extends ChangeNotifier {
     '🧺',
   ];
 
-  Future<void> loadLists({String? authToken}) async {
+  Future<void> loadLists({String? authToken, String? userId}) async {
+    if (_activeUserId != userId) {
+      _lists = [];
+      await restoreListsForUser(userId);
+    }
+
     _isLoading = true;
     notifyListeners();
 
+    if (authToken == null || authToken.isEmpty) {
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
     try {
       _lists = await StrapiService.getShoppingLists(authToken: authToken);
+      await _persistLists();
     } catch (e) {
-      debugPrint('Strapi fetch failed, using sample data: $e');
-      _lists = _getSampleLists();
+      debugPrint('Shopping list sync failed, keeping cached data: $e');
     }
 
     _isLoading = false;
-    _persistLists();
     notifyListeners();
   }
 
@@ -479,156 +500,22 @@ class ShoppingListProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> clearAll() async {
+  Future<void> clearAll({bool clearPersisted = true}) async {
     _lists.clear();
     _isLoading = false;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(AppConstants.shoppingListsKey);
+      if (clearPersisted) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_storageKeyForUser(_activeUserId));
+        if (_activeUserId == null || _activeUserId!.isEmpty) {
+          await prefs.remove(AppConstants.shoppingListsKey);
+        }
+      }
     } catch (_) {
       // Ignore persistence errors
     }
+    _activeUserId = null;
     notifyListeners();
-  }
-
-  // Sample data
-  List<ShoppingList> _getSampleLists() {
-    final sampleProducts = Product.getSampleProducts();
-
-    return [
-      ShoppingList(
-        id: '1',
-        name: 'Weekly Groceries',
-        description: 'Regular household essentials',
-        emoji: '🛒',
-        color: '#15874B',
-        items: [
-          ShoppingListItem(
-            id: '1',
-            name: 'Fresh Milk',
-            description:
-                'Full cream, not skimmed. Check expiry date - at least 5 days',
-            quantity: 2,
-            unit: 'liters',
-            linkedProduct: sampleProducts.firstWhere(
-              (p) => p.name.contains('Milk'),
-              orElse: () => sampleProducts.first,
-            ),
-          ),
-          ShoppingListItem(
-            id: '2',
-            name: 'Brown Bread',
-            description: 'Whole wheat, soft texture. Not the seeded one',
-            quantity: 1,
-            unit: 'loaf',
-            linkedProduct: sampleProducts.firstWhere(
-              (p) => p.name.contains('Bread'),
-              orElse: () => sampleProducts.first,
-            ),
-          ),
-          ShoppingListItem(
-            id: '3',
-            name: 'Eggs',
-            description: 'Large size, brown eggs preferred',
-            quantity: 1,
-            unit: 'tray',
-            linkedProduct: sampleProducts.firstWhere(
-              (p) => p.name.contains('Egg'),
-              orElse: () => sampleProducts.first,
-            ),
-          ),
-          ShoppingListItem(
-            id: '4',
-            name: 'Tomatoes',
-            description: 'Firm, slightly ripe. Not too soft',
-            budgetAmount: 3000,
-            quantity: 1,
-            linkedProduct: sampleProducts.firstWhere(
-              (p) => p.name.contains('Tomato'),
-              orElse: () => sampleProducts.first,
-            ),
-            isChecked: true,
-          ),
-        ],
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-      ShoppingList(
-        id: '2',
-        name: 'BBQ Weekend',
-        description: 'Meat and sides for the grill',
-        emoji: '🥩',
-        color: '#EA7702',
-        items: [
-          ShoppingListItem(
-            id: '5',
-            name: 'Chicken Wings',
-            description: 'Fresh, not frozen. Medium-sized wings',
-            quantity: 2,
-            unit: 'kg',
-            linkedProduct: sampleProducts.firstWhere(
-              (p) => p.name.contains('Chicken'),
-              orElse: () => sampleProducts.first,
-            ),
-          ),
-          ShoppingListItem(
-            id: '6',
-            name: 'Beef Steak',
-            description: 'Well-marbled, ribeye or sirloin cut. About 2cm thick',
-            budgetAmount: 25000,
-            quantity: 1,
-            linkedProduct: sampleProducts.firstWhere(
-              (p) => p.name.contains('Beef'),
-              orElse: () => sampleProducts.first,
-            ),
-          ),
-          ShoppingListItem(
-            id: '7',
-            name: 'Onions',
-            description: 'Red onions, medium size',
-            quantity: 4,
-            unit: 'pieces',
-            linkedProduct: sampleProducts.firstWhere(
-              (p) => p.name.contains('Onion'),
-              orElse: () => sampleProducts.first,
-            ),
-          ),
-        ],
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      ShoppingList(
-        id: '3',
-        name: 'Healthy Week',
-        description: 'Fresh fruits and vegetables',
-        emoji: '🥗',
-        color: '#14B8A6',
-        items: [
-          ShoppingListItem(
-            id: '8',
-            name: 'Avocados',
-            description:
-                'Ripe, ready to eat. Should yield slightly to gentle pressure',
-            quantity: 4,
-            unit: 'pieces',
-            linkedProduct: sampleProducts.firstWhere(
-              (p) => p.name.contains('Avocado'),
-              orElse: () => sampleProducts.first,
-            ),
-          ),
-          ShoppingListItem(
-            id: '9',
-            name: 'Spinach',
-            description: 'Fresh leaves, bright green. No wilting or yellowing',
-            quantity: 2,
-            unit: 'bunches',
-            linkedProduct: sampleProducts.firstWhere(
-              (p) => p.name.contains('Spinach'),
-              orElse: () => sampleProducts.first,
-            ),
-          ),
-        ],
-        createdAt: DateTime.now(),
-      ),
-    ];
   }
 
   void linkProductToItem(String listId, String itemId, Product product) {

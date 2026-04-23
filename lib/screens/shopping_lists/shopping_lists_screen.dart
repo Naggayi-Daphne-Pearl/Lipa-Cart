@@ -46,6 +46,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
       if (authProvider.isAuthenticated && authProvider.token != null) {
         context.read<ShoppingListProvider>().loadLists(
           authToken: authProvider.token,
+          userId: authProvider.user?.id,
         );
       }
     });
