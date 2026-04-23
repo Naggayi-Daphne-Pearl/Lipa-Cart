@@ -129,219 +129,53 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
           child: WebLayoutWrapper(
             addPadding: false,
             child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const DesktopTopNavBar(activeSection: 'lists'),
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(AppSizes.lg),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        if (context.canPop()) {
-                          context.pop();
-                        } else {
-                          context.go('/customer/home');
-                        }
-                      },
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(
-                            AppSizes.radiusMd,
-                          ),
-                          boxShadow: AppColors.shadowSm,
-                        ),
-                        child: const Icon(
-                          Iconsax.arrow_left,
-                          color: AppColors.textPrimary,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSizes.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'My Shopping Lists',
-                            style: AppTextStyles.displayMd,
-                          ),
-                          Text(
-                            '${visibleLists.length} ${searchQuery.isEmpty ? 'lists' : 'matches'}',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              if (_showListsSpotlight)
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const DesktopTopNavBar(activeSection: 'lists'),
+                // Header
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSizes.lg,
-                    0,
-                    AppSizes.lg,
-                    AppSizes.md,
-                  ),
-                  child: FeatureSpotlightCard(
-                    icon: Iconsax.clipboard_text,
-                    eyebrow: 'SMART LISTS',
-                    title: 'Make repeat shopping easier',
-                    description:
-                        'Save weekly essentials, meal prep items, or party supplies once and bring them back in seconds.',
-                    highlights: const [
-                      'Plan ahead faster',
-                      'Reuse favorite items',
-                      'Add all to cart in one tap',
-                    ],
-                    primaryLabel: authProvider.isAuthenticated
-                        ? 'Create a list'
-                        : 'Sign in to save lists',
-                    onPrimaryTap: () {
-                      _dismissListsSpotlight();
-                      if (authProvider.isAuthenticated) {
-                        _showCreateListSheet(context);
-                      } else {
-                        context.go(
-                          '/login?return=%2Fcustomer%2Fshopping-lists',
-                        );
-                      }
-                    },
-                    secondaryLabel: 'Browse items',
-                    onSecondaryTap: () {
-                      _dismissListsSpotlight();
-                      context.go('/customer/browse');
-                    },
-                    onDismiss: () => _dismissListsSpotlight(remember: true),
-                  ),
-                ),
-
-              if (authProvider.isAuthenticated && provider.lists.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSizes.lg,
-                    0,
-                    AppSizes.lg,
-                    AppSizes.md,
-                  ),
-                  child: Column(
+                  padding: const EdgeInsets.all(AppSizes.lg),
+                  child: Row(
                     children: [
-                      TextField(
-                        controller: _searchController,
-                        onChanged: (_) => setState(() {}),
-                        decoration: InputDecoration(
-                          hintText: 'Search lists or items',
-                          prefixIcon: const Icon(Iconsax.search_normal),
-                          suffixIcon: searchQuery.isEmpty
-                              ? null
-                              : IconButton(
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() {});
-                                  },
-                                  icon: const Icon(Iconsax.close_circle),
-                                ),
+                      GestureDetector(
+                        onTap: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/customer/home');
+                          }
+                        },
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusMd,
+                            ),
+                            boxShadow: AppColors.shadowSm,
+                          ),
+                          child: const Icon(
+                            Iconsax.arrow_left,
+                            color: AppColors.textPrimary,
+                            size: 20,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: AppSizes.sm),
-                      Wrap(
-                        spacing: AppSizes.sm,
-                        runSpacing: AppSizes.sm,
-                        children: [
-                          _buildInsightChip(
-                            icon: Iconsax.note_1,
-                            label: '${visibleLists.length} lists',
-                          ),
-                          _buildInsightChip(
-                            icon: Iconsax.box,
-                            label: '$visibleItemCount items',
-                          ),
-                          _buildInsightChip(
-                            icon: Iconsax.wallet_2,
-                            label: Formatters.formatCurrency(
-                              visibleEstimatedTotal,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSizes.sm),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
+                      const SizedBox(width: AppSizes.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildQuickTemplateChip(
-                              label: 'Weekly',
-                              emoji: '🛒',
-                              items: [
-                                ShoppingListItem(
-                                  id: 'wk_bread',
-                                  name: 'Bread',
-                                  unitPrice: 4000,
-                                ),
-                                ShoppingListItem(
-                                  id: 'wk_milk',
-                                  name: 'Milk',
-                                  unitPrice: 5000,
-                                ),
-                                ShoppingListItem(
-                                  id: 'wk_eggs',
-                                  name: 'Eggs',
-                                  unitPrice: 6000,
-                                ),
-                              ],
+                            Text(
+                              'My Shopping Lists',
+                              style: AppTextStyles.displayMd,
                             ),
-                            const SizedBox(width: AppSizes.sm),
-                            _buildQuickTemplateChip(
-                              label: 'Meal Prep',
-                              emoji: '🥗',
-                              items: [
-                                ShoppingListItem(
-                                  id: 'mp_chicken',
-                                  name: 'Chicken Breast',
-                                  unitPrice: 18000,
-                                ),
-                                ShoppingListItem(
-                                  id: 'mp_rice',
-                                  name: 'Rice',
-                                  unitPrice: 8000,
-                                ),
-                                ShoppingListItem(
-                                  id: 'mp_veg',
-                                  name: 'Mixed Vegetables',
-                                  unitPrice: 7000,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(width: AppSizes.sm),
-                            _buildQuickTemplateChip(
-                              label: 'BBQ',
-                              emoji: '🔥',
-                              items: [
-                                ShoppingListItem(
-                                  id: 'bbq_beef',
-                                  name: 'Beef',
-                                  unitPrice: 22000,
-                                ),
-                                ShoppingListItem(
-                                  id: 'bbq_soda',
-                                  name: 'Soda',
-                                  unitPrice: 2000,
-                                ),
-                                ShoppingListItem(
-                                  id: 'bbq_charcoal',
-                                  name: 'Charcoal',
-                                  unitPrice: 6000,
-                                ),
-                              ],
+                            Text(
+                              '${visibleLists.length} ${searchQuery.isEmpty ? 'lists' : 'matches'}',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -350,31 +184,197 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                   ),
                 ),
 
-              // Lists
-              Expanded(
-                child: !authProvider.isAuthenticated
-                    ? _buildUnauthenticatedState()
-                    : provider.isLoading
-                    ? const AppLoadingPage(
-                        message: 'Loading your shopping lists...',
-                      )
-                    : provider.lists.isEmpty
-                    ? _buildEmptyState()
-                    : visibleLists.isEmpty
-                    ? _buildNoSearchResults()
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSizes.lg,
+                if (_showListsSpotlight)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSizes.lg,
+                      0,
+                      AppSizes.lg,
+                      AppSizes.md,
+                    ),
+                    child: FeatureSpotlightCard(
+                      icon: Iconsax.clipboard_text,
+                      eyebrow: 'SMART LISTS',
+                      title: 'Make repeat shopping easier',
+                      description:
+                          'Save weekly essentials, meal prep items, or party supplies once and bring them back in seconds.',
+                      highlights: const [
+                        'Plan ahead faster',
+                        'Reuse favorite items',
+                        'Add all to cart in one tap',
+                      ],
+                      primaryLabel: authProvider.isAuthenticated
+                          ? 'Create a list'
+                          : 'Sign in to save lists',
+                      onPrimaryTap: () {
+                        _dismissListsSpotlight();
+                        if (authProvider.isAuthenticated) {
+                          _showCreateListSheet(context);
+                        } else {
+                          context.go(
+                            '/login?return=%2Fcustomer%2Fshopping-lists',
+                          );
+                        }
+                      },
+                      secondaryLabel: 'Browse items',
+                      onSecondaryTap: () {
+                        _dismissListsSpotlight();
+                        context.go('/customer/browse');
+                      },
+                      onDismiss: () => _dismissListsSpotlight(remember: true),
+                    ),
+                  ),
+
+                if (authProvider.isAuthenticated && provider.lists.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSizes.lg,
+                      0,
+                      AppSizes.lg,
+                      AppSizes.md,
+                    ),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: _searchController,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: 'Search lists or items',
+                            prefixIcon: const Icon(Iconsax.search_normal),
+                            suffixIcon: searchQuery.isEmpty
+                                ? null
+                                : IconButton(
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() {});
+                                    },
+                                    icon: const Icon(Iconsax.close_circle),
+                                  ),
+                          ),
                         ),
-                        itemCount: visibleLists.length,
-                        itemBuilder: (context, index) {
-                          final list = visibleLists[index];
-                          return _buildListCard(list);
-                        },
-                      ),
-              ),
-            ],
-          ),
+                        const SizedBox(height: AppSizes.sm),
+                        Wrap(
+                          spacing: AppSizes.sm,
+                          runSpacing: AppSizes.sm,
+                          children: [
+                            _buildInsightChip(
+                              icon: Iconsax.note_1,
+                              label: '${visibleLists.length} lists',
+                            ),
+                            _buildInsightChip(
+                              icon: Iconsax.box,
+                              label: '$visibleItemCount items',
+                            ),
+                            _buildInsightChip(
+                              icon: Iconsax.wallet_2,
+                              label: Formatters.formatCurrency(
+                                visibleEstimatedTotal,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSizes.sm),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildQuickTemplateChip(
+                                label: 'Weekly',
+                                emoji: '🛒',
+                                items: [
+                                  ShoppingListItem(
+                                    id: 'wk_bread',
+                                    name: 'Bread',
+                                    unitPrice: 4000,
+                                  ),
+                                  ShoppingListItem(
+                                    id: 'wk_milk',
+                                    name: 'Milk',
+                                    unitPrice: 5000,
+                                  ),
+                                  ShoppingListItem(
+                                    id: 'wk_eggs',
+                                    name: 'Eggs',
+                                    unitPrice: 6000,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: AppSizes.sm),
+                              _buildQuickTemplateChip(
+                                label: 'Meal Prep',
+                                emoji: '🥗',
+                                items: [
+                                  ShoppingListItem(
+                                    id: 'mp_chicken',
+                                    name: 'Chicken Breast',
+                                    unitPrice: 18000,
+                                  ),
+                                  ShoppingListItem(
+                                    id: 'mp_rice',
+                                    name: 'Rice',
+                                    unitPrice: 8000,
+                                  ),
+                                  ShoppingListItem(
+                                    id: 'mp_veg',
+                                    name: 'Mixed Vegetables',
+                                    unitPrice: 7000,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: AppSizes.sm),
+                              _buildQuickTemplateChip(
+                                label: 'BBQ',
+                                emoji: '🔥',
+                                items: [
+                                  ShoppingListItem(
+                                    id: 'bbq_beef',
+                                    name: 'Beef',
+                                    unitPrice: 22000,
+                                  ),
+                                  ShoppingListItem(
+                                    id: 'bbq_soda',
+                                    name: 'Soda',
+                                    unitPrice: 2000,
+                                  ),
+                                  ShoppingListItem(
+                                    id: 'bbq_charcoal',
+                                    name: 'Charcoal',
+                                    unitPrice: 6000,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Lists
+                Expanded(
+                  child: !authProvider.isAuthenticated
+                      ? _buildUnauthenticatedState()
+                      : provider.isLoading
+                      ? const AppLoadingPage(
+                          message: 'Loading your shopping lists...',
+                        )
+                      : provider.lists.isEmpty
+                      ? _buildEmptyState()
+                      : visibleLists.isEmpty
+                      ? _buildNoSearchResults()
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSizes.lg,
+                          ),
+                          itemCount: visibleLists.length,
+                          itemBuilder: (context, index) {
+                            final list = visibleLists[index];
+                            return _buildListCard(list);
+                          },
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -722,10 +722,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
           ),
         ),
         const SizedBox(height: AppSizes.lg),
-        Text(
-          'No Shopping Lists Yet',
-          style: AppTextStyles.displaySm,
-        ),
+        Text('No Shopping Lists Yet', style: AppTextStyles.displaySm),
         const SizedBox(height: AppSizes.sm),
         Text(
           'Save weekly essentials, meal prep, or party items once\nso reordering your groceries takes seconds.',

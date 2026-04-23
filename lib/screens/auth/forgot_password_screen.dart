@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
@@ -14,7 +13,8 @@ import '../../core/utils/validators.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 
-enum _Step { phone, otp, newPassword }
+enum _Step { email, otp, password }
+enum _RecoveryMethod { email }
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -24,14 +24,16 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final _phoneFormKey = GlobalKey<FormState>();
+  final _emailFormKey = GlobalKey<FormState>();
   final _passwordFormKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   final _otpController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  _Step _currentStep = _Step.phone;
+  _Step _currentStep = _Step.email;
+  _RecoveryMethod _recoveryMethod = _RecoveryMethod.email;
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
@@ -41,12 +43,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   static const double _desktopBreakpoint = 800;
   static const double _formMaxWidth = 440;
 
-  String get _fullPhoneNumber => '+256${_phoneController.text}';
-
   @override
   void dispose() {
     _timer?.cancel();
-    _phoneController.dispose();
+    _emailController.dispose();
     _otpController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -65,21 +65,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
   }
 
-  Future<void> _sendOtp() async {
-    if (!_phoneFormKey.currentState!.validate()) return;
+  Future<void> _sendResetLink() async {
+    if (!_emailFormKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.forgotPassword(_fullPhoneNumber);
+    final success = await authProvider.forgotPasswordByEmail(
+      _emailController.text.trim(),
+    );
 
     setState(() => _isLoading = false);
+
+    if (!mounted) return;
 
     if (success) {
       _startResendTimer();
       setState(() => _currentStep = _Step.otp);
     } else if (authProvider.errorMessage != null) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage!),
@@ -100,7 +103,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       return;
     }
 
-    setState(() => _currentStep = _Step.newPassword);
+    setState(() => _currentStep = _Step.password);
   }
 
   Future<void> _resetPassword() async {
@@ -109,8 +112,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() => _isLoading = true);
 
     final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.resetPassword(
-      phoneNumber: _fullPhoneNumber,
+    final success = await authProvider.resetPasswordWithEmail(
+      email: _emailController.text.trim(),
       otp: _otpController.text,
       newPassword: _passwordController.text,
     );
@@ -128,13 +131,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       context.go('/login');
     } else if (authProvider.errorMessage != null) {
       if (!mounted) return;
-      if (authProvider.errorMessage!.contains('Invalid') ||
-          authProvider.errorMessage!.contains('expired')) {
-        setState(() {
-          _currentStep = _Step.otp;
-          _otpController.clear();
-        });
-      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage!),
@@ -147,8 +143,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _resendOtp() async {
     if (_resendSeconds > 0) return;
 
+    setState(() => _isLoading = true);
+
     final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.forgotPassword(_fullPhoneNumber);
+    final success = await authProvider.forgotPasswordByEmail(
+      _emailController.text.trim(),
+    );
+
+    setState(() => _isLoading = false);
 
     if (success) {
       _startResendTimer();
@@ -163,11 +165,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   void _handleBack() {
-    if (_currentStep == _Step.phone) {
+    if (_currentStep == _Step.email) {
       context.canPop() ? context.pop() : context.go('/login');
     } else if (_currentStep == _Step.otp) {
       setState(() {
-        _currentStep = _Step.phone;
+        _currentStep = _Step.email;
         _otpController.clear();
       });
     } else {
@@ -389,10 +391,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           SvgPicture.asset('assets/images/logos/logo-on-white.svg', height: 32),
           const SizedBox(height: AppSizes.xl),
         ],
-        // Step indicator
-        _buildStepIndicator(),
-        const SizedBox(height: AppSizes.xl),
-        // Step content card
+        const SizedBox(height: AppSizes.sm),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(AppSizes.lg),
@@ -409,254 +408,188 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
             ],
           ),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: _buildStepContent(isDesktop: isDesktop),
-          ),
+          child: _buildStepContent(isDesktop: isDesktop),
         ),
-        if (!isDesktop) ...[
-          const SizedBox(height: AppSizes.xl),
-          // Back to login link (mobile only)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Remember your password?',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              TextButton(
-                onPressed: () => context.go('/login'),
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(
-                    AppSizes.touchTargetMin,
-                    AppSizes.touchTargetMin,
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm),
-                ),
-                child: Text(
-                  'Sign In',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
         const SizedBox(height: AppSizes.lg),
       ],
     );
   }
 
-  Widget _buildStepIndicator() {
-    final steps = [
-      ('Phone', _Step.phone),
-      ('Verify', _Step.otp),
-      ('Reset', _Step.newPassword),
-    ];
-    final currentIndex = _currentStep.index;
-
-    return Row(
-      children: List.generate(steps.length * 2 - 1, (i) {
-        if (i.isOdd) {
-          final stepIndex = i ~/ 2;
-          final isCompleted = stepIndex < currentIndex;
-          return Expanded(
-            child: Container(
-              height: 2,
-              color: isCompleted ? AppColors.primary : AppColors.grey300,
-            ),
-          );
-        }
-
-        final stepIndex = i ~/ 2;
-        final isActive = stepIndex == currentIndex;
-        final isCompleted = stepIndex < currentIndex;
-
-        return Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isCompleted
-                ? AppColors.primary
-                : isActive
-                ? AppColors.primary
-                : AppColors.grey200,
-          ),
-          child: Center(
-            child: isCompleted
-                ? const Icon(Icons.check, color: Colors.white, size: 16)
-                : Text(
-                    '${stepIndex + 1}',
-                    style: AppTextStyles.labelMedium.copyWith(
-                      color: isActive ? Colors.white : AppColors.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-          ),
-        );
-      }),
-    );
-  }
-
   Widget _buildStepContent({required bool isDesktop}) {
     switch (_currentStep) {
-      case _Step.phone:
-        return _buildPhoneStep(isDesktop: isDesktop);
+      case _Step.email:
+        return _buildEmailStep(isDesktop: isDesktop);
       case _Step.otp:
         return _buildOtpStep(isDesktop: isDesktop);
-      case _Step.newPassword:
+      case _Step.password:
         return _buildPasswordStep(isDesktop: isDesktop);
     }
   }
 
-  Widget _buildPhoneStep({required bool isDesktop}) {
-    return Form(
-      key: _phoneFormKey,
-      child: Column(
-        key: const ValueKey('phone'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.primarySoft,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(
-                Iconsax.lock_1,
-                color: AppColors.primary,
-                size: 28,
-              ),
+  Widget _buildEmailStep({required bool isDesktop}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Center(
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Iconsax.lock_1,
+              color: AppColors.primary,
+              size: 28,
             ),
           ),
-          const SizedBox(height: AppSizes.md),
-          Center(
-            child: Text(
-              'Reset Password',
-              style: AppTextStyles.h3.copyWith(color: AppColors.primaryDark),
-            ),
+        ),
+        const SizedBox(height: AppSizes.md),
+        Center(
+          child: Text(
+            'Forgot Password',
+            style: AppTextStyles.h3.copyWith(color: AppColors.primaryDark),
           ),
-          const SizedBox(height: AppSizes.xs),
-          Center(
-            child: Text(
-              'Enter your phone number and we\'ll send\nyou a verification code',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSizes.xs),
+        Center(
+          child: Text(
+            'Choose how you want to recover your account',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
             ),
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: AppSizes.lg),
-          Text(
-            'Phone Number',
-            style: AppTextStyles.labelLarge.copyWith(
-              color: AppColors.textPrimary,
-              fontSize: isDesktop ? 13 : null,
-            ),
-          ),
-          const SizedBox(height: AppSizes.sm),
-          TextFormField(
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(12),
-            ],
-            validator: Validators.validatePhoneNumber,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            style: isDesktop
-                ? AppTextStyles.bodyMedium
-                : AppTextStyles.bodyLarge,
-            decoration: InputDecoration(
-              hintText: '7XX XXX XXX',
-              helperText: 'Uganda mobile number',
-              helperStyle: AppTextStyles.caption,
-              contentPadding: isDesktop
-                  ? const EdgeInsets.symmetric(horizontal: 12, vertical: 12)
-                  : null,
-              prefixIcon: Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Iconsax.call,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '+256',
-                      style:
-                          (isDesktop
-                                  ? AppTextStyles.bodyMedium
-                                  : AppTextStyles.bodyLarge)
-                              .copyWith(
-                                color: AppColors.primaryDark,
-                                fontWeight: FontWeight.w600,
-                              ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      width: 1.5,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(1),
-                      ),
-                    ),
-                  ],
+        ),
+        const SizedBox(height: AppSizes.lg),
+        Row(
+          children: [
+            Expanded(
+              child: _buildRecoveryMethodTab(
+                label: 'Email',
+                icon: Iconsax.sms,
+                selected: _recoveryMethod == _RecoveryMethod.email,
+                enabled: true,
+                onTap: () => setState(
+                  () => _recoveryMethod = _RecoveryMethod.email,
                 ),
               ),
             ),
+            const SizedBox(width: AppSizes.sm),
+            Expanded(
+              child: Tooltip(
+                message: 'Coming soon: phone recovery in a future update',
+                child: _buildRecoveryMethodTab(
+                  label: 'Phone Number',
+                  icon: Iconsax.call,
+                  selected: false,
+                  enabled: false,
+                  onTap: null,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSizes.sm),
+        Text(
+          'Phone recovery is coming soon in a future update.',
+          style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
+        ),
+        const SizedBox(height: AppSizes.lg),
+        Form(
+          key: _emailFormKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Email Address',
+                style: AppTextStyles.labelLarge.copyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: isDesktop ? 13 : null,
+                ),
+              ),
+              const SizedBox(height: AppSizes.sm),
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.done,
+                validator: (value) {
+                  final required = Validators.validateRequired(
+                    value,
+                    'Email address',
+                  );
+                  if (required != null) return required;
+                  return Validators.validateEmail(value);
+                },
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                style: isDesktop
+                    ? AppTextStyles.bodyMedium
+                    : AppTextStyles.bodyLarge,
+                decoration: InputDecoration(
+                  hintText: 'name@example.com',
+                  contentPadding: isDesktop
+                      ? const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        )
+                      : null,
+                  prefixIcon: const Icon(
+                    Iconsax.sms,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSizes.lg),
+              CustomButton(
+                text: 'Send Verification Code',
+                isLoading: _isLoading,
+                onPressed: _sendResetLink,
+                height: isDesktop
+                    ? AppSizes.buttonHeightMd
+                    : AppSizes.buttonHeightLg,
+              ),
+            ],
           ),
-          const SizedBox(height: AppSizes.lg),
-          CustomButton(
-            text: 'Send Code',
-            isLoading: _isLoading,
-            onPressed: _sendOtp,
-            height: isDesktop
-                ? AppSizes.buttonHeightMd
-                : AppSizes.buttonHeightLg,
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: AppSizes.md),
+        _buildBackToLoginLink(),
+      ],
     );
   }
 
   Widget _buildOtpStep({required bool isDesktop}) {
     return Column(
-      key: const ValueKey('otp'),
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            color: AppColors.accentSoft,
-            borderRadius: BorderRadius.circular(16),
+        Center(
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Iconsax.sms, color: AppColors.accent, size: 28),
           ),
-          child: const Icon(Iconsax.sms, color: AppColors.accent, size: 28),
         ),
         const SizedBox(height: AppSizes.md),
-        Text(
-          'Enter Verification Code',
-          style: AppTextStyles.h3.copyWith(color: AppColors.primaryDark),
+        Center(
+          child: Text(
+            'Enter Verification Code',
+            style: AppTextStyles.h3.copyWith(color: AppColors.primaryDark),
+          ),
         ),
         const SizedBox(height: AppSizes.xs),
-        Text(
-          'We sent a 6-digit code to\n$_fullPhoneNumber',
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+        Center(
+          child: Text(
+            'We sent a 6-digit code to\n${_maskEmail(_emailController.text.trim())}',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
           ),
-          textAlign: TextAlign.center,
         ),
         const SizedBox(height: AppSizes.lg),
         PinCodeTextField(
@@ -684,19 +617,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         const SizedBox(height: AppSizes.sm),
         _resendSeconds > 0
-            ? Text(
-                'Resend code in ${_resendSeconds}s',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
+            ? Center(
+                child: Text(
+                  'Resend code in ${_resendSeconds}s',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               )
-            : TextButton(
-                onPressed: _resendOtp,
-                child: Text(
-                  'Resend Code',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.accent,
-                    fontWeight: FontWeight.w600,
+            : Center(
+                child: TextButton(
+                  onPressed: _resendOtp,
+                  child: Text(
+                    'Resend Code',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.accent,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -715,7 +652,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Form(
       key: _passwordFormKey,
       child: Column(
-        key: const ValueKey('password'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(
@@ -859,6 +795,87 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ),
     );
   }
+
+  String _maskEmail(String email) {
+    if (email.isEmpty) return '';
+    final parts = email.split('@');
+    if (parts.length != 2) return email;
+    
+    final local = parts[0];
+    final domain = parts[1];
+    
+    if (local.length <= 2) {
+      return '***@$domain';
+    }
+    
+    final masked = local[0] + '*' * (local.length - 2) + local[local.length - 1];
+    return '$masked@$domain';
+  }
+
+  Widget _buildRecoveryMethodTab({
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required bool enabled,
+    required VoidCallback? onTap,
+  }) {
+    final background = enabled
+        ? (selected ? AppColors.primarySoft : Colors.white)
+        : AppColors.grey100;
+    final border = enabled
+        ? (selected ? AppColors.primary : AppColors.grey300)
+        : AppColors.grey200;
+    final textColor = enabled
+        ? (selected ? AppColors.primary : AppColors.textSecondary)
+        : AppColors.textLight;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: AppSizes.md),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+          border: Border.all(color: border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: textColor),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: AppTextStyles.labelLarge.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackToLoginLink() {
+    return Center(
+      child: TextButton.icon(
+        onPressed: () => context.go('/login'),
+        icon: const Icon(Iconsax.arrow_left_2, size: 16),
+        label: Text(
+          'Back to Login',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.primary,
+        ),
+      ),
+    );
+  }
+
 }
 
 /// Paints subtle decorative circles on the brand panel background

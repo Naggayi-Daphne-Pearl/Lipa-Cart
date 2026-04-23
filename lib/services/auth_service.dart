@@ -343,6 +343,31 @@ class AuthService {
     }
   }
 
+  /// Request password reset using email
+  /// Backend accepts email and handles delivery through email channel.
+  static Future<void> forgotPasswordByEmail(String email) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$_apiUrl/auth/forgot-password'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email.trim().toLowerCase()}),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(
+          body['error']?['message'] ??
+              body['message'] ??
+              'No account found with this email',
+        );
+      }
+    } catch (e) {
+      throw Exception(_friendlyError(e, 'No account found with this email'));
+    }
+  }
+
   /// Reset password with OTP verification
   /// Takes phone, OTP code, and new password
   static Future<void> resetPassword({
@@ -357,6 +382,39 @@ class AuthService {
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
               'phone': phoneNumber,
+              'otp': otp,
+              'newPassword': newPassword,
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(
+          body['error']?['message'] ??
+              body['error'] ??
+              'Failed to reset password',
+        );
+      }
+    } catch (e) {
+      throw Exception(_friendlyError(e, 'Failed to reset password'));
+    }
+  }
+
+  /// Reset password with email + OTP verification
+  /// Takes email, OTP code, and new password
+  static Future<void> resetPasswordWithEmail({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$_apiUrl/auth/reset-password'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': email.trim().toLowerCase(),
               'otp': otp,
               'newPassword': newPassword,
             }),

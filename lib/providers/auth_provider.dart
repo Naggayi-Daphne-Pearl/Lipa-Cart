@@ -672,6 +672,25 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Request forgot password by email (link/code delivery handled by backend)
+  Future<bool> forgotPasswordByEmail(String email) async {
+    _status = AuthStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await AuthService.forgotPasswordByEmail(email);
+      _status = AuthStatus.unauthenticated;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Reset password with OTP + new password (no auth needed)
   Future<bool> resetPassword({
     required String phoneNumber,
@@ -685,6 +704,33 @@ class AuthProvider extends ChangeNotifier {
     try {
       await AuthService.resetPassword(
         phoneNumber: phoneNumber,
+        otp: otp,
+        newPassword: newPassword,
+      );
+      _status = AuthStatus.unauthenticated;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Reset password with email + OTP + new password (no auth needed)
+  Future<bool> resetPasswordWithEmail({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    _status = AuthStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await AuthService.resetPasswordWithEmail(
+        email: email,
         otp: otp,
         newPassword: newPassword,
       );
