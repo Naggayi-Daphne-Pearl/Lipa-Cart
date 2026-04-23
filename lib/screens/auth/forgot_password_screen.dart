@@ -14,10 +14,20 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 
 enum _Step { email, otp, password }
+
 enum _RecoveryMethod { email }
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  const ForgotPasswordScreen({
+    super.key,
+    this.initialEmail,
+    this.initialOtp,
+    this.initialStep,
+  });
+
+  final String? initialEmail;
+  final String? initialOtp;
+  final String? initialStep;
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
@@ -42,6 +52,37 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   static const double _desktopBreakpoint = 800;
   static const double _formMaxWidth = 440;
+
+  @override
+  void initState() {
+    super.initState();
+    _applyInitialRouteState();
+  }
+
+  void _applyInitialRouteState() {
+    final initialEmail = widget.initialEmail?.trim();
+    final initialOtp = widget.initialOtp?.trim();
+    final initialStep = widget.initialStep?.trim().toLowerCase();
+
+    if (initialEmail != null && initialEmail.isNotEmpty) {
+      _emailController.text = initialEmail;
+    }
+
+    if (initialOtp != null && initialOtp.isNotEmpty) {
+      _otpController.text = initialOtp;
+    }
+
+    if (initialStep == 'otp' &&
+        initialEmail != null &&
+        initialEmail.isNotEmpty &&
+        initialOtp != null &&
+        initialOtp.isNotEmpty) {
+      _currentStep = _Step.otp;
+      // OTP was just sent via email — start the resend cooldown so the
+      // "Resend" button isn't immediately active when landing from the link.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _startResendTimer());
+    }
+  }
 
   @override
   void dispose() {
@@ -82,13 +123,37 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (success) {
       _startResendTimer();
       setState(() => _currentStep = _Step.otp);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Check your email or spam folder for your verification code.',
+          ),
+          backgroundColor: AppColors.success,
+        ),
+      );
     } else if (authProvider.errorMessage != null) {
+      final errorMessage = authProvider.errorMessage!;
+      final shouldRedirectToSignup =
+          errorMessage.toLowerCase().contains('no email found') ||
+          errorMessage.toLowerCase().contains('please sign up');
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage!),
+          content: Text(
+            shouldRedirectToSignup
+                ? 'No account found for that email. Redirecting to sign up.'
+                : errorMessage,
+          ),
           backgroundColor: AppColors.error,
         ),
       );
+
+      if (shouldRedirectToSignup) {
+        Future.delayed(const Duration(milliseconds: 1200), () {
+          if (!mounted) return;
+          context.go('/signup');
+        });
+      }
     }
   }
 
@@ -157,10 +222,34 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Code sent successfully'),
+          content: Text(
+            'Check your email or spam folder for your verification code.',
+          ),
           backgroundColor: AppColors.success,
         ),
       );
+    } else if (authProvider.errorMessage != null) {
+      final errorMessage = authProvider.errorMessage!;
+      final shouldRedirectToSignup =
+          errorMessage.toLowerCase().contains('no email found') ||
+          errorMessage.toLowerCase().contains('please sign up');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            shouldRedirectToSignup
+                ? 'No account found for that email. Redirecting to sign up.'
+                : errorMessage,
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      if (shouldRedirectToSignup) {
+        Future.delayed(const Duration(milliseconds: 1200), () {
+          if (!mounted) return;
+          context.go('/signup');
+        });
+      }
     }
   }
 
@@ -471,9 +560,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 icon: Iconsax.sms,
                 selected: _recoveryMethod == _RecoveryMethod.email,
                 enabled: true,
-                onTap: () => setState(
-                  () => _recoveryMethod = _RecoveryMethod.email,
-                ),
+                onTap: () =>
+                    setState(() => _recoveryMethod = _RecoveryMethod.email),
               ),
             ),
             const SizedBox(width: AppSizes.sm),
@@ -529,10 +617,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 decoration: InputDecoration(
                   hintText: 'name@example.com',
                   contentPadding: isDesktop
-                      ? const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        )
+                      ? const EdgeInsets.symmetric(horizontal: 12, vertical: 12)
                       : null,
                   prefixIcon: const Icon(
                     Iconsax.sms,
@@ -800,15 +885,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (email.isEmpty) return '';
     final parts = email.split('@');
     if (parts.length != 2) return email;
-    
+
     final local = parts[0];
     final domain = parts[1];
-    
+
     if (local.length <= 2) {
       return '***@$domain';
     }
-    
-    final masked = local[0] + '*' * (local.length - 2) + local[local.length - 1];
+
+    final masked =
+        local[0] + '*' * (local.length - 2) + local[local.length - 1];
     return '$masked@$domain';
   }
 
@@ -869,13 +955,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             fontWeight: FontWeight.w700,
           ),
         ),
-        style: TextButton.styleFrom(
-          foregroundColor: AppColors.primary,
-        ),
+        style: TextButton.styleFrom(foregroundColor: AppColors.primary),
       ),
     );
   }
-
 }
 
 /// Paints subtle decorative circles on the brand panel background

@@ -107,9 +107,10 @@ UserRole? _scopeForWebHost() {
 /// scheme and port so this works identically on prod and local dev mirrors.
 String _originForRole(UserRole role) {
   final current = Uri.base;
-  final rootHost = current.host
-      .toLowerCase()
-      .replaceFirst(RegExp(r'^(shopper|rider|admin|www)\.'), '');
+  final rootHost = current.host.toLowerCase().replaceFirst(
+    RegExp(r'^(shopper|rider|admin|www)\.'),
+    '',
+  );
   final port = current.hasPort && current.port != 80 && current.port != 443
       ? ':${current.port}'
       : '';
@@ -459,7 +460,11 @@ class RoleBasedRouter {
         ),
         GoRoute(
           path: '/forgot-password',
-          builder: (context, state) => const ForgotPasswordScreen(),
+          builder: (context, state) => ForgotPasswordScreen(
+            initialEmail: state.uri.queryParameters['email'],
+            initialOtp: state.uri.queryParameters['otp'],
+            initialStep: state.uri.queryParameters['step'],
+          ),
         ),
         GoRoute(
           path: '/terms-of-service',
@@ -692,8 +697,7 @@ class RoleBasedRouter {
         ),
         GoRoute(
           path: '/customer/join-waitlist',
-          builder: (context, state) =>
-              _safeBack(const JoinWaitlistScreen()),
+          builder: (context, state) => _safeBack(const JoinWaitlistScreen()),
         ),
 
         // Admin Routes
