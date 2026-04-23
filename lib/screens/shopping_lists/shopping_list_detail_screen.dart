@@ -77,284 +77,286 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
         child: WebLayoutWrapper(
           addPadding: false,
           child: Column(
-          children: [
-            // Header with colored background
-            Container(
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(AppSizes.radiusXl),
-                ),
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSizes.lg),
-                  child: Column(
-                    children: [
-                      // Top bar
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(
-                                  AppSizes.radiusMd,
-                                ),
-                              ),
-                              child: const Icon(
-                                Iconsax.arrow_left,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          GestureDetector(
-                            onTap: () => _showOptionsMenu(context, list),
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(
-                                  AppSizes.radiusMd,
-                                ),
-                              ),
-                              child: const Icon(
-                                Iconsax.more,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSizes.lg),
-                      // List info
-                      Row(
-                        children: [
-                          Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(
-                                AppSizes.radiusLg,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                list.emoji ?? '🛒',
-                                style: const TextStyle(fontSize: 32),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: AppSizes.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  list.name,
-                                  style: AppTextStyles.h4.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                if (list.description != null) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    list.description!,
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.8,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSizes.sm),
-                      // Item count
-                      Text(
-                        '${list.totalItems} item${list.totalItems != 1 ? 's' : ''}',
-                        style: AppTextStyles.labelSmall.copyWith(
-                          color: Colors.white.withValues(alpha: 0.8),
-                        ),
-                      ),
-                    ],
+            children: [
+              // Header with colored background
+              Container(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(AppSizes.radiusXl),
                   ),
                 ),
-              ),
-            ),
-
-            // Items list
-            Expanded(
-              child: list.items.isEmpty
-                  ? _buildEmptyState(color)
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        final auth = context.read<AuthProvider>();
-                        await context.read<ShoppingListProvider>().loadLists(
-                          authToken: auth.token,
-                          userId: auth.user?.id,
-                        );
-                      },
-                      child: ListView(
-                        padding: const EdgeInsets.all(AppSizes.lg),
-                        children: [
-                          if (pastSuggestions.isNotEmpty) ...[
-                            _buildSuggestionSection(
-                              pastSuggestions,
-                              list,
-                              color,
-                              authToken,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSizes.lg),
+                    child: Column(
+                      children: [
+                        // Top bar
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusMd,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Iconsax.arrow_left,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
                             ),
-                            const SizedBox(height: AppSizes.lg),
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: () => _showOptionsMenu(context, list),
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusMd,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Iconsax.more,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
                           ],
-                          // Shopping cart stats header
-                          Container(
-                            padding: const EdgeInsets.all(AppSizes.md),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(
-                                AppSizes.radiusMd,
+                        ),
+                        const SizedBox(height: AppSizes.lg),
+                        // List info
+                        Row(
+                          children: [
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusLg,
+                                ),
                               ),
-                              border: Border.all(
-                                color: AppColors.primary.withValues(alpha: 0.2),
+                              child: Center(
+                                child: Text(
+                                  list.emoji ?? '🛒',
+                                  style: const TextStyle(fontSize: 32),
+                                ),
                               ),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Iconsax.bag_2,
-                                      color: AppColors.primary,
-                                      size: 18,
+                            const SizedBox(width: AppSizes.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    list.name,
+                                    style: AppTextStyles.h4.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
                                     ),
-                                    const SizedBox(width: AppSizes.sm),
-                                    Expanded(
-                                      child: Text(
-                                        '${actionableItems.length} item${actionableItems.length != 1 ? 's' : ''} ready for order',
-                                        style: AppTextStyles.labelMedium
-                                            .copyWith(
-                                              color: AppColors.primary,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                  ),
+                                  if (list.description != null) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      list.description!,
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.8,
+                                        ),
                                       ),
                                     ),
                                   ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSizes.sm),
+                        // Item count
+                        Text(
+                          '${list.totalItems} item${list.totalItems != 1 ? 's' : ''}',
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Items list
+              Expanded(
+                child: list.items.isEmpty
+                    ? _buildEmptyState(color)
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          final auth = context.read<AuthProvider>();
+                          await context.read<ShoppingListProvider>().loadLists(
+                            authToken: auth.token,
+                            userId: auth.user?.id,
+                          );
+                        },
+                        child: ListView(
+                          padding: const EdgeInsets.all(AppSizes.lg),
+                          children: [
+                            if (pastSuggestions.isNotEmpty) ...[
+                              _buildSuggestionSection(
+                                pastSuggestions,
+                                list,
+                                color,
+                                authToken,
+                              ),
+                              const SizedBox(height: AppSizes.lg),
+                            ],
+                            // Shopping cart stats header
+                            Container(
+                              padding: const EdgeInsets.all(AppSizes.md),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusMd,
                                 ),
-                                // Estimated total cost
-                                if (estimatedTotal > 0) ...[
-                                  const SizedBox(height: 4),
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   Row(
                                     children: [
                                       Icon(
-                                        Iconsax.wallet_2,
+                                        Iconsax.bag_2,
                                         color: AppColors.primary,
                                         size: 18,
                                       ),
                                       const SizedBox(width: AppSizes.sm),
+                                      Expanded(
+                                        child: Text(
+                                          '${actionableItems.length} item${actionableItems.length != 1 ? 's' : ''} ready for order',
+                                          style: AppTextStyles.labelMedium
+                                              .copyWith(
+                                                color: AppColors.primary,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  // Estimated total cost
+                                  if (estimatedTotal > 0) ...[
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Iconsax.wallet_2,
+                                          color: AppColors.primary,
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: AppSizes.sm),
+                                        Text(
+                                          'Estimated: ${Formatters.formatCurrency(estimatedTotal)}',
+                                          style: AppTextStyles.labelMedium
+                                              .copyWith(
+                                                color: AppColors.primary,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: AppSizes.sm),
+                            Wrap(
+                              spacing: AppSizes.sm,
+                              runSpacing: AppSizes.sm,
+                              children: [
+                                _buildOverviewChip(
+                                  icon: Iconsax.task_square,
+                                  label:
+                                      '${checkedItems.length}/${list.totalItems} checked',
+                                  color: checkedItems.isEmpty
+                                      ? AppColors.textSecondary
+                                      : AppColors.success,
+                                ),
+                                _buildOverviewChip(
+                                  icon: Iconsax.note_1,
+                                  label: '${uncheckedItems.length} pending',
+                                  color: color,
+                                ),
+                                if (estimatedTotal > 0)
+                                  _buildOverviewChip(
+                                    icon: Iconsax.wallet_money,
+                                    label: Formatters.formatCurrency(
+                                      estimatedTotal,
+                                    ),
+                                    color: AppColors.primary,
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSizes.lg),
+
+                            // All items — unchecked first, then checked
+                            ...[...uncheckedItems, ...checkedItems].map(
+                              (item) =>
+                                  _buildItemCard(item, list, color, authToken),
+                            ),
+                            if (checkedItems.isNotEmpty) ...[
+                              const SizedBox(height: AppSizes.sm),
+                              GestureDetector(
+                                onTap: () => listProvider.clearCheckedItems(
+                                  widget.listId,
+                                  authToken: authToken,
+                                ),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Iconsax.trash,
+                                        size: 16,
+                                        color: AppColors.error,
+                                      ),
+                                      const SizedBox(width: 6),
                                       Text(
-                                        'Estimated: ${Formatters.formatCurrency(estimatedTotal)}',
-                                        style: AppTextStyles.labelMedium
+                                        'Clear ${checkedItems.length} checked item${checkedItems.length != 1 ? 's' : ''}',
+                                        style: AppTextStyles.labelSmall
                                             .copyWith(
-                                              color: AppColors.primary,
-                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.error,
+                                              fontWeight: FontWeight.w500,
                                             ),
                                       ),
                                     ],
                                   ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: AppSizes.sm),
-                          Wrap(
-                            spacing: AppSizes.sm,
-                            runSpacing: AppSizes.sm,
-                            children: [
-                              _buildOverviewChip(
-                                icon: Iconsax.task_square,
-                                label:
-                                    '${checkedItems.length}/${list.totalItems} checked',
-                                color: checkedItems.isEmpty
-                                    ? AppColors.textSecondary
-                                    : AppColors.success,
-                              ),
-                              _buildOverviewChip(
-                                icon: Iconsax.note_1,
-                                label:
-                                    '${uncheckedItems.length} pending',
-                                color: color,
-                              ),
-                              if (estimatedTotal > 0)
-                                _buildOverviewChip(
-                                  icon: Iconsax.wallet_money,
-                                  label: Formatters.formatCurrency(
-                                    estimatedTotal,
-                                  ),
-                                  color: AppColors.primary,
                                 ),
+                              ),
                             ],
-                          ),
-                          const SizedBox(height: AppSizes.lg),
-
-                          // All items — unchecked first, then checked
-                          ...[...uncheckedItems, ...checkedItems].map(
-                            (item) =>
-                                _buildItemCard(item, list, color, authToken),
-                          ),
-                          if (checkedItems.isNotEmpty) ...[
-                            const SizedBox(height: AppSizes.sm),
-                            GestureDetector(
-                              onTap: () => listProvider.clearCheckedItems(
-                                widget.listId,
-                                authToken: authToken,
-                              ),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Iconsax.trash,
-                                      size: 16,
-                                      color: AppColors.error,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Clear ${checkedItems.length} checked item${checkedItems.length != 1 ? 's' : ''}',
-                                      style: AppTextStyles.labelSmall.copyWith(
-                                        color: AppColors.error,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                            const SizedBox(height: 100),
                           ],
-                          const SizedBox(height: 100),
-                        ],
+                        ),
                       ),
-                    ),
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
