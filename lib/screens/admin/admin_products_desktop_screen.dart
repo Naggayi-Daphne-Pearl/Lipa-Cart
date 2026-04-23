@@ -1,10 +1,13 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/product_service.dart';
+import '../../services/upload_service.dart';
 import '../../models/product.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -581,6 +584,11 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
   bool _isLoading = false;
   String? _selectedCategory;
 
+  Uint8List? _pickedImageBytes;
+  int? _uploadedImageId;
+  String? _existingImageUrl;
+  bool _isUploadingImage = false;
+
   @override
   void initState() {
     super.initState();
@@ -595,6 +603,56 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
     _maxQtyController =
         TextEditingController(text: widget.product?.maxQuantity.toString());
     _selectedCategory = widget.product?.categoryName;
+    _existingImageUrl = widget.product?.image.isNotEmpty == true
+        ? widget.product!.image
+        : null;
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (picked == null || !mounted) return;
+
+      final bytes = await picked.readAsBytes();
+      setState(() {
+        _pickedImageBytes = bytes;
+        _isUploadingImage = true;
+      });
+
+      final token = context.read<AuthProvider>().token;
+      if (token == null) throw Exception('No auth token');
+
+      final result = await UploadService.uploadImageBytesWithMeta(
+        bytes,
+        picked.name,
+        token,
+      );
+
+      if (mounted) {
+        setState(() {
+          _uploadedImageId = result.id;
+          _existingImageUrl = result.url;
+          _isUploadingImage = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isUploadingImage = false;
+          _pickedImageBytes = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Image upload failed: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _submitForm() async {
@@ -613,11 +671,12 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
 
       if (token == null) throw Exception('No auth token');
 
-      final productData = {
+      final productData = <String, dynamic>{
         'name': _nameController.text,
         'description': _descriptionController.text,
         'estimated_price': double.parse(_priceController.text),
         'common_units': _unitController.text,
+        if (_uploadedImageId != null) 'image': _uploadedImageId,
       };
 
       late Product result;
@@ -667,6 +726,91 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
     }
   }
 
+  Widget _buildImagePicker() {
+    final hasPicked = _pickedImageBytes != null;
+    final hasExisting = _existingImageUrl != null && _existingImageUrl!.isNotEmpty;
+
+    Widget preview;
+    if (hasPicked) {
+      preview = Image.memory(_pickedImageBytes!, fit: BoxFit.cover);
+    } else if (hasExisting) {
+      preview = CachedNetworkImage(
+        imageUrl: _existingImageUrl!,
+        fit: BoxFit.cover,
+        placeholder: (_, __) =>
+            Container(color: AppColors.grey100),
+        errorWidget: (_, __, ___) => Container(
+          color: AppColors.grey100,
+          child: const Icon(Iconsax.image,
+              size: 32, color: AppColors.textTertiary),
+        ),
+      );
+    } else {
+      preview = Container(
+        color: AppColors.grey100,
+        alignment: Alignment.center,
+        child: const Icon(Iconsax.gallery,
+            size: 36, color: AppColors.textTertiary),
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: SizedBox(width: 96, height: 96, child: preview),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Product Image',
+                style: AppTextStyles.labelMedium
+                    .copyWith(color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'JPG, PNG or WEBP. Max 10MB.',
+                style: AppTextStyles.caption
+                    .copyWith(color: AppColors.textTertiary),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _isUploadingImage ? null : _pickAndUploadImage,
+                icon: _isUploadingImage
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Iconsax.gallery_add, size: 18),
+                label: Text(
+                  _isUploadingImage
+                      ? 'Uploading...'
+                      : (hasPicked || hasExisting)
+                          ? 'Change image'
+                          : 'Upload image',
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: BorderSide(color: AppColors.grey300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -679,6 +823,8 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 8),
+              _buildImagePicker(),
+              const SizedBox(height: 16),
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(

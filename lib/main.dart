@@ -20,6 +20,7 @@ import 'providers/shopping_list_provider.dart';
 import 'providers/recipe_provider.dart';
 import 'providers/shopper_provider.dart';
 import 'providers/rider_provider.dart';
+import 'providers/waitlist_provider.dart';
 import 'services/order_service.dart';
 import 'services/address_service.dart';
 import 'services/session_service.dart';
@@ -224,6 +225,7 @@ class _LipaCartAppState extends State<LipaCartApp> with WidgetsBindingObserver {
         ChangeNotifierProvider(create: (_) => RecipeProvider()),
         ChangeNotifierProvider(create: (_) => ShopperProvider()),
         ChangeNotifierProvider(create: (_) => RiderProvider()),
+        ChangeNotifierProvider(create: (_) => WaitlistProvider()),
       ],
       child: Builder(
         builder: (context) {

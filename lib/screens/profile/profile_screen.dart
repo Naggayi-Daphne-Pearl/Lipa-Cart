@@ -458,6 +458,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 onTap: () => context.go('/customer/orders'),
                               ),
                               _MenuItem(
+                                icon: Iconsax.location_add,
+                                title: 'Service Waitlist',
+                                onTap: () => context.go('/customer/waitlist'),
+                              ),
+                              _MenuItem(
                                 icon: Iconsax.star,
                                 title: 'Ratings & Reviews',
                                 onTap: () =>
@@ -489,6 +494,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           icon: Iconsax.receipt,
                           title: 'Orders',
                           onTap: () => context.go('/customer/orders'),
+                        ),
+                        _MenuItem(
+                          icon: Iconsax.location_add,
+                          title: 'Service Waitlist',
+                          onTap: () => context.go('/customer/waitlist'),
                         ),
                         _MenuItem(
                           icon: Iconsax.star,

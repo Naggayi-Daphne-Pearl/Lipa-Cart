@@ -52,6 +52,7 @@ class DesktopFooter extends StatelessWidget {
                   links: const [
                     _FooterLink('My orders', '/customer/orders'),
                     _FooterLink('Profile', '/customer/profile'),
+                    _FooterLink('Service waitlist', '/customer/waitlist'),
                     _FooterLink('Terms of service', '/terms-of-service'),
                     _FooterLink('Privacy policy', '/privacy-policy'),
                   ],

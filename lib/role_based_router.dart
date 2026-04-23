@@ -38,6 +38,8 @@ import 'screens/recipes/recipe_detail_screen.dart';
 import 'screens/customer/addresses_screen.dart';
 import 'screens/customer/order_rating_screen.dart';
 import 'screens/customer/ratings_reviews_screen.dart';
+import 'screens/customer/customer_waitlist_screen.dart';
+import 'screens/customer/join_waitlist_screen.dart';
 import 'screens/notifications/notification_inbox_screen.dart';
 import 'screens/legal/terms_of_service_screen.dart';
 import 'screens/legal/privacy_policy_screen.dart';
@@ -55,6 +57,7 @@ import 'screens/admin/admin_riders_screen.dart';
 import 'screens/admin/admin_orders_screen.dart';
 import 'screens/admin/admin_analytics_screen.dart';
 import 'screens/admin/admin_user_management_screen.dart';
+import 'screens/admin/admin_waitlist_screen.dart';
 
 // Rider screens
 import 'screens/rider/rider_home_screen.dart';
@@ -682,6 +685,16 @@ class RoleBasedRouter {
           path: '/customer/profile',
           builder: (context, state) => _safeBack(const ProfileScreen()),
         ),
+        GoRoute(
+          path: '/customer/waitlist',
+          builder: (context, state) =>
+              _safeBack(const CustomerWaitlistScreen()),
+        ),
+        GoRoute(
+          path: '/customer/join-waitlist',
+          builder: (context, state) =>
+              _safeBack(const JoinWaitlistScreen()),
+        ),
 
         // Admin Routes
         GoRoute(
@@ -728,6 +741,11 @@ class RoleBasedRouter {
           path: '/admin/notifications',
           builder: (context, state) =>
               AdminShell(child: const NotificationInboxScreen()),
+        ),
+        GoRoute(
+          path: '/admin/waitlist',
+          builder: (context, state) =>
+              AdminShell(child: const AdminWaitlistScreen()),
         ),
 
         // Rider Routes
