@@ -8,6 +8,14 @@ import 'package:http_parser/http_parser.dart';
 
 import '../core/constants/app_constants.dart';
 
+/// Handle returned by upload endpoints that need both the Strapi media id
+/// (for relation binding) and the resolved URL (for preview rendering).
+class UploadedMedia {
+  final int id;
+  final String url;
+  const UploadedMedia({required this.id, required this.url});
+}
+
 /// Uploads images through Strapi's `/api/upload` endpoint. Strapi then
 /// delegates to whichever upload provider is configured server-side
 /// (currently Cloudinary — see `Lipa-Cart-Backend/config/plugins.ts`).
@@ -43,6 +51,53 @@ class UploadService {
   }
 
   static Future<String?> uploadImageBytes(
+    Uint8List bytes,
+    String fileName,
+    String token, {
+    String? apiUrlOverride,
+    Future<http.StreamedResponse> Function(http.MultipartRequest request)?
+    sendRequest,
+  }) async {
+    final result = await _uploadRaw(
+      bytes,
+      fileName,
+      token,
+      apiUrlOverride: apiUrlOverride,
+      sendRequest: sendRequest,
+    );
+    return result['url'] as String?;
+  }
+
+  /// Uploads and returns `{id, url}` so the caller can attach the media to a
+  /// Strapi relation (e.g. `product.image`) via its numeric id.
+  static Future<UploadedMedia> uploadImageWithMeta(
+    File imageFile,
+    String token, {
+    String? apiUrlOverride,
+  }) async {
+    final bytes = await imageFile.readAsBytes();
+    final name = imageFile.uri.pathSegments.isNotEmpty
+        ? imageFile.uri.pathSegments.last
+        : 'upload_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    return uploadImageBytesWithMeta(bytes, name, token, apiUrlOverride: apiUrlOverride);
+  }
+
+  static Future<UploadedMedia> uploadImageBytesWithMeta(
+    Uint8List bytes,
+    String fileName,
+    String token, {
+    String? apiUrlOverride,
+  }) async {
+    final result = await _uploadRaw(bytes, fileName, token, apiUrlOverride: apiUrlOverride);
+    final id = result['id'];
+    final url = result['url'] as String?;
+    if (id == null || url == null) {
+      throw Exception('Upload response missing id/url: $result');
+    }
+    return UploadedMedia(id: id as int, url: url);
+  }
+
+  static Future<Map<String, dynamic>> _uploadRaw(
     Uint8List bytes,
     String fileName,
     String token, {
@@ -86,8 +141,7 @@ class UploadService {
     if (decoded is! List || decoded.isEmpty) {
       throw Exception('Upload response missing file data: ${response.body}');
     }
-    final first = decoded.first as Map<String, dynamic>;
-    return first['url'] as String?;
+    return decoded.first as Map<String, dynamic>;
   }
 
   static Future<List<String>> uploadMultipleImages(

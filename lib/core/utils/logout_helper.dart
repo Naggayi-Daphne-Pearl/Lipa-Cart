@@ -33,7 +33,7 @@ class LogoutHelper {
     await Future.wait([
       cartProvider.clearAll(),
       orderProvider.clearAll(),
-      shoppingListProvider.clearAll(),
+      shoppingListProvider.clearAll(clearPersisted: false),
       recipeProvider.clearAll(),
       shopperProvider.clearAll(),
       orderService.clearAll(),

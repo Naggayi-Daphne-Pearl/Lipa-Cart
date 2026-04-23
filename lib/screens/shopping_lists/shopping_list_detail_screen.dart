@@ -205,6 +205,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                         final auth = context.read<AuthProvider>();
                         await context.read<ShoppingListProvider>().loadLists(
                           authToken: auth.token,
+                          userId: auth.user?.id,
                         );
                       },
                       child: ListView(

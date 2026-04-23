@@ -243,13 +243,6 @@ class AuthProvider extends ChangeNotifier {
       final savedUserJson = prefs.getString(AppConstants.userKey);
       final sessionMetadata = await _readSessionMetadata();
 
-      if (savedToken == null || savedUserJson == null) {
-        await _deleteRefreshToken();
-        _status = AuthStatus.unauthenticated;
-        notifyListeners();
-        return false;
-      }
-
       if (_isSessionExpired(sessionMetadata)) {
         await _deleteToken();
         await _deleteRefreshToken();
@@ -265,8 +258,19 @@ class AuthProvider extends ChangeNotifier {
       }
 
       _token = savedToken;
-      final userJson = jsonDecode(savedUserJson) as Map<String, dynamic>;
-      _user = User.fromJson(userJson);
+      if (savedUserJson != null && savedUserJson.isNotEmpty) {
+        final userJson = jsonDecode(savedUserJson) as Map<String, dynamic>;
+        _user = User.fromJson(userJson);
+      }
+
+      if (_token == null || _user == null) {
+        final refreshed = await refreshToken(silent: true);
+        if (!refreshed || _token == null || _user == null) {
+          _status = AuthStatus.unauthenticated;
+          notifyListeners();
+          return false;
+        }
+      }
 
       if (sessionMetadata == null) {
         await _persistSessionMetadata();
@@ -862,8 +866,6 @@ class AuthProvider extends ChangeNotifier {
   /// Call this when token is about to expire or after receiving 401
   Future<bool> refreshToken({bool silent = false}) async {
     try {
-      if (_token == null) return false;
-
       final sessionMetadata = await _readSessionMetadata();
       final rememberMe = sessionMetadata?['rememberMe'] as bool? ?? true;
       final savedRefreshToken = await _readRefreshToken();
@@ -888,7 +890,35 @@ class AuthProvider extends ChangeNotifier {
       );
       _token = jwt;
 
-      if (_user != null) {
+      if (_user == null) {
+        _user = User(
+          id: (userData['id'] ?? userData['documentId'] ?? '').toString(),
+          documentId: (userData['documentId'] ?? userData['document_id'])
+              ?.toString(),
+          phoneNumber: (userData['phone'] ?? '').toString(),
+          email: userData['email'],
+          role: UserRoleExtension.fromString(
+            userData['user_type'] ?? userData['role'] ?? 'customer',
+          ),
+          name: userData['name'],
+          profileImage: userData['profile_photo'],
+          isPremium:
+              userData['isPremium'] as bool? ??
+              userData['is_premium'] as bool? ??
+              false,
+          customerId: userData['customer_id']?.toString(),
+          shopperId: userData['shopper_id']?.toString(),
+          riderId: userData['rider_id']?.toString(),
+          kycStatus: userData['kyc_status'] as String?,
+          kycRejectionReason: userData['kyc_rejection_reason'] as String?,
+          createdAt: DateTime.now(),
+        );
+
+        await prefs.setString(
+          AppConstants.userKey,
+          jsonEncode(_user!.toJson()),
+        );
+      } else {
         _user = _user!.copyWith(
           name: userData['name'] ?? _user!.name,
           email: userData['email'] ?? _user!.email,
