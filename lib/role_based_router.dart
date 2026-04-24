@@ -162,10 +162,21 @@ String _homeForRole(UserRole? role, {String? kycStatus}) {
 class RoleBasedRouter {
   static GoRouter? _router;
 
+  // Cross-origin bounce de-duplication. `assignWebLocation` triggers a
+  // full-page navigation, but the current page keeps rendering during the
+  // transition. Without a guard, `refreshListenable` re-fires `redirect` and
+  // we re-call `assignWebLocation` repeatedly, causing a visible flicker/loop
+  // (cookies "load then clear") on mismatched-role + mismatched-host boots.
+  static DateTime? _lastBounceAt;
+  static String? _lastBounceTarget;
+  static const Duration _bounceCooldown = Duration(seconds: 3);
+
   /// Reset cached router (call on hot restart / app recreation)
   static void reset() {
     _router?.dispose();
     _router = null;
+    _lastBounceAt = null;
+    _lastBounceTarget = null;
   }
 
   /// Creates a fade transition page for smoother navigation.
@@ -242,7 +253,17 @@ class RoleBasedRouter {
               userRole,
               kycStatus: authProvider.user?.kycStatus,
             );
-            assignWebLocation('${_originForRole(userRole)}$homePath');
+            final target = '${_originForRole(userRole)}$homePath';
+            final now = DateTime.now();
+            final recentlyBouncedSameTarget =
+                _lastBounceTarget == target &&
+                _lastBounceAt != null &&
+                now.difference(_lastBounceAt!) < _bounceCooldown;
+            if (!recentlyBouncedSameTarget) {
+              _lastBounceAt = now;
+              _lastBounceTarget = target;
+              assignWebLocation(target);
+            }
             return null;
           }
         }
