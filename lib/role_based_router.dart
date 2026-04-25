@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
-import 'core/utils/web_location.dart';
 import 'models/category.dart';
 import 'models/order.dart';
 import 'models/product.dart';
@@ -19,6 +18,7 @@ import 'screens/auth/otp_screen.dart';
 import 'screens/auth/profile_completion_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/google_callback_screen.dart';
+import 'screens/auth/domain_switch_screen.dart';
 import 'screens/profile/profile_screen.dart';
 
 // Customer screens
@@ -162,21 +162,10 @@ String _homeForRole(UserRole? role, {String? kycStatus}) {
 class RoleBasedRouter {
   static GoRouter? _router;
 
-  // Cross-origin bounce de-duplication. `assignWebLocation` triggers a
-  // full-page navigation, but the current page keeps rendering during the
-  // transition. Without a guard, `refreshListenable` re-fires `redirect` and
-  // we re-call `assignWebLocation` repeatedly, causing a visible flicker/loop
-  // (cookies "load then clear") on mismatched-role + mismatched-host boots.
-  static DateTime? _lastBounceAt;
-  static String? _lastBounceTarget;
-  static const Duration _bounceCooldown = Duration(seconds: 3);
-
   /// Reset cached router (call on hot restart / app recreation)
   static void reset() {
     _router?.dispose();
     _router = null;
-    _lastBounceAt = null;
-    _lastBounceTarget = null;
   }
 
   /// Creates a fade transition page for smoother navigation.
@@ -237,10 +226,8 @@ class RoleBasedRouter {
 
         // === HOST-BASED ROLE SCOPING (production web only) ===
         // On *.lipacart.com, each role subdomain is locked to a specific role.
-        // An authenticated user whose role doesn't match the current host is
-        // bounced to their correct origin via a full-page navigation. Non-prod
-        // hosts (localhost, Vercel previews) skip this so the unified router
-        // remains usable for staging.
+        // A role/host mismatch shows an interstitial and only redirects when
+        // the user confirms, which avoids automatic cross-origin flicker loops.
         if (isAuthenticated && userRole != null) {
           final hostScope = _scopeForWebHost();
           final onCustomerRoot = _isProdLipaHost() && hostScope == null;
@@ -248,23 +235,15 @@ class RoleBasedRouter {
               (hostScope != null && userRole != hostScope) ||
               (onCustomerRoot && userRole != UserRole.customer);
 
-          if (needsBounce) {
+          if (needsBounce && state.matchedLocation != '/domain-switch') {
             final homePath = _homeForRole(
               userRole,
               kycStatus: authProvider.user?.kycStatus,
             );
             final target = '${_originForRole(userRole)}$homePath';
-            final now = DateTime.now();
-            final recentlyBouncedSameTarget =
-                _lastBounceTarget == target &&
-                _lastBounceAt != null &&
-                now.difference(_lastBounceAt!) < _bounceCooldown;
-            if (!recentlyBouncedSameTarget) {
-              _lastBounceAt = now;
-              _lastBounceTarget = target;
-              assignWebLocation(target);
-            }
-            return null;
+            final encodedTarget = Uri.encodeComponent(target);
+            final encodedHost = Uri.encodeComponent(Uri.base.host);
+            return '/domain-switch?target=$encodedTarget&role=${userRole.name}&host=$encodedHost';
           }
         }
 
@@ -486,6 +465,23 @@ class RoleBasedRouter {
             initialOtp: state.uri.queryParameters['otp'],
             initialStep: state.uri.queryParameters['step'],
           ),
+        ),
+        GoRoute(
+          path: '/domain-switch',
+          builder: (context, state) {
+            final target = Uri.decodeComponent(
+              state.uri.queryParameters['target'] ?? '',
+            );
+            final role = state.uri.queryParameters['role'];
+            final host = Uri.decodeComponent(
+              state.uri.queryParameters['host'] ?? Uri.base.host,
+            );
+            return DomainSwitchScreen(
+              targetUrl: target,
+              roleName: role,
+              currentHost: host,
+            );
+          },
         ),
         GoRoute(
           path: '/terms-of-service',
