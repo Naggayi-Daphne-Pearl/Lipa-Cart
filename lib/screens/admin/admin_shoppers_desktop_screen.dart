@@ -238,7 +238,7 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                         if (token == null) throw Exception('No auth token');
 
                         await ShopperService.rejectKyc(
-                          shopper['id'],
+                          shopper['documentId'],
                           token: token,
                           reason: reasonController.text,
                         );
@@ -529,7 +529,7 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                 : _ShopperDetailsView(
                     shopper: _selectedShopper!,
                     onApproveKyc: () =>
-                        _approveKyc(_selectedShopper!['id']),
+                        _approveKyc(_selectedShopper!['documentId']),
                     onRejectKyc: () =>
                         _showRejectKycDialog(_selectedShopper!),
                     onRefresh: _loadShoppers,
