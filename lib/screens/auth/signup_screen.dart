@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/validators.dart';
+import '../../core/utils/web_location.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/google_oauth_service.dart';
 import '../../models/user.dart';
@@ -149,6 +150,65 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
       );
     }
+  }
+
+  /// Get the target domain for a given role
+  String _getTargetDomainForRole(String role) {
+    switch (role.toLowerCase()) {
+      case 'shopper':
+        return 'shopper.lipacart.com';
+      case 'rider':
+        return 'rider.lipacart.com';
+      case 'admin':
+        return 'admin.lipacart.com';
+      default:
+        return 'lipacart.com';
+    }
+  }
+
+  /// Check if current domain matches the domain required for a role
+  bool _needsDomainSwitch(String role) {
+    if (!kIsWeb) return false;
+
+    final currentHost = Uri.base.host;
+    final targetDomain = _getTargetDomainForRole(role);
+
+    // For customer role, accept lipacart.com and www.lipacart.com
+    if (role.toLowerCase() == 'customer') {
+      return currentHost != 'lipacart.com' &&
+          currentHost != 'www.lipacart.com' &&
+          currentHost != 'localhost' &&
+          !currentHost.startsWith('192.') &&
+          !currentHost.startsWith('10.') &&
+          !currentHost.contains(':');
+    }
+
+    // For worker roles, must be on the exact domain
+    return currentHost != targetDomain && currentHost != 'localhost';
+  }
+
+  /// Redirect to the signup form on the correct domain for a role
+  void _redirectToSignupOnDomain(String role) {
+    if (!kIsWeb) return;
+
+    final targetDomain = _getTargetDomainForRole(role);
+    final currentScheme = Uri.base.scheme;
+
+    // Build the target URL
+    final targetUrl = '$currentScheme://$targetDomain/signup?role=$role';
+    assignWebLocation(targetUrl);
+  }
+
+  /// Handle role selection with domain-aware redirection
+  void _selectRole(String role) {
+    // If on wrong domain for this role, redirect
+    if (_needsDomainSwitch(role)) {
+      _redirectToSignupOnDomain(role);
+      return;
+    }
+
+    // Otherwise, update role locally
+    setState(() => _selectedRole = role);
   }
 
   Future<void> _continueWithGoogle() async {
@@ -337,7 +397,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           label: 'Customer',
                           icon: Iconsax.shopping_bag,
                           isSelected: _selectedRole == 'customer',
-                          onTap: () => setState(() => _selectedRole = 'customer'),
+                          onTap: () => _selectRole('customer'),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -346,7 +406,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           label: 'Shopper',
                           icon: Iconsax.bag_happy,
                           isSelected: _selectedRole == 'shopper',
-                          onTap: () => setState(() => _selectedRole = 'shopper'),
+                          onTap: () => _selectRole('shopper'),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -355,7 +415,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           label: 'Rider',
                           icon: Iconsax.truck_fast,
                           isSelected: _selectedRole == 'rider',
-                          onTap: () => setState(() => _selectedRole = 'rider'),
+                          onTap: () => _selectRole('rider'),
                         ),
                       ),
                     ],
