@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
+import '../../core/utils/safe_navigation.dart';
 import '../../core/utils/validators.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/address_service.dart';
@@ -19,8 +20,13 @@ import '../../widgets/auth_shell.dart';
 
 class LoginScreen extends StatefulWidget {
   final String? returnRoute;
+  final bool stepUpRequired;
 
-  const LoginScreen({super.key, this.returnRoute});
+  const LoginScreen({
+    super.key,
+    this.returnRoute,
+    this.stepUpRequired = false,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -44,6 +50,21 @@ class _LoginScreenState extends State<LoginScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final authProvider = context.read<AuthProvider>();
+
+      if (widget.stepUpRequired) {
+        setState(() => _isLoading = true);
+        await authProvider.logout();
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please re-enter your password to continue.'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+        return;
+      }
+
       if (authProvider.isAuthenticated) {
         await _handlePostLogin(authProvider);
         return;
@@ -130,8 +151,8 @@ class _LoginScreenState extends State<LoginScreen> {
       queryParameters: {
         'role': 'customer',
         'source': 'login',
-        if (widget.returnRoute != null && widget.returnRoute!.isNotEmpty)
-          'return': widget.returnRoute,
+        if (sanitizeInternalReturnRoute(widget.returnRoute) != null)
+          'return': sanitizeInternalReturnRoute(widget.returnRoute),
       },
     );
     if (!launched && mounted) {
@@ -152,7 +173,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final authProvider = context.read<AuthProvider>();
     final stateParams = profile.stateParams;
-    final returnRoute = stateParams['return'] ?? widget.returnRoute;
+    final returnRoute = sanitizeInternalReturnRoute(
+      stateParams['return'] ?? widget.returnRoute,
+    );
     final result = await authProvider.signInWithGoogle(
       profile.idToken,
       rememberMe: _rememberMe,
@@ -191,8 +214,7 @@ class _LoginScreenState extends State<LoginScreen> {
           'email': result.email ?? profile.email,
           if ((result.name ?? profile.name)?.trim().isNotEmpty == true)
             'name': (result.name ?? profile.name)!.trim(),
-          if (returnRoute != null && returnRoute.isNotEmpty)
-            'return': returnRoute,
+          if (returnRoute != null) 'return': returnRoute,
         },
       );
 
@@ -510,12 +532,13 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final returnRoute = widget.returnRoute;
-    if (returnRoute == null || returnRoute.isEmpty) {
+    final safeReturnRoute = sanitizeInternalReturnRoute(returnRoute);
+    if (safeReturnRoute == null) {
       context.go('/customer/home');
       return;
     }
 
-    if (returnRoute.startsWith('/customer/checkout')) {
+    if (safeReturnRoute.startsWith('/customer/checkout')) {
       final token = authProvider.token;
       final addressService = context.read<AddressService>();
       if (token != null && user != null && addressService.userAddresses.isEmpty) {
@@ -526,12 +549,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final hasAddress = addressService.userAddresses.isNotEmpty;
       if (!hasAddress) {
-        final encoded = Uri.encodeComponent(returnRoute);
+        final encoded = Uri.encodeComponent(safeReturnRoute);
         context.go('/customer/addresses?return=$encoded');
         return;
       }
     }
 
-    context.go(returnRoute);
+    context.go(safeReturnRoute);
   }
 }

@@ -238,6 +238,53 @@ void main() {
       provider.updateKycStatus('pending_review');
       expect(provider.user!.kycStatus, 'pending_review');
     });
+
+    test('ensureSessionAvailableForSwitch returns false when no tokens exist', () async {
+      SharedPreferences.setMockInitialValues({});
+      final provider = AuthProvider();
+      await Future.delayed(const Duration(seconds: 1));
+
+      final hasSession = await provider.ensureSessionAvailableForSwitch();
+
+      expect(hasSession, false);
+      expect(provider.status, AuthStatus.unauthenticated);
+      expect(provider.errorMessage, contains('another tab'));
+    });
+
+    test('ensureSessionAvailableForSwitch returns true when refresh token exists', () async {
+      final testUser = User(
+        id: '1',
+        phoneNumber: '+256700000000',
+        name: 'Switch User',
+        role: UserRole.customer,
+        customerId: 'c-1',
+        createdAt: DateTime(2026),
+      );
+
+      final sessionMetadata = {
+        'rememberMe': true,
+        'issuedAt': DateTime.now().toIso8601String(),
+        'expiresAt':
+            DateTime.now().add(const Duration(days: 30)).toIso8601String(),
+        'lastRefreshAt': DateTime.now().toIso8601String(),
+      };
+
+      setupSecureStorageMock(initialValues: {
+        AppConstants.tokenKey: 'test-jwt-token',
+      });
+      SharedPreferences.setMockInitialValues({
+        AppConstants.userKey: jsonEncode(testUser.toJson()),
+        AppConstants.sessionMetadataKey: jsonEncode(sessionMetadata),
+      });
+
+      final provider = AuthProvider();
+      await Future.delayed(const Duration(seconds: 1));
+      expect(provider.status, AuthStatus.authenticated);
+
+      final hasSession = await provider.ensureSessionAvailableForSwitch();
+
+      expect(hasSession, true);
+    });
   });
 
   group('AuthProvider - first launch', () {

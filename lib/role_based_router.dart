@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'core/utils/safe_navigation.dart';
 import 'models/category.dart';
 import 'models/order.dart';
 import 'models/product.dart';
@@ -218,6 +219,9 @@ class RoleBasedRouter {
         final isInitial = authProvider.status == AuthStatus.initial;
         final userRole = authProvider.user?.role;
         final isSplash = state.matchedLocation == '/';
+        final isStepUpLogin =
+          state.matchedLocation == '/login' &&
+          state.uri.queryParameters['stepup'] == '1';
 
         // Still loading — only allow splash, redirect everything else to splash
         if (isInitial) {
@@ -297,7 +301,7 @@ class RoleBasedRouter {
         }
 
         // Already authenticated, trying to access auth routes → go to role home
-        if (isAuthenticated && isAuthRoute) {
+        if (isAuthenticated && isAuthRoute && !isStepUpLogin) {
           return _homeForRole(
             authProvider.user?.role,
             kycStatus: authProvider.user?.kycStatus,
@@ -410,8 +414,14 @@ class RoleBasedRouter {
         GoRoute(
           path: '/login',
           builder: (context, state) {
-            final returnRoute = state.uri.queryParameters['return'];
-            return LoginScreen(returnRoute: returnRoute);
+            final returnRoute = sanitizeInternalReturnRoute(
+              state.uri.queryParameters['return'],
+            );
+            final stepUpRequired = state.uri.queryParameters['stepup'] == '1';
+            return LoginScreen(
+              returnRoute: returnRoute,
+              stepUpRequired: stepUpRequired,
+            );
           },
         ),
         GoRoute(
@@ -432,7 +442,9 @@ class RoleBasedRouter {
         GoRoute(
           path: '/auth/google/callback',
           builder: (context, state) {
-            final returnRoute = state.uri.queryParameters['return'];
+            final returnRoute = sanitizeInternalReturnRoute(
+              state.uri.queryParameters['return'],
+            );
             final source = state.uri.queryParameters['source'];
             return GoogleCallbackScreen(
               returnRoute: returnRoute,
@@ -469,10 +481,11 @@ class RoleBasedRouter {
         GoRoute(
           path: '/domain-switch',
           builder: (context, state) {
-            final target = Uri.decodeComponent(
+            final role = sanitizeRoleName(state.uri.queryParameters['role']);
+            final rawTarget = Uri.decodeComponent(
               state.uri.queryParameters['target'] ?? '',
             );
-            final role = state.uri.queryParameters['role'];
+            final target = sanitizeDomainSwitchTarget(rawTarget, role) ?? '';
             final host = Uri.decodeComponent(
               state.uri.queryParameters['host'] ?? Uri.base.host,
             );
