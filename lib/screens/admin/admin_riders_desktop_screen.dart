@@ -613,8 +613,8 @@ class _RiderDetailsView extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () => (rider['is_verified'] ?? false)
-                          ? onUnverify(rider['id'] ?? '')
-                          : onVerify(rider['id'] ?? ''),
+                          ? onUnverify(rider['documentId'] ?? '')
+                          : onVerify(rider['documentId'] ?? ''),
                       icon: Icon(
                         (rider['is_verified'] ?? false)
                             ? Icons.block

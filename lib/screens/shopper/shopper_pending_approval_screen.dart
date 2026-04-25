@@ -30,6 +30,7 @@ class _ShopperPendingApprovalScreenState
         final kycStatus = authProvider.user?.kycStatus;
         debugPrint('Check Status - kycStatus: $kycStatus, shopperId: ${authProvider.user?.shopperId}');
         if (kycStatus == 'approved') {
+          // Router gate routes to /shopper/training if not done, else /shopper/home.
           context.go('/shopper/home');
         } else if (kycStatus == 'rejected') {
           context.go('/shopper/kyc?rejected=true');
@@ -76,7 +77,6 @@ class _ShopperPendingApprovalScreenState
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Hourglass icon
               Container(
                 width: 80,
                 height: 80,
@@ -91,16 +91,12 @@ class _ShopperPendingApprovalScreenState
                 ),
               ),
               const SizedBox(height: 32),
-
-              // Title
               Text(
                 'Application Under Review',
                 style: AppTextStyles.h2,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
-
-              // Subtitle
               Text(
                 'Your KYC documents have been submitted successfully. We\'ll review them and notify you shortly.',
                 style: AppTextStyles.bodySmall.copyWith(
@@ -110,8 +106,6 @@ class _ShopperPendingApprovalScreenState
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 48),
-
-              // Timeline info
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -141,8 +135,6 @@ class _ShopperPendingApprovalScreenState
                 ),
               ),
               const SizedBox(height: 48),
-
-              // Check Status button
               ShopperButton.primary(
                 text: 'Check Status',
                 icon: Icons.refresh_rounded,
@@ -150,16 +142,12 @@ class _ShopperPendingApprovalScreenState
                 onPressed: _isChecking ? null : _checkStatus,
               ),
               const SizedBox(height: 12),
-
-              // Update Documents button
               ShopperButton.secondary(
                 text: 'Update Documents',
                 icon: Icons.edit_document,
                 onPressed: () => context.go('/shopper/kyc'),
               ),
               const SizedBox(height: 12),
-
-              // Logout button
               ShopperButton.outlined(
                 text: 'Logout',
                 icon: Icons.logout_rounded,

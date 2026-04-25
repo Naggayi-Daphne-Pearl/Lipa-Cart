@@ -190,21 +190,23 @@ class ShopperService {
     }
   }
 
-  /// Approve KYC for shopper (admin endpoint)
+  /// Approve shopper KYC. [shopperDocumentId] must be the Strapi v5 documentId.
   static Future<void> approveKyc(
-    String shopperId, {
+    String shopperDocumentId, {
     required String token,
   }) async {
     try {
-      final url = '$_apiUrl/admin/shoppers/$shopperId/kyc-approve';
+      final url = '$_apiUrl/shoppers/$shopperDocumentId/kyc';
 
       final headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
 
+      final body = jsonEncode({'action': 'approve'});
+
       final response = await http
-          .post(Uri.parse(url), headers: headers)
+          .patch(Uri.parse(url), headers: headers, body: body)
           .timeout(AppConstants.apiTimeout);
 
       if (response.statusCode == 401) {
@@ -219,24 +221,27 @@ class ShopperService {
     }
   }
 
-  /// Reject KYC for shopper (admin endpoint)
+  /// Reject shopper KYC. [shopperDocumentId] must be the Strapi v5 documentId.
   static Future<void> rejectKyc(
-    String shopperId, {
+    String shopperDocumentId, {
     required String token,
     String? reason,
   }) async {
     try {
-      final url = '$_apiUrl/admin/shoppers/$shopperId/kyc-reject';
+      final url = '$_apiUrl/shoppers/$shopperDocumentId/kyc';
 
       final headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
 
-      final body = jsonEncode({'reason': reason});
+      final body = jsonEncode({
+        'action': 'reject',
+        if (reason != null && reason.isNotEmpty) 'rejection_reason': reason,
+      });
 
       final response = await http
-          .post(Uri.parse(url), headers: headers, body: body)
+          .patch(Uri.parse(url), headers: headers, body: body)
           .timeout(AppConstants.apiTimeout);
 
       if (response.statusCode == 401) {

@@ -156,21 +156,23 @@ class RiderService {
     }
   }
 
-  /// Verify rider
+  /// Approve rider KYC. [riderDocumentId] must be the Strapi v5 documentId.
   static Future<void> verifyRider(
-    String riderId, {
+    String riderDocumentId, {
     required String token,
   }) async {
     try {
-      final url = '$_apiUrl/admin/riders/$riderId/verify';
+      final url = '$_apiUrl/riders/$riderDocumentId/kyc';
 
       final headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
 
+      final body = jsonEncode({'action': 'approve'});
+
       final response = await http
-          .post(Uri.parse(url), headers: headers)
+          .patch(Uri.parse(url), headers: headers, body: body)
           .timeout(AppConstants.apiTimeout);
 
       if (response.statusCode == 401) {
@@ -185,21 +187,27 @@ class RiderService {
     }
   }
 
-  /// Unverify rider
+  /// Reject rider KYC. [riderDocumentId] must be the Strapi v5 documentId.
   static Future<void> unverifyRider(
-    String riderId, {
+    String riderDocumentId, {
     required String token,
+    String? reason,
   }) async {
     try {
-      final url = '$_apiUrl/admin/riders/$riderId/unverify';
+      final url = '$_apiUrl/riders/$riderDocumentId/kyc';
 
       final headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
 
+      final body = jsonEncode({
+        'action': 'reject',
+        if (reason != null && reason.isNotEmpty) 'rejection_reason': reason,
+      });
+
       final response = await http
-          .post(Uri.parse(url), headers: headers)
+          .patch(Uri.parse(url), headers: headers, body: body)
           .timeout(AppConstants.apiTimeout);
 
       if (response.statusCode == 401) {

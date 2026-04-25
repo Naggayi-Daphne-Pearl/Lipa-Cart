@@ -41,8 +41,7 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  // MVP: only Cash on Delivery exposed. See .claude/playbooks/payments_todo.md
-  // for the plan to re-enable mobile money (Flutterwave v4 already scaffolded).
+  // Default to cash on delivery, but allow mobile money checkout when chosen.
   PaymentMethod _selectedPayment = PaymentMethod.cashOnDelivery;
   Address? _selectedAddress;
   bool _isLoading = false;
@@ -411,6 +410,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         // Backend also enforces this; the client check is just for fast UX.
         final lat = _selectedAddress!.latitude;
         final lng = _selectedAddress!.longitude;
+        if (!_selectedAddress!.hasCoordinates) {
+          // Address has no GPS pin — backend service-area check would reject
+          // with a confusing 400. Push the user to the address picker so they
+          // can drop a pin before checkout.
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Please pick a delivery address with a map location so we can verify it’s in our delivery zone.',
+                ),
+                backgroundColor: AppColors.error,
+                duration: Duration(seconds: 4),
+              ),
+            );
+          }
+          setState(() => _isLoading = false);
+          _goToAddressSelection();
+          return;
+        }
         if (lat != null && lng != null && !(lat == 0 && lng == 0)) {
           final distanceKm = _haversineDistance(
             lat,
@@ -471,8 +489,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             if (paymentPhone != null) {
               try {
                 final orderRef = backendOrder.documentId ?? backendOrder.id;
-                final result =
-                    await PaymentService.initiateFlutterwaveMobileMoney(
+                final result = await PaymentService.initiateMobileMoneyPayment(
                   token: authProvider.token!,
                   orderId: orderRef,
                   phoneNumber: paymentPhone,
@@ -483,20 +500,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
                 final data = result['data'] as Map<String, dynamic>? ?? {};
                 final payment = data['payment'] as Map<String, dynamic>? ?? {};
+                final paymentStatus = payment['status'] as String? ?? 'processing';
+                final providerMessage = data['message'] as String?;
                 final paymentId = payment['documentId'] as String? ??
                     payment['id']?.toString() ??
                     '';
 
-                cartProvider.clearCart();
-                context.pushReplacement(
-                  '/customer/payment-pending',
-                  extra: {
-                    'order': backendOrder,
-                    'paymentId': paymentId,
-                    'phoneNumber': paymentPhone,
-                  },
-                );
-                return;
+                if (paymentStatus == 'failed' || paymentId.isEmpty) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          providerMessage ??
+                              'Order placed, but payment prompt failed. You can retry from your order details.',
+                        ),
+                        backgroundColor: AppColors.warning,
+                        duration: const Duration(seconds: 5),
+                      ),
+                    );
+                  }
+                } else {
+
+                  cartProvider.clearCart();
+                  context.pushReplacement(
+                    '/customer/payment-pending',
+                    extra: {
+                      'order': backendOrder,
+                      'paymentId': paymentId,
+                      'phoneNumber': paymentPhone,
+                    },
+                  );
+                  return;
+                }
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -524,12 +559,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             extra: orderForSuccess,
           );
         } else if (mounted) {
+          // Prefer the backend's actual reason (e.g. service-area rejection,
+          // missing GPS) over the local provider's generic message so the
+          // user knows exactly what to fix.
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                orderProvider.errorMessage ?? 'Failed to place order',
+                orderService.error ??
+                    orderProvider.errorMessage ??
+                    'Failed to place order',
               ),
               backgroundColor: AppColors.error,
+              duration: const Duration(seconds: 5),
             ),
           );
         }
@@ -635,13 +676,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                       const SizedBox(height: AppSizes.md),
 
-                      // Payment method — MVP exposes CoD only.
+                      // Payment method
                       _buildSection(
                         title: 'Payment Method',
                         icon: Iconsax.card,
                         child: Column(
                           children: PaymentMethod.values
-                              .where((m) => m == PaymentMethod.cashOnDelivery)
+                              .where((m) => m != PaymentMethod.card)
                               .map(_buildPaymentOption)
                               .toList(),
                         ),

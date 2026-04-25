@@ -69,6 +69,7 @@ import 'screens/rider/rider_ratings_screen.dart';
 import 'screens/rider/rider_kyc_screen.dart';
 import 'screens/rider/rider_pending_approval_screen.dart';
 import 'screens/rider/rider_profile_screen.dart';
+import 'screens/training/training_quiz_screen.dart';
 
 // Shopper screens
 import 'screens/shopper/shopper_home_screen.dart';
@@ -320,27 +321,38 @@ class RoleBasedRouter {
             );
           }
 
-          // KYC enforcement for shoppers
+          // KYC + training enforcement for shoppers
           if (isAuthenticated && userRole == UserRole.shopper) {
             final kycStatus = authProvider.user?.kycStatus;
-            final isKycRoute =
+            final trainingDone =
+                authProvider.user?.trainingCompletedAt != null;
+            final isOnboardingRoute =
                 state.matchedLocation == '/shopper/kyc' ||
-                state.matchedLocation == '/shopper/pending-approval';
+                state.matchedLocation == '/shopper/pending-approval' ||
+                state.matchedLocation == '/shopper/training';
 
-            if (!isKycRoute) {
-              // Block access to dashboard/other routes if KYC not approved
+            if (!isOnboardingRoute) {
               if (kycStatus == null || kycStatus == 'not_submitted') {
                 return '/shopper/kyc';
               } else if (kycStatus == 'pending_review') {
                 return '/shopper/pending-approval';
               } else if (kycStatus == 'rejected') {
                 return '/shopper/kyc?rejected=true';
+              } else if (!trainingDone) {
+                return '/shopper/training';
               }
-              // kycStatus == 'approved' → allow access
+              // kycStatus == 'approved' AND training done → allow access
             } else {
-              // On KYC/pending pages but already approved → go to home
+              // On an onboarding route — push forward when the user has progressed.
               if (kycStatus == 'approved') {
-                return '/shopper/home';
+                if (state.matchedLocation == '/shopper/training') {
+                  if (trainingDone) return '/shopper/home';
+                  // else stay on /training
+                } else if (!trainingDone) {
+                  return '/shopper/training';
+                } else {
+                  return '/shopper/home';
+                }
               }
             }
           }
@@ -355,27 +367,38 @@ class RoleBasedRouter {
             );
           }
 
-          // KYC enforcement for riders
+          // KYC + training enforcement for riders
           if (isAuthenticated && userRole == UserRole.rider) {
             final kycStatus = authProvider.user?.kycStatus;
-            final isKycRoute =
+            final trainingDone =
+                authProvider.user?.trainingCompletedAt != null;
+            final isOnboardingRoute =
                 state.matchedLocation == '/rider/kyc' ||
-                state.matchedLocation == '/rider/pending-approval';
+                state.matchedLocation == '/rider/pending-approval' ||
+                state.matchedLocation == '/rider/training';
 
-            if (!isKycRoute) {
-              // Block access to home/other routes if KYC not approved
+            if (!isOnboardingRoute) {
               if (kycStatus == null || kycStatus == 'not_submitted') {
                 return '/rider/kyc';
               } else if (kycStatus == 'pending_review') {
                 return '/rider/pending-approval';
               } else if (kycStatus == 'rejected') {
                 return '/rider/kyc?rejected=true';
+              } else if (!trainingDone) {
+                return '/rider/training';
               }
-              // kycStatus == 'approved' → allow access
+              // kycStatus == 'approved' AND training done → allow access
             } else {
-              // On KYC/pending pages but already approved → go to home
+              // On an onboarding route — push forward when the user has progressed.
               if (kycStatus == 'approved') {
-                return '/rider/home';
+                if (state.matchedLocation == '/rider/training') {
+                  if (trainingDone) return '/rider/home';
+                  // else stay on /training
+                } else if (!trainingDone) {
+                  return '/rider/training';
+                } else {
+                  return '/rider/home';
+                }
               }
             }
           }
@@ -820,6 +843,11 @@ class RoleBasedRouter {
           builder: (context, state) => const RiderPendingApprovalScreen(),
         ),
         GoRoute(
+          path: '/rider/training',
+          builder: (context, state) =>
+              const TrainingQuizScreen(role: 'rider'),
+        ),
+        GoRoute(
           path: '/rider/profile',
           builder: (context, state) => const RiderProfileScreen(),
         ),
@@ -889,6 +917,11 @@ class RoleBasedRouter {
         GoRoute(
           path: '/shopper/pending-approval',
           builder: (context, state) => const ShopperPendingApprovalScreen(),
+        ),
+        GoRoute(
+          path: '/shopper/training',
+          builder: (context, state) =>
+              const TrainingQuizScreen(role: 'shopper'),
         ),
       ],
     );
