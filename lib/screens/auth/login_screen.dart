@@ -10,7 +10,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/safe_navigation.dart';
+import '../../core/utils/signup_domain_utils.dart';
 import '../../core/utils/validators.dart';
+import '../../core/utils/web_location.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/address_service.dart';
 import '../../services/google_oauth_service.dart';
@@ -39,6 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _rememberMe = true;
+  String _selectedRole = 'customer';
 
   bool _biometricsAvailable = false;
   final LocalAuthentication _localAuth = LocalAuthentication();
@@ -46,6 +49,17 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedRole = _roleForCurrentHost();
+    if (kIsWeb) {
+      final queryRole = Uri.base.queryParameters['role'];
+      if (queryRole != null && queryRole.isNotEmpty) {
+        _selectedRole = normalizeRoleName(queryRole);
+      }
+      final queryPhone = Uri.base.queryParameters['phone'];
+      if (queryPhone != null && queryPhone.isNotEmpty) {
+        _phoneController.text = queryPhone;
+      }
+    }
     _checkBiometrics();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
@@ -71,6 +85,47 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       await _handleGoogleOAuthCallback();
     });
+  }
+
+  String _roleForCurrentHost() {
+    final host = Uri.base.host.toLowerCase();
+    if (host == 'shopper.lipacart.com') return 'shopper';
+    if (host == 'rider.lipacart.com') return 'rider';
+    if (host == 'admin.lipacart.com') return 'admin';
+    return 'customer';
+  }
+
+  void _selectRole(String role) {
+    final normalizedRole = normalizeRoleName(role);
+    if (kIsWeb && needsDomainSwitch(normalizedRole, Uri.base.host)) {
+      final scheme = Uri.base.scheme;
+      var targetUrl = buildSignupUrlForDomain(
+        normalizedRole,
+        scheme: scheme,
+      ).replaceFirst('/signup', '/login');
+
+      final queryParams = <String, String>{
+        'role': normalizedRole,
+      };
+      if (_phoneController.text.isNotEmpty) {
+        queryParams['phone'] = _phoneController.text;
+      }
+      final safeReturnRoute = sanitizeInternalReturnRoute(widget.returnRoute);
+      if (safeReturnRoute != null) {
+        queryParams['return'] = safeReturnRoute;
+      }
+      if (widget.stepUpRequired) {
+        queryParams['stepup'] = '1';
+      }
+
+      final separator = targetUrl.contains('?') ? '&' : '?';
+      targetUrl += separator + Uri(queryParameters: queryParams).query;
+
+      assignWebLocation(targetUrl);
+      return;
+    }
+
+    setState(() => _selectedRole = normalizedRole);
   }
 
   Future<void> _checkBiometrics() async {
@@ -273,10 +328,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final altLabel = switch (_selectedRole) {
+      'shopper' => 'Apply',
+      'rider' => 'Apply',
+      _ => 'Sign Up',
+    };
+    final altPrompt = switch (_selectedRole) {
+      'shopper' => 'Want to shop for customers?',
+      'rider' => 'Want to deliver with us?',
+      _ => 'Don\'t have an account?',
+    };
+
     return AuthShell(
-      altActionLabel: 'Sign Up',
-      altActionPrompt: 'Don\'t have an account?',
+      altActionLabel: altLabel,
+      altActionPrompt: altPrompt,
       altActionRoute: '/signup',
+      selectedRole: _selectedRole,
       child: _buildFormContent(),
     );
   }
@@ -302,7 +369,11 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: AppSizes.xs),
           Text(
-            'Sign in to your account',
+            switch (_selectedRole) {
+              'shopper' => 'Sign in to pick up new orders',
+              'rider' => 'Sign in to start your deliveries',
+              _ => 'Sign in to continue shopping',
+            },
             style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
             textAlign: isDesktop ? TextAlign.left : TextAlign.center,
           ),
@@ -326,6 +397,40 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text('Account Type', style: AppTextStyles.labelLarge.copyWith(color: AppColors.textPrimary)),
+                const SizedBox(height: AppSizes.sm),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _RoleChip(
+                        label: 'Customer',
+                        icon: Iconsax.shopping_bag,
+                        isSelected: _selectedRole == 'customer',
+                        onTap: () => _selectRole('customer'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _RoleChip(
+                        label: 'Shopper',
+                        icon: Iconsax.bag_happy,
+                        isSelected: _selectedRole == 'shopper',
+                        onTap: () => _selectRole('shopper'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _RoleChip(
+                        label: 'Rider',
+                        icon: Iconsax.truck_fast,
+                        isSelected: _selectedRole == 'rider',
+                        onTap: () => _selectRole('rider'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSizes.lg),
+
                 // Phone
                 Text('Phone Number', style: AppTextStyles.labelLarge.copyWith(color: AppColors.textPrimary)),
                 const SizedBox(height: AppSizes.sm),
@@ -346,8 +451,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Iconsax.call, color: AppColors.primary, size: 20),
-                          const SizedBox(width: 8),
+                          const Text('🇺🇬', style: TextStyle(fontSize: 18)),
+                          const SizedBox(width: 6),
                           Text(
                             '+256',
                             style: AppTextStyles.bodyLarge.copyWith(
@@ -449,14 +554,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Sign in button
                 CustomButton(
-                  text: 'Sign In',
+                  text: switch (_selectedRole) {
+                    'shopper' => 'Sign in to Shopper Portal',
+                    'rider' => 'Sign in to Rider Portal',
+                    _ => 'Sign in to Customer Account',
+                  },
                   isLoading: _isLoading,
                   onPressed: _login,
                   height: AppSizes.buttonHeightLg,
                 ),
 
-                // Google sign-in
-                if (kIsWeb) ...[
+                // Google sign-in (customers only)
+                if (kIsWeb && _selectedRole == 'customer') ...[
                   const SizedBox(height: AppSizes.sm),
                   SizedBox(
                     width: double.infinity,
@@ -558,3 +667,52 @@ class _LoginScreenState extends State<LoginScreen> {
     context.go(safeReturnRoute);
   }
 }
+
+// ─── Role chip (matches signup) ───────────────────────────────────
+class _RoleChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _RoleChip({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.transparent,
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.grey300,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 20, color: isSelected ? Colors.white : AppColors.textSecondary),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: isSelected ? Colors.white : AppColors.textPrimary,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
