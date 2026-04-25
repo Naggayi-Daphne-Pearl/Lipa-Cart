@@ -10,6 +10,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/web_location.dart';
+import '../../core/utils/signup_domain_utils.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/google_oauth_service.dart';
 import '../../models/user.dart';
@@ -152,58 +153,13 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  /// Get the target domain for a given role
-  String _getTargetDomainForRole(String role) {
-    switch (role.toLowerCase()) {
-      case 'shopper':
-        return 'shopper.lipacart.com';
-      case 'rider':
-        return 'rider.lipacart.com';
-      case 'admin':
-        return 'admin.lipacart.com';
-      default:
-        return 'lipacart.com';
-    }
-  }
-
-  /// Check if current domain matches the domain required for a role
-  bool _needsDomainSwitch(String role) {
-    if (!kIsWeb) return false;
-
-    final currentHost = Uri.base.host;
-    final targetDomain = _getTargetDomainForRole(role);
-
-    // For customer role, accept lipacart.com and www.lipacart.com
-    if (role.toLowerCase() == 'customer') {
-      return currentHost != 'lipacart.com' &&
-          currentHost != 'www.lipacart.com' &&
-          currentHost != 'localhost' &&
-          !currentHost.startsWith('192.') &&
-          !currentHost.startsWith('10.') &&
-          !currentHost.contains(':');
-    }
-
-    // For worker roles, must be on the exact domain
-    return currentHost != targetDomain && currentHost != 'localhost';
-  }
-
-  /// Redirect to the signup form on the correct domain for a role
-  void _redirectToSignupOnDomain(String role) {
-    if (!kIsWeb) return;
-
-    final targetDomain = _getTargetDomainForRole(role);
-    final currentScheme = Uri.base.scheme;
-
-    // Build the target URL
-    final targetUrl = '$currentScheme://$targetDomain/signup?role=$role';
-    assignWebLocation(targetUrl);
-  }
-
   /// Handle role selection with domain-aware redirection
   void _selectRole(String role) {
     // If on wrong domain for this role, redirect
-    if (_needsDomainSwitch(role)) {
-      _redirectToSignupOnDomain(role);
+    if (kIsWeb && needsDomainSwitch(role, Uri.base.host)) {
+      final scheme = Uri.base.scheme;
+      final targetUrl = buildSignupUrlForDomain(role, scheme: scheme);
+      assignWebLocation(targetUrl);
       return;
     }
 
