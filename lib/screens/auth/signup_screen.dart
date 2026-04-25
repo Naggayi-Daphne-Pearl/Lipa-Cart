@@ -9,6 +9,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/validators.dart';
+import '../../core/utils/web_location.dart';
+import '../../core/utils/signup_domain_utils.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/google_oauth_service.dart';
 import '../../models/user.dart';
@@ -149,6 +151,38 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
       );
     }
+  }
+
+  /// Handle role selection with domain-aware redirection
+  void _selectRole(String role) {
+    // If on wrong domain for this role, redirect
+    if (kIsWeb && needsDomainSwitch(role, Uri.base.host)) {
+      final scheme = Uri.base.scheme;
+      var targetUrl = buildSignupUrlForDomain(role, scheme: scheme);
+
+      // Preserve user-entered form data via query params
+      final queryParams = <String, String>{};
+      if (_phoneController.text.isNotEmpty) {
+        queryParams['phone'] = _phoneController.text;
+      }
+      if (_nameController.text.isNotEmpty) {
+        queryParams['name'] = _nameController.text;
+      }
+      if (_emailController.text.isNotEmpty) {
+        queryParams['email'] = _emailController.text;
+      }
+
+      if (queryParams.isNotEmpty) {
+        final separator = targetUrl.contains('?') ? '&' : '?';
+        targetUrl += separator + Uri(queryParameters: queryParams).query;
+      }
+
+      assignWebLocation(targetUrl);
+      return;
+    }
+
+    // Otherwise, update role locally
+    setState(() => _selectedRole = role);
   }
 
   Future<void> _continueWithGoogle() async {
@@ -337,7 +371,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           label: 'Customer',
                           icon: Iconsax.shopping_bag,
                           isSelected: _selectedRole == 'customer',
-                          onTap: () => setState(() => _selectedRole = 'customer'),
+                          onTap: () => _selectRole('customer'),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -346,7 +380,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           label: 'Shopper',
                           icon: Iconsax.bag_happy,
                           isSelected: _selectedRole == 'shopper',
-                          onTap: () => setState(() => _selectedRole = 'shopper'),
+                          onTap: () => _selectRole('shopper'),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -355,7 +389,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           label: 'Rider',
                           icon: Iconsax.truck_fast,
                           isSelected: _selectedRole == 'rider',
-                          onTap: () => setState(() => _selectedRole = 'rider'),
+                          onTap: () => _selectRole('rider'),
                         ),
                       ),
                     ],
