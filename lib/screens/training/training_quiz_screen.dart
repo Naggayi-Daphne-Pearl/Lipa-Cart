@@ -50,6 +50,22 @@ class _TrainingQuizScreenState extends State<TrainingQuizScreen> {
       _errorMessage = null;
     });
     try {
+      final token = context.read<AuthProvider>().token;
+      if (token != null) {
+        try {
+          final status = await TrainingService.fetchStatus(token);
+          if (status.passed) {
+            if (!mounted) return;
+            await context.read<AuthProvider>().refreshProfile();
+            if (!mounted) return;
+            context.go(_homeRoute);
+            return;
+          }
+        } catch (_) {
+          // Fall through to fetching questions if status check fails.
+        }
+      }
+
       final questions = await TrainingService.fetchQuestions(widget.role);
       if (!mounted) return;
       if (questions.isEmpty) {

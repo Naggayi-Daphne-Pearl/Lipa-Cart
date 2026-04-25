@@ -137,4 +137,35 @@ class TrainingService {
     final outer = jsonDecode(response.body) as Map<String, dynamic>;
     return TrainingResult.fromJson(outer['data'] as Map<String, dynamic>);
   }
+
+  static Future<TrainingStatus> fetchStatus(String token) async {
+    final url = '$_apiUrl/training-attempts/status';
+    final response = await http
+        .get(
+          Uri.parse(url),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(AppConstants.apiTimeout);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load training status: ${response.statusCode}');
+    }
+
+    final outer = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = (outer['data'] as Map<String, dynamic>? ?? const {});
+    final completedAtRaw = data['completed_at'];
+    return TrainingStatus(
+      passed: data['passed'] as bool? ?? false,
+      completedAt: completedAtRaw == null
+          ? null
+          : DateTime.tryParse(completedAtRaw.toString()),
+    );
+  }
+}
+
+class TrainingStatus {
+  final bool passed;
+  final DateTime? completedAt;
+
+  const TrainingStatus({required this.passed, required this.completedAt});
 }
