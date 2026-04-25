@@ -19,6 +19,11 @@ enum AuthStatus {
   error,
 }
 
+DateTime? _parseDateTime(dynamic raw) {
+  if (raw is String && raw.isNotEmpty) return DateTime.tryParse(raw);
+  return null;
+}
+
 class GoogleSignInResult {
   final bool success;
   final bool needsSignup;
@@ -886,6 +891,7 @@ class AuthProvider extends ChangeNotifier {
           riderId: response['rider_id']?.toString(),
           kycStatus: response['kyc_status'] as String?,
           kycRejectionReason: response['kyc_rejection_reason'] as String?,
+          trainingCompletedAt: _parseDateTime(response['training_completed_at']),
           createdAt: DateTime.now(),
         );
       } else {
@@ -913,6 +919,9 @@ class AuthProvider extends ChangeNotifier {
           kycRejectionReason:
               (response['kyc_rejection_reason'] as String?) ??
               _user!.kycRejectionReason,
+          trainingCompletedAt:
+              _parseDateTime(response['training_completed_at']) ??
+              _user!.trainingCompletedAt,
         );
       }
 

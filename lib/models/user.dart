@@ -40,6 +40,7 @@ class User {
   final String? riderId;
   final String? kycStatus;
   final String? kycRejectionReason;
+  final DateTime? trainingCompletedAt;
   final List<Address> addresses;
   final DateTime createdAt;
 
@@ -57,6 +58,7 @@ class User {
     this.riderId,
     this.kycStatus,
     this.kycRejectionReason,
+    this.trainingCompletedAt,
     this.addresses = const [],
     required this.createdAt,
   });
@@ -75,6 +77,7 @@ class User {
     String? riderId,
     String? kycStatus,
     String? kycRejectionReason,
+    DateTime? trainingCompletedAt,
     List<Address>? addresses,
     DateTime? createdAt,
   }) {
@@ -92,6 +95,7 @@ class User {
       riderId: riderId ?? this.riderId,
       kycStatus: kycStatus ?? this.kycStatus,
       kycRejectionReason: kycRejectionReason ?? this.kycRejectionReason,
+      trainingCompletedAt: trainingCompletedAt ?? this.trainingCompletedAt,
       addresses: addresses ?? this.addresses,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -112,6 +116,7 @@ class User {
       'riderId': riderId,
       'kycStatus': kycStatus,
       'kycRejectionReason': kycRejectionReason,
+      'trainingCompletedAt': trainingCompletedAt?.toIso8601String(),
       'addresses': addresses.map((a) => a.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
     };
@@ -145,6 +150,11 @@ class User {
       riderId: (json['riderId'] ?? json['rider_id'])?.toString(),
       kycStatus: (json['kycStatus'] ?? json['kyc_status']) as String?,
       kycRejectionReason: (json['kycRejectionReason'] ?? json['kyc_rejection_reason']) as String?,
+      trainingCompletedAt: () {
+        final raw = json['trainingCompletedAt'] ?? json['training_completed_at'];
+        if (raw is String && raw.isNotEmpty) return DateTime.tryParse(raw);
+        return null;
+      }(),
       addresses:
           (json['addresses'] as List<dynamic>?)
               ?.map((a) => Address.fromJson(a as Map<String, dynamic>))
