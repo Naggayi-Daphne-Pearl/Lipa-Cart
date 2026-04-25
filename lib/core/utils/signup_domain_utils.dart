@@ -21,32 +21,32 @@ String getTargetDomainForRole(String role) {
   }
 }
 
+/// Check if a host is a development environment (localhost, loopback, private IP).
+bool _isDevHost(String host) {
+  return host == 'localhost' ||
+      host.startsWith('127.') ||
+      host.startsWith('192.') ||
+      host.startsWith('10.') ||
+      host.contains(':'); // localhost:PORT or IPv6
+}
+
 /// Checks if the current host matches the expected domain for a role.
 ///
 /// Returns true if a domain switch is needed, false otherwise.
 bool needsDomainSwitch(String role, String currentHost) {
   final targetDomain = getTargetDomainForRole(role);
 
+  // Dev/test environments never need to switch
+  if (_isDevHost(currentHost)) {
+    return false;
+  }
+
   // For customer role, accept lipacart.com and www.lipacart.com
   if (role.toLowerCase() == 'customer') {
-    // Dev/test environments (localhost, IPs) don't need switch
-    if (currentHost == 'localhost' ||
-        currentHost.startsWith('127.') ||
-        currentHost.startsWith('192.') ||
-        currentHost.startsWith('10.') ||
-        currentHost.contains(':')) {
-      return false;
-    }
-
     return currentHost != 'lipacart.com' && currentHost != 'www.lipacart.com';
   }
 
   // For worker roles, must be on the exact domain
-  // Allow localhost for development
-  if (currentHost == 'localhost' || currentHost.contains(':')) {
-    return false;
-  }
-
   return currentHost != targetDomain;
 }
 

@@ -158,7 +158,25 @@ class _SignupScreenState extends State<SignupScreen> {
     // If on wrong domain for this role, redirect
     if (kIsWeb && needsDomainSwitch(role, Uri.base.host)) {
       final scheme = Uri.base.scheme;
-      final targetUrl = buildSignupUrlForDomain(role, scheme: scheme);
+      var targetUrl = buildSignupUrlForDomain(role, scheme: scheme);
+
+      // Preserve user-entered form data via query params
+      final queryParams = <String, String>{};
+      if (_phoneController.text.isNotEmpty) {
+        queryParams['phone'] = _phoneController.text;
+      }
+      if (_nameController.text.isNotEmpty) {
+        queryParams['name'] = _nameController.text;
+      }
+      if (_emailController.text.isNotEmpty) {
+        queryParams['email'] = _emailController.text;
+      }
+
+      if (queryParams.isNotEmpty) {
+        final separator = targetUrl.contains('?') ? '&' : '?';
+        targetUrl += separator + Uri(queryParameters: queryParams).query;
+      }
+
       assignWebLocation(targetUrl);
       return;
     }
