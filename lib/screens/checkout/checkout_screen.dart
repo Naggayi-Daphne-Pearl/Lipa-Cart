@@ -41,7 +41,8 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  // Default to cash on delivery, but allow mobile money checkout when chosen.
+  // MVP: only Cash on Delivery exposed. See .claude/playbooks/payments_todo.md
+  // for the plan to re-enable mobile money (Flutterwave v4 already scaffolded).
   PaymentMethod _selectedPayment = PaymentMethod.cashOnDelivery;
   Address? _selectedAddress;
   bool _isLoading = false;
@@ -489,7 +490,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             if (paymentPhone != null) {
               try {
                 final orderRef = backendOrder.documentId ?? backendOrder.id;
-                final result = await PaymentService.initiateMobileMoneyPayment(
+                final result =
+                    await PaymentService.initiateFlutterwaveMobileMoney(
                   token: authProvider.token!,
                   orderId: orderRef,
                   phoneNumber: paymentPhone,
@@ -500,38 +502,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
                 final data = result['data'] as Map<String, dynamic>? ?? {};
                 final payment = data['payment'] as Map<String, dynamic>? ?? {};
-                final paymentStatus = payment['status'] as String? ?? 'processing';
-                final providerMessage = data['message'] as String?;
                 final paymentId = payment['documentId'] as String? ??
                     payment['id']?.toString() ??
                     '';
 
-                if (paymentStatus == 'failed' || paymentId.isEmpty) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          providerMessage ??
-                              'Order placed, but payment prompt failed. You can retry from your order details.',
-                        ),
-                        backgroundColor: AppColors.warning,
-                        duration: const Duration(seconds: 5),
-                      ),
-                    );
-                  }
-                } else {
-
-                  cartProvider.clearCart();
-                  context.pushReplacement(
-                    '/customer/payment-pending',
-                    extra: {
-                      'order': backendOrder,
-                      'paymentId': paymentId,
-                      'phoneNumber': paymentPhone,
-                    },
-                  );
-                  return;
-                }
+                cartProvider.clearCart();
+                context.pushReplacement(
+                  '/customer/payment-pending',
+                  extra: {
+                    'order': backendOrder,
+                    'paymentId': paymentId,
+                    'phoneNumber': paymentPhone,
+                  },
+                );
+                return;
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -676,13 +660,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                       const SizedBox(height: AppSizes.md),
 
-                      // Payment method
+                      // Payment method — MVP exposes CoD only.
                       _buildSection(
                         title: 'Payment Method',
                         icon: Iconsax.card,
                         child: Column(
                           children: PaymentMethod.values
-                              .where((m) => m != PaymentMethod.card)
+                              .where((m) => m == PaymentMethod.cashOnDelivery)
                               .map(_buildPaymentOption)
                               .toList(),
                         ),
