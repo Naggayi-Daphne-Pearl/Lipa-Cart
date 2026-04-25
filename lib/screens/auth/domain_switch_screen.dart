@@ -53,50 +53,57 @@ class _DomainSwitchScreenState extends State<DomainSwitchScreen> {
     }
   }
 
-    Future<void> _switchDomain() async {
-      if (_isSwitching || widget.targetUrl.isEmpty) return;
+  Future<void> _switchDomain() async {
+    if (_isSwitching || widget.targetUrl.isEmpty) return;
 
-      setState(() => _isSwitching = true);
-      final auth = context.read<AuthProvider>();
-      final hasSession = await auth.ensureSessionAvailableForSwitch();
-      if (!mounted) return;
+    setState(() => _isSwitching = true);
+    final auth = context.read<AuthProvider>();
+    final hasSession = await auth.ensureSessionAvailableForSwitch();
+    if (!mounted) return;
 
-      if (!hasSession) {
-        setState(() => _isSwitching = false);
-        context.go('/login');
-        return;
-      }
-
-      final refreshed = await auth.refreshSessionIfNeeded(force: true);
-      if (!mounted) return;
-
-      if (!refreshed) {
-        setState(() => _isSwitching = false);
-        context.go('/login');
-        return;
-      }
-
-      final role = sanitizeRoleName(widget.roleName);
-      if (role == 'admin') {
-        final targetUri = Uri.parse(widget.targetUrl);
-        final adminLoginUri = targetUri.replace(
-          path: '/login',
-          queryParameters: {
-            'stepup': '1',
-            'return': targetUri.path +
-                (targetUri.query.isNotEmpty ? '?${targetUri.query}' : ''),
-          },
-        );
-        await auth.logout();
-        if (!mounted) return;
-        setState(() => _isSwitching = false);
-        assignWebLocation(adminLoginUri.toString());
-        return;
-      }
-
+    if (!hasSession) {
       setState(() => _isSwitching = false);
-      assignWebLocation(widget.targetUrl);
+      context.go('/login');
+      return;
     }
+
+    final refreshed = await auth.refreshSessionIfNeeded(force: true);
+    if (!mounted) return;
+
+    if (!refreshed) {
+      setState(() => _isSwitching = false);
+      context.go('/login');
+      return;
+    }
+
+    final role = sanitizeRoleName(widget.roleName);
+    if (role == 'admin') {
+      final targetUri = Uri.parse(widget.targetUrl);
+      final returnPath = StringBuffer(targetUri.path);
+      if (targetUri.query.isNotEmpty) {
+        returnPath.write('?${targetUri.query}');
+      }
+      if (targetUri.fragment.isNotEmpty) {
+        returnPath.write('#${targetUri.fragment}');
+      }
+
+      final adminLoginUri = targetUri.replace(
+        path: '/login',
+        queryParameters: {
+          'stepup': '1',
+          'return': returnPath.toString(),
+        },
+      );
+      await auth.logout();
+      if (!mounted) return;
+      setState(() => _isSwitching = false);
+      assignWebLocation(adminLoginUri.toString());
+      return;
+    }
+
+    setState(() => _isSwitching = false);
+    assignWebLocation(widget.targetUrl);
+  }
 
   Future<void> _logoutHere() async {
     setState(() => _isLoggingOut = true);

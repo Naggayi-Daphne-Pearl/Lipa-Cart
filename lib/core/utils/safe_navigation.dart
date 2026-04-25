@@ -22,9 +22,13 @@ String? sanitizeInternalReturnRoute(String? route) {
     '/onboarding',
   ];
 
-  final allowed = allowedPrefixes.any(
-    (prefix) => path == prefix || path.startsWith(prefix),
-  );
+  bool isAllowedPrefix(String prefix) {
+    if (path == prefix) return true;
+    if (prefix.endsWith('/')) return path.startsWith(prefix);
+    return path.startsWith('$prefix/');
+  }
+
+  final allowed = allowedPrefixes.any(isAllowedPrefix);
   if (!allowed) return null;
 
   return uri.toString();
@@ -57,15 +61,24 @@ String? sanitizeDomainSwitchTarget(
   if (uri.scheme != 'https' && uri.scheme != 'http') return null;
 
   final host = uri.host.toLowerCase();
-  final baseHost = host
-      .replaceFirst(RegExp(r'^(shopper|rider|admin|www)\.'), '');
-  final isLipaHost =
-      baseHost == 'lipacart.com' || baseHost.endsWith('.lipacart.com');
-  if (!isLipaHost) return null;
-
   final role = sanitizeRoleName(expectedRole);
-  final expectedHost = role == 'customer' ? baseHost : '$role.$baseHost';
-  if (host != expectedHost) return null;
+
+  final isCanonicalLipaHost =
+      host == 'lipacart.com' ||
+      host == 'www.lipacart.com' ||
+      host == 'shopper.lipacart.com' ||
+      host == 'rider.lipacart.com' ||
+      host == 'admin.lipacart.com';
+  if (!isCanonicalLipaHost) return null;
+
+  if (role == 'customer') {
+    if (host != 'lipacart.com' && host != 'www.lipacart.com') {
+      return null;
+    }
+  } else {
+    final expectedHost = '$role.lipacart.com';
+    if (host != expectedHost) return null;
+  }
 
   return uri.toString();
 }

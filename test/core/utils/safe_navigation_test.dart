@@ -24,6 +24,12 @@ void main() {
     test('rejects unknown internal route', () {
       expect(sanitizeInternalReturnRoute('/some-random-path'), isNull);
     });
+
+    test('rejects suffix spoof for non-slash routes', () {
+      expect(sanitizeInternalReturnRoute('/forgot-password-evil'), isNull);
+      expect(sanitizeInternalReturnRoute('/profile-completionx'), isNull);
+      expect(sanitizeInternalReturnRoute('/onboarding-anything'), isNull);
+    });
   });
 
   group('sanitizeRoleName', () {
@@ -57,6 +63,28 @@ void main() {
     test('rejects non-lipacart host target', () {
       expect(
         sanitizeDomainSwitchTarget('https://example.com/admin/dashboard', 'admin'),
+        isNull,
+      );
+    });
+
+    test('accepts canonical customer host only', () {
+      expect(
+        sanitizeDomainSwitchTarget('https://lipacart.com/customer/home', 'customer'),
+        'https://lipacart.com/customer/home',
+      );
+      expect(
+        sanitizeDomainSwitchTarget('https://www.lipacart.com/customer/home', 'customer'),
+        'https://www.lipacart.com/customer/home',
+      );
+    });
+
+    test('rejects non-canonical customer subdomains', () {
+      expect(
+        sanitizeDomainSwitchTarget('https://staging.lipacart.com/customer/home', 'customer'),
+        isNull,
+      );
+      expect(
+        sanitizeDomainSwitchTarget('https://preview-xyz.lipacart.com/customer/home', 'customer'),
         isNull,
       );
     });

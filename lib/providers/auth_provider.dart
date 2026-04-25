@@ -209,6 +209,13 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> ensureSessionAvailableForSwitch() async {
+    if (_status != AuthStatus.authenticated || _user == null) {
+      await _clearLocalSession(
+        errorMessage: 'Session ended in another tab. Please sign in again.',
+      );
+      return false;
+    }
+
     final token = await _readToken();
     final refreshToken = await _readRefreshToken();
     final hasToken = token != null && token.isNotEmpty;
@@ -229,8 +236,16 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final me = await AuthService.getMe(_token!);
+      final roleRaw = me['user_type'] ?? me['role'];
+      if (roleRaw == null || roleRaw.toString().trim().isEmpty) {
+        await _clearLocalSession(
+          errorMessage: 'Unable to verify account role. Please sign in again.',
+        );
+        return;
+      }
+
       final backendRole = UserRoleExtension.fromString(
-        me['user_type'] ?? me['role'] ?? _user!.role.name,
+        roleRaw.toString(),
       );
 
       if (backendRole != _user!.role) {

@@ -252,13 +252,34 @@ void main() {
     });
 
     test('ensureSessionAvailableForSwitch returns true when refresh token exists', () async {
+      final testUser = User(
+        id: '1',
+        phoneNumber: '+256700000000',
+        name: 'Switch User',
+        role: UserRole.customer,
+        customerId: 'c-1',
+        createdAt: DateTime(2026),
+      );
+
+      final sessionMetadata = {
+        'rememberMe': true,
+        'issuedAt': DateTime.now().toIso8601String(),
+        'expiresAt':
+            DateTime.now().add(const Duration(days: 30)).toIso8601String(),
+        'lastRefreshAt': DateTime.now().toIso8601String(),
+      };
+
       setupSecureStorageMock(initialValues: {
-        AppConstants.refreshTokenKey: 'refresh-token',
+        AppConstants.tokenKey: 'test-jwt-token',
       });
-      SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({
+        AppConstants.userKey: jsonEncode(testUser.toJson()),
+        AppConstants.sessionMetadataKey: jsonEncode(sessionMetadata),
+      });
 
       final provider = AuthProvider();
       await Future.delayed(const Duration(seconds: 1));
+      expect(provider.status, AuthStatus.authenticated);
 
       final hasSession = await provider.ensureSessionAvailableForSwitch();
 
