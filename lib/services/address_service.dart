@@ -253,15 +253,39 @@ class AddressService extends ChangeNotifier {
         if (isDefault) {
           _defaultAddress = newAddress;
         }
+        _error = null;
         notifyListeners();
         return true;
       }
+      _error = _extractStrapiError(response, fallback: 'Could not save address');
+      notifyListeners();
       return false;
     } catch (e) {
       _error = 'Error creating address: $e';
       notifyListeners();
       return false;
     }
+  }
+
+  /// Pulls a human-readable message out of a Strapi v5 error response body so
+  /// callers can surface the *actual* validation reason (e.g. "city is
+  /// required", "address is outside our delivery zone") instead of a generic
+  /// "could not save". Falls back to the supplied [fallback] if the body
+  /// can't be parsed or the error envelope is shaped differently.
+  String _extractStrapiError(http.Response response, {required String fallback}) {
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map) {
+        final err = body['error'];
+        if (err is Map) {
+          final msg = err['message'];
+          if (msg is String && msg.trim().isNotEmpty) return msg;
+        }
+        final msg = body['message'];
+        if (msg is String && msg.trim().isNotEmpty) return msg;
+      }
+    } catch (_) {}
+    return '$fallback (status ${response.statusCode})';
   }
 
   /// Update existing address
@@ -311,9 +335,13 @@ class AddressService extends ChangeNotifier {
             _defaultAddress = _addresses[index];
           }
         }
+        _error = null;
         notifyListeners();
         return true;
       }
+      _error =
+          _extractStrapiError(response, fallback: 'Could not update address');
+      notifyListeners();
       return false;
     } catch (e) {
       _error = 'Error updating address: $e';

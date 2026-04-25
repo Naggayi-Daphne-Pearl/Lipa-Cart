@@ -770,7 +770,10 @@ class OrderService extends ChangeNotifier {
         return true;
       }
 
-      _error = 'Failed to create order (${response.statusCode})';
+      _error = _extractStrapiOrderError(
+        response,
+        fallback: 'Failed to create order',
+      );
       notifyListeners();
       return false;
     } catch (e) {
@@ -778,6 +781,28 @@ class OrderService extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  /// Pulls a human-readable validation message out of a Strapi v5 error body
+  /// (e.g. the service-area rejection reason from `order.create`). Falls back
+  /// to a generic message + status code when the envelope can't be parsed.
+  String _extractStrapiOrderError(
+    http.Response response, {
+    required String fallback,
+  }) {
+    try {
+      final body = jsonDecode(response.body);
+      if (body is Map) {
+        final err = body['error'];
+        if (err is Map) {
+          final msg = err['message'];
+          if (msg is String && msg.trim().isNotEmpty) return msg;
+        }
+        final msg = body['message'];
+        if (msg is String && msg.trim().isNotEmpty) return msg;
+      }
+    } catch (_) {}
+    return '$fallback (status ${response.statusCode})';
   }
 
   /// Create order as guest (no authentication required).

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:http/http.dart' as http;
+import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 import '../../core/constants/app_sizes.dart';
 import '../../core/constants/app_constants.dart';
@@ -699,10 +702,143 @@ class _AddressFormState extends State<AddressForm> {
   bool isDefault = false;
   double? _selectedLat;
   double? _selectedLng;
-  bool _showMap =
-      false; // Map pin is optional but helps riders find the exact stop.
+  bool _showMap = false; // Expanded on demand and on first save attempt.
+  bool _isResolvingLocation = false;
+  // Inline feedback shown directly in the bottom sheet. We can't rely on
+  // ScaffoldMessenger from inside a modal sheet because the snackbar lands on
+  // the parent Scaffold, hidden behind the sheet — so the user sees nothing.
+  String? _formError;
+  String? _formInfo;
 
   double _toRadians(double degrees) => degrees * math.pi / 180;
+
+  /// Forward-geocode the typed address via Nominatim so we can drop a pin for
+  /// users who entered the address manually. Returns null on failure or when
+  /// no usable result comes back.
+  Future<({double lat, double lng})?> _geocodeTypedAddress() async {
+    final parts = [
+      addressLineController.text.trim(),
+      landmarkController.text.trim(),
+      cityController.text.trim().isEmpty
+          ? 'Kampala'
+          : cityController.text.trim(),
+      'Uganda',
+    ].where((p) => p.isNotEmpty).join(', ');
+
+    if (parts.isEmpty) return null;
+
+    try {
+      // Cap the geocode call so a slow / blocked Nominatim doesn't strand
+      // the user on a save button that does nothing visible.
+      final response = await http
+          .get(
+            Uri.parse(
+              'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(parts)}&countrycodes=ug,ke&limit=1',
+            ),
+            headers: const {'User-Agent': 'LipaCart/1.0'},
+          )
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode != 200) return null;
+      final data = jsonDecode(response.body) as List<dynamic>;
+      if (data.isEmpty) return null;
+      final first = data.first as Map<String, dynamic>;
+      final lat = double.tryParse(first['lat']?.toString() ?? '');
+      final lng = double.tryParse(first['lon']?.toString() ?? '');
+      if (lat == null || lng == null) return null;
+      return (lat: lat, lng: lng);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Save handler that enforces a GPS pin. Edge cases:
+  /// 1. Required text fields missing -> snackbar, no save.
+  /// 2. Pin already dropped -> save normally.
+  /// 3. Manual entry with no pin -> attempt forward-geocode; on success, drop
+  ///    the pin in the map and ask the user to confirm. On failure, expand
+  ///    the map and ask them to drop one manually. Either way, do NOT save
+  ///    until lat/lng are set, because the backend will reject the order at
+  ///    checkout (service-area check requires coordinates).
+  Future<void> _handleSavePressed() async {
+    setState(() {
+      _formError = null;
+      _formInfo = null;
+    });
+
+    if (labelController.text.trim().isEmpty ||
+        addressLineController.text.trim().isEmpty ||
+        cityController.text.trim().isEmpty) {
+      setState(() {
+        _formError = 'Please fill in the label, address, and city before saving.';
+      });
+      return;
+    }
+
+    if (_selectedLat == null || _selectedLng == null) {
+      // Manual-entry path: try to resolve the typed address into coordinates
+      // via Nominatim so the user doesn't get stuck. On success we proceed
+      // to save in the same tap (with an info banner so they know we used
+      // an approximate pin and can refine later). On failure we surface the
+      // map and ask them to drop one — we can't save without coordinates
+      // because the backend service-area check requires them.
+      setState(() => _isResolvingLocation = true);
+      final geocoded = await _geocodeTypedAddress();
+      if (!mounted) return;
+      setState(() => _isResolvingLocation = false);
+
+      if (geocoded == null) {
+        setState(() {
+          _showMap = true;
+          _formError =
+              'We couldn’t locate that address automatically. Drop a pin on the map below so we can verify it’s in our delivery zone.';
+        });
+        return;
+      }
+
+      setState(() {
+        _selectedLat = geocoded.lat;
+        _selectedLng = geocoded.lng;
+        _formInfo =
+            'Using an approximate map pin for the address you typed. Open the address later to refine it on the map.';
+      });
+      // Fall through to service-area check + save.
+    }
+
+    // We have a pin — enforce service-area client-side too so the user gets
+    // an immediate, clear rejection instead of a 400 from the backend.
+    final dLat = _toRadians(_selectedLat! - AppConstants.serviceAreaCenterLat);
+    final dLng = _toRadians(_selectedLng! - AppConstants.serviceAreaCenterLng);
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(AppConstants.serviceAreaCenterLat)) *
+            math.cos(_toRadians(_selectedLat!)) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    final distKm = 6371.0 * c;
+    if (distKm > AppConstants.serviceAreaRadiusKm) {
+      setState(() {
+        _showMap = true;
+        _formInfo = null;
+        _formError =
+            'This pin is ${distKm.toStringAsFixed(1)} km from Kampala center. '
+            'We currently deliver within ${AppConstants.serviceAreaRadiusKm.toInt()} km. '
+            'Move the pin closer or pick a different address.';
+      });
+      return;
+    }
+
+    widget.onSave(
+      labelController.text,
+      addressLineController.text,
+      cityController.text,
+      landmarkController.text.isEmpty ? null : landmarkController.text,
+      instructionsController.text.isEmpty ? null : instructionsController.text,
+      isDefault,
+      _selectedLat,
+      _selectedLng,
+    );
+  }
 
   @override
   void initState() {
@@ -787,9 +923,17 @@ class _AddressFormState extends State<AddressForm> {
                   ),
                   const SizedBox(height: AppSizes.xs),
                   Text(
-                    'Use the area, building name, and a nearby landmark. Add a map pin only if you want extra precision for the rider.',
+                    'Type the area / building / landmark, then drop a map pin so we can verify the address is in our delivery zone. Riders use the pin to find your exact stop.',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.xs),
+                  Text(
+                    'You don’t have to share your phone location — search the map by name, drag the pin to your spot, or just save and we’ll place a pin from the address you typed.',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                      fontStyle: FontStyle.italic,
                     ),
                   ),
                   const SizedBox(height: AppSizes.sm),
@@ -797,7 +941,7 @@ class _AddressFormState extends State<AddressForm> {
                     OutlinedButton.icon(
                       onPressed: () => setState(() => _showMap = true),
                       icon: const Icon(Icons.map_outlined, size: 18),
-                      label: const Text('Add map pin (optional)'),
+                      label: const Text('Drop a map pin (required)'),
                     )
                   else ...[
                     Row(
@@ -983,26 +1127,68 @@ class _AddressFormState extends State<AddressForm> {
               ),
             ),
             const SizedBox(height: AppSizes.lg),
+            if (_formError != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSizes.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                  border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Iconsax.warning_2,
+                        size: 18, color: AppColors.error),
+                    const SizedBox(width: AppSizes.xs),
+                    Expanded(
+                      child: Text(
+                        _formError!,
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: AppColors.error),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSizes.sm),
+            ],
+            if (_formInfo != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSizes.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                  border:
+                      Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Iconsax.info_circle,
+                        size: 18, color: AppColors.primaryDark),
+                    const SizedBox(width: AppSizes.xs),
+                    Expanded(
+                      child: Text(
+                        _formInfo!,
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: AppColors.primaryDark),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSizes.sm),
+            ],
             CustomButton(
-              text: widget.address == null ? 'Add Address' : 'Update Address',
+              text: _isResolvingLocation
+                  ? 'Locating address...'
+                  : (widget.address == null ? 'Add Address' : 'Update Address'),
               icon: widget.address == null ? Iconsax.add : Iconsax.tick_circle,
               backgroundColor: AppColors.primary,
-              onPressed: () {
-                widget.onSave(
-                  labelController.text,
-                  addressLineController.text,
-                  cityController.text,
-                  landmarkController.text.isEmpty
-                      ? null
-                      : landmarkController.text,
-                  instructionsController.text.isEmpty
-                      ? null
-                      : instructionsController.text,
-                  isDefault,
-                  _selectedLat,
-                  _selectedLng,
-                );
-              },
+              onPressed: _isResolvingLocation ? null : _handleSavePressed,
             ),
             const SizedBox(height: AppSizes.lg),
           ],
