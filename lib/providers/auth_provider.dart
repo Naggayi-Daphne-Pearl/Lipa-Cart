@@ -6,6 +6,7 @@ import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../services/strapi_service.dart';
+import '../services/training_service.dart';
 import '../core/constants/app_constants.dart';
 import '../services/web_cookie_storage_stub.dart'
     if (dart.library.html) '../services/web_cookie_storage.dart';
@@ -870,6 +871,16 @@ class AuthProvider extends ChangeNotifier {
     try {
       final response = await AuthService.getMe(_token!);
 
+      DateTime? trainingCompletedAt;
+      try {
+        final status = await TrainingService.fetchStatus(_token!);
+        if (status.passed) {
+          trainingCompletedAt = status.completedAt ?? DateTime.now();
+        }
+      } catch (_) {
+        // Network/permission failure — preserve any previously-known value below.
+      }
+
       if (_user == null) {
         _user = User(
           id: (response['id'] ?? response['documentId'] ?? '').toString(),
@@ -891,7 +902,8 @@ class AuthProvider extends ChangeNotifier {
           riderId: response['rider_id']?.toString(),
           kycStatus: response['kyc_status'] as String?,
           kycRejectionReason: response['kyc_rejection_reason'] as String?,
-          trainingCompletedAt: _parseDateTime(response['training_completed_at']),
+          trainingCompletedAt:
+              trainingCompletedAt ?? _parseDateTime(response['training_completed_at']),
           createdAt: DateTime.now(),
         );
       } else {
@@ -920,6 +932,7 @@ class AuthProvider extends ChangeNotifier {
               (response['kyc_rejection_reason'] as String?) ??
               _user!.kycRejectionReason,
           trainingCompletedAt:
+              trainingCompletedAt ??
               _parseDateTime(response['training_completed_at']) ??
               _user!.trainingCompletedAt,
         );
