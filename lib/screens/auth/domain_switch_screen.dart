@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/utils/safe_navigation.dart';
 import '../../core/utils/web_location.dart';
 import '../../providers/auth_provider.dart';
 
@@ -23,9 +24,24 @@ class DomainSwitchScreen extends StatefulWidget {
 
 class _DomainSwitchScreenState extends State<DomainSwitchScreen> {
   bool _isLoggingOut = false;
+  bool _isSwitching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final auth = context.read<AuthProvider>();
+      final hasSession = await auth.ensureSessionAvailableForSwitch();
+      if (!mounted) return;
+      if (!hasSession) {
+        context.go('/login');
+      }
+    });
+  }
 
   String get _roleLabel {
-    switch ((widget.roleName ?? '').toLowerCase()) {
+    switch (sanitizeRoleName(widget.roleName)) {
       case 'shopper':
         return 'Shopper';
       case 'rider':
@@ -36,6 +52,51 @@ class _DomainSwitchScreenState extends State<DomainSwitchScreen> {
         return 'Customer';
     }
   }
+
+    Future<void> _switchDomain() async {
+      if (_isSwitching || widget.targetUrl.isEmpty) return;
+
+      setState(() => _isSwitching = true);
+      final auth = context.read<AuthProvider>();
+      final hasSession = await auth.ensureSessionAvailableForSwitch();
+      if (!mounted) return;
+
+      if (!hasSession) {
+        setState(() => _isSwitching = false);
+        context.go('/login');
+        return;
+      }
+
+      final refreshed = await auth.refreshSessionIfNeeded(force: true);
+      if (!mounted) return;
+
+      if (!refreshed) {
+        setState(() => _isSwitching = false);
+        context.go('/login');
+        return;
+      }
+
+      final role = sanitizeRoleName(widget.roleName);
+      if (role == 'admin') {
+        final targetUri = Uri.parse(widget.targetUrl);
+        final adminLoginUri = targetUri.replace(
+          path: '/login',
+          queryParameters: {
+            'stepup': '1',
+            'return': targetUri.path +
+                (targetUri.query.isNotEmpty ? '?${targetUri.query}' : ''),
+          },
+        );
+        await auth.logout();
+        if (!mounted) return;
+        setState(() => _isSwitching = false);
+        assignWebLocation(adminLoginUri.toString());
+        return;
+      }
+
+      setState(() => _isSwitching = false);
+      assignWebLocation(widget.targetUrl);
+    }
 
   Future<void> _logoutHere() async {
     setState(() => _isLoggingOut = true);
@@ -90,10 +151,14 @@ class _DomainSwitchScreenState extends State<DomainSwitchScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: widget.targetUrl.isEmpty
+                        onPressed: widget.targetUrl.isEmpty || _isSwitching
                             ? null
-                            : () => assignWebLocation(widget.targetUrl),
-                        child: const Text('Switch To Correct Domain'),
+                            : _switchDomain,
+                        child: Text(
+                          _isSwitching
+                              ? 'Checking Session...'
+                              : 'Switch To Correct Domain',
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),

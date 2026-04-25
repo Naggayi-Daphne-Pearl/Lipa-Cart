@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/safe_navigation.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/google_oauth_service.dart';
 
@@ -36,7 +37,9 @@ class _GoogleCallbackScreenState extends State<GoogleCallbackScreen> {
 
     final authProvider = context.read<AuthProvider>();
     final stateParams = profile.stateParams;
-    final returnRoute = stateParams['return'] ?? widget.returnRoute;
+    final returnRoute = sanitizeInternalReturnRoute(
+      stateParams['return'] ?? widget.returnRoute,
+    );
 
     final result = await authProvider.signInWithGoogle(
       profile.idToken,
@@ -64,8 +67,7 @@ class _GoogleCallbackScreenState extends State<GoogleCallbackScreen> {
           'email': result.email ?? profile.email,
           if ((result.name ?? profile.name)?.trim().isNotEmpty == true)
             'name': (result.name ?? profile.name)!.trim(),
-          if (returnRoute != null && returnRoute.isNotEmpty)
-            'return': returnRoute,
+          if (returnRoute != null) 'return': returnRoute,
         },
       );
 
@@ -90,8 +92,8 @@ class _GoogleCallbackScreenState extends State<GoogleCallbackScreen> {
     final fallbackUri = Uri(
       path: '/login',
       queryParameters: {
-        if (widget.returnRoute != null && widget.returnRoute!.isNotEmpty)
-          'return': widget.returnRoute,
+        if (sanitizeInternalReturnRoute(widget.returnRoute) != null)
+          'return': sanitizeInternalReturnRoute(widget.returnRoute),
       },
     );
     context.go(fallbackUri.toString());

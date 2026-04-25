@@ -238,6 +238,32 @@ void main() {
       provider.updateKycStatus('pending_review');
       expect(provider.user!.kycStatus, 'pending_review');
     });
+
+    test('ensureSessionAvailableForSwitch returns false when no tokens exist', () async {
+      SharedPreferences.setMockInitialValues({});
+      final provider = AuthProvider();
+      await Future.delayed(const Duration(seconds: 1));
+
+      final hasSession = await provider.ensureSessionAvailableForSwitch();
+
+      expect(hasSession, false);
+      expect(provider.status, AuthStatus.unauthenticated);
+      expect(provider.errorMessage, contains('another tab'));
+    });
+
+    test('ensureSessionAvailableForSwitch returns true when refresh token exists', () async {
+      setupSecureStorageMock(initialValues: {
+        AppConstants.refreshTokenKey: 'refresh-token',
+      });
+      SharedPreferences.setMockInitialValues({});
+
+      final provider = AuthProvider();
+      await Future.delayed(const Duration(seconds: 1));
+
+      final hasSession = await provider.ensureSessionAvailableForSwitch();
+
+      expect(hasSession, true);
+    });
   });
 
   group('AuthProvider - first launch', () {

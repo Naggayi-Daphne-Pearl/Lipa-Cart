@@ -188,6 +188,69 @@ class AuthProvider extends ChangeNotifier {
     return DateTime.now().difference(lastRefreshAt) >= _silentRefreshInterval;
   }
 
+  Future<void> _clearLocalSession({
+    String? errorMessage,
+    bool notify = true,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await _deleteToken();
+    await _deleteRefreshToken();
+    await prefs.remove(AppConstants.userKey);
+    await _clearSessionMetadata();
+
+    _user = null;
+    _token = null;
+    _status = AuthStatus.unauthenticated;
+    _errorMessage = errorMessage;
+
+    if (notify) {
+      notifyListeners();
+    }
+  }
+
+  Future<bool> ensureSessionAvailableForSwitch() async {
+    final token = await _readToken();
+    final refreshToken = await _readRefreshToken();
+    final hasToken = token != null && token.isNotEmpty;
+    final hasRefreshToken = refreshToken != null && refreshToken.isNotEmpty;
+
+    if (!hasToken && !hasRefreshToken) {
+      await _clearLocalSession(
+        errorMessage: 'Session ended in another tab. Please sign in again.',
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<void> _enforceBackendRoleTruth() async {
+    if (_token == null || _user == null) return;
+
+    try {
+      final me = await AuthService.getMe(_token!);
+      final backendRole = UserRoleExtension.fromString(
+        me['user_type'] ?? me['role'] ?? _user!.role.name,
+      );
+
+      if (backendRole != _user!.role) {
+        await _clearLocalSession(
+          errorMessage: 'Your account role changed. Please sign in again.',
+        );
+      }
+    } catch (e) {
+      final text = e.toString().toLowerCase();
+      if (text.contains('401') ||
+          text.contains('expired') ||
+          text.contains('invalid') ||
+          text.contains('unauthorized')) {
+        await _clearLocalSession(
+          errorMessage: 'Session expired. Please login again.',
+        );
+      }
+    }
+  }
+
   AuthStatus get status => _status;
   User? get user => _user;
   String? get token => _token;
@@ -244,16 +307,7 @@ class AuthProvider extends ChangeNotifier {
       final sessionMetadata = await _readSessionMetadata();
 
       if (_isSessionExpired(sessionMetadata)) {
-        await _deleteToken();
-        await _deleteRefreshToken();
-        await prefs.remove(AppConstants.userKey);
-        await _clearSessionMetadata();
-
-        _token = null;
-        _user = null;
-        _status = AuthStatus.unauthenticated;
-        _errorMessage = 'Session expired. Please login again.';
-        notifyListeners();
+        await _clearLocalSession(errorMessage: 'Session expired. Please login again.');
         return false;
       }
 
@@ -279,6 +333,7 @@ class AuthProvider extends ChangeNotifier {
       _status = AuthStatus.authenticated;
       notifyListeners();
       _registerPushToken(); // non-blocking
+      Future.microtask(_enforceBackendRoleTruth);
 
       if (_shouldSilentRefresh(sessionMetadata)) {
         Future.microtask(() => refreshToken(silent: true));
@@ -286,17 +341,7 @@ class AuthProvider extends ChangeNotifier {
 
       return true;
     } catch (e) {
-      final prefs = await SharedPreferences.getInstance();
-      await _deleteToken();
-      await _deleteRefreshToken();
-      await prefs.remove(AppConstants.userKey);
-      await _clearSessionMetadata();
-
-      _token = null;
-      _user = null;
-      _status = AuthStatus.unauthenticated;
-      _errorMessage = 'Session expired. Please login again.';
-      notifyListeners();
+      await _clearLocalSession(errorMessage: 'Session expired. Please login again.');
       return false;
     }
   }
@@ -924,10 +969,20 @@ class AuthProvider extends ChangeNotifier {
       final jwt = response['jwt'] as String;
       final rotatedRefreshToken = response['refreshToken'] as String?;
       final userData = response['user'] as Map<String, dynamic>;
+      final resolvedRole = UserRoleExtension.fromString(
+        userData['user_type'] ?? userData['role'] ?? 'customer',
+      );
       final prefs = await SharedPreferences.getInstance();
       final issuedAt =
           DateTime.tryParse(sessionMetadata?['issuedAt'] as String? ?? '') ??
           DateTime.now();
+
+      if (_user != null && _user!.role != resolvedRole) {
+        await _clearLocalSession(
+          errorMessage: 'Your account role changed. Please sign in again.',
+        );
+        return false;
+      }
 
       await _writeToken(jwt, maxAgeDays: rememberMe ? 30 : 14);
       await _writeRefreshToken(
@@ -943,9 +998,7 @@ class AuthProvider extends ChangeNotifier {
               ?.toString(),
           phoneNumber: (userData['phone'] ?? '').toString(),
           email: userData['email'],
-          role: UserRoleExtension.fromString(
-            userData['user_type'] ?? userData['role'] ?? 'customer',
-          ),
+          role: resolvedRole,
           name: userData['name'],
           profileImage: userData['profile_photo'],
           isPremium:
@@ -966,6 +1019,7 @@ class AuthProvider extends ChangeNotifier {
         );
       } else {
         _user = _user!.copyWith(
+          role: resolvedRole,
           name: userData['name'] ?? _user!.name,
           email: userData['email'] ?? _user!.email,
           profileImage: userData['profile_photo'] ?? _user!.profileImage,
