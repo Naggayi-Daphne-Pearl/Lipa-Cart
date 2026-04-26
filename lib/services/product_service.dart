@@ -10,6 +10,9 @@ class BulkImportResult {
   final int created;
   final int skipped;
   final int total;
+  final int rowsRequestingImage;
+  final int imagesAttached;
+  final bool zipProvided;
   final List<({int row, String error})> errors;
   final List<String> unusedZipFiles;
 
@@ -18,6 +21,9 @@ class BulkImportResult {
     required this.created,
     required this.skipped,
     required this.total,
+    required this.rowsRequestingImage,
+    required this.imagesAttached,
+    required this.zipProvided,
     required this.errors,
     required this.unusedZipFiles,
   });
@@ -89,6 +95,9 @@ class ProductService {
       created: (data['created'] as num?)?.toInt() ?? 0,
       skipped: (data['skipped'] as num?)?.toInt() ?? 0,
       total: (data['total'] as num?)?.toInt() ?? 0,
+      rowsRequestingImage: (data['rows_requesting_image'] as num?)?.toInt() ?? 0,
+      imagesAttached: (data['images_attached'] as num?)?.toInt() ?? 0,
+      zipProvided: data['zip_provided'] as bool? ?? false,
       errors: errors,
       unusedZipFiles: (data['unused_zip_files'] as List<dynamic>? ?? const [])
           .map((e) => e.toString())

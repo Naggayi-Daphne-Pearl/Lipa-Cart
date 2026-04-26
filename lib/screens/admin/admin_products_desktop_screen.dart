@@ -1139,55 +1139,48 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
     html.Url.revokeObjectUrl(url);
   }
 
-  Future<void> _pickXlsxAndZip() async {
-    // Use the browser's native multi-file picker. file_picker had a
-    // LateInitializationError under some Flutter Web builds and we don't
-    // need its mobile/desktop support here.
-    final input = html.FileUploadInputElement()
-      ..accept = '.xlsx,.zip'
-      ..multiple = true;
+  Future<({Uint8List bytes, String name})?> _pickSingle(String accept) async {
+    final input = html.FileUploadInputElement()..accept = accept;
     input.click();
     await input.onChange.first;
-
     final files = input.files;
-    if (files == null || files.isEmpty) return;
+    if (files == null || files.isEmpty) return null;
+    final file = files.first;
+    final reader = html.FileReader();
+    reader.readAsArrayBuffer(file);
+    await reader.onLoad.first;
+    final bytes = Uint8List.fromList(reader.result as List<int>);
+    return (bytes: bytes, name: file.name);
+  }
 
-    Uint8List? xlsxBytes;
-    String? xlsxName;
-    Uint8List? zipBytes;
-    String? zipName;
-
-    for (final file in files) {
-      final reader = html.FileReader();
-      reader.readAsArrayBuffer(file);
-      await reader.onLoad.first;
-      final bytes = Uint8List.fromList((reader.result as List<int>));
-      final lower = file.name.toLowerCase();
-      if (lower.endsWith('.xlsx')) {
-        xlsxBytes = bytes;
-        xlsxName = file.name;
-      } else if (lower.endsWith('.zip')) {
-        zipBytes = bytes;
-        zipName = file.name;
-      }
-    }
-
-    if (xlsxBytes == null) {
-      setState(() =>
-          _error = 'Pick the .xlsx template (and optionally a .zip of images).');
-      return;
-    }
-
+  Future<void> _pickXlsx() async {
+    final picked = await _pickSingle('.xlsx');
+    if (picked == null) return;
     setState(() {
-      _xlsxBytes = xlsxBytes;
-      _xlsxName = xlsxName;
-      _zipBytes = zipBytes;
-      _zipName = zipName;
+      _xlsxBytes = picked.bytes;
+      _xlsxName = picked.name;
       _error = null;
       _result = null;
     });
+  }
 
-    await _runImport();
+  Future<void> _pickZip() async {
+    final picked = await _pickSingle('.zip');
+    if (picked == null) return;
+    setState(() {
+      _zipBytes = picked.bytes;
+      _zipName = picked.name;
+      _error = null;
+      _result = null;
+    });
+  }
+
+  void _clearZip() {
+    setState(() {
+      _zipBytes = null;
+      _zipName = null;
+      _result = null;
+    });
   }
 
   Future<void> _runImport() async {
@@ -1274,68 +1267,71 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
                 '2. Fill in rows. To attach an image, name a file in your '
                 'images folder (e.g. tomato.jpg) and put that filename in '
                 'the image_filename column.\n'
-                '3. Zip the images folder, then upload the .xlsx and .zip '
-                'together. Max 200 rows.',
+                '3. Pick the .xlsx, pick the .zip of images, then Import. '
+                'Max 200 rows.',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _busy || _downloadingTemplate
-                          ? null
-                          : _downloadTemplate,
-                      icon: _downloadingTemplate
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Iconsax.document_download, size: 18),
-                      label: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Text('Download Template'),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _busy ? null : _pickXlsxAndZip,
-                      icon: _busy
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Iconsax.document_upload, size: 18),
-                      label: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child:
-                            Text(_busy ? 'Working...' : 'Upload .xlsx + .zip'),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (_xlsxName != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'xlsx: $_xlsxName${_zipName != null ? '   zip: $_zipName' : ''}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
+              OutlinedButton.icon(
+                onPressed:
+                    _busy || _downloadingTemplate ? null : _downloadTemplate,
+                icon: _downloadingTemplate
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Iconsax.document_download, size: 18),
+                label: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text('Download Template'),
                 ),
-              ],
+              ),
+              const SizedBox(height: 16),
+              _FileSlot(
+                label: 'Template (.xlsx)',
+                required: true,
+                fileName: _xlsxName,
+                disabled: _busy,
+                onPick: _pickXlsx,
+                onClear: () => setState(() {
+                  _xlsxBytes = null;
+                  _xlsxName = null;
+                  _result = null;
+                }),
+              ),
+              const SizedBox(height: 8),
+              _FileSlot(
+                label: 'Images (.zip)',
+                required: false,
+                fileName: _zipName,
+                disabled: _busy,
+                onPick: _pickZip,
+                onClear: _clearZip,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed:
+                    _busy || _xlsxBytes == null ? null : _runImport,
+                icon: _busy
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Iconsax.document_upload, size: 18),
+                label: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(_busy ? 'Working...' : 'Import'),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+              ),
               if (_busy) ...[
                 const SizedBox(height: 12),
                 const LinearProgressIndicator(),
@@ -1372,6 +1368,28 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
                                 'in ${_result!.total} rows',
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
+                      if (_result!.rowsRequestingImage > 0) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Images: ${_result!.imagesAttached} '
+                          'of ${_result!.rowsRequestingImage} attached'
+                          '${!_result!.zipProvided ? "  (no .zip uploaded)" : ""}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                      if (_result!.rowsRequestingImage == 0 &&
+                          _result!.created > 0)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 4),
+                          child: Text(
+                            'No image_filename or image_url values were '
+                            'set on any row, so no images were attached.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
                       if (_result!.errors.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         ..._result!.errors.take(20).map(
@@ -1414,6 +1432,85 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
           child: const Text('Close'),
         ),
       ],
+    );
+  }
+}
+
+class _FileSlot extends StatelessWidget {
+  final String label;
+  final bool required;
+  final String? fileName;
+  final bool disabled;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  const _FileSlot({
+    required this.label,
+    required this.required,
+    required this.fileName,
+    required this.disabled,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasFile = fileName != null && fileName!.isNotEmpty;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.grey300),
+        borderRadius: BorderRadius.circular(10),
+        color: hasFile ? AppColors.cardGreen : AppColors.grey50,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            hasFile ? Iconsax.tick_circle : Iconsax.document_upload,
+            size: 18,
+            color: hasFile ? AppColors.success : AppColors.textSecondary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label + (required ? ' *' : ' (optional)'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  fileName ?? 'No file selected',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: hasFile
+                        ? AppColors.textPrimary
+                        : AppColors.textTertiary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          if (hasFile)
+            IconButton(
+              tooltip: 'Remove',
+              onPressed: disabled ? null : onClear,
+              icon: const Icon(Iconsax.close_circle, size: 18),
+              color: AppColors.textSecondary,
+              visualDensity: VisualDensity.compact,
+            ),
+          TextButton.icon(
+            onPressed: disabled ? null : onPick,
+            icon: const Icon(Iconsax.folder_open, size: 16),
+            label: Text(hasFile ? 'Replace' : 'Pick'),
+          ),
+        ],
+      ),
     );
   }
 }
