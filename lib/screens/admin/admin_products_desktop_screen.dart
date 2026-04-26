@@ -7,6 +7,9 @@ import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../core/constants/app_constants.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/category_service.dart';
 import '../../services/product_service.dart';
@@ -1078,274 +1081,174 @@ class _BulkImportDialog extends StatefulWidget {
   State<_BulkImportDialog> createState() => _BulkImportDialogState();
 }
 
-enum _ImportPhase { idle, validating, ready, importing, done }
-
 class _BulkImportDialogState extends State<_BulkImportDialog> {
-  final _csvController = TextEditingController();
-  _ImportPhase _phase = _ImportPhase.idle;
-  bool _fetchingTemplate = false;
-  bool _loadingCategories = false;
-  String? _error;
+  bool _busy = false;
+  String _phaseLabel = '';
   String? _selectedFileName;
-  BulkImportResult? _validation;
-  BulkImportResult? _importResult;
-  List<({String id, String name})> _categoryOptions = [];
-
-  @override
-  void dispose() {
-    _csvController.dispose();
-    super.dispose();
-  }
+  String? _error;
+  BulkImportResult? _result;
 
   Future<void> _downloadTemplate() async {
-    setState(() => _fetchingTemplate = true);
-    try {
-      final token = context.read<AuthProvider>().token;
-      final csv = await ProductService.fetchCsvTemplate(token: token);
-      if (!mounted) return;
-      _csvController.text = csv;
-      _resetPreview();
+    final url = Uri.parse('${AppConstants.apiUrl}/products/csv-template');
+    final ok = await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Template loaded. Edit, then Validate.'),
-        ),
+        const SnackBar(content: Text('Could not open download link')),
       );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load template: $e')),
-      );
-    } finally {
-      if (mounted) setState(() => _fetchingTemplate = false);
     }
   }
 
-  Future<void> _showCategoryReference() async {
-    setState(() => _loadingCategories = true);
-    try {
-      final token = context.read<AuthProvider>().token;
-      if (token == null) throw Exception('Not signed in');
-      final options = await ProductService.fetchCategoryOptions(token: token);
-      if (!mounted) return;
-      setState(() => _categoryOptions = options);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load categories: $e')),
-      );
-    } finally {
-      if (mounted) setState(() => _loadingCategories = false);
-    }
-  }
-
-  Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles(
+  Future<void> _uploadTemplate() async {
+    final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['csv', 'txt'],
       withData: true,
     );
-    if (result == null || result.files.isEmpty) return;
-    final file = result.files.first;
+    if (picked == null || picked.files.isEmpty) return;
+
+    final file = picked.files.first;
     final bytes = file.bytes;
     if (bytes == null) {
       setState(() => _error = 'Could not read the selected file.');
       return;
     }
-    final text = utf8.decode(bytes, allowMalformed: true);
+    final csv = utf8.decode(bytes, allowMalformed: true);
+
     setState(() {
-      _csvController.text = text;
+      _busy = true;
+      _phaseLabel = 'Validating ${file.name}...';
       _selectedFileName = file.name;
-      _resetPreview();
+      _error = null;
+      _result = null;
     });
-  }
 
-  void _resetPreview() {
-    _phase = _ImportPhase.idle;
-    _validation = null;
-    _importResult = null;
-    _error = null;
-  }
-
-  Future<void> _validate() async {
-    final csv = _csvController.text.trim();
-    if (csv.isEmpty) {
-      setState(() => _error = 'Add CSV content first (drop a file or paste).');
+    final token = context.read<AuthProvider>().token;
+    if (token == null) {
+      setState(() {
+        _busy = false;
+        _error = 'Not signed in';
+      });
       return;
     }
-    setState(() {
-      _phase = _ImportPhase.validating;
-      _error = null;
-      _validation = null;
-      _importResult = null;
-    });
+
     try {
-      final token = context.read<AuthProvider>().token;
-      if (token == null) throw Exception('Not signed in');
-      final result = await ProductService.bulkImport(
+      // Dry-run first so the user can see structural errors before any DB
+      // writes or image fetches happen.
+      final preview = await ProductService.bulkImport(
         csv,
         token: token,
         dryRun: true,
       );
       if (!mounted) return;
+      if (preview.errors.isNotEmpty) {
+        setState(() {
+          _busy = false;
+          _phaseLabel = '';
+          _result = preview;
+          _error = 'Fix the rows below and upload again.';
+        });
+        return;
+      }
+
       setState(() {
-        _validation = result;
-        _phase = _ImportPhase.ready;
+        _phaseLabel = 'Importing ${preview.total} rows '
+            '(image fetches can take ~1s each)...';
       });
+
+      final imported = await ProductService.bulkImport(csv, token: token);
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _phaseLabel = '';
+        _result = imported;
+      });
+      if (imported.created > 0) widget.onComplete();
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _phase = _ImportPhase.idle;
+        _busy = false;
+        _phaseLabel = '';
         _error = e.toString().replaceAll('Exception: ', '');
       });
-    }
-  }
-
-  Future<void> _import() async {
-    final csv = _csvController.text.trim();
-    setState(() {
-      _phase = _ImportPhase.importing;
-      _error = null;
-      _importResult = null;
-    });
-    try {
-      final token = context.read<AuthProvider>().token;
-      if (token == null) throw Exception('Not signed in');
-      final result = await ProductService.bulkImport(csv, token: token);
-      if (!mounted) return;
-      setState(() {
-        _importResult = result;
-        _phase = _ImportPhase.done;
-      });
-      if (result.created > 0) widget.onComplete();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _phase = _ImportPhase.ready;
-        _error = e.toString().replaceAll('Exception: ', '');
-      });
-    }
-  }
-
-  bool get _busy =>
-      _phase == _ImportPhase.validating || _phase == _ImportPhase.importing;
-
-  String _phaseLabel() {
-    switch (_phase) {
-      case _ImportPhase.validating:
-        return 'Validating...';
-      case _ImportPhase.importing:
-        return 'Importing... (image fetches can take ~1s each)';
-      default:
-        return '';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final preview = _importResult ?? _validation;
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Text('Bulk import products'),
       content: SizedBox(
-        width: 640,
+        width: 560,
         child: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'Required columns: name, description, estimated_price, '
-                'common_units, category_id. Optional: image_url '
-                '(Cloudinary URL on our tenant). Use "|" to separate '
-                'multiple units (e.g. "kg|bunch"). Max 200 rows per import.',
+                '1. Download the template, fill in the rows in Excel/Sheets, '
+                'and save as CSV.\n'
+                '2. Upload the file. Rows with errors are reported below.\n'
+                'Required: name, description, estimated_price, common_units, '
+                'category_id. Optional: image_url (Cloudinary URL on our '
+                'tenant). Use "|" to separate multiple units. Max 200 rows.',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 8,
+              const SizedBox(height: 16),
+              Row(
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: _fetchingTemplate ? null : _downloadTemplate,
-                    icon: _fetchingTemplate
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Iconsax.document_download, size: 16),
-                    label: const Text('Load template'),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _busy ? null : _downloadTemplate,
+                      icon: const Icon(Iconsax.document_download, size: 18),
+                      label: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text('Download Template'),
+                      ),
+                    ),
                   ),
-                  OutlinedButton.icon(
-                    onPressed: _loadingCategories ? null : _showCategoryReference,
-                    icon: _loadingCategories
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Iconsax.tag_2, size: 16),
-                    label: const Text('Show category IDs'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _busy ? null : _pickFile,
-                    icon: const Icon(Iconsax.document_upload, size: 16),
-                    label: Text(_selectedFileName ?? 'Pick CSV file'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _busy ? null : _uploadTemplate,
+                      icon: _busy
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Iconsax.document_upload, size: 18),
+                      label: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Text(_busy ? 'Working...' : 'Upload Template'),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
                   ),
                 ],
               ),
-              if (_categoryOptions.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Container(
-                  constraints: const BoxConstraints(maxHeight: 140),
-                  decoration: BoxDecoration(
-                    color: AppColors.beige,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.all(12),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: _categoryOptions
-                          .map(
-                            (c) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2),
-                              child: SelectableText(
-                                '${c.name} → ${c.id}',
-                                style: const TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
+              if (_selectedFileName != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _selectedFileName!,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
-              const SizedBox(height: 12),
-              TextField(
-                controller: _csvController,
-                maxLines: 12,
-                onChanged: (_) {
-                  if (_phase != _ImportPhase.idle) {
-                    setState(_resetPreview);
-                  }
-                },
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-                decoration: const InputDecoration(
-                  hintText:
-                      'name,description,estimated_price,common_units,category_id,image_url',
-                  border: OutlineInputBorder(),
-                ),
-              ),
               if (_busy) ...[
                 const SizedBox(height: 12),
                 const LinearProgressIndicator(),
                 const SizedBox(height: 4),
                 Text(
-                  _phaseLabel(),
+                  _phaseLabel,
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
@@ -1353,15 +1256,15 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
                 ),
               ],
               if (_error != null) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Text(_error!, style: const TextStyle(color: AppColors.error)),
               ],
-              if (preview != null) ...[
+              if (_result != null) ...[
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: preview.errors.isEmpty
+                    color: _result!.errors.isEmpty
                         ? AppColors.cardGreen
                         : AppColors.accentSoft,
                     borderRadius: BorderRadius.circular(8),
@@ -1370,24 +1273,23 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _importResult != null
-                            ? 'Imported ${preview.created} of ${preview.total} '
-                                '(${preview.skipped} skipped)'
-                            : 'Validated ${preview.created} of ${preview.total} '
-                                'rows would import (${preview.skipped} would skip)',
+                        _result!.errors.isEmpty
+                            ? 'Imported ${_result!.created} of ${_result!.total} rows'
+                            : 'Found ${_result!.errors.length} error(s) '
+                                'in ${_result!.total} rows',
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      if (preview.errors.isNotEmpty) ...[
+                      if (_result!.errors.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        ...preview.errors.take(20).map(
+                        ..._result!.errors.take(20).map(
                               (e) => Text(
                                 'Row ${e.row}: ${e.error}',
                                 style: const TextStyle(fontSize: 12),
                               ),
                             ),
-                        if (preview.errors.length > 20)
+                        if (_result!.errors.length > 20)
                           Text(
-                            '...and ${preview.errors.length - 20} more',
+                            '...and ${_result!.errors.length - 20} more',
                             style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary,
@@ -1407,35 +1309,6 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
           onPressed: _busy ? null : () => Navigator.pop(context),
           child: const Text('Close'),
         ),
-        if (_phase != _ImportPhase.ready && _phase != _ImportPhase.done)
-          ElevatedButton.icon(
-            onPressed: _busy ? null : _validate,
-            icon: const Icon(Iconsax.tick_square, size: 18),
-            label: const Text('Validate'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.grey900,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        if (_phase == _ImportPhase.ready)
-          ElevatedButton.icon(
-            onPressed: _busy ? null : _import,
-            icon: _busy
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Icon(Iconsax.import, size: 18),
-            label: Text(_busy ? 'Importing...' : 'Import for real'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-            ),
-          ),
       ],
     );
   }
