@@ -1,13 +1,14 @@
-import 'dart:convert';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:http/http.dart' as http;
 import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../providers/auth_provider.dart';
@@ -1083,60 +1084,128 @@ class _BulkImportDialog extends StatefulWidget {
 
 class _BulkImportDialogState extends State<_BulkImportDialog> {
   bool _busy = false;
+  bool _downloadingTemplate = false;
   String _phaseLabel = '';
-  String? _selectedFileName;
+  String? _xlsxName;
+  Uint8List? _xlsxBytes;
+  String? _zipName;
+  Uint8List? _zipBytes;
   String? _error;
   BulkImportResult? _result;
 
   Future<void> _downloadTemplate() async {
-    final url = Uri.parse('${AppConstants.apiUrl}/products/csv-template');
-    final ok = await launchUrl(url, mode: LaunchMode.externalApplication);
-    if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open download link')),
+    final token = context.read<AuthProvider>().token;
+    if (token == null) {
+      setState(() => _error = 'Not signed in');
+      return;
+    }
+    setState(() => _downloadingTemplate = true);
+    try {
+      // The xlsx-template endpoint is admin-gated, so we have to fetch with
+      // the bearer token and then trigger a browser download from the bytes.
+      final response = await http.get(
+        Uri.parse('${AppConstants.apiUrl}/products/xlsx-template'),
+        headers: {'Authorization': 'Bearer $token'},
       );
+      if (response.statusCode != 200) {
+        throw Exception('Server returned ${response.statusCode}');
+      }
+      _saveBytesToBrowser(
+        response.bodyBytes,
+        'products-template.xlsx',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(
+        () => _error = 'Failed to download template: '
+            '${e.toString().replaceAll('Exception: ', '')}',
+      );
+    } finally {
+      if (mounted) setState(() => _downloadingTemplate = false);
     }
   }
 
-  Future<void> _uploadTemplate() async {
+  void _saveBytesToBrowser(Uint8List bytes, String filename, String mime) {
+    // The admin shell is web-only, so a synthetic <a download> click is the
+    // standard pattern for binary downloads behind an Authorization header.
+    final blob = html.Blob([bytes], mime);
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    final anchor = html.AnchorElement(href: url)
+      ..download = filename
+      ..style.display = 'none';
+    html.document.body?.append(anchor);
+    anchor.click();
+    anchor.remove();
+    html.Url.revokeObjectUrl(url);
+  }
+
+  Future<void> _pickXlsxAndZip() async {
     final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: const ['csv', 'txt'],
+      allowedExtensions: const ['xlsx', 'zip'],
+      allowMultiple: true,
       withData: true,
     );
     if (picked == null || picked.files.isEmpty) return;
 
-    final file = picked.files.first;
-    final bytes = file.bytes;
-    if (bytes == null) {
-      setState(() => _error = 'Could not read the selected file.');
+    Uint8List? xlsxBytes;
+    String? xlsxName;
+    Uint8List? zipBytes;
+    String? zipName;
+
+    for (final f in picked.files) {
+      final lower = f.name.toLowerCase();
+      if (lower.endsWith('.xlsx')) {
+        xlsxBytes = f.bytes;
+        xlsxName = f.name;
+      } else if (lower.endsWith('.zip')) {
+        zipBytes = f.bytes;
+        zipName = f.name;
+      }
+    }
+
+    if (xlsxBytes == null) {
+      setState(() => _error = 'Pick the .xlsx template (and optionally a .zip of images).');
       return;
     }
-    final csv = utf8.decode(bytes, allowMalformed: true);
 
     setState(() {
-      _busy = true;
-      _phaseLabel = 'Validating ${file.name}...';
-      _selectedFileName = file.name;
+      _xlsxBytes = xlsxBytes;
+      _xlsxName = xlsxName;
+      _zipBytes = zipBytes;
+      _zipName = zipName;
       _error = null;
       _result = null;
     });
 
+    await _runImport();
+  }
+
+  Future<void> _runImport() async {
+    if (_xlsxBytes == null || _xlsxName == null) return;
     final token = context.read<AuthProvider>().token;
     if (token == null) {
-      setState(() {
-        _busy = false;
-        _error = 'Not signed in';
-      });
+      setState(() => _error = 'Not signed in');
       return;
     }
 
+    setState(() {
+      _busy = true;
+      _phaseLabel = 'Validating ${_xlsxName!}...';
+      _result = null;
+      _error = null;
+    });
+
     try {
-      // Dry-run first so the user can see structural errors before any DB
-      // writes or image fetches happen.
+      // Dry-run first to surface row-level errors before any DB writes or
+      // image uploads happen.
       final preview = await ProductService.bulkImport(
-        csv,
         token: token,
+        xlsxBytes: _xlsxBytes!,
+        xlsxFilename: _xlsxName!,
+        zipBytes: _zipBytes,
+        zipFilename: _zipName,
         dryRun: true,
       );
       if (!mounted) return;
@@ -1145,17 +1214,23 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
           _busy = false;
           _phaseLabel = '';
           _result = preview;
-          _error = 'Fix the rows below and upload again.';
+          _error = 'Fix the rows below and re-upload.';
         });
         return;
       }
 
       setState(() {
         _phaseLabel = 'Importing ${preview.total} rows '
-            '(image fetches can take ~1s each)...';
+            '(image uploads can take ~1s each)...';
       });
 
-      final imported = await ProductService.bulkImport(csv, token: token);
+      final imported = await ProductService.bulkImport(
+        token: token,
+        xlsxBytes: _xlsxBytes!,
+        xlsxFilename: _xlsxName!,
+        zipBytes: _zipBytes,
+        zipFilename: _zipName,
+      );
       if (!mounted) return;
       setState(() {
         _busy = false;
@@ -1179,19 +1254,20 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Text('Bulk import products'),
       content: SizedBox(
-        width: 560,
+        width: 580,
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                '1. Download the template, fill in the rows in Excel/Sheets, '
-                'and save as CSV.\n'
-                '2. Upload the file. Rows with errors are reported below.\n'
-                'Required: name, description, estimated_price, common_units, '
-                'category_id. Optional: image_url (Cloudinary URL on our '
-                'tenant). Use "|" to separate multiple units. Max 200 rows.',
+                '1. Download the template (.xlsx). The "category_name" '
+                'column is a dropdown of your live categories.\n'
+                '2. Fill in rows. To attach an image, name a file in your '
+                'images folder (e.g. tomato.jpg) and put that filename in '
+                'the image_filename column.\n'
+                '3. Zip the images folder, then upload the .xlsx and .zip '
+                'together. Max 200 rows.',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 16),
@@ -1199,8 +1275,16 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: _busy ? null : _downloadTemplate,
-                      icon: const Icon(Iconsax.document_download, size: 18),
+                      onPressed: _busy || _downloadingTemplate
+                          ? null
+                          : _downloadTemplate,
+                      icon: _downloadingTemplate
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Iconsax.document_download, size: 18),
                       label: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 12),
                         child: Text('Download Template'),
@@ -1210,7 +1294,7 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: _busy ? null : _uploadTemplate,
+                      onPressed: _busy ? null : _pickXlsxAndZip,
                       icon: _busy
                           ? const SizedBox(
                               width: 16,
@@ -1223,7 +1307,8 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
                           : const Icon(Iconsax.document_upload, size: 18),
                       label: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Text(_busy ? 'Working...' : 'Upload Template'),
+                        child:
+                            Text(_busy ? 'Working...' : 'Upload .xlsx + .zip'),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
@@ -1233,10 +1318,10 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
                   ),
                 ],
               ),
-              if (_selectedFileName != null) ...[
+              if (_xlsxName != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  _selectedFileName!,
+                  'xlsx: $_xlsxName${_zipName != null ? '   zip: $_zipName' : ''}',
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
@@ -1295,6 +1380,17 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
                               color: AppColors.textSecondary,
                             ),
                           ),
+                      ],
+                      if (_result!.unusedZipFiles.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Images in zip not referenced by any row: '
+                          '${_result!.unusedZipFiles.join(', ')}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
                       ],
                     ],
                   ),

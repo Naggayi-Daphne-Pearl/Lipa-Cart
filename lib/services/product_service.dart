@@ -1,19 +1,25 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../core/constants/app_constants.dart';
 import '../models/product.dart';
 
 class BulkImportResult {
+  final bool dryRun;
   final int created;
   final int skipped;
   final int total;
   final List<({int row, String error})> errors;
+  final List<String> unusedZipFiles;
 
   const BulkImportResult({
+    required this.dryRun,
     required this.created,
     required this.skipped,
     required this.total,
     required this.errors,
+    required this.unusedZipFiles,
   });
 }
 
@@ -21,44 +27,53 @@ class ProductService {
   static String get _apiUrl => AppConstants.apiUrl;
   static String get _baseUrl => AppConstants.baseUrl;
 
-  /// Fetch the canonical CSV template as raw text (admins paste this into a
-  /// spreadsheet, fill it in, and paste the result back into bulkImport).
-  static Future<String> fetchCsvTemplate({String? token}) async {
-    final url = '$_apiUrl/products/csv-template';
-    final response = await http
-        .get(Uri.parse(url), headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        })
-        .timeout(AppConstants.apiTimeout);
-    if (response.statusCode != 200) {
-      throw Exception('Failed to fetch template: ${response.statusCode}');
-    }
-    return response.body;
-  }
-
-  /// Bulk-create products from a CSV blob. Backend caps at 200 rows per call.
+  /// Bulk-create products from an .xlsx (and optional companion .zip of
+  /// product images). Backend caps at 200 rows per call.
   /// Pass [dryRun] = true to validate without persisting.
-  static Future<BulkImportResult> bulkImport(
-    String csv, {
+  static Future<BulkImportResult> bulkImport({
     required String token,
+    required Uint8List xlsxBytes,
+    required String xlsxFilename,
+    Uint8List? zipBytes,
+    String? zipFilename,
     bool dryRun = false,
   }) async {
-    final response = await http
-        .post(
-          Uri.parse('$_apiUrl/products/bulk-import'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          },
-          body: jsonEncode({'csv': csv, 'dry_run': dryRun}),
-        )
-        .timeout(const Duration(minutes: 5));
+    final uri = Uri.parse('$_apiUrl/products/bulk-import');
+    final request = http.MultipartRequest('POST', uri);
+    request.headers['Authorization'] = 'Bearer $token';
+    request.fields['dry_run'] = dryRun.toString();
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'xlsx',
+        xlsxBytes,
+        filename: xlsxFilename,
+        contentType: MediaType(
+          'application',
+          'vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ),
+      ),
+    );
+    if (zipBytes != null) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'zip',
+          zipBytes,
+          filename: zipFilename ?? 'images.zip',
+          contentType: MediaType('application', 'zip'),
+        ),
+      );
+    }
+
+    final streamed = await request.send().timeout(const Duration(minutes: 10));
+    final response = await http.Response.fromStream(streamed);
 
     if (response.statusCode != 200) {
-      final body = jsonDecode(response.body);
-      throw Exception(
-        body['error']?['message'] ?? 'Bulk import failed: ${response.statusCode}',
-      );
+      String message = 'Bulk import failed: ${response.statusCode}';
+      try {
+        final parsed = jsonDecode(response.body);
+        message = parsed['error']?['message'] ?? message;
+      } catch (_) {}
+      throw Exception(message);
     }
 
     final outer = jsonDecode(response.body) as Map<String, dynamic>;
@@ -70,35 +85,15 @@ class ProductService {
             ))
         .toList();
     return BulkImportResult(
+      dryRun: data['dry_run'] as bool? ?? false,
       created: (data['created'] as num?)?.toInt() ?? 0,
       skipped: (data['skipped'] as num?)?.toInt() ?? 0,
       total: (data['total'] as num?)?.toInt() ?? 0,
       errors: errors,
+      unusedZipFiles: (data['unused_zip_files'] as List<dynamic>? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
     );
-  }
-
-  /// Admin-only list of {id, name} category options. Used by the bulk-import
-  /// dialog to surface the documentIds that admins must paste into category_id.
-  static Future<List<({String id, String name})>> fetchCategoryOptions({
-    required String token,
-  }) async {
-    final response = await http
-        .get(
-          Uri.parse('$_apiUrl/products/category-options'),
-          headers: {'Authorization': 'Bearer $token'},
-        )
-        .timeout(AppConstants.apiTimeout);
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load category options: ${response.statusCode}');
-    }
-    final outer = jsonDecode(response.body) as Map<String, dynamic>;
-    final list = outer['data'] as List<dynamic>;
-    return list
-        .map((e) => (
-              id: (e['id'] ?? '').toString(),
-              name: (e['name'] ?? '').toString(),
-            ))
-        .toList();
   }
 
   // Scoped populate for list queries — the admin/customer list view only needs
