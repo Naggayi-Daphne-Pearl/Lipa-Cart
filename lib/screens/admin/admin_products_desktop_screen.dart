@@ -3,7 +3,6 @@ import 'dart:html' as html;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
@@ -1141,32 +1140,41 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
   }
 
   Future<void> _pickXlsxAndZip() async {
-    final picked = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['xlsx', 'zip'],
-      allowMultiple: true,
-      withData: true,
-    );
-    if (picked == null || picked.files.isEmpty) return;
+    // Use the browser's native multi-file picker. file_picker had a
+    // LateInitializationError under some Flutter Web builds and we don't
+    // need its mobile/desktop support here.
+    final input = html.FileUploadInputElement()
+      ..accept = '.xlsx,.zip'
+      ..multiple = true;
+    input.click();
+    await input.onChange.first;
+
+    final files = input.files;
+    if (files == null || files.isEmpty) return;
 
     Uint8List? xlsxBytes;
     String? xlsxName;
     Uint8List? zipBytes;
     String? zipName;
 
-    for (final f in picked.files) {
-      final lower = f.name.toLowerCase();
+    for (final file in files) {
+      final reader = html.FileReader();
+      reader.readAsArrayBuffer(file);
+      await reader.onLoad.first;
+      final bytes = Uint8List.fromList((reader.result as List<int>));
+      final lower = file.name.toLowerCase();
       if (lower.endsWith('.xlsx')) {
-        xlsxBytes = f.bytes;
-        xlsxName = f.name;
+        xlsxBytes = bytes;
+        xlsxName = file.name;
       } else if (lower.endsWith('.zip')) {
-        zipBytes = f.bytes;
-        zipName = f.name;
+        zipBytes = bytes;
+        zipName = file.name;
       }
     }
 
     if (xlsxBytes == null) {
-      setState(() => _error = 'Pick the .xlsx template (and optionally a .zip of images).');
+      setState(() =>
+          _error = 'Pick the .xlsx template (and optionally a .zip of images).');
       return;
     }
 
