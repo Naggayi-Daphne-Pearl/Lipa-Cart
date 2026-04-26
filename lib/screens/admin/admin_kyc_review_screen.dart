@@ -447,7 +447,7 @@ class _DocumentTile extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => Dialog(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.black,
         insetPadding: const EdgeInsets.all(24),
         child: InteractiveViewer(
           child: Image.network(url!, fit: BoxFit.contain),
@@ -495,7 +495,7 @@ class _DocumentTile extends StatelessWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.55),
+                          color: AppColors.black.withValues(alpha: 0.55),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: const Row(
@@ -504,13 +504,13 @@ class _DocumentTile extends StatelessWidget {
                             Icon(
                               Icons.zoom_in,
                               size: 14,
-                              color: Colors.white,
+                              color: AppColors.textWhite,
                             ),
                             SizedBox(width: 4),
                             Text(
                               'Tap to zoom',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: AppColors.textWhite,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -674,14 +674,14 @@ class _DecisionConsole extends StatelessWidget {
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: AppColors.textWhite,
                       ),
                     )
                   : const Icon(Icons.send),
               label: Text(submitting ? 'Submitting...' : 'Submit decision'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.grey900,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textWhite,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

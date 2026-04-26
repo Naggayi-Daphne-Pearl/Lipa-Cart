@@ -305,7 +305,7 @@ class _AdminProductsDesktopScreenState
                       label: const Text('Add Product'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.textWhite,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 12),
                         shape: RoundedRectangleBorder(
@@ -335,7 +335,7 @@ class _AdminProductsDesktopScreenState
                       prefixIcon: const Icon(Iconsax.search_normal,
                           size: 20, color: AppColors.textTertiary),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: AppColors.surface,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(color: AppColors.grey200),
@@ -370,7 +370,7 @@ class _AdminProductsDesktopScreenState
                   icon: const Icon(Iconsax.refresh, size: 20),
                   tooltip: 'Refresh',
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.white,
+                    backgroundColor: AppColors.surface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                       side: BorderSide(color: AppColors.grey200),
@@ -407,7 +407,7 @@ class _AdminProductsDesktopScreenState
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : Colors.white,
+            color: isSelected ? AppColors.primary : AppColors.textWhite,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isSelected ? AppColors.primary : AppColors.grey300,
@@ -416,7 +416,7 @@ class _AdminProductsDesktopScreenState
           child: Text(
             category,
             style: AppTextStyles.labelSmall.copyWith(
-              color: isSelected ? Colors.white : AppColors.textSecondary,
+              color: isSelected ? AppColors.textWhite : AppColors.textSecondary,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
@@ -450,7 +450,7 @@ class _AdminProductsDesktopScreenState
             label: const Text('Retry'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.textWhite,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -489,7 +489,7 @@ class _AdminProductsDesktopScreenState
               label: const Text('Add Product'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textWhite,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -505,7 +505,7 @@ class _AdminProductsDesktopScreenState
   Widget _buildProductsTable() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.textWhite,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.grey200),
       ),
@@ -1059,7 +1059,7 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
           onPressed: _isLoading ? null : _submitForm,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
+            foregroundColor: AppColors.textWhite,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),

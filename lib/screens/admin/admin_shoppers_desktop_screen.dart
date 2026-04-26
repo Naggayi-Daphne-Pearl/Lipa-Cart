@@ -174,7 +174,7 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                           ScaffoldMessenger.of(this.context).showSnackBar(
                             const SnackBar(
                               content: Text('Shopper profile updated successfully'),
-                              backgroundColor: Colors.green,
+                              backgroundColor: AppColors.success,
                             ),
                           );
                           _loadShoppers();
@@ -185,7 +185,7 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                           ScaffoldMessenger.of(this.context).showSnackBar(
                             SnackBar(
                               content: Text('Error: $e'),
-                              backgroundColor: Colors.red,
+                              backgroundColor: AppColors.error,
                             ),
                           );
                         }
@@ -264,7 +264,7 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('KYC rejected successfully'),
-                              backgroundColor: Colors.green,
+                              backgroundColor: AppColors.success,
                             ),
                           );
                           _loadShoppers();
@@ -304,7 +304,7 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('KYC approved successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
         _loadShoppers();
@@ -387,7 +387,7 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _selectedActiveStatus == true
                                     ? AppColors.primary
-                                    : Colors.grey[300],
+                                    : AppColors.grey300,
                               ),
                             ),
                           ),
@@ -402,8 +402,8 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                               label: const Text('Inactive'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _selectedActiveStatus == false
-                                    ? Colors.red
-                                    : Colors.grey[300],
+                                    ? AppColors.error
+                                    : AppColors.grey300,
                               ),
                             ),
                           ),
@@ -417,7 +417,7 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _selectedActiveStatus == null
                                     ? AppColors.primary
-                                    : Colors.grey[300],
+                                    : AppColors.grey300,
                               ),
                               child: const Text('All'),
                             ),
@@ -512,7 +512,7 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                                                         )
                                                         .toUpperCase(),
                                                     style: const TextStyle(
-                                                      color: Colors.white,
+                                                      color: AppColors.textWhite,
                                                       fontSize: 10,
                                                     ),
                                                   ),
@@ -523,7 +523,7 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                                                   const Text(
                                                     'INACTIVE',
                                                     style: TextStyle(
-                                                      color: Colors.red,
+                                                      color: AppColors.error,
                                                       fontSize: 10,
                                                       fontWeight:
                                                           FontWeight.bold,
@@ -618,7 +618,7 @@ class _ShopperDetailsView extends StatelessWidget {
     final canReject = kycStatus == 'pending_review' || kycStatus == 'not_submitted';
 
     return Container(
-      color: Colors.grey[50],
+      color: AppColors.grey50,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -640,7 +640,7 @@ class _ShopperDetailsView extends StatelessWidget {
                     ),
                     Text(
                       shopper['phone'] ?? 'N/A',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -654,7 +654,7 @@ class _ShopperDetailsView extends StatelessWidget {
                   child: Text(
                     _formatKycStatus(kycStatus),
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textWhite,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -758,8 +758,8 @@ class _ShopperDetailsView extends StatelessWidget {
                             icon: const Icon(Icons.check_circle),
                             label: const Text('Approve KYC'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
+                              backgroundColor: AppColors.success,
+                              foregroundColor: AppColors.textWhite,
                             ),
                           ),
                         if (canReject)
@@ -768,8 +768,8 @@ class _ShopperDetailsView extends StatelessWidget {
                             icon: const Icon(Icons.cancel),
                             label: const Text('Reject KYC'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
+                              backgroundColor: AppColors.error,
+                              foregroundColor: AppColors.textWhite,
                             ),
                           ),
                       ],
@@ -798,7 +798,7 @@ class _ShopperDetailsView extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
+            border: Border.all(color: AppColors.grey300),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
@@ -818,7 +818,7 @@ class _ShopperDetailsView extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(color: Colors.grey[600]),
+            style: TextStyle(color: AppColors.textSecondary),
           ),
           Text(
             value,

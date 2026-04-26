@@ -226,7 +226,7 @@ class _AdminOrdersDesktopScreenState extends State<AdminOrdersDesktopScreen> {
                                               label: Text(
                                                 _formatStatus(order.status),
                                                 style: const TextStyle(
-                                                  color: Colors.white,
+                                                  color: AppColors.textWhite,
                                                   fontSize: 12,
                                                 ),
                                               ),
@@ -306,7 +306,7 @@ class _OrderDetailsView extends StatelessWidget {
                     ),
                     Text(
                       'Created: ${order.createdAt.toString().split(' ')[0]}',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -320,7 +320,7 @@ class _OrderDetailsView extends StatelessWidget {
                   child: Text(
                     _formatStatus(order.status),
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textWhite,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -394,7 +394,7 @@ class _OrderDetailsView extends StatelessWidget {
                                     ),
                                     Text(
                                       'Qty: ${item.quantity.toStringAsFixed(0)} • ${item.found == true ? "Found" : item.found == false ? "Not found" : "Pending"}',
-                                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                                     ),
                                   ],
                                 ),
@@ -428,7 +428,7 @@ class _OrderDetailsView extends StatelessWidget {
                                   ),
                                   if (item.substitutePrice != null)
                                     Text('Price: ${CurrencyFormatter.format(item.substitutePrice!)}',
-                                      style: TextStyle(fontSize: 11, color: Colors.grey[700])),
+                                      style: TextStyle(fontSize: 11, color: AppColors.grey700)),
                                   Text(
                                     'Status: ${item.substitutionApproved == true ? "Approved" : item.substitutionApproved == false ? "Rejected" : "Pending"}',
                                     style: TextStyle(
@@ -477,7 +477,7 @@ class _OrderDetailsView extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
                     border: Border(
-                      top: BorderSide(color: Colors.grey[300]!),
+                      top: BorderSide(color: AppColors.grey300),
                     ),
                   ),
                   child: Row(
@@ -572,7 +572,7 @@ class _OrderDetailsView extends StatelessWidget {
                     TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Back')),
                     ElevatedButton(
                       onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: AppColors.textWhite),
                       child: const Text('Cancel Order'),
                     ),
                   ],
@@ -594,7 +594,7 @@ class _OrderDetailsView extends StatelessWidget {
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.textWhite,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -686,7 +686,7 @@ class _OrderDetailsView extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
+            border: Border.all(color: AppColors.grey300),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
@@ -706,7 +706,7 @@ class _OrderDetailsView extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(color: Colors.grey[600]),
+            style: TextStyle(color: AppColors.textSecondary),
           ),
           Text(
             value,
@@ -897,7 +897,7 @@ class _AssignDispatchDialogState extends State<_AssignDispatchDialog> {
           onPressed: _submitting || _loading || _candidates.isEmpty ? null : _submit,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
+            foregroundColor: AppColors.textWhite,
           ),
           child: _submitting
               ? const SizedBox(
@@ -905,7 +905,7 @@ class _AssignDispatchDialogState extends State<_AssignDispatchDialog> {
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: AppColors.textWhite,
                   ),
                 )
               : Text('Assign $_label'),

@@ -85,225 +85,279 @@ class _AdminShellState extends State<AdminShell> {
     final isMobile = MediaQuery.of(context).size.width < 768;
     final pageTitle = _getPageTitle(_currentRoute);
     final pageIcon = _getPageIcon(_currentRoute);
+    final baseTheme = Theme.of(context);
+    final adminTheme = baseTheme.copyWith(
+      colorScheme: baseTheme.colorScheme.copyWith(
+        primary: AppColors.primary,
+        secondary: AppColors.accent,
+        surface: AppColors.surface,
+        error: AppColors.error,
+        onPrimary: AppColors.textWhite,
+        onSecondary: AppColors.textWhite,
+        onSurface: AppColors.textPrimary,
+      ),
+      scaffoldBackgroundColor: AppColors.background,
+      cardColor: AppColors.surface,
+      dividerColor: AppColors.grey200,
+      inputDecorationTheme: const InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.surface,
+        border: OutlineInputBorder(
+          borderSide: BorderSide(color: AppColors.grey200),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: AppColors.grey200),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.textWhite,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.textPrimary,
+          side: const BorderSide(color: AppColors.grey300),
+        ),
+      ),
+      chipTheme: baseTheme.chipTheme.copyWith(
+        backgroundColor: AppColors.grey100,
+        selectedColor: AppColors.primarySoft,
+        side: const BorderSide(color: AppColors.grey200),
+        labelStyle: AppTextStyles.bodySmall.copyWith(
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
 
-    return Scaffold(
-      // Mobile drawer
-      drawer: isMobile ? Drawer(child: _buildSidebarContent(context)) : null,
-      // Top bar
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: AppColors.surface,
-        foregroundColor: AppColors.textPrimary,
-        surfaceTintColor: Colors.transparent,
-        toolbarHeight: 64,
-        leading: isMobile
-            ? Builder(
-                builder: (ctx) => IconButton(
-                  icon: const Icon(Iconsax.menu_1),
-                  onPressed: () => Scaffold.of(ctx).openDrawer(),
+    return Theme(
+      data: adminTheme,
+      child: Scaffold(
+        // Mobile drawer
+        drawer: isMobile ? Drawer(child: _buildSidebarContent(context)) : null,
+        // Top bar
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: AppColors.surface,
+          foregroundColor: AppColors.textPrimary,
+          surfaceTintColor: Colors.transparent,
+          toolbarHeight: 64,
+          leading: isMobile
+              ? Builder(
+                  builder: (ctx) => IconButton(
+                    icon: const Icon(Iconsax.menu_1),
+                    onPressed: () => Scaffold.of(ctx).openDrawer(),
+                  ),
+                )
+              : null,
+          title: Row(
+            children: [
+              Icon(pageIcon, size: 22, color: AppColors.primary),
+              const SizedBox(width: 10),
+              Text(
+                pageTitle,
+                style: AppTextStyles.h5.copyWith(color: AppColors.textPrimary),
+              ),
+            ],
+          ),
+          actions: [
+            // Live date
+            if (!isMobile)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Center(
+                  child: Text(
+                    DateFormat('EEE, MMM d').format(DateTime.now()),
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
                 ),
-              )
-            : null,
-        title: Row(
-          children: [
-            Icon(pageIcon, size: 22, color: AppColors.primary),
-            const SizedBox(width: 10),
-            Text(
-              pageTitle,
-              style: AppTextStyles.h5.copyWith(color: AppColors.textPrimary),
+              ),
+            // Notification bell
+            IconButton(
+              onPressed: () async {
+                context.go('/admin/notifications');
+                await Future<void>.delayed(const Duration(milliseconds: 150));
+                _refreshUnreadCount();
+              },
+              icon: _unreadNotifications > 0
+                  ? Badge(
+                      label: Text(
+                        _unreadNotifications > 99
+                            ? '99+'
+                            : '$_unreadNotifications',
+                      ),
+                      child: const Icon(Iconsax.notification, size: 22),
+                    )
+                  : const Icon(Iconsax.notification, size: 22),
+              tooltip: 'Notifications',
+            ),
+            const SizedBox(width: 4),
+            // Profile menu
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Consumer<AuthProvider>(
+                builder: (context, authProvider, _) {
+                  final name = authProvider.user?.name ?? 'Admin';
+                  return PopupMenuButton(
+                    offset: const Offset(0, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.grey100,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircleAvatar(
+                            radius: 14,
+                            backgroundColor: AppColors.primary,
+                            child: Text(
+                              _getInitials(name),
+                              style: const TextStyle(
+                                color: AppColors.textWhite,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          if (!isMobile) ...[
+                            const SizedBox(width: 8),
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Text(
+                                  'Admin',
+                                  style: AppTextStyles.caption.copyWith(
+                                    fontSize: 10,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(
+                              Icons.keyboard_arrow_down,
+                              size: 18,
+                              color: AppColors.textTertiary,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    itemBuilder: (context) => <PopupMenuEntry<void>>[
+                      PopupMenuItem<void>(
+                        enabled: false,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              style: AppTextStyles.labelMedium.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              authProvider.user?.email ?? 'admin@lipacart.com',
+                              style: AppTextStyles.caption,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      PopupMenuItem<void>(
+                        child: Row(
+                          children: [
+                            Icon(
+                              Iconsax.user,
+                              size: 18,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text('Profile'),
+                          ],
+                        ),
+                        onTap: () {},
+                      ),
+                      PopupMenuItem<void>(
+                        child: Row(
+                          children: [
+                            Icon(
+                              Iconsax.setting_2,
+                              size: 18,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 12),
+                            const Text('Settings'),
+                          ],
+                        ),
+                        onTap: () {},
+                      ),
+                      const PopupMenuDivider(),
+                      PopupMenuItem<void>(
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Iconsax.logout,
+                              size: 18,
+                              color: AppColors.error,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Logout',
+                              style: TextStyle(color: AppColors.error),
+                            ),
+                          ],
+                        ),
+                        onTap: () => _showLogoutDialog(context),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ],
         ),
-        actions: [
-          // Live date
-          if (!isMobile)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Center(
-                child: Text(
-                  DateFormat('EEE, MMM d').format(DateTime.now()),
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
+        body: Row(
+          children: [
+            // Sidebar (desktop only)
+            if (!isMobile)
+              Container(
+                width: 240,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  border: Border(right: BorderSide(color: AppColors.grey200)),
                 ),
+                child: _buildSidebarContent(context),
               ),
-            ),
-          // Notification bell
-          IconButton(
-            onPressed: () async {
-              context.go('/admin/notifications');
-              await Future<void>.delayed(const Duration(milliseconds: 150));
-              _refreshUnreadCount();
-            },
-            icon: _unreadNotifications > 0
-                ? Badge(
-                    label: Text(
-                      _unreadNotifications > 99
-                          ? '99+'
-                          : '$_unreadNotifications',
-                    ),
-                    child: const Icon(Iconsax.notification, size: 22),
-                  )
-                : const Icon(Iconsax.notification, size: 22),
-            tooltip: 'Notifications',
-          ),
-          const SizedBox(width: 4),
-          // Profile menu
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Consumer<AuthProvider>(
-              builder: (context, authProvider, _) {
-                final name = authProvider.user?.name ?? 'Admin';
-                return PopupMenuButton(
-                  offset: const Offset(0, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.grey100,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircleAvatar(
-                          radius: 14,
-                          backgroundColor: AppColors.primary,
-                          child: Text(
-                            _getInitials(name),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ),
-                        if (!isMobile) ...[
-                          const SizedBox(width: 8),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                name,
-                                style: AppTextStyles.labelSmall.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              Text(
-                                'Admin',
-                                style: AppTextStyles.caption.copyWith(
-                                  fontSize: 10,
-                                  color: AppColors.textTertiary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(width: 2),
-                          Icon(
-                            Icons.keyboard_arrow_down,
-                            size: 18,
-                            color: AppColors.textTertiary,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  itemBuilder: (context) => <PopupMenuEntry<void>>[
-                    PopupMenuItem<void>(
-                      enabled: false,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name,
-                            style: AppTextStyles.labelMedium.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            authProvider.user?.email ?? 'admin@lipacart.com',
-                            style: AppTextStyles.caption,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuDivider(),
-                    PopupMenuItem<void>(
-                      child: Row(
-                        children: [
-                          Icon(
-                            Iconsax.user,
-                            size: 18,
-                            color: AppColors.textSecondary,
-                          ),
-                          const SizedBox(width: 12),
-                          const Text('Profile'),
-                        ],
-                      ),
-                      onTap: () {},
-                    ),
-                    PopupMenuItem<void>(
-                      child: Row(
-                        children: [
-                          Icon(
-                            Iconsax.setting_2,
-                            size: 18,
-                            color: AppColors.textSecondary,
-                          ),
-                          const SizedBox(width: 12),
-                          const Text('Settings'),
-                        ],
-                      ),
-                      onTap: () {},
-                    ),
-                    const PopupMenuDivider(),
-                    PopupMenuItem<void>(
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Iconsax.logout,
-                            size: 18,
-                            color: AppColors.error,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Logout',
-                            style: TextStyle(color: AppColors.error),
-                          ),
-                        ],
-                      ),
-                      onTap: () => _showLogoutDialog(context),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      body: Row(
-        children: [
-          // Sidebar (desktop only)
-          if (!isMobile)
-            Container(
-              width: 240,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                border: Border(right: BorderSide(color: AppColors.grey200)),
-              ),
-              child: _buildSidebarContent(context),
-            ),
-          // Main content
-          Expanded(child: widget.child),
-        ],
+            // Main content
+            Expanded(child: widget.child),
+          ],
+        ),
       ),
     );
   }
@@ -327,7 +381,7 @@ class _AdminShellState extends State<AdminShell> {
                   child: Text(
                     'LC',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textWhite,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),

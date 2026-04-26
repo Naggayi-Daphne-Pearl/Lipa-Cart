@@ -162,7 +162,7 @@ class _AdminRecipesScreenState extends State<AdminRecipesScreen> {
                       hintText: 'Search recipes...',
                       prefixIcon: const Icon(Iconsax.search_normal),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: AppColors.surface,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide(color: AppColors.grey200),
@@ -180,7 +180,7 @@ class _AdminRecipesScreenState extends State<AdminRecipesScreen> {
                   onPressed: _loadRecipes,
                   icon: const Icon(Iconsax.refresh),
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.white,
+                    backgroundColor: AppColors.surface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                       side: BorderSide(color: AppColors.grey200),
@@ -194,7 +194,7 @@ class _AdminRecipesScreenState extends State<AdminRecipesScreen> {
                   label: const Text('Add Recipe'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.textWhite,
                   ),
                 ),
               ],
@@ -252,7 +252,7 @@ class _AdminRecipesScreenState extends State<AdminRecipesScreen> {
   Widget _buildRecipesTable() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.textWhite,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.grey200),
       ),
@@ -710,7 +710,7 @@ class _RecipeFormDialogState extends State<_RecipeFormDialog> {
                     onPressed: _saving ? null : _save,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.textWhite,
                     ),
                     child: _saving
                         ? const SizedBox(
@@ -718,7 +718,7 @@ class _RecipeFormDialogState extends State<_RecipeFormDialog> {
                             height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: AppColors.textWhite,
                             ),
                           )
                         : const Text('Save Recipe'),
