@@ -16,6 +16,31 @@ enum OrderStatus {
   refunded,
 }
 
+/// Backend uses snake_case names that don't all line up with our enum:
+/// `payment_confirmed` → confirmed, `ready_for_pickup` → readyForDelivery.
+/// Fall back to the firstWhere by enum name for everything else.
+OrderStatus _statusFromBackend(String? raw) {
+  switch (raw) {
+    case 'payment_confirmed':
+      return OrderStatus.confirmed;
+    case 'ready_for_pickup':
+      return OrderStatus.readyForDelivery;
+    case 'payment_processing':
+      return OrderStatus.paymentProcessing;
+    case 'shopper_assigned':
+      return OrderStatus.shopperAssigned;
+    case 'rider_assigned':
+      return OrderStatus.riderAssigned;
+    case 'in_transit':
+      return OrderStatus.inTransit;
+    default:
+      return OrderStatus.values.firstWhere(
+        (s) => s.name == raw,
+        orElse: () => OrderStatus.pending,
+      );
+  }
+}
+
 extension OrderStatusExtension on OrderStatus {
   String get displayName {
     switch (this) {
@@ -319,10 +344,7 @@ class Order {
       serviceFee: (json['serviceFee'] as num).toDouble(),
       deliveryFee: (json['deliveryFee'] as num).toDouble(),
       total: (json['total'] as num).toDouble(),
-      status: OrderStatus.values.firstWhere(
-        (s) => s.name == json['status'],
-        orElse: () => OrderStatus.pending,
-      ),
+      status: _statusFromBackend(json['status']?.toString()),
       customerId: json['customerId'] as String?,
       customer: json['customer'] != null
           ? User.fromJson(json['customer'] as Map<String, dynamic>)

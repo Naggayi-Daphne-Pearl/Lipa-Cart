@@ -3,9 +3,77 @@ import 'package:http/http.dart' as http;
 import '../core/constants/app_constants.dart';
 import '../models/product.dart';
 
+class BulkImportResult {
+  final int created;
+  final int skipped;
+  final int total;
+  final List<({int row, String error})> errors;
+
+  const BulkImportResult({
+    required this.created,
+    required this.skipped,
+    required this.total,
+    required this.errors,
+  });
+}
+
 class ProductService {
   static String get _apiUrl => AppConstants.apiUrl;
   static String get _baseUrl => AppConstants.baseUrl;
+
+  /// Fetch the canonical CSV template as raw text (admins paste this into a
+  /// spreadsheet, fill it in, and paste the result back into bulkImport).
+  static Future<String> fetchCsvTemplate({String? token}) async {
+    final url = '$_apiUrl/products/csv-template';
+    final response = await http
+        .get(Uri.parse(url), headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        })
+        .timeout(AppConstants.apiTimeout);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch template: ${response.statusCode}');
+    }
+    return response.body;
+  }
+
+  /// Bulk-create products from a CSV blob. Backend caps at 200 rows per call.
+  static Future<BulkImportResult> bulkImport(
+    String csv, {
+    required String token,
+  }) async {
+    final response = await http
+        .post(
+          Uri.parse('$_apiUrl/products/bulk-import'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({'csv': csv}),
+        )
+        .timeout(const Duration(minutes: 5));
+
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(
+        body['error']?['message'] ?? 'Bulk import failed: ${response.statusCode}',
+      );
+    }
+
+    final outer = jsonDecode(response.body) as Map<String, dynamic>;
+    final data = outer['data'] as Map<String, dynamic>;
+    final errors = (data['errors'] as List<dynamic>? ?? const [])
+        .map((e) => (
+              row: (e['row'] as num).toInt(),
+              error: (e['error'] ?? '').toString(),
+            ))
+        .toList();
+    return BulkImportResult(
+      created: (data['created'] as num?)?.toInt() ?? 0,
+      skipped: (data['skipped'] as num?)?.toInt() ?? 0,
+      total: (data['total'] as num?)?.toInt() ?? 0,
+      errors: errors,
+    );
+  }
 
   // Scoped populate for list queries — the admin/customer list view only needs
   // the image url + category name. populate=* on a 1k-row catalog was the

@@ -672,6 +672,74 @@ class OrderService extends ChangeNotifier {
     }
   }
 
+  /// Admin manually assigns a shopper to a payment_confirmed order.
+  /// [shopperDocumentId] is the Strapi v5 documentId from /api/shoppers.
+  Future<bool> adminAssignShopper(
+    String token,
+    String orderId,
+    String shopperDocumentId,
+  ) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/orders/$orderId/assign-shopper'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'shopper_id': shopperDocumentId}),
+      );
+      if (response.statusCode == 200) {
+        notifyListeners();
+        return true;
+      }
+      _error = _extractError(response, 'Failed to assign shopper');
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = 'Error assigning shopper: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Admin manually assigns a rider to a ready_for_pickup order.
+  Future<bool> adminAssignRider(
+    String token,
+    String orderId,
+    String riderDocumentId,
+  ) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/orders/$orderId/assign-rider'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'rider_id': riderDocumentId}),
+      );
+      if (response.statusCode == 200) {
+        notifyListeners();
+        return true;
+      }
+      _error = _extractError(response, 'Failed to assign rider');
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = 'Error assigning rider: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  String _extractError(http.Response response, String fallback) {
+    try {
+      final body = jsonDecode(response.body);
+      return body['error']?['message'] ?? fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   /// Admin removes current shopper, resets order to payment_confirmed.
   Future<bool> adminReassignShopper(String token, String orderId) async {
     try {

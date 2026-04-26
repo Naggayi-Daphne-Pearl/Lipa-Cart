@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
+import '../../services/rider_service.dart';
+import '../../services/shopper_service.dart';
 import '../../models/order.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_order_status_colors.dart';
@@ -520,12 +522,30 @@ class _OrderDetailsView extends StatelessWidget {
             final success = await svc.adminConfirmPayment(auth.token!, orderId);
             if (success) onOrderUpdated?.call();
           }),
+        if (order.status == OrderStatus.confirmed)
+          _buildActionButton(context, 'Assign Shopper', AppColors.primary, () async {
+            await _openAssignDialog(
+              context,
+              role: _DispatchRole.shopper,
+              orderId: orderId,
+              onAssigned: () => onOrderUpdated?.call(),
+            );
+          }),
         if (order.status == OrderStatus.shopperAssigned || order.status == OrderStatus.shopping)
           _buildActionButton(context, 'Reassign Shopper', AppColors.accent, () async {
             final auth = context.read<AuthProvider>();
             final svc = context.read<OrderService>();
             final success = await svc.adminReassignShopper(auth.token!, orderId);
             if (success) onOrderUpdated?.call();
+          }),
+        if (order.status == OrderStatus.readyForDelivery)
+          _buildActionButton(context, 'Assign Rider', AppColors.primary, () async {
+            await _openAssignDialog(
+              context,
+              role: _DispatchRole.rider,
+              orderId: orderId,
+              onAssigned: () => onOrderUpdated?.call(),
+            );
           }),
         if (order.status == OrderStatus.riderAssigned || order.status == OrderStatus.inTransit)
           _buildActionButton(context, 'Reassign Rider', AppColors.accent, () async {
@@ -580,6 +600,19 @@ class _OrderDetailsView extends StatelessWidget {
       ),
       child: Text(label, style: const TextStyle(fontSize: 13)),
     );
+  }
+
+  Future<void> _openAssignDialog(
+    BuildContext context, {
+    required _DispatchRole role,
+    required String orderId,
+    required VoidCallback onAssigned,
+  }) async {
+    final assigned = await showDialog<bool>(
+      context: context,
+      builder: (_) => _AssignDispatchDialog(role: role, orderId: orderId),
+    );
+    if (assigned == true) onAssigned();
   }
 
   Widget _buildTimeline() {
@@ -681,6 +714,198 @@ class _OrderDetailsView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+enum _DispatchRole { shopper, rider }
+
+class _AssignDispatchDialog extends StatefulWidget {
+  final _DispatchRole role;
+  final String orderId;
+
+  const _AssignDispatchDialog({required this.role, required this.orderId});
+
+  @override
+  State<_AssignDispatchDialog> createState() => _AssignDispatchDialogState();
+}
+
+class _AssignDispatchDialogState extends State<_AssignDispatchDialog> {
+  bool _loading = true;
+  bool _submitting = false;
+  String? _error;
+  List<Map<String, dynamic>> _candidates = [];
+  String? _selectedDocumentId;
+
+  bool get _isShopper => widget.role == _DispatchRole.shopper;
+  String get _label => _isShopper ? 'Shopper' : 'Rider';
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) {
+      setState(() {
+        _loading = false;
+        _error = 'Not signed in';
+      });
+      return;
+    }
+
+    try {
+      final results = _isShopper
+          ? await ShopperService.getShoppers(
+              token: token,
+              kycStatus: 'approved',
+              isActive: true,
+              pageSize: 100,
+            )
+          : await RiderService.getRiders(
+              token: token,
+              isVerified: true,
+              isActive: true,
+              pageSize: 100,
+            );
+      if (!mounted) return;
+      setState(() {
+        _candidates = results;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString().replaceAll('Exception: ', '');
+      });
+    }
+  }
+
+  String _profileDocumentId(Map<String, dynamic> entry) {
+    final nested = entry[_isShopper ? 'shopper' : 'rider'];
+    if (nested is Map<String, dynamic>) {
+      final id = nested['documentId'] ?? nested['document_id'];
+      if (id != null) return id.toString();
+    }
+    final id = entry['documentId'] ?? entry['document_id'];
+    return id?.toString() ?? '';
+  }
+
+  Future<void> _submit() async {
+    final docId = _selectedDocumentId;
+    if (docId == null || docId.isEmpty) {
+      setState(() => _error = 'Pick a $_label first.');
+      return;
+    }
+    final token = context.read<AuthProvider>().token;
+    if (token == null) {
+      setState(() => _error = 'Not signed in');
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+
+    final svc = context.read<OrderService>();
+    final ok = _isShopper
+        ? await svc.adminAssignShopper(token, widget.orderId, docId)
+        : await svc.adminAssignRider(token, widget.orderId, docId);
+
+    if (!mounted) return;
+
+    if (ok) {
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() {
+        _submitting = false;
+        _error = svc.error ?? 'Failed to assign $_label';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text('Assign $_label'),
+      content: SizedBox(
+        width: 420,
+        child: _loading
+            ? const SizedBox(
+                height: 80,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            : _candidates.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      'No approved ${_label.toLowerCase()}s available.',
+                      style: const TextStyle(color: AppColors.textSecondary),
+                    ),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedDocumentId,
+                        decoration: InputDecoration(
+                          labelText: _label,
+                          border: const OutlineInputBorder(),
+                        ),
+                        items: _candidates.map((c) {
+                          final docId = _profileDocumentId(c);
+                          final name = (c['name'] ?? 'Unknown').toString();
+                          final phone = (c['phone'] ?? '').toString();
+                          return DropdownMenuItem<String>(
+                            value: docId,
+                            child: Text(
+                              phone.isEmpty ? name : '$name • $phone',
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: _submitting
+                            ? null
+                            : (v) => setState(() => _selectedDocumentId = v),
+                      ),
+                      if (_error != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _error!,
+                          style: const TextStyle(color: AppColors.error),
+                        ),
+                      ],
+                    ],
+                  ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _submitting || _loading || _candidates.isEmpty ? null : _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+          ),
+          child: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text('Assign $_label'),
+        ),
+      ],
     );
   }
 }

@@ -133,6 +133,16 @@ class _AdminProductsDesktopScreenState
     return 'UGX ${NumberFormat('#,###').format(price.toInt())}';
   }
 
+  void _showBulkImportDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _BulkImportDialog(
+        onComplete: _loadProducts,
+      ),
+    );
+  }
+
   void _showProductDialog({Product? product}) {
     showDialog(
       context: context,
@@ -254,20 +264,40 @@ class _AdminProductsDesktopScreenState
                     ],
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () => _showProductDialog(),
-                  icon: const Icon(Iconsax.add, size: 18),
-                  label: const Text('Add Product'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _showBulkImportDialog,
+                      icon: const Icon(Iconsax.document_upload, size: 18),
+                      label: const Text('Bulk Import'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textPrimary,
+                        side: const BorderSide(color: AppColors.grey300),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
                     ),
-                    elevation: 0,
-                  ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => _showProductDialog(),
+                      icon: const Icon(Iconsax.add, size: 18),
+                      label: const Text('Add Product'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1035,5 +1065,202 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
     _minQtyController.dispose();
     _maxQtyController.dispose();
     super.dispose();
+  }
+}
+
+class _BulkImportDialog extends StatefulWidget {
+  final VoidCallback onComplete;
+  const _BulkImportDialog({required this.onComplete});
+
+  @override
+  State<_BulkImportDialog> createState() => _BulkImportDialogState();
+}
+
+class _BulkImportDialogState extends State<_BulkImportDialog> {
+  final _csvController = TextEditingController();
+  bool _submitting = false;
+  bool _fetchingTemplate = false;
+  String? _error;
+  BulkImportResult? _result;
+
+  @override
+  void dispose() {
+    _csvController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _downloadTemplate() async {
+    setState(() => _fetchingTemplate = true);
+    try {
+      final token = context.read<AuthProvider>().token;
+      final csv = await ProductService.fetchCsvTemplate(token: token);
+      if (!mounted) return;
+      _csvController.text = csv;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Template loaded. Edit the rows below, then Import.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load template: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _fetchingTemplate = false);
+    }
+  }
+
+  Future<void> _submit() async {
+    final csv = _csvController.text.trim();
+    if (csv.isEmpty) {
+      setState(() => _error = 'Paste CSV content first.');
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+      _error = null;
+      _result = null;
+    });
+
+    try {
+      final token = context.read<AuthProvider>().token;
+      if (token == null) throw Exception('Not signed in');
+      final result = await ProductService.bulkImport(csv, token: token);
+      if (!mounted) return;
+      setState(() {
+        _result = result;
+        _submitting = false;
+      });
+      if (result.created > 0) widget.onComplete();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = e.toString().replaceAll('Exception: ', '');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Bulk import products'),
+      content: SizedBox(
+        width: 600,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Paste CSV content below. Required columns: name, '
+                'description, estimated_price, common_units, category_id. '
+                'Optional: image_url (Cloudinary URL on our tenant). '
+                'Use "|" to separate multiple units (e.g. "kg|bunch").',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _fetchingTemplate ? null : _downloadTemplate,
+                    icon: _fetchingTemplate
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Iconsax.document_download, size: 16),
+                    label: const Text('Load template'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _csvController,
+                maxLines: 14,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                decoration: const InputDecoration(
+                  hintText: 'name,description,estimated_price,common_units,category_id,image_url',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                Text(_error!, style: const TextStyle(color: AppColors.error)),
+              ],
+              if (_result != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _result!.errors.isEmpty
+                        ? AppColors.cardGreen
+                        : AppColors.accentSoft,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Created ${_result!.created} of ${_result!.total} '
+                        '(${_result!.skipped} skipped)',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      if (_result!.errors.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        ..._result!.errors.take(20).map(
+                              (e) => Text(
+                                'Row ${e.row}: ${e.error}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                        if (_result!.errors.length > 20)
+                          Text(
+                            '...and ${_result!.errors.length - 20} more',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+        ElevatedButton.icon(
+          onPressed: _submitting ? null : _submit,
+          icon: _submitting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Iconsax.import, size: 18),
+          label: Text(_submitting ? 'Importing...' : 'Import'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+          ),
+        ),
+      ],
+    );
   }
 }
