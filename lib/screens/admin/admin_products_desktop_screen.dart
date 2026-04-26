@@ -1084,6 +1084,7 @@ class _BulkImportDialog extends StatefulWidget {
 class _BulkImportDialogState extends State<_BulkImportDialog> {
   bool _busy = false;
   bool _downloadingTemplate = false;
+  bool _exportingCatalog = false;
   String _phaseLabel = '';
   String? _xlsxName;
   Uint8List? _xlsxBytes;
@@ -1093,17 +1094,36 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
   BulkImportResult? _result;
 
   Future<void> _downloadTemplate() async {
+    await _downloadXlsxFromEndpoint(
+      endpoint: '/products/xlsx-template',
+      filename: 'products-template.xlsx',
+      busyFlagSetter: (v) => setState(() => _downloadingTemplate = v),
+    );
+  }
+
+  Future<void> _exportCatalog() async {
+    await _downloadXlsxFromEndpoint(
+      endpoint: '/products/xlsx-export',
+      filename:
+          'products-export-${DateTime.now().toIso8601String().substring(0, 10)}.xlsx',
+      busyFlagSetter: (v) => setState(() => _exportingCatalog = v),
+    );
+  }
+
+  Future<void> _downloadXlsxFromEndpoint({
+    required String endpoint,
+    required String filename,
+    required void Function(bool) busyFlagSetter,
+  }) async {
     final token = context.read<AuthProvider>().token;
     if (token == null) {
       setState(() => _error = 'Not signed in');
       return;
     }
-    setState(() => _downloadingTemplate = true);
+    busyFlagSetter(true);
     try {
-      // The xlsx-template endpoint is admin-gated, so we have to fetch with
-      // the bearer token and then trigger a browser download from the bytes.
       final response = await http.get(
-        Uri.parse('${AppConstants.apiUrl}/products/xlsx-template'),
+        Uri.parse('${AppConstants.apiUrl}$endpoint'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode != 200) {
@@ -1111,17 +1131,17 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
       }
       _saveBytesToBrowser(
         response.bodyBytes,
-        'products-template.xlsx',
+        filename,
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       );
     } catch (e) {
       if (!mounted) return;
       setState(
-        () => _error = 'Failed to download template: '
+        () => _error = 'Download failed: '
             '${e.toString().replaceAll('Exception: ', '')}',
       );
     } finally {
-      if (mounted) setState(() => _downloadingTemplate = false);
+      if (mounted) busyFlagSetter(false);
     }
   }
 
@@ -1272,20 +1292,46 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed:
-                    _busy || _downloadingTemplate ? null : _downloadTemplate,
-                icon: _downloadingTemplate
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Iconsax.document_download, size: 18),
-                label: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('Download Template'),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _busy || _downloadingTemplate
+                          ? null
+                          : _downloadTemplate,
+                      icon: _downloadingTemplate
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Iconsax.document_download, size: 18),
+                      label: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text('Download Template'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _busy || _exportingCatalog
+                          ? null
+                          : _exportCatalog,
+                      icon: _exportingCatalog
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Iconsax.export_1, size: 18),
+                      label: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Text('Export Current Catalog'),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               _FileSlot(
