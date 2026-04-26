@@ -49,8 +49,16 @@ class StrapiService {
   }
 
   static Future<List<Category>> getCategories() async {
+    // Customer browse: hide categories admins have toggled off.
     final response = await http
-        .get(Uri.parse('$_apiUrl/categories?populate[image]=true'))
+        .get(
+          Uri.parse(
+            '$_apiUrl/categories'
+            '?populate[image]=true'
+            '&filters[is_active][\$eq]=true'
+            '&sort=sort_order:asc',
+          ),
+        )
         .timeout(AppConstants.apiTimeout);
 
     if (response.statusCode != 200) {
@@ -77,6 +85,8 @@ class StrapiService {
             '?populate[image]=true'
             '&populate[category][fields][0]=name&populate[category][fields][1]=slug'
             '&populate[subcategory][fields][0]=name&populate[subcategory][fields][1]=slug'
+            '&filters[is_active][\$eq]=true'
+            '&filters[category][is_active][\$eq]=true'
             '&pagination[pageSize]=100',
           ),
         )

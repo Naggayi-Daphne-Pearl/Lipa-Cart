@@ -77,6 +77,7 @@ import 'screens/shopper/shopper_available_tasks_screen.dart';
 import 'screens/shopper/shopper_active_tasks_screen.dart';
 import 'screens/shopper/shopper_earnings_screen.dart';
 import 'screens/shopper/shopper_completed_tasks_screen.dart';
+import 'screens/auth/admin_login_screen.dart';
 import 'screens/shopper/shopper_kyc_screen.dart';
 import 'screens/shopper/shopper_pending_approval_screen.dart';
 import 'screens/shopper/shopping_checklist_screen.dart';
@@ -275,6 +276,7 @@ class RoleBasedRouter {
         // Define auth routes (should redirect away if already authenticated)
         final isAuthRoute =
             state.matchedLocation == '/login' ||
+            state.matchedLocation == '/admin/login' ||
             state.matchedLocation == '/signup' ||
             state.matchedLocation == '/auth/google/callback' ||
             state.matchedLocation == '/onboarding' ||
@@ -294,11 +296,29 @@ class RoleBasedRouter {
             state.matchedLocation.startsWith('/customer/order-rating') ||
             state.matchedLocation.startsWith('/customer/profile');
 
-        // Not authenticated, trying to access protected → go to login
+        // Not authenticated, trying to access protected → go to login.
+        // Admin host (admin.lipacart.com) and admin routes use the dedicated
+        // admin login page; everyone else uses the generic /login.
         if (!isAuthenticated &&
             (isProtectedRoute || isCustomerProtectedRoute)) {
           final returnPath = Uri.encodeComponent(state.uri.toString());
+          final wantsAdmin =
+              state.matchedLocation.startsWith('/admin/') ||
+              _scopeForWebHost() == UserRole.admin;
+          if (wantsAdmin) {
+            return '/admin/login';
+          }
           return '/login?return=$returnPath';
+        }
+
+        // On admin.lipacart.com, send guests landing anywhere else (incl.
+        // splash or /login) directly to /admin/login so they never see the
+        // customer-facing login UI.
+        if (!isAuthenticated &&
+            _scopeForWebHost() == UserRole.admin &&
+            state.matchedLocation != '/admin/login' &&
+            state.matchedLocation != '/domain-switch') {
+          return '/admin/login';
         }
 
         // Already authenticated, trying to access auth routes → go to role home
@@ -446,6 +466,10 @@ class RoleBasedRouter {
               stepUpRequired: stepUpRequired,
             );
           },
+        ),
+        GoRoute(
+          path: '/admin/login',
+          builder: (context, state) => const AdminLoginScreen(),
         ),
         GoRoute(
           path: '/signup',

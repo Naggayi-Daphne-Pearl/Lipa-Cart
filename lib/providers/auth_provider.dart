@@ -521,6 +521,60 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Admin-only sign in. Backed by /auth/admin/login which rejects any
+  /// account whose user_type is not 'admin'.
+  Future<bool> loginAdmin({
+    required String phoneNumber,
+    required String password,
+    bool rememberMe = true,
+  }) async {
+    _status = AuthStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await AuthService.adminLogin(
+        phoneNumber: phoneNumber,
+        password: password,
+        rememberMe: rememberMe,
+      );
+
+      final jwt = response['jwt'] as String;
+      final refreshToken = response['refreshToken'] as String?;
+      final userData = response['user'] as Map<String, dynamic>;
+
+      final prefs = await SharedPreferences.getInstance();
+      await _writeToken(jwt, maxAgeDays: rememberMe ? 30 : 14);
+      await _writeRefreshToken(refreshToken, maxAgeDays: rememberMe ? 30 : 14);
+
+      _token = jwt;
+      _user = User(
+        id: (userData['id'] ?? userData['documentId'] ?? '').toString(),
+        documentId: (userData['documentId'] ?? userData['document_id'])
+            ?.toString(),
+        phoneNumber: (userData['phone'] ?? phoneNumber).toString(),
+        email: userData['email'],
+        role: UserRole.admin,
+        name: userData['name'],
+        profileImage: userData['profile_photo'],
+        createdAt: DateTime.now(),
+      );
+
+      await prefs.setString(AppConstants.userKey, jsonEncode(_user!.toJson()));
+      await _persistSessionMetadata(rememberMe: rememberMe);
+
+      _status = AuthStatus.authenticated;
+      notifyListeners();
+      _registerPushToken();
+      return true;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Sign in with Google on web and either restore a backend session or
   /// return prefill details for a new sign-up.
   Future<GoogleSignInResult> signInWithGoogle(

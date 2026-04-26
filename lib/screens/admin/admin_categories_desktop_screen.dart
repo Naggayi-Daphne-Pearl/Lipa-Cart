@@ -11,7 +11,7 @@ import '../../models/category.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/category_service.dart';
 import '../../services/upload_service.dart';
-import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/shimmer_loading.dart';
 
 class AdminCategoriesDesktopScreen extends StatefulWidget {
   const AdminCategoriesDesktopScreen({super.key});
@@ -86,47 +86,71 @@ class _AdminCategoriesDesktopScreenState
   void _confirmDelete(Category category) {
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Category'),
-        content: Text(
-          'Delete "${category.name}"? Products in this category will not be deleted, but they will lose their category assignment.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        bool inFlight = false;
+        return StatefulBuilder(
+          builder: (_, setDialogState) => AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Delete Category'),
+            content: Text(
+              'Delete "${category.name}"? Products in this category will not be deleted, but they will lose their category assignment.',
+            ),
+            actions: [
+              TextButton(
+                onPressed:
+                    inFlight ? null : () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                onPressed: inFlight
+                    ? null
+                    : () async {
+                        final token = context.read<AuthProvider>().token;
+                        if (token == null) return;
+                        final messenger = ScaffoldMessenger.of(context);
+                        final navigator = Navigator.of(dialogContext);
+                        setDialogState(() => inFlight = true);
+                        try {
+                          await CategoryService.deleteCategory(
+                            category.id,
+                            token: token,
+                          );
+                          navigator.pop();
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('Category deleted'),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
+                          if (mounted) _loadCategories();
+                        } catch (e) {
+                          setDialogState(() => inFlight = false);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      },
+                child: inFlight
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.error,
+                        ),
+                      )
+                    : const Text('Delete'),
+              ),
+            ],
           ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            onPressed: () async {
-              final token = context.read<AuthProvider>().token;
-              if (token == null) return;
-              final messenger = ScaffoldMessenger.of(context);
-              final navigator = Navigator.of(dialogContext);
-              try {
-                await CategoryService.deleteCategory(category.id, token: token);
-                navigator.pop();
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Category deleted'),
-                    backgroundColor: AppColors.success,
-                  ),
-                );
-                if (mounted) _loadCategories();
-              } catch (e) {
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text('Error: $e'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              }
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -145,7 +169,7 @@ class _AdminCategoriesDesktopScreenState
             const SizedBox(height: 20),
             Expanded(
               child: _isLoading
-                  ? const AppLoadingPage()
+                  ? const ShimmerAdminTable()
                   : _error != null
                       ? _buildErrorState()
                       : _categories.isEmpty

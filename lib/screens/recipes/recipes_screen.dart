@@ -13,6 +13,7 @@ import '../../providers/product_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
+import '../../widgets/shimmer_loading.dart';
 
 class RecipesScreen extends StatefulWidget {
   const RecipesScreen({super.key});
@@ -349,7 +350,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
                 // Recipes list/grid
                 Expanded(
                   child: provider.isLoading
-                      ? const AppLoadingPage()
+                      ? _buildRecipesSkeleton(context)
                       : filteredRecipes.isEmpty
                       ? _buildEmptyState()
                       : _buildRecipesGrid(filteredRecipes),
@@ -444,6 +445,36 @@ class _RecipesScreenState extends State<RecipesScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRecipesSkeleton(BuildContext context) {
+    final columns = context.responsive<int>(
+      mobile: 1,
+      tablet: 2,
+      desktop: 3,
+      largeDesktop: 4,
+    );
+    if (context.isMobile) {
+      return ListView.builder(
+        padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+        itemCount: 6,
+        itemBuilder: (_, __) => const Padding(
+          padding: EdgeInsets.only(bottom: AppSizes.md),
+          child: SizedBox(height: 220, child: ShimmerAdminRecipeCard()),
+        ),
+      );
+    }
+    return GridView.builder(
+      padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        crossAxisSpacing: 24,
+        mainAxisSpacing: 24,
+        childAspectRatio: 0.85,
+      ),
+      itemCount: columns * 2,
+      itemBuilder: (_, __) => const ShimmerAdminRecipeCard(),
     );
   }
 

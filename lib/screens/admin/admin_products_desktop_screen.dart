@@ -6,12 +6,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/category_service.dart';
 import '../../services/product_service.dart';
 import '../../services/upload_service.dart';
+import '../../models/category.dart';
 import '../../models/product.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/shimmer_loading.dart';
 
 class AdminProductsDesktopScreen extends StatefulWidget {
   const AdminProductsDesktopScreen({super.key});
@@ -25,10 +28,41 @@ class _AdminProductsDesktopScreenState
     extends State<AdminProductsDesktopScreen> {
   late List<Product> _products = [];
   bool _isLoading = true;
+  String? _deletingProductId;
+  final Set<String> _togglingProductIds = {};
+
+  Future<void> _toggleAvailability(Product product, bool value) async {
+    setState(() => _togglingProductIds.add(product.id));
+    try {
+      final token = context.read<AuthProvider>().token;
+      if (token == null) throw Exception('No auth token');
+      await ProductService.updateProduct(
+        product.id,
+        {'is_active': value},
+        token: token,
+      );
+      if (mounted) _loadProducts();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _togglingProductIds.remove(product.id));
+      }
+    }
+  }
   String? _error;
   final _searchController = TextEditingController();
-  List<String> _categories = [];
+  List<Category> _categories = [];
   String _selectedCategory = 'All';
+
+  List<String> get _categoryNames =>
+      _categories.map((c) => c.name).toList(growable: false);
 
   @override
   void initState() {
@@ -42,7 +76,7 @@ class _AdminProductsDesktopScreenState
       final authProvider = context.read<AuthProvider>();
       final token = authProvider.token;
 
-      final categories = await ProductService.getCategories(token: token);
+      final categories = await CategoryService.getCategories(token: token);
       if (mounted) {
         setState(() => _categories = categories);
       }
@@ -115,51 +149,78 @@ class _AdminProductsDesktopScreenState
   void _deleteProduct(Product product) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Product'),
-        content: Text('Are you sure you want to delete "${product.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        bool inFlight = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text('Delete Product'),
+            content: Text(
+              'Are you sure you want to delete "${product.name}"?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: inFlight
+                    ? null
+                    : () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: inFlight
+                    ? null
+                    : () async {
+                        setDialogState(() => inFlight = true);
+                        setState(() => _deletingProductId = product.id);
+                        try {
+                          final token = context.read<AuthProvider>().token;
+                          if (token == null) throw Exception('No auth token');
+                          await ProductService.deleteProduct(
+                            product.id,
+                            token: token,
+                          );
+                          if (!mounted) return;
+                          Navigator.pop(dialogContext);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Product deleted'),
+                              backgroundColor: AppColors.success,
+                            ),
+                          );
+                          _loadProducts();
+                        } catch (e) {
+                          if (!mounted) return;
+                          setDialogState(() => inFlight = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        } finally {
+                          if (mounted) {
+                            setState(() => _deletingProductId = null);
+                          }
+                        }
+                      },
+                style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                child: inFlight
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.error,
+                        ),
+                      )
+                    : const Text('Delete'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              try {
-                final authProvider = context.read<AuthProvider>();
-                final token = authProvider.token;
-
-                if (token == null) throw Exception('No auth token');
-
-                await ProductService.deleteProduct(product.id, token: token);
-
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Product deleted successfully'),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                  _loadProducts();
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: $e'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -251,7 +312,7 @@ class _AdminProductsDesktopScreenState
                     child: Row(
                       children: [
                         _buildCategoryPill('All'),
-                        ..._categories.map((cat) => _buildCategoryPill(cat)),
+                        ..._categoryNames.map((cat) => _buildCategoryPill(cat)),
                       ],
                     ),
                   ),
@@ -276,7 +337,7 @@ class _AdminProductsDesktopScreenState
             // Products table
             Expanded(
               child: _isLoading
-                  ? const AppLoadingPage()
+                  ? const ShimmerAdminTable()
                   : _error != null
                       ? _buildErrorState()
                       : _filteredProducts.isEmpty
@@ -510,14 +571,20 @@ class _AdminProductsDesktopScreenState
                   ),
                   // Availability toggle
                   DataCell(
-                    Switch(
-                      value: product.isAvailable,
-                      onChanged: (value) {
-                        // TODO: Toggle availability via API
-                      },
-                      activeTrackColor: AppColors.primary,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
+                    _togglingProductIds.contains(product.id)
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Switch(
+                            value: product.isAvailable,
+                            onChanged: (value) =>
+                                _toggleAvailability(product, value),
+                            activeTrackColor: AppColors.primary,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                          ),
                   ),
                   // Actions
                   DataCell(
@@ -560,7 +627,7 @@ class _AdminProductsDesktopScreenState
 
 class _ProductFormDialog extends StatefulWidget {
   final Product? product;
-  final List<String> categories;
+  final List<Category> categories;
   final Function(Product) onSave;
 
   const _ProductFormDialog({
@@ -602,7 +669,14 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
         TextEditingController(text: widget.product?.minQuantity.toString());
     _maxQtyController =
         TextEditingController(text: widget.product?.maxQuantity.toString());
-    _selectedCategory = widget.product?.categoryName;
+    final initialCategoryId = widget.product?.categoryId;
+    if (initialCategoryId != null && initialCategoryId.isNotEmpty) {
+      _selectedCategory = initialCategoryId;
+    } else {
+      final byName = widget.categories
+          .where((c) => c.name == widget.product?.categoryName);
+      _selectedCategory = byName.isEmpty ? null : byName.first.id;
+    }
     _existingImageUrl = widget.product?.image.isNotEmpty == true
         ? widget.product!.image
         : null;
@@ -671,11 +745,19 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
 
       if (token == null) throw Exception('No auth token');
 
+      final units = _unitController.text
+          .split(',')
+          .map((u) => u.trim())
+          .where((u) => u.isNotEmpty)
+          .toList();
+
       final productData = <String, dynamic>{
         'name': _nameController.text,
         'description': _descriptionController.text,
         'estimated_price': double.parse(_priceController.text),
-        'common_units': _unitController.text,
+        'common_units': units,
+        if (_selectedCategory != null && _selectedCategory!.isNotEmpty)
+          'category': _selectedCategory,
         if (_uploadedImageId != null) 'image': _uploadedImageId,
       };
 
@@ -862,7 +944,9 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
                     child: TextField(
                       controller: _unitController,
                       decoration: InputDecoration(
-                        labelText: 'Unit *',
+                        labelText: 'Units *',
+                        hintText: 'kg, bunch, piece',
+                        helperText: 'Comma-separated',
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10)),
                       ),
@@ -907,7 +991,10 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
                       borderRadius: BorderRadius.circular(10)),
                 ),
                 items: widget.categories.map((cat) {
-                  return DropdownMenuItem(value: cat, child: Text(cat));
+                  return DropdownMenuItem<String?>(
+                    value: cat.id,
+                    child: Text(cat.name),
+                  );
                 }).toList(),
                 onChanged: (value) =>
                     setState(() => _selectedCategory = value),

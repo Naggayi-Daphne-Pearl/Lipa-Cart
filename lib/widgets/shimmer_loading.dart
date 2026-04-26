@@ -81,6 +81,135 @@ class ShimmerHorizontalRow extends StatelessWidget {
   }
 }
 
+/// Shimmer placeholder for one row in an admin desktop table
+/// (image thumb + name/sub + price + action buttons).
+class ShimmerAdminTableRow extends StatelessWidget {
+  const ShimmerAdminTableRow({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: AppColors.grey200,
+      highlightColor: AppColors.grey100,
+      child: Container(
+        height: 72,
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(height: 14, width: 180, color: Colors.white),
+                  const SizedBox(height: 8),
+                  Container(height: 12, width: 120, color: Colors.white),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Container(height: 14, width: 80, color: Colors.white),
+            ),
+            const SizedBox(width: 16),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Vertical list of admin table row skeletons.
+class ShimmerAdminTable extends StatelessWidget {
+  final int count;
+  const ShimmerAdminTable({super.key, this.count = 6});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: count,
+      itemBuilder: (_, __) => const ShimmerAdminTableRow(),
+    );
+  }
+}
+
+/// Shimmer placeholder for one admin recipe card (image header + title).
+class ShimmerAdminRecipeCard extends StatelessWidget {
+  const ShimmerAdminRecipeCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: AppColors.grey200,
+      highlightColor: AppColors.grey100,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(height: 14, width: 140, color: Colors.white),
+                  const SizedBox(height: 8),
+                  Container(height: 12, width: 80, color: Colors.white),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Shimmer placeholder for a list item (e.g., cart item, order item).
 class ShimmerListItem extends StatelessWidget {
   const ShimmerListItem({super.key});
