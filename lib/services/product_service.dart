@@ -7,6 +7,15 @@ class ProductService {
   static String get _apiUrl => AppConstants.apiUrl;
   static String get _baseUrl => AppConstants.baseUrl;
 
+  // Scoped populate for list queries — the admin/customer list view only needs
+  // the image url + category name. populate=* on a 1k-row catalog was the
+  // dominant cost in the 2.3s GET response.
+  static const _listPopulate =
+      'populate[image][fields][0]=url'
+      '&populate[image][fields][1]=formats'
+      '&populate[category][fields][0]=name'
+      '&populate[category][fields][1]=slug';
+
   /// Get all products with pagination and filters
   static Future<List<Product>> getProducts({
     String? token,
@@ -16,7 +25,8 @@ class ProductService {
     String? search,
   }) async {
     try {
-      String url = '$_apiUrl/products?pagination[page]=$page&pagination[pageSize]=$pageSize&populate=*';
+      String url =
+          '$_apiUrl/products?pagination[page]=$page&pagination[pageSize]=$pageSize&$_listPopulate';
 
       if (category != null && category.isNotEmpty) {
         url += '&filters[category][\$eq]=$category';
@@ -183,7 +193,7 @@ class ProductService {
         throw Exception('Unauthorized - Admin access required');
       }
 
-      if (response.statusCode != 200) {
+      if (response.statusCode != 200 && response.statusCode != 204) {
         throw Exception('Failed to delete product: ${response.statusCode}');
       }
     } catch (e) {

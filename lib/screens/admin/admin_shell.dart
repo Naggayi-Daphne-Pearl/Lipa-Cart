@@ -483,7 +483,7 @@ class _AdminShellState extends State<AdminShell> {
               if (!mounted) return;
               await LogoutHelper.logoutAndClear(context);
               if (!mounted) return;
-              GoRouter.of(context).go('/login');
+              GoRouter.of(context).go('/admin/login');
             },
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Logout'),

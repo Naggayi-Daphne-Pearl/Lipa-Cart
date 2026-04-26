@@ -5,6 +5,7 @@ import '../../services/rider_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../widgets/app_loading_indicator.dart';
+import 'admin_kyc_review_screen.dart';
 
 class AdminRidersDesktopScreen extends StatefulWidget {
   const AdminRidersDesktopScreen({super.key});
@@ -27,6 +28,20 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
   void initState() {
     super.initState();
     _loadRiders();
+  }
+
+  Future<void> _openKycReview(Map<String, dynamic> rider) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AdminKycReviewScreen(
+          role: KycRole.rider,
+          applicant: rider,
+        ),
+      ),
+    );
+    if (result == true) {
+      _loadRiders();
+    }
   }
 
   Future<void> _loadRiders() async {
@@ -434,20 +449,33 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
                                         subtitle: Text(
                                           rider['phone'] ?? 'N/A',
                                         ),
-                                        trailing: Chip(
-                                          label: Text(
-                                            rider['is_verified'] ?? false
-                                                ? 'Verified'
-                                                : 'Unverified',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 11,
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Chip(
+                                              label: Text(
+                                                rider['is_verified'] ?? false
+                                                    ? 'Verified'
+                                                    : 'Unverified',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                              backgroundColor:
+                                                  (rider['is_verified'] ?? false)
+                                                      ? Colors.green
+                                                      : Colors.orange,
                                             ),
-                                          ),
-                                          backgroundColor:
-                                              (rider['is_verified'] ?? false)
-                                                  ? Colors.green
-                                                  : Colors.orange,
+                                            IconButton(
+                                              tooltip: 'Review KYC',
+                                              icon: const Icon(
+                                                Icons.fact_check_outlined,
+                                              ),
+                                              onPressed: () =>
+                                                  _openKycReview(rider),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     );

@@ -187,6 +187,45 @@ class RiderService {
     }
   }
 
+  /// Unified KYC decision call. Mirrors ShopperService.submitKycDecision.
+  static Future<void> submitKycDecision(
+    String riderDocumentId, {
+    required String token,
+    required String decision,
+    String? reason,
+    String? adminNotes,
+    List<String>? fieldsToResubmit,
+  }) async {
+    final url = '$_apiUrl/riders/$riderDocumentId/kyc';
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    final body = jsonEncode({
+      'action': decision,
+      if (reason != null && reason.isNotEmpty) 'rejection_reason': reason,
+      if (adminNotes != null && adminNotes.isNotEmpty) 'admin_notes': adminNotes,
+      if (fieldsToResubmit != null && fieldsToResubmit.isNotEmpty)
+        'fields_to_resubmit': fieldsToResubmit,
+    });
+
+    final response = await http
+        .patch(Uri.parse(url), headers: headers, body: body)
+        .timeout(AppConstants.apiTimeout);
+
+    if (response.statusCode == 401) {
+      throw Exception('Unauthorized - Admin access required');
+    }
+    if (response.statusCode != 200) {
+      String message = 'Failed to submit decision: ${response.statusCode}';
+      try {
+        final parsed = jsonDecode(response.body);
+        message = parsed['error']?['message'] ?? message;
+      } catch (_) {}
+      throw Exception(message);
+    }
+  }
+
   /// Reject rider KYC. [riderDocumentId] must be the Strapi v5 documentId.
   static Future<void> unverifyRider(
     String riderDocumentId, {

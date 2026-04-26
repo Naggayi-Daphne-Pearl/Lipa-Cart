@@ -5,6 +5,7 @@ import '../../services/shopper_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../widgets/app_loading_indicator.dart';
+import 'admin_kyc_review_screen.dart';
 
 class AdminShoppersDesktopScreen extends StatefulWidget {
   const AdminShoppersDesktopScreen({super.key});
@@ -27,9 +28,24 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
     'All',
     'not_submitted',
     'pending_review',
+    'more_info_requested',
     'approved',
     'rejected',
   ];
+
+  Future<void> _openKycReview(Map<String, dynamic> shopper) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AdminKycReviewScreen(
+          role: KycRole.shopper,
+          applicant: shopper,
+        ),
+      ),
+    );
+    if (result == true) {
+      _loadShoppers();
+    }
+  }
 
   @override
   void initState() {
@@ -480,36 +496,49 @@ class _AdminShoppersDesktopScreenState extends State<AdminShoppersDesktopScreen>
                                         subtitle: Text(
                                           shopper['phone'] ?? 'N/A',
                                         ),
-                                        trailing: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Chip(
-                                              label: Text(
-                                                kycStatus
-                                                    .replaceAllMapped(
-                                                      RegExp(r'_'),
-                                                      (match) => ' ',
-                                                    )
-                                                    .toUpperCase(),
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 10,
+                                            Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Chip(
+                                                  label: Text(
+                                                    kycStatus
+                                                        .replaceAllMapped(
+                                                          RegExp(r'_'),
+                                                          (match) => ' ',
+                                                        )
+                                                        .toUpperCase(),
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 10,
+                                                    ),
+                                                  ),
+                                                  backgroundColor: kycColor,
                                                 ),
-                                              ),
-                                              backgroundColor: kycColor,
+                                                if (shopper['is_active'] ==
+                                                    false)
+                                                  const Text(
+                                                    'INACTIVE',
+                                                    style: TextStyle(
+                                                      color: Colors.red,
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                              ],
                                             ),
-                                            if (shopper['is_active'] ==
-                                                false)
-                                              const Text(
-                                                'INACTIVE',
-                                                style: TextStyle(
-                                                  color: Colors.red,
-                                                  fontSize: 10,
-                                                  fontWeight:
-                                                      FontWeight.bold,
-                                                ),
+                                            IconButton(
+                                              tooltip: 'Review KYC',
+                                              icon: const Icon(
+                                                Icons.fact_check_outlined,
                                               ),
+                                              onPressed: () =>
+                                                  _openKycReview(shopper),
+                                            ),
                                           ],
                                         ),
                                       ),

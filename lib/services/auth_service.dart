@@ -96,6 +96,39 @@ class AuthService {
     }
   }
 
+  /// Admin-only sign in. Calls the dedicated /auth/admin/login endpoint that
+  /// rejects any account whose user_type is not 'admin'.
+  static Future<Map<String, dynamic>> adminLogin({
+    required String phoneNumber,
+    required String password,
+    bool rememberMe = true,
+  }) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$_apiUrl/auth/admin/login'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'phone': phoneNumber,
+              'password': password,
+              'rememberMe': rememberMe,
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body);
+        throw Exception(
+          body['error']?['message'] ?? 'Invalid admin credentials',
+        );
+      }
+
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception(_friendlyError(e, 'Failed to sign in'));
+    }
+  }
+
   /// Sign in with a Google ID token from the web consent flow.
   /// Returns either a normal auth payload or { needsSignup: true, profile: {...} }
   static Future<Map<String, dynamic>> googleSignIn({
