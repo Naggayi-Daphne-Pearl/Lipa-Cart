@@ -11,6 +11,7 @@ import '../../models/category.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/category_service.dart';
 import '../../services/upload_service.dart';
+import '../../widgets/admin/bulk_import_dialog.dart';
 import '../../widgets/shimmer_loading.dart';
 
 class AdminCategoriesDesktopScreen extends StatefulWidget {
@@ -203,22 +204,66 @@ class _AdminCategoriesDesktopScreenState
             ],
           ),
         ),
-        ElevatedButton.icon(
-          onPressed: () => _showCategoryDialog(),
-          icon: const Icon(Iconsax.add, size: 18),
-          label: const Text('Add Category'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _showBulkImportDialog,
+              icon: const Icon(Iconsax.document_upload, size: 18),
+              label: const Text('Bulk Import'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textPrimary,
+                side: const BorderSide(color: AppColors.grey300),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
             ),
-            elevation: 0,
-          ),
+            const SizedBox(width: 12),
+            ElevatedButton.icon(
+              onPressed: () => _showCategoryDialog(),
+              icon: const Icon(Iconsax.add, size: 18),
+              label: const Text('Add Category'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ],
         ),
       ],
+    );
+  }
+
+  void _showBulkImportDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AdminBulkImportDialog(
+        dialogTitle: 'Bulk import categories',
+        instructions:
+            '1. Download the template (.xlsx).\n'
+            '2. Fill in rows. To attach an image, name a file in your '
+            'images folder (e.g. vegetables.jpg) and put that filename '
+            'in the image_filename column.\n'
+            '3. Pick the .xlsx, pick the .zip of images, then Import. '
+            'Max 200 rows.',
+        templateEndpoint: '/categories/xlsx-template',
+        exportEndpoint: '/categories/xlsx-export',
+        templateFilename: 'categories-template.xlsx',
+        exportFilenamePrefix: 'categories-export',
+        exportButtonLabel: 'Export Current Categories',
+        importFn: CategoryService.bulkImport,
+        onComplete: _loadCategories,
+      ),
     );
   }
 

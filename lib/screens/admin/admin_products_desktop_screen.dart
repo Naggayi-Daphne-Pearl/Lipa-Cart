@@ -5,6 +5,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/auth_provider.dart';
 import '../../services/category_service.dart';
 import '../../services/product_service.dart';
@@ -13,6 +14,7 @@ import '../../models/category.dart';
 import '../../models/product.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../widgets/admin/bulk_import_dialog.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/shimmer_loading.dart';
 
@@ -131,6 +133,31 @@ class _AdminProductsDesktopScreenState
 
   String _formatPrice(double price) {
     return 'UGX ${NumberFormat('#,###').format(price.toInt())}';
+  }
+
+  void _showBulkImportDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AdminBulkImportDialog(
+        dialogTitle: 'Bulk import products',
+        instructions:
+            '1. Download the template (.xlsx). The "category_name" column is '
+            'a dropdown of your live categories.\n'
+            '2. Fill in rows. To attach an image, name a file in your images '
+            'folder (e.g. tomato.jpg) and put that filename in the '
+            'image_filename column.\n'
+            '3. Pick the .xlsx, pick the .zip of images, then Import. '
+            'Max 200 rows.',
+        templateEndpoint: '/products/xlsx-template',
+        exportEndpoint: '/products/xlsx-export',
+        templateFilename: 'products-template.xlsx',
+        exportFilenamePrefix: 'products-export',
+        exportButtonLabel: 'Export Current Catalog',
+        importFn: ProductService.bulkImport,
+        onComplete: _loadProducts,
+      ),
+    );
   }
 
   void _showProductDialog({Product? product}) {
@@ -254,20 +281,40 @@ class _AdminProductsDesktopScreenState
                     ],
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () => _showProductDialog(),
-                  icon: const Icon(Iconsax.add, size: 18),
-                  label: const Text('Add Product'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _showBulkImportDialog,
+                      icon: const Icon(Iconsax.document_upload, size: 18),
+                      label: const Text('Bulk Import'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textPrimary,
+                        side: const BorderSide(color: AppColors.grey300),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
                     ),
-                    elevation: 0,
-                  ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => _showProductDialog(),
+                      icon: const Icon(Iconsax.add, size: 18),
+                      label: const Text('Add Product'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1037,3 +1084,4 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
     super.dispose();
   }
 }
+
