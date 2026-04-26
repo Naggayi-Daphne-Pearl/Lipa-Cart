@@ -479,7 +479,12 @@ class _RecipeFormDialogState extends State<_RecipeFormDialog> {
 
     final image = recipe['image'];
     if (image is Map<String, dynamic>) {
-      _imageMediaId = image['id'] as int?;
+      final imageId = image['id'];
+      if (imageId is int) {
+        _imageMediaId = imageId;
+      } else if (imageId != null) {
+        _imageMediaId = int.tryParse(imageId.toString());
+      }
       _imageUrl = image['url']?.toString();
     }
 
@@ -559,6 +564,12 @@ class _RecipeFormDialogState extends State<_RecipeFormDialog> {
 
   Future<void> _save() async {
     if (_saving) return;
+    if (_uploadingImage) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please wait for image upload to complete')),
+      );
+      return;
+    }
 
     if (_titleController.text.trim().isEmpty ||
         _descriptionController.text.trim().isEmpty ||
@@ -628,8 +639,9 @@ class _RecipeFormDialogState extends State<_RecipeFormDialog> {
       }
 
       if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context, true);
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(recipe == null ? 'Recipe created' : 'Recipe updated'),
           backgroundColor: AppColors.success,
