@@ -771,8 +771,13 @@ class _AssignDispatchDialogState extends State<_AssignDispatchDialog> {
               pageSize: 100,
             );
       if (!mounted) return;
+      // Drop candidates without a valid documentId — duplicate empty values
+      // crash the DropdownButton's "exactly one item" assertion.
+      final filtered = results
+          .where((c) => _profileDocumentId(c).isNotEmpty)
+          .toList();
       setState(() {
-        _candidates = results;
+        _candidates = filtered;
         _loading = false;
       });
     } catch (e) {

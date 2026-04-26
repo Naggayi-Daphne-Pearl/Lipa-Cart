@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -1076,12 +1078,18 @@ class _BulkImportDialog extends StatefulWidget {
   State<_BulkImportDialog> createState() => _BulkImportDialogState();
 }
 
+enum _ImportPhase { idle, validating, ready, importing, done }
+
 class _BulkImportDialogState extends State<_BulkImportDialog> {
   final _csvController = TextEditingController();
-  bool _submitting = false;
+  _ImportPhase _phase = _ImportPhase.idle;
   bool _fetchingTemplate = false;
+  bool _loadingCategories = false;
   String? _error;
-  BulkImportResult? _result;
+  String? _selectedFileName;
+  BulkImportResult? _validation;
+  BulkImportResult? _importResult;
+  List<({String id, String name})> _categoryOptions = [];
 
   @override
   void dispose() {
@@ -1096,11 +1104,10 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
       final csv = await ProductService.fetchCsvTemplate(token: token);
       if (!mounted) return;
       _csvController.text = csv;
+      _resetPreview();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Template loaded. Edit the rows below, then Import.',
-          ),
+          content: Text('Template loaded. Edit, then Validate.'),
         ),
       );
     } catch (e) {
@@ -1113,59 +1120,150 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
     }
   }
 
-  Future<void> _submit() async {
-    final csv = _csvController.text.trim();
-    if (csv.isEmpty) {
-      setState(() => _error = 'Paste CSV content first.');
+  Future<void> _showCategoryReference() async {
+    setState(() => _loadingCategories = true);
+    try {
+      final token = context.read<AuthProvider>().token;
+      if (token == null) throw Exception('Not signed in');
+      final options = await ProductService.fetchCategoryOptions(token: token);
+      if (!mounted) return;
+      setState(() => _categoryOptions = options);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load categories: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _loadingCategories = false);
+    }
+  }
+
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['csv', 'txt'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.first;
+    final bytes = file.bytes;
+    if (bytes == null) {
+      setState(() => _error = 'Could not read the selected file.');
       return;
     }
-
+    final text = utf8.decode(bytes, allowMalformed: true);
     setState(() {
-      _submitting = true;
-      _error = null;
-      _result = null;
+      _csvController.text = text;
+      _selectedFileName = file.name;
+      _resetPreview();
     });
+  }
 
+  void _resetPreview() {
+    _phase = _ImportPhase.idle;
+    _validation = null;
+    _importResult = null;
+    _error = null;
+  }
+
+  Future<void> _validate() async {
+    final csv = _csvController.text.trim();
+    if (csv.isEmpty) {
+      setState(() => _error = 'Add CSV content first (drop a file or paste).');
+      return;
+    }
+    setState(() {
+      _phase = _ImportPhase.validating;
+      _error = null;
+      _validation = null;
+      _importResult = null;
+    });
+    try {
+      final token = context.read<AuthProvider>().token;
+      if (token == null) throw Exception('Not signed in');
+      final result = await ProductService.bulkImport(
+        csv,
+        token: token,
+        dryRun: true,
+      );
+      if (!mounted) return;
+      setState(() {
+        _validation = result;
+        _phase = _ImportPhase.ready;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _phase = _ImportPhase.idle;
+        _error = e.toString().replaceAll('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _import() async {
+    final csv = _csvController.text.trim();
+    setState(() {
+      _phase = _ImportPhase.importing;
+      _error = null;
+      _importResult = null;
+    });
     try {
       final token = context.read<AuthProvider>().token;
       if (token == null) throw Exception('Not signed in');
       final result = await ProductService.bulkImport(csv, token: token);
       if (!mounted) return;
       setState(() {
-        _result = result;
-        _submitting = false;
+        _importResult = result;
+        _phase = _ImportPhase.done;
       });
       if (result.created > 0) widget.onComplete();
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _submitting = false;
+        _phase = _ImportPhase.ready;
         _error = e.toString().replaceAll('Exception: ', '');
       });
     }
   }
 
+  bool get _busy =>
+      _phase == _ImportPhase.validating || _phase == _ImportPhase.importing;
+
+  String _phaseLabel() {
+    switch (_phase) {
+      case _ImportPhase.validating:
+        return 'Validating...';
+      case _ImportPhase.importing:
+        return 'Importing... (image fetches can take ~1s each)';
+      default:
+        return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final preview = _importResult ?? _validation;
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Text('Bulk import products'),
       content: SizedBox(
-        width: 600,
+        width: 640,
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'Paste CSV content below. Required columns: name, '
-                'description, estimated_price, common_units, category_id. '
-                'Optional: image_url (Cloudinary URL on our tenant). '
-                'Use "|" to separate multiple units (e.g. "kg|bunch").',
+                'Required columns: name, description, estimated_price, '
+                'common_units, category_id. Optional: image_url '
+                '(Cloudinary URL on our tenant). Use "|" to separate '
+                'multiple units (e.g. "kg|bunch"). Max 200 rows per import.',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 12),
-              Row(
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   OutlinedButton.icon(
                     onPressed: _fetchingTemplate ? null : _downloadTemplate,
@@ -1178,28 +1276,92 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
                         : const Icon(Iconsax.document_download, size: 16),
                     label: const Text('Load template'),
                   ),
+                  OutlinedButton.icon(
+                    onPressed: _loadingCategories ? null : _showCategoryReference,
+                    icon: _loadingCategories
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Iconsax.tag_2, size: 16),
+                    label: const Text('Show category IDs'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : _pickFile,
+                    icon: const Icon(Iconsax.document_upload, size: 16),
+                    label: Text(_selectedFileName ?? 'Pick CSV file'),
+                  ),
                 ],
               ),
+              if (_categoryOptions.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 140),
+                  decoration: BoxDecoration(
+                    color: AppColors.beige,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.all(12),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: _categoryOptions
+                          .map(
+                            (c) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: SelectableText(
+                                '${c.name} → ${c.id}',
+                                style: const TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               TextField(
                 controller: _csvController,
-                maxLines: 14,
+                maxLines: 12,
+                onChanged: (_) {
+                  if (_phase != _ImportPhase.idle) {
+                    setState(_resetPreview);
+                  }
+                },
                 style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
                 decoration: const InputDecoration(
-                  hintText: 'name,description,estimated_price,common_units,category_id,image_url',
+                  hintText:
+                      'name,description,estimated_price,common_units,category_id,image_url',
                   border: OutlineInputBorder(),
                 ),
               ),
+              if (_busy) ...[
+                const SizedBox(height: 12),
+                const LinearProgressIndicator(),
+                const SizedBox(height: 4),
+                Text(
+                  _phaseLabel(),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
               if (_error != null) ...[
                 const SizedBox(height: 8),
                 Text(_error!, style: const TextStyle(color: AppColors.error)),
               ],
-              if (_result != null) ...[
+              if (preview != null) ...[
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _result!.errors.isEmpty
+                    color: preview.errors.isEmpty
                         ? AppColors.cardGreen
                         : AppColors.accentSoft,
                     borderRadius: BorderRadius.circular(8),
@@ -1208,21 +1370,24 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Created ${_result!.created} of ${_result!.total} '
-                        '(${_result!.skipped} skipped)',
+                        _importResult != null
+                            ? 'Imported ${preview.created} of ${preview.total} '
+                                '(${preview.skipped} skipped)'
+                            : 'Validated ${preview.created} of ${preview.total} '
+                                'rows would import (${preview.skipped} would skip)',
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      if (_result!.errors.isNotEmpty) ...[
+                      if (preview.errors.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        ..._result!.errors.take(20).map(
+                        ...preview.errors.take(20).map(
                               (e) => Text(
                                 'Row ${e.row}: ${e.error}',
                                 style: const TextStyle(fontSize: 12),
                               ),
                             ),
-                        if (_result!.errors.length > 20)
+                        if (preview.errors.length > 20)
                           Text(
-                            '...and ${_result!.errors.length - 20} more',
+                            '...and ${preview.errors.length - 20} more',
                             style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary,
@@ -1239,27 +1404,38 @@ class _BulkImportDialogState extends State<_BulkImportDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _submitting ? null : () => Navigator.pop(context),
+          onPressed: _busy ? null : () => Navigator.pop(context),
           child: const Text('Close'),
         ),
-        ElevatedButton.icon(
-          onPressed: _submitting ? null : _submit,
-          icon: _submitting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Iconsax.import, size: 18),
-          label: Text(_submitting ? 'Importing...' : 'Import'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
+        if (_phase != _ImportPhase.ready && _phase != _ImportPhase.done)
+          ElevatedButton.icon(
+            onPressed: _busy ? null : _validate,
+            icon: const Icon(Iconsax.tick_square, size: 18),
+            label: const Text('Validate'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.grey900,
+              foregroundColor: Colors.white,
+            ),
           ),
-        ),
+        if (_phase == _ImportPhase.ready)
+          ElevatedButton.icon(
+            onPressed: _busy ? null : _import,
+            icon: _busy
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Iconsax.import, size: 18),
+            label: Text(_busy ? 'Importing...' : 'Import for real'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+          ),
       ],
     );
   }

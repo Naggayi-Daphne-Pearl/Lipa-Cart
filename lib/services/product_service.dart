@@ -37,9 +37,11 @@ class ProductService {
   }
 
   /// Bulk-create products from a CSV blob. Backend caps at 200 rows per call.
+  /// Pass [dryRun] = true to validate without persisting.
   static Future<BulkImportResult> bulkImport(
     String csv, {
     required String token,
+    bool dryRun = false,
   }) async {
     final response = await http
         .post(
@@ -48,7 +50,7 @@ class ProductService {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
           },
-          body: jsonEncode({'csv': csv}),
+          body: jsonEncode({'csv': csv, 'dry_run': dryRun}),
         )
         .timeout(const Duration(minutes: 5));
 
@@ -73,6 +75,30 @@ class ProductService {
       total: (data['total'] as num?)?.toInt() ?? 0,
       errors: errors,
     );
+  }
+
+  /// Admin-only list of {id, name} category options. Used by the bulk-import
+  /// dialog to surface the documentIds that admins must paste into category_id.
+  static Future<List<({String id, String name})>> fetchCategoryOptions({
+    required String token,
+  }) async {
+    final response = await http
+        .get(
+          Uri.parse('$_apiUrl/products/category-options'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(AppConstants.apiTimeout);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to load category options: ${response.statusCode}');
+    }
+    final outer = jsonDecode(response.body) as Map<String, dynamic>;
+    final list = outer['data'] as List<dynamic>;
+    return list
+        .map((e) => (
+              id: (e['id'] ?? '').toString(),
+              name: (e['name'] ?? '').toString(),
+            ))
+        .toList();
   }
 
   // Scoped populate for list queries — the admin/customer list view only needs
