@@ -5,12 +5,28 @@ import '../core/constants/app_constants.dart';
 class ShopperService {
   static String get _apiUrl => AppConstants.apiUrl;
 
+  static Map<String, dynamic> _normalizeSingle(dynamic body) {
+    if (body is Map<String, dynamic> && body['data'] is Map<String, dynamic>) {
+      final data = Map<String, dynamic>.from(
+        body['data'] as Map<String, dynamic>,
+      );
+      final attributes = data['attributes'];
+      if (attributes is Map<String, dynamic>) {
+        return {...data, ...attributes};
+      }
+      return data;
+    }
+    if (body is Map<String, dynamic>) return body;
+    return {};
+  }
+
   /// Get all shoppers with filters
   static Future<List<Map<String, dynamic>>> getShoppers({
     required String token,
     int page = 1,
     int pageSize = 20,
-    String? kycStatus, // 'not_submitted', 'pending_review', 'approved', 'rejected'
+    String?
+    kycStatus, // 'not_submitted', 'pending_review', 'approved', 'rejected'
     bool? isActive,
     String? search, // Search by name or phone
   }) async {
@@ -52,20 +68,23 @@ class ShopperService {
       final List<dynamic> data = body is List ? body : body['data'] ?? [];
 
       // Flatten nested attributes structure if present
-      return data.map((item) {
-        if (item is Map<String, dynamic>) {
-          final attributes = item['attributes'] as Map<String, dynamic>?;
-          if (attributes != null) {
-            return {
-              'id': item['id'],
-              'documentId': item['documentId'],
-              ...attributes,
-            };
-          }
-          return item;
-        }
-        return item;
-      }).cast<Map<String, dynamic>>().toList();
+      return data
+          .map((item) {
+            if (item is Map<String, dynamic>) {
+              final attributes = item['attributes'] as Map<String, dynamic>?;
+              if (attributes != null) {
+                return {
+                  'id': item['id'],
+                  'documentId': item['documentId'],
+                  ...attributes,
+                };
+              }
+              return item;
+            }
+            return item;
+          })
+          .cast<Map<String, dynamic>>()
+          .toList();
     } catch (e) {
       throw Exception('Error loading shoppers: $e');
     }
@@ -77,7 +96,8 @@ class ShopperService {
     required String token,
   }) async {
     try {
-      final url = '$_apiUrl/admin/users?filters[documentId][\$eq]=$shopperId&populate=*';
+      final url =
+          '$_apiUrl/admin/users?filters[documentId][\$eq]=$shopperId&populate=*';
 
       final headers = {
         'Content-Type': 'application/json',
@@ -114,6 +134,132 @@ class ShopperService {
     }
   }
 
+  /// Source-of-truth shopper profile endpoint.
+  /// Uses GET /api/shoppers/:id and expects profile + KYC + activity fields.
+  static Future<Map<String, dynamic>> getShopperProfileById(
+    String shopperId, {
+    required String token,
+  }) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('$_apiUrl/shoppers/$shopperId?populate=*'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode == 401) {
+        throw Exception('Unauthorized - Admin access required');
+      }
+
+      if (response.statusCode == 404) {
+        throw Exception('Shopper profile not found');
+      }
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Failed to load shopper profile: ${response.statusCode}',
+        );
+      }
+
+      final parsed = jsonDecode(response.body);
+      final profile = _normalizeSingle(parsed);
+      if (profile.isEmpty) {
+        throw Exception('Empty shopper profile response');
+      }
+      return profile;
+    } catch (e) {
+      throw Exception('Error loading shopper profile: $e');
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getShopperProfileByUser({
+    required String token,
+    String? userDocumentId,
+    dynamic userId,
+    String? phone,
+    String? email,
+  }) async {
+    Future<Map<String, dynamic>?> queryByUser(String url) async {
+      final response = await http
+          .get(
+            Uri.parse(url),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      if (response.statusCode != 200) return null;
+      final parsed = jsonDecode(response.body);
+      final data = parsed is Map<String, dynamic> ? parsed['data'] : null;
+      if (data is List && data.isNotEmpty) {
+        final first = data.first;
+        if (first is Map<String, dynamic>) {
+          final attrs = first['attributes'];
+          if (attrs is Map<String, dynamic>) {
+            return {...first, ...attrs};
+          }
+          return first;
+        }
+      }
+      return null;
+    }
+
+    Future<Map<String, dynamic>?> queryByUserDocId(String candidate) async {
+      return queryByUser(
+        '$_apiUrl/shoppers?filters[user][documentId][\$eq]=$candidate&populate=*',
+      );
+    }
+
+    final docCandidates = <String>{};
+    final userDoc = userDocumentId?.trim();
+    if (userDoc != null && userDoc.isNotEmpty) {
+      docCandidates.add(userDoc);
+    }
+    final uidText = userId?.toString().trim();
+    if (uidText != null &&
+        uidText.isNotEmpty &&
+        int.tryParse(uidText) == null) {
+      // Admin users list may expose user documentId in the id field.
+      docCandidates.add(uidText);
+    }
+    for (final candidate in docCandidates) {
+      final byDoc = await queryByUserDocId(candidate);
+      if (byDoc != null) return byDoc;
+    }
+
+    final numericUid = uidText != null ? int.tryParse(uidText) : null;
+    if (numericUid != null) {
+      final byId = await queryByUser(
+        '$_apiUrl/shoppers?filters[user][id][\$eq]=$numericUid&populate=*',
+      );
+      if (byId != null) return byId;
+    }
+
+    final phoneText = phone?.trim();
+    if (phoneText != null && phoneText.isNotEmpty) {
+      final byPhone = await queryByUser(
+        '$_apiUrl/shoppers?filters[user][phone][\$eq]=$phoneText&populate=*',
+      );
+      if (byPhone != null) return byPhone;
+    }
+
+    final emailText = email?.trim();
+    if (emailText != null && emailText.isNotEmpty) {
+      final byEmail = await queryByUser(
+        '$_apiUrl/shoppers?filters[user][email][\$eq]=$emailText&populate=*',
+      );
+      if (byEmail != null) return byEmail;
+    }
+
+    return null;
+  }
+
   /// Update shopper details
   static Future<Map<String, dynamic>> updateShopper(
     String shopperId,
@@ -129,11 +275,7 @@ class ShopperService {
       };
 
       final response = await http
-          .put(
-            Uri.parse(url),
-            headers: headers,
-            body: jsonEncode(data),
-          )
+          .put(Uri.parse(url), headers: headers, body: jsonEncode(data))
           .timeout(AppConstants.apiTimeout);
 
       if (response.statusCode == 401) {
@@ -162,7 +304,8 @@ class ShopperService {
     required String token,
   }) async {
     try {
-      final url = '$_apiUrl/shoppers?filters[user][id][\$eq]=$shopperId&populate=*';
+      final url =
+          '$_apiUrl/shoppers?filters[user][id][\$eq]=$shopperId&populate=*';
 
       final headers = {
         'Content-Type': 'application/json',
@@ -241,7 +384,8 @@ class ShopperService {
     final body = jsonEncode({
       'action': decision,
       if (reason != null && reason.isNotEmpty) 'rejection_reason': reason,
-      if (adminNotes != null && adminNotes.isNotEmpty) 'admin_notes': adminNotes,
+      if (adminNotes != null && adminNotes.isNotEmpty)
+        'admin_notes': adminNotes,
       if (fieldsToResubmit != null && fieldsToResubmit.isNotEmpty)
         'fields_to_resubmit': fieldsToResubmit,
     });

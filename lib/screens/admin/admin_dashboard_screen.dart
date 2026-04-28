@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/user.dart';
 import '../../services/admin_user_service.dart';
+import 'admin_recipes_screen.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../widgets/app_loading_indicator.dart';
@@ -48,8 +49,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           authProvider.user?.role == UserRole.shopper
               ? '/shopper/home'
               : authProvider.user?.role == UserRole.rider
-                  ? '/rider/home'
-                  : '/customer/home',
+              ? '/rider/home'
+              : '/customer/home',
         );
       });
     }
@@ -117,7 +118,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Payment confirmed! Order is now available for shoppers.'),
+            content: Text(
+              'Payment confirmed! Order is now available for shoppers.',
+            ),
             backgroundColor: AppColors.success,
           ),
         );
@@ -166,7 +169,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.textWhite,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           padding: EdgeInsets.only(
@@ -267,7 +270,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                      'Please fill in all required fields'),
+                                    'Please fill in all required fields',
+                                  ),
                                 ),
                               );
                               return;
@@ -286,20 +290,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                      'Password must be at least 6 characters'),
+                                    'Password must be at least 6 characters',
+                                  ),
                                 ),
                               );
                               return;
                             }
 
                             if (emailController.text.isNotEmpty) {
-                              final emailRegex =
-                                  RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+                              final emailRegex = RegExp(
+                                r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+                              );
                               if (!emailRegex.hasMatch(emailController.text)) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
-                                        'Please enter a valid email address'),
+                                      'Please enter a valid email address',
+                                    ),
                                   ),
                                 );
                                 return;
@@ -309,8 +316,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             setState(() => isSubmitting = true);
 
                             try {
-                              final authProvider =
-                                  context.read<AuthProvider>();
+                              final authProvider = context.read<AuthProvider>();
                               final token = authProvider.token;
                               if (token == null) {
                                 throw Exception('No auth token');
@@ -318,15 +324,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                               final success =
                                   await AdminUserService.createStaff(
-                                phone: '+256${phoneController.text}',
-                                password: passwordController.text,
-                                name: nameController.text,
-                                userType: userType,
-                                email: emailController.text.isEmpty
-                                    ? null
-                                    : emailController.text,
-                                token: token,
-                              );
+                                    phone: '+256${phoneController.text}',
+                                    password: passwordController.text,
+                                    name: nameController.text,
+                                    userType: userType,
+                                    email: emailController.text.isEmpty
+                                        ? null
+                                        : emailController.text,
+                                    token: token,
+                                  );
 
                               if (context.mounted) {
                                 Navigator.pop(context);
@@ -380,49 +386,51 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showQuickActionsMenu(context),
         backgroundColor: AppColors.primary,
-        child: const Icon(Iconsax.flash_1, color: Colors.white),
+        child: const Icon(Iconsax.flash_1, color: AppColors.textWhite),
       ),
       body: ErrorBoundary(
         onRetry: () => setState(() {}),
         child: RefreshIndicator(
-        onRefresh: () async {
-          await Future.wait([_loadStats(), _loadPendingOrders()]);
-        },
-        color: AppColors.primary,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.all(isWide ? 32 : 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ─── Compact greeting header ─────────────────
-              _buildGreetingHeader(),
-              const SizedBox(height: 28),
+          onRefresh: () async {
+            await Future.wait([_loadStats(), _loadPendingOrders()]);
+          },
+          color: AppColors.primary,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.all(isWide ? 32 : 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ─── Compact greeting header ─────────────────
+                _buildGreetingHeader(),
+                const SizedBox(height: 28),
 
-              // ─── Stats grid (merged - no more duplication) ──
-              _buildSectionHeader('Overview', Iconsax.chart_2),
-              const SizedBox(height: 16),
-              _buildStatsGrid(isWide: isWide, isMedium: isMedium),
-              const SizedBox(height: 32),
+                // ─── Stats grid (merged - no more duplication) ──
+                _buildSectionHeader('Overview', Iconsax.chart_2),
+                const SizedBox(height: 16),
+                _buildStatsGrid(isWide: isWide, isMedium: isMedium),
+                const SizedBox(height: 32),
 
-              // ─── Pending Orders (awaiting payment confirmation) ──
-              if (_pendingOrders.isNotEmpty || _pendingLoading)
-                ...[
-                  _buildSectionHeader('Pending Payment Confirmation', Iconsax.timer_1),
+                // ─── Pending Orders (awaiting payment confirmation) ──
+                if (_pendingOrders.isNotEmpty || _pendingLoading) ...[
+                  _buildSectionHeader(
+                    'Pending Payment Confirmation',
+                    Iconsax.timer_1,
+                  ),
                   const SizedBox(height: 16),
                   _buildPendingOrders(),
                   const SizedBox(height: 32),
                 ],
 
-              // ─── Quick Actions ───────────────────────────
-              _buildSectionHeader('Quick Actions', Iconsax.flash_1),
-              const SizedBox(height: 16),
-              _buildQuickActions(isWide: isWide, isMedium: isMedium),
-              const SizedBox(height: 32),
-            ],
+                // ─── Quick Actions ───────────────────────────
+                _buildSectionHeader('Quick Actions', Iconsax.flash_1),
+                const SizedBox(height: 16),
+                _buildQuickActions(isWide: isWide, isMedium: isMedium),
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -439,9 +447,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             children: [
               Text(
                 '${_getGreeting()}, ${_getDisplayName()}',
-                style: AppTextStyles.h3.copyWith(
-                  color: AppColors.textPrimary,
-                ),
+                style: AppTextStyles.h3.copyWith(color: AppColors.textPrimary),
               ),
               const SizedBox(height: 4),
               Text(
@@ -483,9 +489,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: AppTextStyles.h5.copyWith(
-            color: AppColors.textPrimary,
-          ),
+          style: AppTextStyles.h5.copyWith(color: AppColors.textPrimary),
         ),
       ],
     );
@@ -609,7 +613,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   color: AppColors.accentSoft,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Iconsax.timer_1, color: AppColors.accent, size: 20),
+                child: const Icon(
+                  Iconsax.timer_1,
+                  color: AppColors.accent,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -635,7 +643,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '$customerName • ${paymentMethod == 'mobileMoney' ? 'Mobile Money' : paymentMethod == 'card' ? 'Card' : paymentMethod} • UGX ${NumberFormat('#,###').format(total.toInt())}',
+                      '$customerName • ${paymentMethod == 'mobileMoney'
+                          ? 'Mobile Money'
+                          : paymentMethod == 'card'
+                          ? 'Card'
+                          : paymentMethod} • UGX ${NumberFormat('#,###').format(total.toInt())}',
                       style: AppTextStyles.caption.copyWith(
                         color: AppColors.textSecondary,
                       ),
@@ -648,14 +660,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 onPressed: () => _confirmPayment(documentId),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  foregroundColor: AppColors.textWhite,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                   elevation: 0,
                 ),
-                child: const Text('Confirm', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                child: const Text(
+                  'Confirm',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
               ),
             ],
           ),
@@ -675,29 +693,123 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.grey300, borderRadius: BorderRadius.circular(2))),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.grey300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             const SizedBox(height: 20),
-            Text('Quick Actions', style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              'Quick Actions',
+              style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 16),
             ListTile(
-              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(10)), child: const Icon(Iconsax.box_add, color: AppColors.primary, size: 20)),
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Iconsax.box_add,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
               title: const Text('Add Product'),
-              onTap: () { Navigator.pop(ctx); context.go('/admin/products'); },
+              onTap: () {
+                Navigator.pop(ctx);
+                context.go('/admin/products');
+              },
             ),
             ListTile(
-              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: AppColors.accentSoft, borderRadius: BorderRadius.circular(10)), child: const Icon(Iconsax.bag_2, color: AppColors.accent, size: 20)),
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Iconsax.bag_2,
+                  color: AppColors.accent,
+                  size: 20,
+                ),
+              ),
               title: const Text('View Pending Orders'),
-              onTap: () { Navigator.pop(ctx); context.go('/admin/orders'); },
+              onTap: () {
+                Navigator.pop(ctx);
+                context.go('/admin/orders');
+              },
             ),
             ListTile(
-              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: AppColors.cardBlue, borderRadius: BorderRadius.circular(10)), child: const Icon(Iconsax.verify, color: AppColors.info, size: 20)),
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.cardBlue,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Iconsax.verify,
+                  color: AppColors.info,
+                  size: 20,
+                ),
+              ),
               title: const Text('Approve KYC'),
-              onTap: () { Navigator.pop(ctx); context.go('/admin/riders'); },
+              onTap: () {
+                Navigator.pop(ctx);
+                context.go('/admin/riders');
+              },
             ),
             ListTile(
-              leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: AppColors.beige, borderRadius: BorderRadius.circular(10)), child: const Icon(Iconsax.chart_2, color: AppColors.beverages, size: 20)),
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.beige,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Iconsax.chart_2,
+                  color: AppColors.beverages,
+                  size: 20,
+                ),
+              ),
               title: const Text('View Analytics'),
-              onTap: () { Navigator.pop(ctx); context.go('/admin/analytics'); },
+              onTap: () {
+                Navigator.pop(ctx);
+                context.go('/admin/analytics');
+              },
+            ),
+            ListTile(
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Iconsax.book_1,
+                  color: AppColors.success,
+                  size: 20,
+                ),
+              ),
+              title: const Text('Manage Recipes'),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AdminRecipesScreen(),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 8),
           ],
@@ -737,6 +849,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         label: 'Analytics',
         color: AppColors.beverages,
         onTap: () => context.go('/admin/analytics'),
+      ),
+      _QuickAction(
+        icon: Iconsax.book_1,
+        label: 'Recipes',
+        color: AppColors.success,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const AdminRecipesScreen()),
+        ),
       ),
     ];
 
@@ -835,7 +955,7 @@ class _StatCardState extends State<_StatCard> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.textWhite,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: _isHovered
@@ -847,7 +967,7 @@ class _StatCardState extends State<_StatCard> {
               BoxShadow(
                 color: _isHovered
                     ? widget.color.withValues(alpha: 0.1)
-                    : Colors.black.withValues(alpha: 0.03),
+                    : AppColors.black.withValues(alpha: 0.03),
                 blurRadius: _isHovered ? 16 : 8,
                 offset: const Offset(0, 4),
               ),
@@ -881,8 +1001,11 @@ class _StatCardState extends State<_StatCard> {
                       ),
                     )
                   else if (widget.isError)
-                    Icon(Iconsax.warning_2,
-                        color: AppColors.textTertiary, size: 24)
+                    Icon(
+                      Iconsax.warning_2,
+                      color: AppColors.textTertiary,
+                      size: 24,
+                    )
                   else
                     Text(
                       NumberFormat.compact().format(widget.value),
@@ -946,7 +1069,7 @@ class _QuickActionCardState extends State<_QuickActionCard> {
           decoration: BoxDecoration(
             color: _isHovered
                 ? widget.color.withValues(alpha: 0.08)
-                : Colors.white,
+                : AppColors.textWhite,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: _isHovered
@@ -970,8 +1093,7 @@ class _QuickActionCardState extends State<_QuickActionCard> {
                 widget.label,
                 style: AppTextStyles.labelSmall.copyWith(
                   color: AppColors.textPrimary,
-                  fontWeight:
-                      _isHovered ? FontWeight.w600 : FontWeight.w500,
+                  fontWeight: _isHovered ? FontWeight.w600 : FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,

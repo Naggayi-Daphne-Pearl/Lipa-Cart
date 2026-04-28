@@ -228,7 +228,7 @@ class _AdminCategoriesDesktopScreenState
               label: const Text('Add Category'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textWhite,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(
@@ -281,7 +281,7 @@ class _AdminCategoriesDesktopScreenState
               prefixIcon: const Icon(Iconsax.search_normal,
                   size: 20, color: AppColors.textTertiary),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: AppColors.surface,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide(color: AppColors.grey200),
@@ -303,7 +303,7 @@ class _AdminCategoriesDesktopScreenState
           icon: const Icon(Iconsax.refresh, size: 20),
           tooltip: 'Refresh',
           style: IconButton.styleFrom(
-            backgroundColor: Colors.white,
+            backgroundColor: AppColors.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
               side: BorderSide(color: AppColors.grey200),
@@ -339,7 +339,7 @@ class _AdminCategoriesDesktopScreenState
             label: const Text('Retry'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.textWhite,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -379,7 +379,7 @@ class _AdminCategoriesDesktopScreenState
               label: const Text('Add Category'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.textWhite,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -395,7 +395,7 @@ class _AdminCategoriesDesktopScreenState
   Widget _buildCategoriesTable() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.textWhite,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.grey200),
       ),
@@ -801,7 +801,7 @@ class _CategoryFormDialogState extends State<_CategoryFormDialog> {
           onPressed: _isSubmitting || _isUploadingImage ? null : _submit,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
+            foregroundColor: AppColors.textWhite,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -814,7 +814,7 @@ class _CategoryFormDialogState extends State<_CategoryFormDialog> {
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: AppColors.textWhite,
                   ),
                 )
               : Text(widget.category == null ? 'Create' : 'Save changes'),

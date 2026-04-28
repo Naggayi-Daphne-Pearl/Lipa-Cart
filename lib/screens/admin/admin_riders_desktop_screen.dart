@@ -121,7 +121,7 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Rider verified successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
         _loadRiders();
@@ -148,7 +148,7 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Rider unverified'),
-            backgroundColor: Colors.orange,
+            backgroundColor: AppColors.accent,
           ),
         );
         _loadRiders();
@@ -267,7 +267,7 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
                           ScaffoldMessenger.of(this.context).showSnackBar(
                             const SnackBar(
                               content: Text('Rider profile updated successfully'),
-                              backgroundColor: Colors.green,
+                              backgroundColor: AppColors.success,
                             ),
                           );
                           _loadRiders();
@@ -278,7 +278,7 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
                           ScaffoldMessenger.of(this.context).showSnackBar(
                             SnackBar(
                               content: Text('Error: $e'),
-                              backgroundColor: Colors.red,
+                              backgroundColor: AppColors.error,
                             ),
                           );
                         }
@@ -423,8 +423,8 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
                                       child: ListTile(
                                         leading: CircleAvatar(
                                           backgroundColor: (rider['is_online'] ?? false)
-                                              ? Colors.green
-                                              : Colors.grey,
+                                              ? AppColors.success
+                                              : AppColors.grey400,
                                           child: Text(
                                             (rider['name'] as String?)
                                                     ?.isNotEmpty ??
@@ -433,7 +433,7 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
                                                     .toUpperCase()
                                                 : '?',
                                             style: const TextStyle(
-                                              color: Colors.white,
+                                              color: AppColors.textWhite,
                                             ),
                                           ),
                                         ),
@@ -458,14 +458,14 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
                                                     ? 'Verified'
                                                     : 'Unverified',
                                                 style: const TextStyle(
-                                                  color: Colors.white,
+                                                  color: AppColors.textWhite,
                                                   fontSize: 11,
                                                 ),
                                               ),
                                               backgroundColor:
                                                   (rider['is_verified'] ?? false)
-                                                      ? Colors.green
-                                                      : Colors.orange,
+                                                      ? AppColors.success
+                                                      : AppColors.accent,
                                             ),
                                             IconButton(
                                               tooltip: 'Review KYC',
@@ -525,7 +525,7 @@ class _RiderDetailsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.grey[50],
+      color: AppColors.grey50,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -547,7 +547,7 @@ class _RiderDetailsView extends StatelessWidget {
                     ),
                     Text(
                       rider['phone'] ?? 'N/A',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -556,13 +556,13 @@ class _RiderDetailsView extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color:
-                        (rider['is_verified'] ?? false) ? Colors.green : Colors.orange,
+                        (rider['is_verified'] ?? false) ? AppColors.success : AppColors.accent,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     (rider['is_verified'] ?? false) ? 'Verified' : 'Unverified',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textWhite,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -655,8 +655,8 @@ class _RiderDetailsView extends StatelessWidget {
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: (rider['is_verified'] ?? false)
-                            ? Colors.orange
-                            : Colors.green,
+                            ? AppColors.accent
+                            : AppColors.success,
                       ),
                     ),
                   ),
@@ -684,7 +684,7 @@ class _RiderDetailsView extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
+            border: Border.all(color: AppColors.grey300),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
@@ -704,7 +704,7 @@ class _RiderDetailsView extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(color: Colors.grey[600]),
+            style: TextStyle(color: AppColors.textSecondary),
           ),
           Text(
             value,

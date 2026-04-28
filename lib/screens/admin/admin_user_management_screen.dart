@@ -214,7 +214,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen>
       appBar: AppBar(
         title: Text('User Management', style: AppTextStyles.h4),
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surface,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(120),
           child: Column(

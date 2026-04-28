@@ -30,9 +30,9 @@ class _AdminWaitlistScreenState extends State<AdminWaitlistScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surface,
         elevation: 0,
         title: const Text('Service Area Waitlist', style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
         centerTitle: true,
@@ -99,12 +99,12 @@ class _AdminWaitlistScreenState extends State<AdminWaitlistScreen> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: _buildSummaryCard(icon: Iconsax.people, title: 'Total Signups', value: '$totalSignups', color: Colors.orange),
+            child: _buildSummaryCard(icon: Iconsax.people, title: 'Total Signups', value: '$totalSignups', color: AppColors.accent),
           ),
         ],
       ),
       const SizedBox(height: 12),
-      if (highPriority.isNotEmpty) _buildSummaryCard(icon: Iconsax.warning_2, title: 'High Priority Areas', value: '${highPriority.length}', color: Colors.red),
+      if (highPriority.isNotEmpty) _buildSummaryCard(icon: Iconsax.warning_2, title: 'High Priority Areas', value: '${highPriority.length}', color: AppColors.error),
     ];
   }
 
@@ -214,7 +214,7 @@ class _AdminWaitlistScreenState extends State<AdminWaitlistScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(success ? 'Notified $count customers' : 'Failed to notify customers'),
-                                backgroundColor: success ? Colors.green : Colors.red,
+                                backgroundColor: success ? AppColors.success : AppColors.error,
                               ),
                             );
                             if (success) {
@@ -226,7 +226,7 @@ class _AdminWaitlistScreenState extends State<AdminWaitlistScreen> {
                         }
                       }
                     },
-                    child: const Text('Send Notification', style: TextStyle(color: Colors.white)),
+                    child: const Text('Send Notification', style: TextStyle(color: AppColors.textWhite)),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -259,7 +259,7 @@ class _AdminWaitlistScreenState extends State<AdminWaitlistScreen> {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(color: AppColors.grey50, borderRadius: BorderRadius.circular(8)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -288,11 +288,11 @@ class _AdminWaitlistScreenState extends State<AdminWaitlistScreen> {
   Color _getPriorityColor(String priority) {
     switch (priority) {
       case 'high':
-        return Colors.red;
+        return AppColors.error;
       case 'medium':
-        return Colors.orange;
+        return AppColors.accent;
       default:
-        return Colors.green;
+        return AppColors.success;
     }
   }
 }

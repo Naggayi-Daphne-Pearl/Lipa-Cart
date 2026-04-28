@@ -158,7 +158,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
                   child: Text(
                     range,
                     style: AppTextStyles.labelSmall.copyWith(
-                      color: isSelected ? Colors.white : AppColors.textTertiary,
+                      color: isSelected ? AppColors.textWhite : AppColors.textTertiary,
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.w500,
                     ),
@@ -221,7 +221,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.textWhite,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.grey200),
         boxShadow: AppColors.shadowSm,
@@ -299,7 +299,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.textWhite,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.grey200),
         boxShadow: AppColors.shadowSm,
@@ -363,7 +363,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.textWhite,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.grey200),
         boxShadow: AppColors.shadowSm,
@@ -462,7 +462,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.textWhite,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.grey200),
         boxShadow: AppColors.shadowSm,
