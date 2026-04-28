@@ -33,7 +33,8 @@ class _AdminKycReviewScreenState extends State<AdminKycReviewScreen> {
   String? _error;
 
   static const _shopperFields = [
-    {'key': 'id_photo', 'label': 'ID document'},
+    {'key': 'id_photo', 'label': 'ID front'},
+    {'key': 'id_back_url', 'label': 'ID back'},
     {'key': 'face_photo', 'label': 'Face photo'},
   ];
 
@@ -56,8 +57,23 @@ class _AdminKycReviewScreenState extends State<AdminKycReviewScreen> {
       widget.role == KycRole.shopper ? _shopperFields : _riderFields;
 
   Map<String, dynamic> get _profile {
-    final raw = widget.applicant[widget.role == KycRole.shopper ? 'shopper' : 'rider'];
-    if (raw is Map<String, dynamic>) return raw;
+    final raw =
+        widget.applicant[widget.role == KycRole.shopper ? 'shopper' : 'rider'];
+    if (raw is Map<String, dynamic>) {
+      final data = raw['data'];
+      if (data is Map<String, dynamic>) {
+        final attrs = data['attributes'];
+        if (attrs is Map<String, dynamic>) {
+          return {...data, ...attrs};
+        }
+        return data;
+      }
+      final attrs = raw['attributes'];
+      if (attrs is Map<String, dynamic>) {
+        return {...raw, ...attrs};
+      }
+      return raw;
+    }
     return widget.applicant;
   }
 
@@ -83,6 +99,12 @@ class _AdminKycReviewScreenState extends State<AdminKycReviewScreen> {
       setState(
         () => _error = 'Pick at least one field for the applicant to resubmit.',
       );
+      return;
+    }
+
+    if (_decision == _Decision.reject &&
+        _reasonController.text.trim().isEmpty) {
+      setState(() => _error = 'Rejection reason is required.');
       return;
     }
 
@@ -207,9 +229,9 @@ class _AdminKycReviewScreenState extends State<AdminKycReviewScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 6, child: left),
+                  Expanded(flex: 6, child: SingleChildScrollView(child: left)),
                   const SizedBox(width: 24),
-                  Expanded(flex: 4, child: right),
+                  Expanded(flex: 4, child: SingleChildScrollView(child: right)),
                 ],
               ),
             );
@@ -247,10 +269,25 @@ class _ApplicantPanel extends StatelessWidget {
   String? _photoUrl(List<String> keys) {
     for (final k in keys) {
       final v = profile[k];
-      if (v is String && v.isNotEmpty) return v;
+      if (v is String && v.isNotEmpty && v.startsWith('http')) return v;
       if (v is Map<String, dynamic>) {
         final url = v['url'];
         if (url is String && url.isNotEmpty) return url;
+        final data = v['data'];
+        if (data is Map<String, dynamic>) {
+          final dataUrl = data['url'];
+          if (dataUrl is String && dataUrl.isNotEmpty) return dataUrl;
+          final attrs = data['attributes'];
+          if (attrs is Map<String, dynamic>) {
+            final attrUrl = attrs['url'];
+            if (attrUrl is String && attrUrl.isNotEmpty) return attrUrl;
+          }
+        }
+        final attrs = v['attributes'];
+        if (attrs is Map<String, dynamic>) {
+          final attrUrl = attrs['url'];
+          if (attrUrl is String && attrUrl.isNotEmpty) return attrUrl;
+        }
       }
     }
     return null;
@@ -258,9 +295,29 @@ class _ApplicantPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final facePhoto = _photoUrl(['face_photo_url', 'face_photo']);
-    final idPhoto = _photoUrl(['id_photo_url', 'id_photo']);
-    final licensePhoto = _photoUrl(['license_photo_url', 'license_photo']);
+    final facePhoto = _photoUrl([
+      'selfie_url',
+      'selfieUrl',
+      'face_photo_url',
+      'face_photo',
+    ]);
+    final idPhoto = _photoUrl([
+      'id_front_url',
+      'idFrontUrl',
+      'id_photo_url',
+      'id_photo',
+    ]);
+    final idBackPhoto = _photoUrl([
+      'id_back_url',
+      'idBackUrl',
+      'id_back_photo_url',
+      'id_back_photo',
+    ]);
+    final licensePhoto = _photoUrl([
+      'license_photo_url',
+      'licensePhotoUrl',
+      'license_photo',
+    ]);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -277,8 +334,9 @@ class _ApplicantPanel extends StatelessWidget {
               CircleAvatar(
                 radius: 32,
                 backgroundColor: AppColors.grey200,
-                backgroundImage:
-                    facePhoto != null ? NetworkImage(facePhoto) : null,
+                backgroundImage: facePhoto != null
+                    ? NetworkImage(facePhoto)
+                    : null,
                 child: facePhoto == null
                     ? const Icon(Icons.person, color: AppColors.grey500)
                     : null,
@@ -309,7 +367,9 @@ class _ApplicantPanel extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           _SectionTitle('Documents'),
-          _DocumentTile(label: 'ID document', url: idPhoto),
+          _DocumentTile(label: 'ID front', url: idPhoto),
+          if (role == KycRole.shopper)
+            _DocumentTile(label: 'ID back', url: idBackPhoto),
           if (role == KycRole.rider)
             _DocumentTile(label: 'Driver licence', url: licensePhoto),
           _DocumentTile(label: 'Face photo', url: facePhoto),
@@ -482,41 +542,69 @@ class _DocumentTile extends StatelessWidget {
               child: url == null
                   ? Center(
                       child: Text(
-                        'Not provided',
+                        'Not yet uploaded',
                         style: TextStyle(color: AppColors.textTertiary),
                       ),
                     )
                   : Align(
-                      alignment: Alignment.topRight,
-                      child: Container(
-                        margin: const EdgeInsets.all(8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.black.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.zoom_in,
-                              size: 14,
-                              color: AppColors.textWhite,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              'Tap to zoom',
-                              style: TextStyle(
-                                color: AppColors.textWhite,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Image.network(
+                              url!,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (_, __, ___) => Center(
+                                child: Text(
+                                  'Unable to preview',
+                                  style: TextStyle(
+                                    color: AppColors.textTertiary,
+                                  ),
+                                ),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                          Align(
+                            alignment: Alignment.topRight,
+                            child: Container(
+                              margin: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.black.withValues(alpha: 0.55),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.zoom_in,
+                                    size: 14,
+                                    color: AppColors.textWhite,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Tap to zoom',
+                                    style: TextStyle(
+                                      color: AppColors.textWhite,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
             ),

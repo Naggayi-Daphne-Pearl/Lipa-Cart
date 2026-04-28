@@ -343,6 +343,107 @@ class StrapiService {
     }
   }
 
+  /// Resolve current shopper KYC data using shopper id first, then user-link lookups.
+  static Future<Map<String, dynamic>?> getMyShopperKycData({
+    required String token,
+    String? shopperId,
+    String? userId,
+    String? userDocumentId,
+    String? phone,
+    String? email,
+  }) async {
+    Map<String, dynamic>? normalize(dynamic raw) {
+      if (raw is! Map<String, dynamic>) return null;
+      final attrs = raw['attributes'];
+      if (attrs is Map<String, dynamic>) {
+        return {...raw, ...attrs};
+      }
+      return raw;
+    }
+
+    Future<Map<String, dynamic>?> fetchByPath(String path) async {
+      try {
+        final response = await http
+            .get(
+              Uri.parse('$_apiUrl$path'),
+              headers: {
+                'Authorization': 'Bearer $token',
+                'Content-Type': 'application/json',
+              },
+            )
+            .timeout(AppConstants.apiTimeout);
+
+        if (response.statusCode != 200) return null;
+        final parsed = json.decode(response.body);
+
+        if (parsed is Map<String, dynamic>) {
+          final data = parsed['data'];
+          if (data is Map<String, dynamic>) return normalize(data);
+          if (data is List && data.isNotEmpty) {
+            return normalize(data.first);
+          }
+        }
+      } catch (_) {
+        return null;
+      }
+      return null;
+    }
+
+    final shopperCandidate = shopperId?.trim();
+    if (shopperCandidate != null && shopperCandidate.isNotEmpty) {
+      final byShopper = await fetchByPath('/shoppers/$shopperCandidate?populate=*');
+      if (byShopper != null) return byShopper;
+    }
+
+    final userDoc = userDocumentId?.trim();
+    if (userDoc != null && userDoc.isNotEmpty) {
+      final encoded = Uri.encodeQueryComponent(userDoc);
+      final byDoc = await fetchByPath(
+        '/shoppers?filters[user][documentId][\$eq]=$encoded&populate=*',
+      );
+      if (byDoc != null) return byDoc;
+    }
+
+    final uid = userId?.trim();
+    final numericUid = uid != null ? int.tryParse(uid) : null;
+    if (numericUid != null) {
+      final byId = await fetchByPath(
+        '/shoppers?filters[user][id][\$eq]=$numericUid&populate=*',
+      );
+      if (byId != null) return byId;
+    }
+
+    final phoneValue = phone?.trim();
+    if (phoneValue != null && phoneValue.isNotEmpty) {
+      final encoded = Uri.encodeQueryComponent(phoneValue);
+      final byPhone = await fetchByPath(
+        '/shoppers?filters[user][phone][\$eq]=$encoded&populate=*',
+      );
+      if (byPhone != null) return byPhone;
+
+      final byPhoneContains = await fetchByPath(
+        '/shoppers?filters[user][phone][\$containsi]=$encoded&populate=*',
+      );
+      if (byPhoneContains != null) return byPhoneContains;
+    }
+
+    final emailValue = email?.trim();
+    if (emailValue != null && emailValue.isNotEmpty) {
+      final encoded = Uri.encodeQueryComponent(emailValue);
+      final byEmail = await fetchByPath(
+        '/shoppers?filters[user][email][\$eq]=$encoded&populate=*',
+      );
+      if (byEmail != null) return byEmail;
+
+      final byEmailContains = await fetchByPath(
+        '/shoppers?filters[user][email][\$containsi]=$encoded&populate=*',
+      );
+      if (byEmailContains != null) return byEmailContains;
+    }
+
+    return null;
+  }
+
   /// Get shopper ratings and comments from customers.
   static Future<List<Map<String, dynamic>>> getShopperRatings(
     String shopperId,
@@ -933,6 +1034,7 @@ class StrapiService {
   static Future<bool> submitShopperKyc({
     required String idNumber,
     required String idPhotoUrl,
+    required String idBackUrl,
     required String facePhotoUrl,
     required String token,
   }) async {
@@ -947,6 +1049,7 @@ class StrapiService {
             body: json.encode({
               'id_number': idNumber,
               'id_photo_url': idPhotoUrl,
+              'id_back_url': idBackUrl,
               'face_photo_url': facePhotoUrl,
             }),
           )
@@ -967,6 +1070,7 @@ class StrapiService {
   static Future<bool> submitShopperKycFull({
     required String idNumber,
     required String idPhotoUrl,
+    required String idBackUrl,
     required String facePhotoUrl,
     String? mobileMoneyProvider,
     String? mobileMoneyNumber,
@@ -981,6 +1085,7 @@ class StrapiService {
       final body = <String, dynamic>{
         'id_number': idNumber,
         'id_photo_url': idPhotoUrl,
+        'id_back_url': idBackUrl,
         'face_photo_url': facePhotoUrl,
       };
       if (mobileMoneyProvider != null) {

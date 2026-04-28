@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
+import 'dart:convert';
 import 'dart:io';
 
 import '../../providers/auth_provider.dart';
@@ -33,8 +35,10 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
   // Step 1: Identity
   final _idNumberController = TextEditingController();
   File? _idPhotoFile;
+  File? _idBackPhotoFile;
   File? _selfiePhotoFile;
   XFile? _idPhotoXFile;
+  XFile? _idBackPhotoXFile;
   XFile? _selfiePhotoXFile;
   String _selectedIdType = 'National ID';
   final _idTypes = ['National ID', 'Passport', "Driver's License"];
@@ -53,6 +57,231 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
 
   bool _isLoading = false;
   String? _loadingMessage;
+  bool _isHydrating = true;
+  String? _kycStatus;
+  String? _existingIdFrontUrl;
+  String? _existingIdBackUrl;
+  String? _existingSelfieUrl;
+
+  bool get _isKycApproved => _kycStatus == 'approved';
+
+  String _draftStorageKey() {
+    final user = context.read<AuthProvider>().user;
+    final id = user?.id ?? user?.documentId ?? 'anonymous';
+    return 'shopper_kyc_draft_$id';
+  }
+
+  Map<String, dynamic> _currentDraft() {
+    return {
+      'current_step': _currentStep,
+      'id_number': _idNumberController.text,
+      'id_type': _selectedIdType,
+      'payment_method': _selectedPaymentMethod,
+      'momo_provider': _selectedMomoProvider,
+      'momo_number': _momoNumberController.text,
+      'bank_name': _bankNameController.text,
+      'bank_account_name': _bankAccountNameController.text,
+      'bank_account_number': _bankAccountNumberController.text,
+      'emergency_contact_name': _emergencyNameController.text,
+      'emergency_contact_phone': _emergencyPhoneController.text,
+      'id_front_url': _existingIdFrontUrl,
+      'id_back_url': _existingIdBackUrl,
+      'selfie_url': _existingSelfieUrl,
+      'saved_at': DateTime.now().toIso8601String(),
+    };
+  }
+
+  Future<void> _persistDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_draftStorageKey(), jsonEncode(_currentDraft()));
+  }
+
+  Future<void> _restoreDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_draftStorageKey());
+    if (raw == null || raw.isEmpty) return;
+
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) return;
+
+    setState(() {
+      _currentStep = (decoded['current_step'] as num?)?.toInt() ?? _currentStep;
+      _idNumberController.text = (decoded['id_number'] ?? '').toString();
+      final idType = (decoded['id_type'] ?? '').toString();
+      if (_idTypes.contains(idType)) _selectedIdType = idType;
+      _selectedPaymentMethod =
+          (decoded['payment_method'] ?? _selectedPaymentMethod).toString();
+      _selectedMomoProvider =
+          (decoded['momo_provider'] ?? _selectedMomoProvider).toString();
+      _momoNumberController.text = (decoded['momo_number'] ?? '').toString();
+      _bankNameController.text = (decoded['bank_name'] ?? '').toString();
+      _bankAccountNameController.text =
+          (decoded['bank_account_name'] ?? '').toString();
+      _bankAccountNumberController.text =
+          (decoded['bank_account_number'] ?? '').toString();
+      _emergencyNameController.text =
+          (decoded['emergency_contact_name'] ?? '').toString();
+      _emergencyPhoneController.text =
+          (decoded['emergency_contact_phone'] ?? '').toString();
+      _existingIdFrontUrl = (decoded['id_front_url'] as String?) ?? _existingIdFrontUrl;
+      _existingIdBackUrl = (decoded['id_back_url'] as String?) ?? _existingIdBackUrl;
+      _existingSelfieUrl = (decoded['selfie_url'] as String?) ?? _existingSelfieUrl;
+    });
+  }
+
+  Future<void> _clearDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_draftStorageKey());
+  }
+
+  String? _pickProfileUrl(Map<String, dynamic> profile, List<String> keys) {
+    for (final key in keys) {
+      final value = profile[key];
+      if (value is String && value.trim().startsWith('http')) return value.trim();
+      if (value is Map<String, dynamic>) {
+        final direct = value['url'];
+        if (direct is String && direct.startsWith('http')) return direct;
+        final attrs = value['attributes'];
+        if (attrs is Map<String, dynamic>) {
+          final nested = attrs['url'];
+          if (nested is String && nested.startsWith('http')) return nested;
+        }
+      }
+    }
+    return null;
+  }
+
+  Future<void> _hydrateExistingKyc() async {
+    try {
+      await _restoreDraft();
+
+      final auth = context.read<AuthProvider>();
+      final token = auth.token;
+      final user = auth.user;
+      if (token == null || user == null) {
+        if (mounted) setState(() => _isHydrating = false);
+        return;
+      }
+
+      final profile = await StrapiService.getMyShopperKycData(
+        token: token,
+        shopperId: user.shopperId,
+        userId: user.id,
+        userDocumentId: user.documentId,
+        phone: user.phoneNumber,
+        email: user.email,
+      );
+
+      if (!mounted) return;
+
+      if (profile != null && profile.isNotEmpty) {
+        final status =
+            (profile['kyc_status'] ?? profile['kycStatus'] ?? user.kycStatus)
+                ?.toString();
+        final shouldHydrate = status == 'pending_review' ||
+            status == 'more_info_requested' ||
+            status == 'rejected' ||
+            status == 'approved';
+
+        if (shouldHydrate) {
+          setState(() {
+            _kycStatus = status;
+            final idNumber = (profile['id_number'] ?? '').toString();
+            if (idNumber.isNotEmpty) _idNumberController.text = idNumber;
+
+            final idType = (profile['id_type'] ?? '').toString();
+            if (_idTypes.contains(idType)) _selectedIdType = idType;
+
+            final momoNumber =
+                (profile['mobile_money_number'] ?? '').toString();
+            if (momoNumber.isNotEmpty) _momoNumberController.text = momoNumber;
+
+            final bankName = (profile['bank_name'] ?? '').toString();
+            if (bankName.isNotEmpty) _bankNameController.text = bankName;
+
+            final bankAccountName =
+                (profile['bank_account_name'] ?? '').toString();
+            if (bankAccountName.isNotEmpty) {
+              _bankAccountNameController.text = bankAccountName;
+            }
+
+            final bankAccountNumber =
+                (profile['bank_account_number'] ?? '').toString();
+            if (bankAccountNumber.isNotEmpty) {
+              _bankAccountNumberController.text = bankAccountNumber;
+            }
+
+            final emergencyName =
+                (profile['emergency_contact_name'] ?? '').toString();
+            if (emergencyName.isNotEmpty) {
+              _emergencyNameController.text = emergencyName;
+            }
+
+            final emergencyPhone =
+                (profile['emergency_contact_phone'] ?? '').toString();
+            if (emergencyPhone.isNotEmpty) {
+              _emergencyPhoneController.text = emergencyPhone;
+            }
+
+            final momoProvider =
+                (profile['mobile_money_provider'] ?? '').toString();
+            if (momoProvider.isNotEmpty) {
+              _selectedPaymentMethod = 'Mobile Money';
+              _selectedMomoProvider = momoProvider;
+            } else if (_bankNameController.text.isNotEmpty ||
+                _bankAccountNumberController.text.isNotEmpty) {
+              _selectedPaymentMethod = 'Bank Account';
+            }
+
+            _existingIdFrontUrl = _pickProfileUrl(profile, [
+              'idFrontUrl',
+              'id_front_url',
+              'id_photo_url',
+              'id_photo',
+            ]);
+            _existingIdBackUrl = _pickProfileUrl(profile, [
+              'idBackUrl',
+              'id_back_url',
+              'id_back_photo_url',
+            ]);
+            _existingSelfieUrl = _pickProfileUrl(profile, [
+              'selfieUrl',
+              'selfie_url',
+              'face_photo_url',
+              'face_photo',
+            ]);
+          });
+        }
+      } else {
+        setState(() {
+          _kycStatus = user.kycStatus;
+        });
+      }
+
+      await _persistDraft();
+    } finally {
+      if (mounted) setState(() => _isHydrating = false);
+    }
+  }
+
+  void _attachDraftListeners() {
+    _idNumberController.addListener(_persistDraft);
+    _momoNumberController.addListener(_persistDraft);
+    _bankNameController.addListener(_persistDraft);
+    _bankAccountNameController.addListener(_persistDraft);
+    _bankAccountNumberController.addListener(_persistDraft);
+    _emergencyNameController.addListener(_persistDraft);
+    _emergencyPhoneController.addListener(_persistDraft);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _attachDraftListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _hydrateExistingKyc();
+    });
+  }
 
   @override
   void dispose() {
@@ -66,24 +295,33 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImage(bool isIdPhoto) async {
+  Future<void> _pickImage(String type) async {
+    if (_isKycApproved) return;
+
     try {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
-        source: isIdPhoto ? ImageSource.gallery : ImageSource.camera,
+        source: type == 'selfie' ? ImageSource.camera : ImageSource.gallery,
         imageQuality: 85,
       );
 
       if (pickedFile != null && mounted) {
         setState(() {
-          if (isIdPhoto) {
+          if (type == 'idFront') {
             _idPhotoXFile = pickedFile;
             if (!kIsWeb) _idPhotoFile = File(pickedFile.path);
-          } else {
+            _existingIdFrontUrl = null;
+          } else if (type == 'selfie') {
             _selfiePhotoXFile = pickedFile;
             if (!kIsWeb) _selfiePhotoFile = File(pickedFile.path);
+            _existingSelfieUrl = null;
+          } else {
+            _idBackPhotoXFile = pickedFile;
+            if (!kIsWeb) _idBackPhotoFile = File(pickedFile.path);
+            _existingIdBackUrl = null;
           }
         });
+        await _persistDraft();
       }
     } catch (e) {
       if (mounted) {
@@ -98,20 +336,30 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
   }
 
   void _nextStep() {
+    if (_isKycApproved) return;
+
     if (_currentStep == 0) {
       if (!_identityFormKey.currentState!.validate()) return;
-      final hasIdPhoto = kIsWeb ? _idPhotoXFile != null : _idPhotoFile != null;
+      final hasIdPhoto =
+        (kIsWeb ? _idPhotoXFile != null : _idPhotoFile != null) ||
+        (_existingIdFrontUrl?.isNotEmpty == true);
+      final hasIdBack =
+        (kIsWeb ? _idBackPhotoXFile != null : _idBackPhotoFile != null) ||
+        (_existingIdBackUrl?.isNotEmpty == true);
       final hasSelfie =
-          kIsWeb ? _selfiePhotoXFile != null : _selfiePhotoFile != null;
-      if (!hasIdPhoto || !hasSelfie) {
+        (kIsWeb ? _selfiePhotoXFile != null : _selfiePhotoFile != null) ||
+        (_existingSelfieUrl?.isNotEmpty == true);
+      if (!hasIdPhoto || !hasIdBack || !hasSelfie) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              !hasIdPhoto && !hasSelfie
-                  ? 'Please upload both ID photo and selfie'
+              !hasIdPhoto && !hasIdBack && !hasSelfie
+                  ? 'Please upload ID front, ID back, and selfie'
                   : !hasIdPhoto
-                      ? 'Please upload your ID document photo'
-                      : 'Please take a selfie photo',
+                  ? 'Please upload your ID document photo'
+                  : !hasIdBack
+                  ? 'Please upload the back of your ID document'
+                  : 'Please take a selfie photo',
             ),
             backgroundColor: AppColors.error,
           ),
@@ -122,18 +370,25 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
       if (!_paymentFormKey.currentState!.validate()) return;
     }
     setState(() => _currentStep++);
+    _persistDraft();
   }
 
   void _previousStep() {
+    if (_isKycApproved) return;
     if (_currentStep > 0) {
       setState(() => _currentStep--);
+      _persistDraft();
     }
   }
 
   Future<void> _submitKyc() async {
+    if (_isKycApproved) return;
     if (!_contactFormKey.currentState!.validate()) return;
 
-    setState(() { _isLoading = true; _loadingMessage = 'Uploading ID photo...'; });
+    setState(() {
+      _isLoading = true;
+      _loadingMessage = 'Uploading ID photo...';
+    });
 
     try {
       final authProvider = context.read<AuthProvider>();
@@ -143,47 +398,102 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
         throw Exception('Not authenticated. Please log in again.');
       }
 
-      // Upload photos through Strapi → Cloudinary
-      final String? idPhotoUrl;
-      final String? selfiePhotoUrl;
-      if (kIsWeb) {
-        final idBytes = await _idPhotoXFile!.readAsBytes();
-        idPhotoUrl = await UploadService.uploadImageBytes(
-          idBytes,
-          _idPhotoXFile!.name,
-          token,
-        );
+      // Keep existing URLs when shopper does not replace a document.
+      String? idPhotoUrl = _existingIdFrontUrl;
+      String? idBackPhotoUrl = _existingIdBackUrl;
+      String? selfiePhotoUrl = _existingSelfieUrl;
 
-        if (mounted) setState(() { _loadingMessage = 'Uploading selfie...'; });
-        final selfieBytes = await _selfiePhotoXFile!.readAsBytes();
-        selfiePhotoUrl = await UploadService.uploadImageBytes(
-          selfieBytes,
-          _selfiePhotoXFile!.name,
-          token,
-        );
+      if (kIsWeb) {
+        if (_idPhotoXFile != null) {
+          final idBytes = await _idPhotoXFile!.readAsBytes();
+          idPhotoUrl = await UploadService.uploadImageBytes(
+            idBytes,
+            _idPhotoXFile!.name,
+            token,
+          );
+        }
+
+        if (mounted) {
+          setState(() {
+            _loadingMessage = 'Uploading ID back photo...';
+          });
+        }
+        if (_idBackPhotoXFile != null) {
+          final idBackBytes = await _idBackPhotoXFile!.readAsBytes();
+          idBackPhotoUrl = await UploadService.uploadImageBytes(
+            idBackBytes,
+            _idBackPhotoXFile!.name,
+            token,
+          );
+        }
+
+        if (mounted) {
+          setState(() {
+            _loadingMessage = 'Uploading selfie...';
+          });
+        }
+        if (_selfiePhotoXFile != null) {
+          final selfieBytes = await _selfiePhotoXFile!.readAsBytes();
+          selfiePhotoUrl = await UploadService.uploadImageBytes(
+            selfieBytes,
+            _selfiePhotoXFile!.name,
+            token,
+          );
+        }
       } else {
-        idPhotoUrl = await UploadService.uploadImage(_idPhotoFile!, token);
-        if (mounted) setState(() { _loadingMessage = 'Uploading selfie...'; });
-        selfiePhotoUrl = await UploadService.uploadImage(_selfiePhotoFile!, token);
+        if (_idPhotoFile != null) {
+          idPhotoUrl = await UploadService.uploadImage(_idPhotoFile!, token);
+        }
+        if (mounted) {
+          setState(() {
+            _loadingMessage = 'Uploading ID back photo...';
+          });
+        }
+        if (_idBackPhotoFile != null) {
+          idBackPhotoUrl = await UploadService.uploadImage(
+            _idBackPhotoFile!,
+            token,
+          );
+        }
+        if (mounted) {
+          setState(() {
+            _loadingMessage = 'Uploading selfie...';
+          });
+        }
+        if (_selfiePhotoFile != null) {
+          selfiePhotoUrl = await UploadService.uploadImage(
+            _selfiePhotoFile!,
+            token,
+          );
+        }
       }
 
-      if (idPhotoUrl == null || selfiePhotoUrl == null) {
+      if (idPhotoUrl == null ||
+          idBackPhotoUrl == null ||
+          selfiePhotoUrl == null) {
         throw Exception('Failed to upload photos');
       }
 
-      if (mounted) setState(() { _loadingMessage = 'Submitting verification...'; });
+      if (mounted)
+        setState(() {
+          _loadingMessage = 'Submitting verification...';
+        });
 
       // Submit KYC with payment & contact info
       final success = await StrapiService.submitShopperKycFull(
         idNumber: _idNumberController.text,
         idPhotoUrl: idPhotoUrl,
+        idBackUrl: idBackPhotoUrl,
         facePhotoUrl: selfiePhotoUrl,
-        mobileMoneyProvider:
-            _selectedPaymentMethod == 'Mobile Money' ? _selectedMomoProvider : null,
-        mobileMoneyNumber:
-            _selectedPaymentMethod == 'Mobile Money' ? _momoNumberController.text : null,
-        bankName:
-            _selectedPaymentMethod == 'Bank Account' ? _bankNameController.text : null,
+        mobileMoneyProvider: _selectedPaymentMethod == 'Mobile Money'
+            ? _selectedMomoProvider
+            : null,
+        mobileMoneyNumber: _selectedPaymentMethod == 'Mobile Money'
+            ? _momoNumberController.text
+            : null,
+        bankName: _selectedPaymentMethod == 'Bank Account'
+            ? _bankNameController.text
+            : null,
         bankAccountName: _selectedPaymentMethod == 'Bank Account'
             ? _bankAccountNameController.text
             : null,
@@ -200,6 +510,13 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
       );
 
       if (success && mounted) {
+        setState(() {
+          _existingIdFrontUrl = idPhotoUrl;
+          _existingIdBackUrl = idBackPhotoUrl;
+          _existingSelfieUrl = selfiePhotoUrl;
+          _kycStatus = 'pending_review';
+        });
+        await _clearDraft();
         authProvider.updateKycStatus('pending_review');
         context.go('/shopper/pending-approval');
       } else if (mounted) {
@@ -216,7 +533,10 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() { _isLoading = false; _loadingMessage = null; });
+        setState(() {
+          _isLoading = false;
+          _loadingMessage = null;
+        });
       }
     }
   }
@@ -263,173 +583,234 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
       body: Stack(
         children: [
           Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFE8F5E9),
-              Color(0xFFF1F8E9),
-              Color(0xFFFAFAFA),
-            ],
-            stops: [0.0, 0.4, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // App bar
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.sm,
-                  vertical: AppSizes.xs,
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Iconsax.arrow_left),
-                      onPressed: () {
-                        if (_currentStep > 0) {
-                          _previousStep();
-                        } else if (context.canPop()) {
-                          context.pop();
-                        } else {
-                          context.go('/shopper/home');
-                        }
-                      },
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFE8F5E9),
+                  Color(0xFFF1F8E9),
+                  Color(0xFFFAFAFA),
+                ],
+                stops: [0.0, 0.4, 1.0],
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // App bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSizes.sm,
+                      vertical: AppSizes.xs,
                     ),
-                    const SizedBox(width: AppSizes.sm),
-                    Text(
-                      _currentStep == 0
-                          ? 'Identity Verification'
-                          : _currentStep == 1
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Iconsax.arrow_left),
+                          onPressed: () {
+                            if (_currentStep > 0) {
+                              _previousStep();
+                            } else if (context.canPop()) {
+                              context.pop();
+                            } else {
+                              context.go('/shopper/home');
+                            }
+                          },
+                        ),
+                        const SizedBox(width: AppSizes.sm),
+                        Text(
+                          _currentStep == 0
+                              ? 'Identity Verification'
+                              : _currentStep == 1
                               ? 'Payment Details'
                               : 'Contact Information',
-                      style: AppTextStyles.h4.copyWith(
-                        color: AppColors.primaryDark,
-                      ),
+                          style: AppTextStyles.h4.copyWith(
+                            color: AppColors.primaryDark,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSizes.lg,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: AppSizes.sm),
 
-                      // Step indicator
-                      _StepIndicator(currentStep: _currentStep),
-                      const SizedBox(height: AppSizes.lg),
+                  // Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSizes.lg,
+                      ),
+                      child: _isHydrating
+                          ? const Padding(
+                              padding: EdgeInsets.only(top: 48),
+                              child: Center(child: CircularProgressIndicator()),
+                            )
+                          : Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: AppSizes.sm),
 
-                      // Rejection banner
-                      if (widget.isRejected && _currentStep == 0) ...[
-                        Builder(builder: (context) {
-                          final rejectionReason = context.read<AuthProvider>().user?.kycRejectionReason;
-                          return Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(AppSizes.md),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade50,
-                              border: Border.all(color: Colors.red.shade200),
-                              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Iconsax.warning_2,
-                                    color: Colors.red.shade600, size: 20),
-                                const SizedBox(width: AppSizes.sm),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                          // Step indicator
+                          _StepIndicator(currentStep: _currentStep),
+                          const SizedBox(height: AppSizes.lg),
+
+                          // Rejection banner
+                          if (widget.isRejected && _currentStep == 0) ...[
+                            Builder(
+                              builder: (context) {
+                                final rejectionReason = context
+                                    .read<AuthProvider>()
+                                    .user
+                                    ?.kycRejectionReason;
+                                return Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(AppSizes.md),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade50,
+                                    border: Border.all(
+                                      color: Colors.red.shade200,
+                                    ),
+                                    borderRadius: BorderRadius.circular(
+                                      AppSizes.radiusSm,
+                                    ),
+                                  ),
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        'Application Rejected',
-                                        style: AppTextStyles.labelLarge.copyWith(
-                                          color: Colors.red.shade700,
-                                        ),
+                                      Icon(
+                                        Iconsax.warning_2,
+                                        color: Colors.red.shade600,
+                                        size: 20,
                                       ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        rejectionReason ?? 'Please review your documents and try again.',
-                                        style: AppTextStyles.bodySmall.copyWith(
-                                          color: Colors.red.shade600,
+                                      const SizedBox(width: AppSizes.sm),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Application Rejected',
+                                              style: AppTextStyles.labelLarge
+                                                  .copyWith(
+                                                    color: Colors.red.shade700,
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              rejectionReason ??
+                                                  'Please review your documents and try again.',
+                                              style: AppTextStyles.bodySmall
+                                                  .copyWith(
+                                                    color: Colors.red.shade600,
+                                                  ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
+                                );
+                              },
                             ),
-                          );
-                        }),
-                        const SizedBox(height: AppSizes.lg),
-                      ],
+                            const SizedBox(height: AppSizes.lg),
+                          ],
 
-                      // Step content
-                      if (_currentStep == 0)
-                        _buildIdentityStep(userName)
-                      else if (_currentStep == 1)
-                        _buildPaymentStep()
-                      else
-                        _buildContactStep(),
-
-                      const SizedBox(height: AppSizes.lg),
-
-                      // Navigation buttons
-                      if (_currentStep < 2) ...[
-                        CustomButton(
-                          text: 'Continue',
-                          onPressed: _nextStep,
-                        ),
-                      ] else ...[
-                        // Review info box
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(AppSizes.md),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF8E1),
-                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                            border: Border.all(color: const Color(0xFFFFE082)),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Iconsax.clock,
-                                  color: Color(0xFFF9A825), size: 20),
-                              const SizedBox(width: AppSizes.sm),
-                              Expanded(
-                                child: Text(
-                                  'Your documents will be reviewed within 24-48 hours. You\'ll be notified once approved.',
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: const Color(0xFF795548),
-                                  ),
+                          if (_isKycApproved) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(AppSizes.md),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(alpha: 0.2),
                                 ),
                               ),
-                            ],
+                              child: Row(
+                                children: [
+                                  const Icon(Iconsax.lock, color: AppColors.primary),
+                                  const SizedBox(width: AppSizes.sm),
+                                  Expanded(
+                                    child: Text(
+                                      'KYC is approved. Editing is disabled.',
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.primaryDark,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: AppSizes.lg),
+                          ],
+
+                          // Step content
+                          AbsorbPointer(
+                            absorbing: _isKycApproved,
+                            child: _currentStep == 0
+                                ? _buildIdentityStep(userName)
+                                : _currentStep == 1
+                                ? _buildPaymentStep()
+                                : _buildContactStep(),
                           ),
-                        ),
-                        const SizedBox(height: AppSizes.lg),
-                        CustomButton(
-                          text: 'Submit Verification',
-                          isLoading: _isLoading,
-                          onPressed: _submitKyc,
-                        ),
-                      ],
-                      const SizedBox(height: AppSizes.xl),
-                    ],
+
+                          const SizedBox(height: AppSizes.lg),
+
+                          // Navigation buttons
+                          if (_currentStep < 2) ...[
+                            CustomButton(
+                              text: 'Continue',
+                              onPressed: _isKycApproved ? null : _nextStep,
+                            ),
+                          ] else ...[
+                            // Review info box
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(AppSizes.md),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF8E1),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusSm,
+                                ),
+                                border: Border.all(
+                                  color: const Color(0xFFFFE082),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Iconsax.clock,
+                                    color: Color(0xFFF9A825),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: AppSizes.sm),
+                                  Expanded(
+                                    child: Text(
+                                      'Your documents will be reviewed within 24-48 hours. You\'ll be notified once approved.',
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: const Color(0xFF795548),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: AppSizes.lg),
+                            CustomButton(
+                              text: _isKycApproved
+                                  ? 'Already Approved'
+                                  : 'Submit Verification',
+                              isLoading: _isLoading,
+                              onPressed: _isKycApproved ? null : _submitKyc,
+                            ),
+                          ],
+                          const SizedBox(height: AppSizes.xl),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
           if (_isLoading)
             Container(
               color: Colors.black54,
@@ -443,7 +824,10 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                       children: [
                         const CircularProgressIndicator(),
                         const SizedBox(height: 16),
-                        Text(_loadingMessage ?? 'Processing...', style: const TextStyle(fontSize: 16)),
+                        Text(
+                          _loadingMessage ?? 'Processing...',
+                          style: const TextStyle(fontSize: 16),
+                        ),
                       ],
                     ),
                   ),
@@ -458,8 +842,12 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
   // ──── Step 1: Identity ────
 
   Widget _buildIdentityStep(String userName) {
-    final hasIdPhoto = _idPhotoFile != null || _idPhotoXFile != null;
-    final hasSelfie = _selfiePhotoFile != null || _selfiePhotoXFile != null;
+    final hasIdPhoto =
+      _idPhotoFile != null || _idPhotoXFile != null || _existingIdFrontUrl != null;
+    final hasIdBack =
+      _idBackPhotoFile != null || _idBackPhotoXFile != null || _existingIdBackUrl != null;
+    final hasSelfie =
+      _selfiePhotoFile != null || _selfiePhotoXFile != null || _existingSelfieUrl != null;
 
     return Form(
       key: _identityFormKey,
@@ -468,7 +856,8 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
           // Security note
           _buildInfoBox(
             icon: Iconsax.shield_tick,
-            text: 'Your information is encrypted and stored securely. We only use it for verification.',
+            text:
+                'Your information is encrypted and stored securely. We only use it for verification.',
             color: AppColors.primary,
             bgColor: AppColors.primary.withValues(alpha: 0.06),
             borderColor: AppColors.primary.withValues(alpha: 0.15),
@@ -488,8 +877,11 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.grey.shade50,
-                  prefixIcon: const Icon(Iconsax.user,
-                      color: AppColors.primary, size: 20),
+                  prefixIcon: const Icon(
+                    Iconsax.user,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
                 ),
               ),
               const SizedBox(height: AppSizes.lg),
@@ -506,7 +898,10 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                         right: type != _idTypes.last ? 8.0 : 0.0,
                       ),
                       child: GestureDetector(
-                        onTap: () => setState(() => _selectedIdType = type),
+                        onTap: () {
+                          setState(() => _selectedIdType = type);
+                          _persistDraft();
+                        },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(vertical: 10),
@@ -520,8 +915,9 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                                   : AppColors.grey300,
                               width: 1.5,
                             ),
-                            borderRadius:
-                                BorderRadius.circular(AppSizes.radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusSm,
+                            ),
                           ),
                           child: Text(
                             type,
@@ -558,8 +954,11 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                   helperText:
                       'Enter the number exactly as shown on your document',
                   helperStyle: AppTextStyles.caption,
-                  prefixIcon: const Icon(Iconsax.card,
-                      color: AppColors.primary, size: 20),
+                  prefixIcon: const Icon(
+                    Iconsax.card,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -587,9 +986,36 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                 hasImage: hasIdPhoto,
                 xFile: _idPhotoXFile,
                 file: _idPhotoFile,
-                onTap: () => _pickImage(true),
+                existingUrl: _existingIdFrontUrl,
+                onTap: () => _pickImage('idFront'),
                 icon: Iconsax.gallery_add,
-                label: 'Tap to upload ID photo',
+                label: hasIdPhoto || _existingIdFrontUrl != null
+                    ? 'Replace ID photo'
+                    : 'Tap to upload ID photo',
+                sublabel: 'JPG, PNG (max 5MB)',
+              ),
+              const SizedBox(height: AppSizes.lg),
+
+              // ID Back Photo
+              _buildFieldLabel('ID Back Photo'),
+              const SizedBox(height: 4),
+              Text(
+                'Upload a clear photo of the back of your ${_selectedIdType.toLowerCase()}',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSizes.sm),
+              _buildImageUploadBox(
+                hasImage: hasIdBack,
+                xFile: _idBackPhotoXFile,
+                file: _idBackPhotoFile,
+                existingUrl: _existingIdBackUrl,
+                onTap: () => _pickImage('idBack'),
+                icon: Iconsax.gallery_add,
+                label: hasIdBack || _existingIdBackUrl != null
+                    ? 'Replace ID back photo'
+                    : 'Tap to upload ID back photo',
                 sublabel: 'JPG, PNG (max 5MB)',
               ),
               const SizedBox(height: AppSizes.lg),
@@ -608,9 +1034,12 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                 hasImage: hasSelfie,
                 xFile: _selfiePhotoXFile,
                 file: _selfiePhotoFile,
-                onTap: () => _pickImage(false),
+                existingUrl: _existingSelfieUrl,
+                onTap: () => _pickImage('selfie'),
                 icon: Iconsax.camera,
-                label: 'Tap to take a selfie',
+                label: hasSelfie || _existingSelfieUrl != null
+                    ? 'Replace selfie'
+                    : 'Tap to take a selfie',
                 sublabel: 'Camera will open automatically',
               ),
             ],
@@ -629,7 +1058,8 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
         children: [
           _buildInfoBox(
             icon: Iconsax.wallet_2,
-            text: 'Add your payment details so you can receive earnings from completed orders.',
+            text:
+                'Add your payment details so you can receive earnings from completed orders.',
             color: AppColors.primary,
             bgColor: AppColors.primary.withValues(alpha: 0.06),
             borderColor: AppColors.primary.withValues(alpha: 0.15),
@@ -661,6 +1091,7 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                               _momoNumberController.clear();
                             }
                           });
+                          _persistDraft();
                         },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
@@ -675,8 +1106,9 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                                   : AppColors.grey300,
                               width: 1.5,
                             ),
-                            borderRadius:
-                                BorderRadius.circular(AppSizes.radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusSm,
+                            ),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -717,8 +1149,9 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                 _buildFieldLabel('Provider'),
                 const SizedBox(height: AppSizes.sm),
                 Row(
-                  children:
-                      ['MTN Mobile Money', 'Airtel Money'].map((provider) {
+                  children: ['MTN Mobile Money', 'Airtel Money'].map((
+                    provider,
+                  ) {
                     final isSelected = _selectedMomoProvider == provider;
                     return Expanded(
                       child: Padding(
@@ -726,26 +1159,29 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                           right: provider == 'MTN Mobile Money' ? 8.0 : 0.0,
                         ),
                         child: GestureDetector(
-                          onTap: () =>
-                              setState(() => _selectedMomoProvider = provider),
+                          onTap: () {
+                            setState(() => _selectedMomoProvider = provider);
+                            _persistDraft();
+                          },
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? (provider == 'MTN Mobile Money'
-                                      ? const Color(0xFFFFF8E1)
-                                      : const Color(0xFFFFEBEE))
+                                        ? const Color(0xFFFFF8E1)
+                                        : const Color(0xFFFFEBEE))
                                   : Colors.transparent,
                               border: Border.all(
                                 color: isSelected
                                     ? (provider == 'MTN Mobile Money'
-                                        ? const Color(0xFFFFCA28)
-                                        : const Color(0xFFE53935))
+                                          ? const Color(0xFFFFCA28)
+                                          : const Color(0xFFE53935))
                                     : AppColors.grey300,
                                 width: 1.5,
                               ),
-                              borderRadius:
-                                  BorderRadius.circular(AppSizes.radiusSm),
+                              borderRadius: BorderRadius.circular(
+                                AppSizes.radiusSm,
+                              ),
                             ),
                             child: Text(
                               provider == 'MTN Mobile Money'
@@ -756,8 +1192,8 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                                 fontWeight: FontWeight.w600,
                                 color: isSelected
                                     ? (provider == 'MTN Mobile Money'
-                                        ? const Color(0xFFF9A825)
-                                        : const Color(0xFFE53935))
+                                          ? const Color(0xFFF9A825)
+                                          : const Color(0xFFE53935))
                                     : AppColors.textPrimary,
                               ),
                             ),
@@ -778,8 +1214,11 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                   style: AppTextStyles.bodyLarge,
                   decoration: InputDecoration(
                     hintText: '0770 000 000',
-                    prefixIcon: const Icon(Iconsax.call,
-                        color: AppColors.primary, size: 20),
+                    prefixIcon: const Icon(
+                      Iconsax.call,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                     prefixText: '+256 ',
                     prefixStyle: AppTextStyles.bodyLarge.copyWith(
                       color: AppColors.textSecondary,
@@ -808,8 +1247,11 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                   style: AppTextStyles.bodyLarge,
                   decoration: const InputDecoration(
                     hintText: 'e.g. Stanbic Bank',
-                    prefixIcon:
-                        Icon(Iconsax.bank, color: AppColors.primary, size: 20),
+                    prefixIcon: Icon(
+                      Iconsax.bank,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -828,8 +1270,11 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                   style: AppTextStyles.bodyLarge,
                   decoration: const InputDecoration(
                     hintText: 'Name on the account',
-                    prefixIcon:
-                        Icon(Iconsax.user, color: AppColors.primary, size: 20),
+                    prefixIcon: Icon(
+                      Iconsax.user,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -849,12 +1294,13 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                   style: AppTextStyles.bodyLarge,
                   decoration: const InputDecoration(
                     hintText: 'Enter account number',
-                    prefixIcon:
-                        Icon(Iconsax.card, color: AppColors.primary, size: 20),
+                    prefixIcon: Icon(
+                      Iconsax.card,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                   ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your account number';
@@ -879,7 +1325,8 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
         children: [
           _buildInfoBox(
             icon: Iconsax.call,
-            text: 'Add an emergency contact. This person will be contacted only in case of an emergency during deliveries.',
+            text:
+                'Add an emergency contact. This person will be contacted only in case of an emergency during deliveries.',
             color: AppColors.primary,
             bgColor: AppColors.primary.withValues(alpha: 0.06),
             borderColor: AppColors.primary.withValues(alpha: 0.15),
@@ -895,8 +1342,11 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                 style: AppTextStyles.bodyLarge,
                 decoration: const InputDecoration(
                   hintText: 'Full name of your emergency contact',
-                  prefixIcon:
-                      Icon(Iconsax.user, color: AppColors.primary, size: 20),
+                  prefixIcon: Icon(
+                    Iconsax.user,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
                 ),
               ),
               const SizedBox(height: AppSizes.lg),
@@ -909,8 +1359,11 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
                 style: AppTextStyles.bodyLarge,
                 decoration: InputDecoration(
                   hintText: '0770 000 000',
-                  prefixIcon: const Icon(Iconsax.call,
-                      color: AppColors.primary, size: 20),
+                  prefixIcon: const Icon(
+                    Iconsax.call,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
                   prefixText: '+256 ',
                   prefixStyle: AppTextStyles.bodyLarge.copyWith(
                     color: AppColors.textSecondary,
@@ -935,9 +1388,7 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
       alignment: Alignment.centerLeft,
       child: Text(
         text,
-        style: AppTextStyles.labelLarge.copyWith(
-          color: AppColors.textPrimary,
-        ),
+        style: AppTextStyles.labelLarge.copyWith(color: AppColors.textPrimary),
       ),
     );
   }
@@ -1000,11 +1451,15 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
     required bool hasImage,
     required XFile? xFile,
     required File? file,
+    required String? existingUrl,
     required VoidCallback onTap,
     required IconData icon,
     required String label,
     required String sublabel,
   }) {
+    final hasExistingRemote = existingUrl != null && existingUrl.isNotEmpty;
+    final shouldShowImage = hasImage || hasExistingRemote;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -1013,36 +1468,61 @@ class _ShopperKycScreenState extends State<ShopperKycScreen> {
         height: 160,
         decoration: BoxDecoration(
           border: Border.all(
-            color: hasImage ? AppColors.primary : AppColors.grey300,
-            width: hasImage ? 2 : 1.5,
+            color: shouldShowImage ? AppColors.primary : AppColors.grey300,
+            width: shouldShowImage ? 2 : 1.5,
             strokeAlign: BorderSide.strokeAlignInside,
           ),
           borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-          color: hasImage
+          color: shouldShowImage
               ? AppColors.primary.withValues(alpha: 0.04)
               : Colors.grey.shade50,
         ),
-        child: hasImage
+        child: shouldShowImage
             ? Stack(
                 fit: StackFit.expand,
                 children: [
-                  _buildImagePreview(xFile, file),
+                  if (hasImage)
+                    _buildImagePreview(xFile, file)
+                  else
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                      child: Image.network(
+                        existingUrl!,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: Colors.grey.shade100,
+                          alignment: Alignment.center,
+                          child: Text(
+                            'Preview unavailable',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   Positioned(
                     bottom: 8,
                     right: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black54,
-                        borderRadius:
-                            BorderRadius.circular(AppSizes.radiusXs),
+                        borderRadius: BorderRadius.circular(AppSizes.radiusXs),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Iconsax.refresh,
-                              color: Colors.white, size: 14),
+                          const Icon(
+                            Iconsax.refresh,
+                            color: Colors.white,
+                            size: 14,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'Change',
