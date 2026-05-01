@@ -21,6 +21,7 @@ import '../../services/payment_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/web_layout_wrapper.dart';
+import '../../widgets/price_text.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final bool isGuest;
@@ -49,6 +50,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _consentChecked = false;
   bool _showAddressForm = false;
   bool _didAutoRedirectForMissingAddress = false;
+  bool _addressExpanded = true;
+  bool _slotExpanded = true;
+  bool _paymentExpanded = true;
+  bool _summaryExpanded = true;
+  int _selectedSlotIndex = 0;
+  bool _promoExpanded = false;
+  final TextEditingController _promoController = TextEditingController();
+  final TextEditingController _riderNoteController = TextEditingController();
+
+  final List<_DeliverySlot> _slots = const [
+    _DeliverySlot('Now (60 min)', 5000, etaTag: 'Almost full'),
+    _DeliverySlot('Today 2-3 PM', 3000),
+    _DeliverySlot('Today 6-7 PM', 3000),
+    _DeliverySlot('Tomorrow 9-10 AM', 2500, saveTag: 'Save UGX 2,500'),
+  ];
 
   // Guest checkout fields
   late final TextEditingController _guestNameController;
@@ -95,7 +111,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       // Prefer an explicit pick from the addresses screen over the default.
       final picked = _resolveSelectedAddress(addressService);
       _selectedAddress = picked ?? addressService.defaultUserAddress;
-      _loadSavedAddresses();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _loadSavedAddresses();
+      });
     }
   }
 
@@ -156,6 +175,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _authAddressController.dispose();
     _authCityController.dispose();
     _authLandmarkController.dispose();
+    _promoController.dispose();
+    _riderNoteController.dispose();
     super.dispose();
   }
 
@@ -609,23 +630,43 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Delivery address or guest form
-                        if (widget.isGuest)
-                          _buildSection(
-                            title: 'Sign Up & Delivery Details',
-                            icon: Iconsax.user_add,
-                            child: _buildGuestAddressForm(),
-                          )
-                        else
-                          _buildSection(
-                            title: 'Delivery Address',
-                            icon: Iconsax.location,
-                            child: _selectedAddress == null
-                                ? (_showAddressForm
-                                      ? _buildAuthAddressForm()
-                                      : _buildAddAddressButton())
-                                : _buildAddressCard(authProvider),
+                        // 1) Delivery address
+                        _buildCollapsibleSection(
+                          title: 'Delivery Address',
+                          icon: Iconsax.location,
+                          isExpanded: _addressExpanded,
+                          summary: widget.isGuest
+                              ? _guestAddressController.text.trim().isNotEmpty
+                                    ? _guestAddressController.text.trim()
+                                    : 'Add your address'
+                              : _selectedAddress != null
+                                    ? _selectedAddress!.fullAddress
+                                    : 'No address selected',
+                          onToggle: () => setState(
+                            () => _addressExpanded = !_addressExpanded,
                           ),
+                          child: widget.isGuest
+                              ? _buildGuestAddressForm()
+                              : (_selectedAddress == null
+                                    ? (_showAddressForm
+                                          ? _buildAuthAddressForm()
+                                          : _buildAddAddressButton())
+                                    : _buildAddressCard(authProvider)),
+                        ),
+                        const SizedBox(height: AppSizes.md),
+
+                        // 2) Delivery slot
+                        _buildCollapsibleSection(
+                          title: 'Delivery Slot',
+                          icon: Iconsax.timer_1,
+                          isExpanded: _slotExpanded,
+                          summary:
+                              '${_slots[_selectedSlotIndex].label} · ${Formatters.formatCurrency(_slots[_selectedSlotIndex].fee.toDouble())}',
+                          onToggle: () => setState(
+                            () => _slotExpanded = !_slotExpanded,
+                          ),
+                          child: _buildDeliverySlotScroller(),
+                        ),
                         const SizedBox(height: AppSizes.md),
 
                         // Order items
@@ -646,11 +687,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                         style: AppTextStyles.bodyMedium,
                                       ),
                                     ),
-                                    Text(
-                                      Formatters.formatCurrency(
-                                        item.totalPrice,
-                                      ),
-                                      style: AppTextStyles.labelMedium,
+                                    PriceText(
+                                      amount: item.totalPrice,
+                                      showCurrencyCode: false,
                                     ),
                                   ],
                                 ),
@@ -660,11 +699,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                         const SizedBox(height: AppSizes.md),
 
-                        // Payment method — all options shown with clear branding.
-                        // Logic: only CoD is active for MVP (others show "coming soon").
-                        _buildSection(
+                        // 3) Payment method
+                        _buildCollapsibleSection(
                           title: 'Payment Method',
                           icon: Iconsax.card,
+                          isExpanded: _paymentExpanded,
+                          summary: _selectedPayment == PaymentMethod.cashOnDelivery
+                              ? 'Pay rider on delivery'
+                              : 'Pay with Mobile Money',
+                          onToggle: () => setState(
+                            () => _paymentExpanded = !_paymentExpanded,
+                          ),
                           child: Column(
                             children: [
                               _buildMobileMoneyCard(
@@ -674,7 +719,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 textColor: Colors.black,
                                 badge: 'MTN',
                                 prompt: 'You\'ll get a prompt to approve',
-                                comingSoon: true,
+                                comingSoon: false,
                               ),
                               const SizedBox(height: AppSizes.sm),
                               _buildMobileMoneyCard(
@@ -684,7 +729,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 textColor: Colors.white,
                                 badge: 'Airtel',
                                 prompt: 'You\'ll get a prompt to approve',
-                                comingSoon: true,
+                                comingSoon: false,
                               ),
                               const SizedBox(height: AppSizes.sm),
                               _buildPaymentOption(PaymentMethod.cashOnDelivery),
@@ -693,30 +738,54 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                         const SizedBox(height: AppSizes.md),
 
-                        // Order summary
-                        _buildSection(
+                        // 4) Order summary
+                        _buildCollapsibleSection(
                           title: 'Order Summary',
                           icon: Iconsax.receipt_2,
+                          isExpanded: _summaryExpanded,
+                          summary: 'Total · ${Formatters.formatCurrency(cartProvider.total)}',
+                          onToggle: () => setState(
+                            () => _summaryExpanded = !_summaryExpanded,
+                          ),
                           child: Column(
                             children: [
-                              _buildSummaryRow(
-                                'Subtotal',
-                                Formatters.formatCurrency(
-                                  cartProvider.subtotal,
+                              _buildSummaryRow('Subtotal', cartProvider.subtotal),
+                              const SizedBox(height: AppSizes.sm),
+                              _buildSummaryRow('Service Fee (5%)', cartProvider.serviceFee),
+                              const SizedBox(height: AppSizes.sm),
+                              _buildSummaryRow('Delivery Fee', _slots[_selectedSlotIndex].fee.toDouble()),
+                              const SizedBox(height: AppSizes.sm),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton(
+                                  onPressed: () => setState(() => _promoExpanded = !_promoExpanded),
+                                  child: Text(
+                                    _promoExpanded ? 'Hide promo code' : 'Have a promo code?',
+                                    style: AppTextStyles.labelMedium.copyWith(color: AppColors.primary),
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: AppSizes.sm),
-                              _buildSummaryRow(
-                                'Service Fee (5%)',
-                                Formatters.formatCurrency(
-                                  cartProvider.serviceFee,
+                              if (_promoExpanded)
+                                TextField(
+                                  controller: _promoController,
+                                  decoration: InputDecoration(
+                                    hintText: 'Enter promo code',
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                    ),
+                                  ),
                                 ),
-                              ),
                               const SizedBox(height: AppSizes.sm),
-                              _buildSummaryRow(
-                                'Delivery Fee',
-                                Formatters.formatCurrency(
-                                  cartProvider.deliveryFee,
+                              TextField(
+                                controller: _riderNoteController,
+                                minLines: 2,
+                                maxLines: 3,
+                                decoration: InputDecoration(
+                                  hintText: 'Note for rider: gate color, landmark, etc.',
+                                  labelText: 'Note for rider',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                  ),
                                 ),
                               ),
                               const Padding(
@@ -727,7 +796,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               ),
                               _buildSummaryRow(
                                 'Total',
-                                Formatters.formatCurrency(cartProvider.total),
+                                cartProvider.subtotal +
+                                    cartProvider.serviceFee +
+                                    _slots[_selectedSlotIndex].fee,
                                 isTotal: true,
                               ),
                             ],
@@ -774,8 +845,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         const SizedBox(height: AppSizes.md),
                         // Place order button
                         CustomButton(
-                          text:
-                              'Place Order - ${Formatters.formatCurrency(cartProvider.total)}',
+                          text: _primaryCheckoutCta(
+                            cartProvider.subtotal +
+                                cartProvider.serviceFee +
+                                _slots[_selectedSlotIndex].fee,
+                          ),
                           isLoading: _isLoading,
                           onPressed: _consentChecked ? _placeOrder : null,
                         ),
@@ -901,6 +975,143 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildCollapsibleSection({
+    required String title,
+    required IconData icon,
+    required bool isExpanded,
+    required String summary,
+    required VoidCallback onToggle,
+    required Widget child,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: onToggle,
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSizes.md),
+              child: Row(
+                children: [
+                  Icon(icon, size: 20, color: AppColors.primaryOrange),
+                  const SizedBox(width: AppSizes.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title, style: AppTextStyles.h5),
+                        if (!isExpanded)
+                          Text(
+                            summary,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                  TextButton(onPressed: onToggle, child: Text(isExpanded ? 'Hide' : 'Change')),
+                ],
+              ),
+            ),
+          ),
+          if (isExpanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSizes.md,
+                0,
+                AppSizes.md,
+                AppSizes.md,
+              ),
+              child: child,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeliverySlotScroller() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: List.generate(_slots.length, (index) {
+          final slot = _slots[index];
+          final selected = _selectedSlotIndex == index;
+          return Padding(
+            padding: EdgeInsets.only(right: index == _slots.length - 1 ? 0 : 8),
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedSlotIndex = index),
+              child: Container(
+                width: 180,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? AppColors.primarySoft
+                      : AppColors.lightGrey,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: selected ? AppColors.primary : AppColors.grey300,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      slot.label,
+                      style: AppTextStyles.labelMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    PriceText(amount: slot.fee.toDouble()),
+                    if (slot.saveTag != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        slot.saveTag!,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.success,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                    if (slot.etaTag != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        slot.etaTag!,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.warning,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  String _primaryCheckoutCta(double total) {
+    final amount = Formatters.formatCurrency(total);
+    switch (_selectedPayment) {
+      case PaymentMethod.mobileMoney:
+        return 'Pay $amount with MoMo';
+      case PaymentMethod.card:
+        return 'Pay $amount with card';
+      case PaymentMethod.cashOnDelivery:
+        return 'Place order - Pay on delivery';
+    }
   }
 
   Widget _buildAddressCard(AuthProvider authProvider) {
@@ -1401,7 +1612,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  Widget _buildSummaryRow(String label, String value, {bool isTotal = false}) {
+  Widget _buildSummaryRow(String label, double amount, {bool isTotal = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -1409,13 +1620,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           label,
           style: isTotal ? AppTextStyles.labelMedium : AppTextStyles.bodySmall,
         ),
-        Text(
-          value,
-          style: isTotal
-              ? AppTextStyles.priceMedium
-              : AppTextStyles.labelMedium,
+        PriceText(
+          amount: amount,
+          large: isTotal,
+          amountColor: isTotal ? AppColors.textPrimary : AppColors.primary,
         ),
       ],
     );
   }
+}
+
+class _DeliverySlot {
+  final String label;
+  final int fee;
+  final String? etaTag;
+  final String? saveTag;
+
+  const _DeliverySlot(this.label, this.fee, {this.etaTag, this.saveTag});
 }

@@ -484,6 +484,7 @@ class AddressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final labelEmoji = _labelEmoji(address.label);
     final card = Container(
       margin: const EdgeInsets.only(bottom: AppSizes.md),
       padding: const EdgeInsets.all(AppSizes.md),
@@ -511,10 +512,11 @@ class AddressCard extends StatelessWidget {
                       color: AppColors.primarySoft,
                       borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                     ),
-                    child: const Icon(
-                      Iconsax.location,
-                      color: AppColors.primary,
-                      size: 20,
+                    child: Center(
+                      child: Text(
+                        labelEmoji,
+                        style: const TextStyle(fontSize: 18),
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSizes.sm),
@@ -563,6 +565,33 @@ class AddressCard extends StatelessWidget {
             address.fullAddress,
             style: AppTextStyles.bodySmall.copyWith(
               color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSizes.sm),
+          Container(
+            height: 66,
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm),
+            decoration: BoxDecoration(
+              color: AppColors.grey100,
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+              border: Border.all(color: AppColors.grey200),
+            ),
+            child: Row(
+              children: [
+                const Icon(Iconsax.map, size: 16, color: AppColors.textSecondary),
+                const SizedBox(width: AppSizes.xs),
+                Expanded(
+                  child: Text(
+                    'Map preview · ${address.city}',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
           if (address.landmark != null) ...[
@@ -633,6 +662,13 @@ class AddressCard extends StatelessWidget {
         child: card,
       ),
     );
+  }
+
+  String _labelEmoji(String label) {
+    final lower = label.toLowerCase();
+    if (lower.contains('home')) return '🏠';
+    if (lower.contains('work')) return '🏢';
+    return '💚';
   }
 
   Widget _buildActionButton({

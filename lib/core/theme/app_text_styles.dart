@@ -44,11 +44,11 @@ class AppTextStyles {
 
   static const TextStyle displayMd = TextStyle(
     fontFamily: displayFontFamily,
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: FontWeight.w600,
-    fontVariations: [..._displayVariations, FontVariation('opsz', 28)],
+    fontVariations: [..._displayVariations, FontVariation('opsz', 32)],
     color: AppColors.textPrimary,
-    height: 1.18,
+    height: 1.25,
     letterSpacing: -0.4,
   );
 
@@ -67,28 +67,28 @@ class AppTextStyles {
   // Headings - Clean, modern weights
   static const TextStyle h1 = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: FontWeight.w700,
     color: AppColors.textPrimary,
-    height: 1.2,
+    height: 1.33,
     letterSpacing: -0.5,
   );
 
   static const TextStyle h2 = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 24,
-    fontWeight: FontWeight.w700,
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
-    height: 1.25,
+    height: 1.4,
     letterSpacing: -0.3,
   );
 
   static const TextStyle h3 = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
-    height: 1.3,
+    height: 1.41,
     letterSpacing: -0.2,
   );
 
@@ -203,18 +203,18 @@ class AppTextStyles {
   // Body Text
   static const TextStyle bodyLarge = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
-    height: 1.5,
+    height: 1.47,
   );
 
   static const TextStyle bodyMedium = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
-    height: 1.5,
+    height: 1.47,
   );
 
   static const TextStyle bodySmall = TextStyle(
@@ -222,7 +222,7 @@ class AppTextStyles {
     fontSize: 13,
     fontWeight: FontWeight.w400,
     color: AppColors.textSecondary,
-    height: 1.5,
+    height: 1.38,
   );
 
   // Labels & Buttons
@@ -277,7 +277,47 @@ class AppTextStyles {
     height: 1.4,
   );
 
-  // Price - Using primary green for fresh feel
+  // Price typography component styles (UGX + amount).
+  // Use tabular numerals for alignment in summaries and lists.
+  static const TextStyle currencyCode = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    color: AppColors.textSecondary,
+    height: 1.2,
+    letterSpacing: 0.4,
+    fontFeatures: [FontFeature.tabularFigures()],
+  );
+
+  static const TextStyle priceAmount = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: AppColors.primary,
+    height: 1.2,
+    fontFeatures: [FontFeature.tabularFigures()],
+  );
+
+  static const TextStyle priceAmountLarge = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: AppColors.primary,
+    height: 1.2,
+    fontFeatures: [FontFeature.tabularFigures()],
+  );
+
+  static const TextStyle priceOld = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: FontWeight.w400,
+    color: AppColors.textTertiary,
+    decoration: TextDecoration.lineThrough,
+    height: 1.2,
+    fontFeatures: [FontFeature.tabularFigures()],
+  );
+
+  // Legacy price styles retained for backward compatibility.
   static const TextStyle priceLarge = TextStyle(
     fontFamily: fontFamily,
     fontSize: 22,

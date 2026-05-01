@@ -8,6 +8,7 @@ import '../core/constants/app_sizes.dart';
 import '../core/utils/formatters.dart';
 import '../models/product.dart';
 import 'app_loading_indicator.dart';
+import 'price_text.dart';
 
 class ProductCard extends StatelessWidget {
   final Product product;
@@ -92,11 +93,17 @@ class ProductCard extends StatelessWidget {
                             ),
                           ),
                           errorWidget: (context, url, error) => Container(
-                            color: AppColors.grey100,
-                            child: Icon(
-                              Iconsax.image,
-                              color: AppColors.grey400,
-                              size: 32,
+                            color: Formatters.getProductBgColor(
+                              product.categoryName,
+                            ),
+                            child: Center(
+                              child: Text(
+                                _initials(product.name),
+                                style: AppTextStyles.h2.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -237,15 +244,10 @@ class ProductCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Flexible(
-                            child: Text(
-                              Formatters.formatCurrency(product.price),
-                              style: AppTextStyles.labelLarge.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
+                            child: PriceText(
+                              amount: product.price,
+                              showCurrencyCode: false,
+                              amountColor: AppColors.primary,
                             ),
                           ),
                           AnimatedSwitcher(
@@ -330,6 +332,14 @@ class ProductCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _initials(String name) {
+  final parts = name.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty);
+  if (parts.isEmpty) return 'P';
+  final list = parts.toList();
+  if (list.length == 1) return list.first[0].toUpperCase();
+  return '${list.first[0]}${list[1][0]}'.toUpperCase();
 }
 
 class _QuantityStepper extends StatelessWidget {
