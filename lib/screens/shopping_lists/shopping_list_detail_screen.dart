@@ -115,6 +115,71 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                             ),
                             const Spacer(),
                             GestureDetector(
+                              onTap: () => _showShareDialog(list),
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusMd,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Iconsax.share,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Recurring schedule coming soon',
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusMd,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Iconsax.calendar_1,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () => _duplicateList(list),
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(
+                                    AppSizes.radiusMd,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Iconsax.copy,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
                               onTap: () => _showOptionsMenu(context, list),
                               child: Container(
                                 width: 44,
@@ -1330,6 +1395,46 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showShareDialog(ShoppingList list) {
+    final items = list.items
+        .asMap()
+        .entries
+        .map((e) {
+          final i = e.value;
+          final qty = i.quantity % 1 == 0
+              ? i.quantity.toInt().toString()
+              : i.quantity.toString();
+          final unit = i.unit != null ? ' ${i.unit}' : '';
+          return '${e.key + 1}. ${i.name} — $qty$unit';
+        })
+        .join('\n');
+    final checked = list.items.where((i) => i.isChecked).length;
+    final total = list.items.length;
+    final progress = total > 0 ? '($checked/$total done)\n' : '';
+    final text =
+        '🛒 *${list.name}*\n$progress\n$items\n\n— Shared via *LipaCart*\n📲 lipacart.com';
+    launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(text)}'));
+  }
+
+  Future<void> _duplicateList(ShoppingList list) async {
+    final auth = context.read<AuthProvider>();
+    final provider = context.read<ShoppingListProvider>();
+    final ok = await provider.createList(
+      name: '${list.name} Copy',
+      description: list.description,
+      emoji: list.emoji ?? '🛒',
+      color: list.color,
+      items: list.items,
+      authToken: auth.token,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok ? 'List duplicated' : 'Could not duplicate list'),
       ),
     );
   }

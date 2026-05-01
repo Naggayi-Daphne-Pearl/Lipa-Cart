@@ -6,10 +6,12 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/constants/app_sizes.dart';
+import '../../core/utils/formatters.dart';
 import '../../core/utils/responsive.dart';
 import '../../models/recipe.dart';
 import '../../providers/recipe_provider.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/cart_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
@@ -25,6 +27,7 @@ class RecipesScreen extends StatefulWidget {
 class _RecipesScreenState extends State<RecipesScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String _activeCategory = 'Ugandan Classics';
 
   @override
   void initState() {
@@ -60,6 +63,35 @@ class _RecipesScreenState extends State<RecipesScreen> {
       }).toList();
     }
 
+    final category = _activeCategory;
+    if (category != 'Ugandan Classics') {
+      recipes = recipes.where((recipe) {
+        final tags = recipe.tags.map((e) => e.toLowerCase()).toList();
+        final name = recipe.name.toLowerCase();
+        switch (category) {
+          case 'Quick (under 30 min)':
+            return recipe.totalTime <= 30;
+          case 'Family Meals':
+            return recipe.servings >= 4;
+          case 'Vegetarian':
+            return tags.contains('vegetarian') || tags.contains('vegan');
+          case 'Breakfast':
+            return tags.contains('breakfast');
+          case 'Snacks':
+            return tags.contains('snack') || tags.contains('snacks');
+          case 'Continental':
+            return tags.contains('continental');
+          default:
+            return name.contains('rolex') ||
+                name.contains('luwombo') ||
+                name.contains('pilau') ||
+                name.contains('matoke') ||
+                tags.contains('ugandan') ||
+                tags.contains('east african');
+        }
+      }).toList();
+    }
+
     return recipes;
   }
 
@@ -77,17 +109,13 @@ class _RecipesScreenState extends State<RecipesScreen> {
     );
     final averageTime = filteredRecipes.isEmpty
         ? 0
-        : (filteredRecipes
-                    .map((r) => r.totalTime)
-                    .reduce((a, b) => a + b) /
-                filteredRecipes.length)
-            .round();
+        : (filteredRecipes.map((r) => r.totalTime).reduce((a, b) => a + b) /
+                  filteredRecipes.length)
+              .round();
     final averageCost = filteredRecipes.isEmpty
         ? 0.0
-        : filteredRecipes
-                .map((r) => r.estimatedCost)
-                .reduce((a, b) => a + b) /
-            filteredRecipes.length;
+        : filteredRecipes.map((r) => r.estimatedCost).reduce((a, b) => a + b) /
+              filteredRecipes.length;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -178,6 +206,13 @@ class _RecipesScreenState extends State<RecipesScreen> {
                   padding: EdgeInsets.symmetric(
                     horizontal: context.horizontalPadding,
                   ),
+                  child: _buildFeaturedRecipeHero(filteredRecipes),
+                ),
+                const SizedBox(height: AppSizes.md),
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.horizontalPadding,
+                  ),
                   child: Container(
                     height: context.responsive<double>(
                       mobile: 52.0,
@@ -233,32 +268,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
                   ),
                 ),
 
-                // Quick filter buttons
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: context.horizontalPadding,
-                  ),
-                  child: Row(
-                    children: [
-                      _buildQuickFilterButton(
-                        label: 'Quick (< 30 min)',
-                        icon: Iconsax.timer_1,
-                        isSelected: provider.quickFilter,
-                        onTap: () => provider.toggleQuickFilter(),
-                      ),
-                      const SizedBox(width: AppSizes.sm),
-                      _buildQuickFilterButton(
-                        label: 'Easy',
-                        icon: Iconsax.star,
-                        isSelected: provider.easyFilter,
-                        onTap: () => provider.toggleEasyFilter(),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSizes.sm),
-
-                // Tag filters — all tags, horizontally scrollable
+                // Locally relevant category chips
                 SizedBox(
                   height: 44,
                   child: ListView(
@@ -267,27 +277,18 @@ class _RecipesScreenState extends State<RecipesScreen> {
                       horizontal: context.horizontalPadding,
                     ),
                     children: [
-                      // "Clear" chip — only shown when tags are selected
-                      if (provider.selectedTags.isNotEmpty)
-                        Padding(
+                      ...[
+                        'Ugandan Classics',
+                        'Quick (under 30 min)',
+                        'Family Meals',
+                        'Vegetarian',
+                        'Breakfast',
+                        'Snacks',
+                        'Continental',
+                      ].map(
+                        (chip) => Padding(
                           padding: const EdgeInsets.only(right: AppSizes.sm),
-                          child: _buildTagChip(
-                            label: 'Clear',
-                            icon: Iconsax.close_circle,
-                            isSelected: false,
-                            onTap: () => provider.clearTags(),
-                          ),
-                        ),
-                      // All tag chips (no .take(8))
-                      ...provider.allTags.map(
-                        (tag) => Padding(
-                          padding: const EdgeInsets.only(right: AppSizes.sm),
-                          child: _buildTagChip(
-                            label: tag,
-                            icon: _getTagIcon(tag),
-                            isSelected: provider.selectedTags.contains(tag),
-                            onTap: () => provider.toggleTag(tag),
-                          ),
+                          child: _buildCuisineChip(chip),
                         ),
                       ),
                     ],
@@ -326,8 +327,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
                         _buildRecipeMetricChip(
                           icon: Iconsax.box,
                           label: 'Ingredients in stock',
-                          value:
-                              '$totalAvailableIngredients/$totalIngredients',
+                          value: '$totalAvailableIngredients/$totalIngredients',
                         ),
                         const SizedBox(width: AppSizes.sm),
                         _buildRecipeMetricChip(
@@ -779,6 +779,24 @@ class _RecipesScreenState extends State<RecipesScreen> {
                     style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: AppSizes.sm),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _addIngredientsQuick(recipe),
+                      icon: const Icon(Iconsax.bag_2, size: 16),
+                      label: const Text('Add ingredients'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.sm),
                   // Bottom row
                   Row(
                     children: [
@@ -848,6 +866,113 @@ class _RecipesScreenState extends State<RecipesScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFeaturedRecipeHero(List<Recipe> recipes) {
+    if (recipes.isEmpty) return const SizedBox.shrink();
+    final featured = recipes.first;
+    return GestureDetector(
+      onTap: () => context.push('/customer/recipe-detail', extra: featured.id),
+      child: Container(
+        height: 210,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+          image: DecorationImage(
+            image: NetworkImage(featured.image),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: 0.1),
+                Colors.black.withValues(alpha: 0.65),
+              ],
+            ),
+          ),
+          padding: const EdgeInsets.all(AppSizes.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                featured.name,
+                style: AppTextStyles.h4.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${featured.prepTime} min prep',
+                style: AppTextStyles.bodySmall.copyWith(color: Colors.white),
+              ),
+              const SizedBox(height: AppSizes.sm),
+              ElevatedButton(
+                onPressed: () => _addIngredientsQuick(featured),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Cook tonight'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCuisineChip(String label) {
+    final isActive = _activeCategory == label;
+    return GestureDetector(
+      onTap: () => setState(() => _activeCategory = label),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primary : AppColors.surface,
+          borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+          border: Border.all(
+            color: isActive ? AppColors.primary : AppColors.grey300,
+          ),
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: isActive ? Colors.white : AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _addIngredientsQuick(Recipe recipe) {
+    final cartProvider = context.read<CartProvider>();
+    var added = 0;
+    double total = 0;
+    for (final ingredient in recipe.ingredients) {
+      final p = ingredient.linkedProduct;
+      if (p != null) {
+        cartProvider.addToCart(p);
+        added += 1;
+        total += p.price;
+      }
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Added $added items - ${Formatters.formatCurrency(total)}',
+        ),
+        backgroundColor: AppColors.success,
       ),
     );
   }

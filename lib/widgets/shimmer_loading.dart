@@ -31,7 +31,11 @@ class ShimmerProductCard extends StatelessWidget {
 class ShimmerProductGrid extends StatelessWidget {
   final int itemCount;
   final int crossAxisCount;
-  const ShimmerProductGrid({super.key, this.itemCount = 6, this.crossAxisCount = 2});
+  const ShimmerProductGrid({
+    super.key,
+    this.itemCount = 6,
+    this.crossAxisCount = 2,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +70,12 @@ class ShimmerHorizontalRow extends StatelessWidget {
   final int itemCount;
   final double cardWidth;
   final double cardHeight;
-  const ShimmerHorizontalRow({super.key, this.itemCount = 4, this.cardWidth = 160, this.cardHeight = 220});
+  const ShimmerHorizontalRow({
+    super.key,
+    this.itemCount = 4,
+    this.cardWidth = 160,
+    this.cardHeight = 220,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +84,8 @@ class ShimmerHorizontalRow extends StatelessWidget {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: itemCount,
-        itemBuilder: (context, index) => ShimmerProductCard(width: cardWidth, height: cardHeight),
+        itemBuilder: (context, index) =>
+            ShimmerProductCard(width: cardWidth, height: cardHeight),
       ),
     );
   }
@@ -242,6 +252,157 @@ class ShimmerListItem extends StatelessWidget {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Full homepage skeleton that mimics the real layout while products load.
+/// Uses soft green shimmer tones (#E8F5E9 / #C8E6C9) for brand feel.
+class HomePageSkeleton extends StatelessWidget {
+  const HomePageSkeleton({super.key});
+
+  static const _searchH = 52.0;
+  static const _editorialH = 340.0; // matches real _buildEditorialHero height
+  static const _catSize = 72.0;
+  static const _catCount = 6;
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFFE8F5E9),
+      highlightColor: const Color(0xFFC8E6C9),
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Greeting line
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 16, 120, 0),
+              height: 20,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 200, 0),
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            const SizedBox(height: 14),
+            // Search bar
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              height: _searchH,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Trust strip (3 pills)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: List.generate(
+                  3,
+                  (i) => Expanded(
+                    child: Container(
+                      margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Editorial hero — tall card matching real layout
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              height: _editorialH,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Category circles row
+            Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const NeverScrollableScrollPhysics(),
+                child: Row(
+                  children: List.generate(
+                    _catCount,
+                    (i) => Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: _catSize,
+                            height: _catSize,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            width: _catSize * 0.7,
+                            height: 10,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Section title
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              height: 16,
+              width: 120,
+              color: Colors.white,
+            ),
+            const SizedBox(height: 12),
+            // Product grid 2-col
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.72,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: 6,
+                itemBuilder: (_, __) => Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 100),
           ],
         ),
       ),

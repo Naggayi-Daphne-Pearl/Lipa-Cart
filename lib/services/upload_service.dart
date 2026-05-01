@@ -23,6 +23,7 @@ class UploadService {
   static String get _apiUrl => AppConstants.apiUrl;
 
   static const int _maxFileSizeMb = 10;
+  static const int _maxUploadAttempts = 3;
 
   static Future<http.StreamedResponse> _defaultSend(
     http.MultipartRequest request,
@@ -79,7 +80,12 @@ class UploadService {
     final name = imageFile.uri.pathSegments.isNotEmpty
         ? imageFile.uri.pathSegments.last
         : 'upload_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    return uploadImageBytesWithMeta(bytes, name, token, apiUrlOverride: apiUrlOverride);
+    return uploadImageBytesWithMeta(
+      bytes,
+      name,
+      token,
+      apiUrlOverride: apiUrlOverride,
+    );
   }
 
   static Future<UploadedMedia> uploadImageBytesWithMeta(
@@ -88,7 +94,12 @@ class UploadService {
     String token, {
     String? apiUrlOverride,
   }) async {
-    final result = await _uploadRaw(bytes, fileName, token, apiUrlOverride: apiUrlOverride);
+    final result = await _uploadRaw(
+      bytes,
+      fileName,
+      token,
+      apiUrlOverride: apiUrlOverride,
+    );
     final id = result['id'];
     final url = result['url'] as String?;
     if (id == null || url == null) {
@@ -113,35 +124,74 @@ class UploadService {
     }
 
     final baseUrl = apiUrlOverride ?? _apiUrl;
-    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/upload'));
-    request.headers['Authorization'] = 'Bearer $token';
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        'files',
-        bytes,
-        filename: fileName,
-        contentType: _contentTypeFor(fileName),
-      ),
-    );
-
     final sender = sendRequest ?? _defaultSend;
-    final streamed = await sender(request).timeout(
-      const Duration(seconds: 60),
-      onTimeout: () => throw TimeoutException('Upload timed out after 60s'),
-    );
-    final response = await http.Response.fromStream(streamed);
+    Exception? lastError;
 
-    if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception(
-        'Upload failed: HTTP ${response.statusCode} ${response.body}',
-      );
+    for (int attempt = 1; attempt <= _maxUploadAttempts; attempt++) {
+      try {
+        final request = http.MultipartRequest(
+          'POST',
+          Uri.parse('$baseUrl/upload'),
+        );
+        request.headers['Authorization'] = 'Bearer $token';
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'files',
+            bytes,
+            filename: fileName,
+            contentType: _contentTypeFor(fileName),
+          ),
+        );
+
+        final streamed = await sender(request).timeout(
+          const Duration(seconds: 60),
+          onTimeout: () => throw TimeoutException('Upload timed out after 60s'),
+        );
+        final response = await http.Response.fromStream(streamed);
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final decoded = jsonDecode(response.body);
+          if (decoded is! List || decoded.isEmpty) {
+            throw Exception(
+              'Upload response missing file data: ${response.body}',
+            );
+          }
+          return decoded.first as Map<String, dynamic>;
+        }
+
+        final message =
+            'Upload failed: HTTP ${response.statusCode} ${response.body}';
+        final isRetryable = _isRetryableUploadFailure(
+          response.statusCode,
+          response.body,
+        );
+        if (!isRetryable || attempt == _maxUploadAttempts) {
+          throw Exception(message);
+        }
+        lastError = Exception(message);
+      } on TimeoutException catch (e) {
+        if (attempt == _maxUploadAttempts) {
+          throw Exception(
+            'Upload timed out after multiple attempts: ${e.message ?? 'timeout'}',
+          );
+        }
+        lastError = Exception(e.message ?? 'timeout');
+      }
+
+      // Backoff for transient network/provider issues.
+      await Future<void>.delayed(Duration(milliseconds: 300 * attempt));
     }
 
-    final decoded = jsonDecode(response.body);
-    if (decoded is! List || decoded.isEmpty) {
-      throw Exception('Upload response missing file data: ${response.body}');
-    }
-    return decoded.first as Map<String, dynamic>;
+    throw lastError ?? Exception('Upload failed after multiple attempts');
+  }
+
+  static bool _isRetryableUploadFailure(int statusCode, String body) {
+    // Retry all 5xx gateway/server errors — body content is unreliable
+    // (proxies often return plain HTML) so don't gate on keywords.
+    if (statusCode >= 500 && statusCode <= 599) return true;
+    // Also retry on 408 Request Timeout and 429 Too Many Requests.
+    if (statusCode == 408 || statusCode == 429) return true;
+    return false;
   }
 
   static Future<List<String>> uploadMultipleImages(

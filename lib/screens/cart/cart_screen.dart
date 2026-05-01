@@ -9,8 +9,10 @@ import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/responsive.dart';
 import '../../models/cart_item.dart';
+import '../../models/product.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/order_provider.dart';
 import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
@@ -47,6 +49,7 @@ class CartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cartProvider = context.watch<CartProvider>();
+    final orderProvider = context.watch<OrderProvider>();
     final deliveryProgress = (cartProvider.subtotal / _freeDeliveryThreshold)
         .clamp(0.0, 1.0);
     final amountToFreeDelivery = _freeDeliveryThreshold - cartProvider.subtotal;
@@ -69,7 +72,10 @@ class CartScreen extends StatelessWidget {
                         amountToFreeDelivery,
                       )
                     : cartProvider.isEmpty
-                    ? _buildEmptyCart(context)
+                    ? _buildEmptyCart(
+                        context,
+                        orderProvider.frequentlyOrderedProducts,
+                      )
                     : Column(
                         children: [
                           Padding(
@@ -158,6 +164,18 @@ class CartScreen extends StatelessWidget {
                               },
                             ),
                           ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSizes.lg,
+                              0,
+                              AppSizes.lg,
+                              AppSizes.md,
+                            ),
+                            child: _buildCrossSellRow(
+                              orderProvider.frequentlyOrderedProducts,
+                              cartProvider,
+                            ),
+                          ),
                           if (amountToFreeDelivery > 0)
                             Padding(
                               padding: const EdgeInsets.all(AppSizes.lg),
@@ -166,6 +184,15 @@ class CartScreen extends StatelessWidget {
                                 amountToFreeDelivery,
                               ),
                             ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSizes.lg,
+                              0,
+                              AppSizes.lg,
+                              AppSizes.sm,
+                            ),
+                            child: _buildDeliverySlotRow(),
+                          ),
                           Container(
                             padding: const EdgeInsets.all(AppSizes.lg),
                             decoration: BoxDecoration(
@@ -324,7 +351,10 @@ class CartScreen extends StatelessWidget {
     double amountToFreeDelivery,
   ) {
     if (cartProvider.isEmpty) {
-      return _buildEmptyCart(context);
+      return _buildEmptyCart(
+        context,
+        context.read<OrderProvider>().frequentlyOrderedProducts,
+      );
     }
 
     return ResponsiveContainer(
@@ -417,6 +447,12 @@ class CartScreen extends StatelessWidget {
                             padding: const EdgeInsets.only(bottom: AppSizes.md),
                             child: _buildCartItem(context, item, cartProvider),
                           ),
+                        ),
+                        _buildCrossSellRow(
+                          context
+                              .read<OrderProvider>()
+                              .frequentlyOrderedProducts,
+                          cartProvider,
                         ),
                       ],
                     ),
@@ -729,6 +765,34 @@ class CartScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.grey50,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                    border: Border.all(color: AppColors.grey200),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        'If unavailable:',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _prefPill('Replace', false),
+                      const SizedBox(width: 6),
+                      _prefPill('Refund', false),
+                      const SizedBox(width: 6),
+                      _prefPill('Call me', true),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -737,7 +801,13 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyCart(BuildContext context) {
+  Widget _buildEmptyCart(BuildContext context, List<Product> buyAgainProducts) {
+    final categories = [
+      ('Fresh Produce', Icons.grass_rounded, const Color(0xFF15874B)),
+      ('Snacks', Icons.cookie_rounded, const Color(0xFFF89227)),
+      ('Drinks', Icons.local_drink_rounded, const Color(0xFF0D6EFD)),
+    ];
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSizes.xl),
@@ -752,27 +822,125 @@ class CartScreen extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Iconsax.bag_2,
+                Icons.shopping_basket_outlined,
                 size: 56,
                 color: AppColors.accent,
               ),
             ),
             const SizedBox(height: AppSizes.lg),
             Text(
-              'Your cart is empty',
-              style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w600),
+              'Your basket is empty',
+              style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSizes.sm),
             Text(
-              'Add some fresh groceries to get started',
+              'Add fresh groceries to get started',
               style: AppTextStyles.bodyMedium.copyWith(
                 color: AppColors.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSizes.xl),
+            // Category shortcut chips
+            Row(
+              children: categories.map((cat) {
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => context.go('/customer/browse'),
+                    child: Container(
+                      margin: EdgeInsets.only(
+                        right: cat == categories.last ? 0 : 8,
+                      ),
+                      constraints: const BoxConstraints(minHeight: 44),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: cat.$3.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        border: Border.all(
+                          color: cat.$3.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(cat.$2, color: cat.$3, size: 24),
+                          const SizedBox(height: 4),
+                          Text(
+                            cat.$1,
+                            style: AppTextStyles.caption.copyWith(
+                              color: cat.$3,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: AppSizes.xl),
+            if (buyAgainProducts.isNotEmpty) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Buy again',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSizes.sm),
+              SizedBox(
+                height: 94,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: buyAgainProducts.length > 6
+                      ? 6
+                      : buyAgainProducts.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final p = buyAgainProducts[index];
+                    return Container(
+                      width: 88,
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        border: Border.all(color: AppColors.grey200),
+                      ),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: CachedNetworkImage(
+                                imageUrl: p.image,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) =>
+                                    const Icon(Iconsax.image),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            p.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.caption.copyWith(fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: AppSizes.md),
+            ],
             GestureDetector(
-              onTap: () => Navigator.pop(context),
+              onTap: () => context.go('/customer/browse'),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSizes.xl,
@@ -783,7 +951,7 @@ class CartScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppSizes.radiusFull),
                 ),
                 child: Text(
-                  'Start Shopping',
+                  'Browse Products',
                   style: AppTextStyles.labelMedium.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -793,6 +961,121 @@ class CartScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCrossSellRow(List<Product> products, CartProvider cartProvider) {
+    if (products.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Customers also added',
+          style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 96,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: products.length > 8 ? 8 : products.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final p = products[index];
+              return Container(
+                width: 170,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  border: Border.all(color: AppColors.grey200),
+                ),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: CachedNetworkImage(
+                        imageUrl: p.image,
+                        width: 46,
+                        height: 46,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => const Icon(Iconsax.image),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        p.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => cartProvider.addToCart(p),
+                      icon: const Icon(Iconsax.add, size: 16),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _prefPill(String label, bool active) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: active ? AppColors.primarySoft : Colors.white,
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        border: Border.all(
+          color: active ? AppColors.primary : AppColors.grey300,
+        ),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.caption.copyWith(
+          color: active ? AppColors.primary : AppColors.textSecondary,
+          fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeliverySlotRow() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        border: Border.all(color: AppColors.grey200),
+      ),
+      child: Row(
+        children: [
+          const Icon(Iconsax.calendar_1, size: 16, color: AppColors.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Delivery: Today, 2-3 PM',
+              style: AppTextStyles.labelMedium.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Text(
+            'Available',
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.success,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 6),
+          const Icon(Iconsax.arrow_down_1, size: 14),
+        ],
       ),
     );
   }

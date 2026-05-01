@@ -279,7 +279,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                           child: Row(
                             children: [
                               _buildQuickTemplateChip(
-                                label: 'Weekly',
+                                label: 'Weekly essentials',
                                 emoji: '🛒',
                                 items: [
                                   ShoppingListItem(
@@ -301,8 +301,8 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                               ),
                               const SizedBox(width: AppSizes.sm),
                               _buildQuickTemplateChip(
-                                label: 'Meal Prep',
-                                emoji: '🥗',
+                                label: 'Baby supplies',
+                                emoji: '🍼',
                                 items: [
                                   ShoppingListItem(
                                     id: 'mp_chicken',
@@ -323,8 +323,8 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                               ),
                               const SizedBox(width: AppSizes.sm),
                               _buildQuickTemplateChip(
-                                label: 'BBQ',
-                                emoji: '🔥',
+                                label: 'Cleaning kit',
+                                emoji: '🧽',
                                 items: [
                                   ShoppingListItem(
                                     id: 'bbq_beef',
@@ -722,10 +722,10 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
           ),
         ),
         const SizedBox(height: AppSizes.lg),
-        Text('No Shopping Lists Yet', style: AppTextStyles.displaySm),
+        Text('Save what you buy often', style: AppTextStyles.displaySm),
         const SizedBox(height: AppSizes.sm),
         Text(
-          'Save weekly essentials, meal prep, or party items once\nso reordering your groceries takes seconds.',
+          'Save what you buy often. Reorder in two taps.',
           style: AppTextStyles.bodyMedium.copyWith(
             color: AppColors.textSecondary,
           ),
@@ -749,7 +749,7 @@ class _ShoppingListsScreenState extends State<ShoppingListsScreen> {
                 const Icon(Iconsax.add, color: Colors.white, size: 20),
                 const SizedBox(width: AppSizes.sm),
                 Text(
-                  'Create Your First List',
+                  'Create a list',
                   style: AppTextStyles.labelMedium.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,

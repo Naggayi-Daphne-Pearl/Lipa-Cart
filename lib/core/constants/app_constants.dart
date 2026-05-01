@@ -55,4 +55,8 @@ class AppConstants {
   // Images
   static const String placeholderImage = 'assets/images/placeholder.png';
   static const String logoImage = 'assets/images/logo.png';
+
+    // Support
+    /// Production WhatsApp support number (Uganda, no leading +).
+    static const String supportWhatsAppNumber = '256785796401'; 
 }

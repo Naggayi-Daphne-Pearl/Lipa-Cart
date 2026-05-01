@@ -195,27 +195,70 @@ class _SearchScreenState extends State<SearchScreen> {
 
     if (productProvider.searchResults.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Iconsax.search_normal,
-              size: 64,
-              color: AppColors.neutralGrey,
-            ),
-            const SizedBox(height: AppSizes.md),
-            Text(
-              'No products found',
-              style: AppTextStyles.h5.copyWith(color: AppColors.textMedium),
-            ),
-            const SizedBox(height: AppSizes.sm),
-            Text(
-              'Try a different search term',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textLight,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSizes.xl),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Iconsax.search_normal,
+                size: 64,
+                color: AppColors.neutralGrey,
               ),
-            ),
-          ],
+              const SizedBox(height: AppSizes.md),
+              Text(
+                'We couldn\'t find that',
+                style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.w700),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSizes.sm),
+              Text(
+                'We couldn\'t find that - try fresh fruit or rice',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSizes.lg),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: ['fresh fruit', 'rice', 'eggs', 'milk', 'bread'].map((
+                  term,
+                ) {
+                  return GestureDetector(
+                    onTap: () {
+                      _performSearch(term, productProvider);
+                    },
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: 44),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft,
+                        borderRadius: BorderRadius.circular(
+                          AppSizes.radiusFull,
+                        ),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Text(
+                        term,
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
         ),
       );
     }

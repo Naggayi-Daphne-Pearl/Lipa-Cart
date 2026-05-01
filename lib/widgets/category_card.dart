@@ -45,58 +45,73 @@ class CategoryCard extends StatelessWidget {
     return Builder(
       builder: (context) {
         final cardSize = context.responsive<double>(
-          mobile: 52.0,
-          tablet: 60.0,
-          desktop: 68.0,
+          mobile: 80.0,
+          tablet: 72.0,
+          desktop: 80.0,
         );
 
         return GestureDetector(
           onTap: onTap,
           behavior: HitTestBehavior.opaque,
-          child: SizedBox(
-            width: cardSize + 16,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Clean circular image — no gradient/border/shadow.
-                // Design direction: let the product photo carry the visual weight.
-                ClipOval(
-                  child: SizedBox(
-                    width: cardSize,
-                    height: cardSize,
-                    child: CachedNetworkImage(
-                      imageUrl: category.image,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: AppColors.grey100,
-                        alignment: Alignment.center,
-                        child: const AppLoadingIndicator.small(),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: AppColors.grey100,
-                        alignment: Alignment.center,
-                        child: Icon(
-                          Icons.category_outlined,
-                          color: AppColors.textTertiary,
-                          size: 24,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              const labelHeight = 14.0;
+              const gap = 6.0;
+
+              final imageSize = constraints.hasBoundedHeight
+                  ? (constraints.maxHeight - labelHeight - gap)
+                        .clamp(42.0, cardSize)
+                        .toDouble()
+                  : cardSize;
+
+              return SizedBox(
+                width: cardSize + 16,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Keep 80px target when space allows, shrink in tight rows.
+                    ClipOval(
+                      child: SizedBox(
+                        width: imageSize,
+                        height: imageSize,
+                        child: CachedNetworkImage(
+                          imageUrl: category.image,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: AppColors.grey100,
+                            alignment: Alignment.center,
+                            child: const AppLoadingIndicator.small(),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: AppColors.grey100,
+                            alignment: Alignment.center,
+                            child: Icon(
+                              Icons.category_outlined,
+                              color: AppColors.textTertiary,
+                              size: 24,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: gap),
+                    SizedBox(
+                      height: labelHeight,
+                      child: Text(
+                        category.name,
+                        style: AppTextStyles.labelSmall.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  category.name,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+              );
+            },
           ),
         );
       },

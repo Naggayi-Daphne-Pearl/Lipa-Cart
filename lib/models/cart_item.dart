@@ -15,6 +15,9 @@ class CartItem {
   String? substitutePhotoUrl;
   String? substituteForItemId;
 
+  /// Counter-suggestion the customer sent back after rejecting the shopper's substitute.
+  String? customerCounterSuggestion;
+
   CartItem({
     required this.id,
     required this.product,
@@ -29,12 +32,16 @@ class CartItem {
     this.substitutePrice,
     this.substitutePhotoUrl,
     this.substituteForItemId,
+    this.customerCounterSuggestion,
   });
 
   /// Parse substitute name from legacy "SUBSTITUTE: Name (UGX Price)" notes.
   static String? parseSubstituteNameFromNotes(String? notes) {
     if (notes == null || !notes.startsWith('SUBSTITUTE:')) return null;
-    return notes.replaceFirst('SUBSTITUTE: ', '').replaceFirst(RegExp(r'\s*\(UGX\s*[\d,]+\)\s*$'), '').trim();
+    return notes
+        .replaceFirst('SUBSTITUTE: ', '')
+        .replaceFirst(RegExp(r'\s*\(UGX\s*[\d,]+\)\s*$'), '')
+        .trim();
   }
 
   /// Parse substitute price from legacy "SUBSTITUTE: ... (UGX Price)" notes.
@@ -44,6 +51,10 @@ class CartItem {
     if (match == null) return null;
     return double.tryParse(match.group(1)!.replaceAll(',', ''));
   }
+
+  /// Whether the customer rejected and is waiting for a new shopper suggestion.
+  bool get isPendingShopperResponse =>
+      substitutionApproved == false && customerCounterSuggestion != null;
 
   /// Whether this item has a pending substitute suggestion.
   bool get hasSubstituteSuggestion =>
@@ -66,6 +77,7 @@ class CartItem {
     double? substitutePrice,
     String? substitutePhotoUrl,
     String? substituteForItemId,
+    String? customerCounterSuggestion,
   }) {
     return CartItem(
       id: id ?? this.id,
@@ -81,6 +93,8 @@ class CartItem {
       substitutePrice: substitutePrice ?? this.substitutePrice,
       substitutePhotoUrl: substitutePhotoUrl ?? this.substitutePhotoUrl,
       substituteForItemId: substituteForItemId ?? this.substituteForItemId,
+      customerCounterSuggestion:
+          customerCounterSuggestion ?? this.customerCounterSuggestion,
     );
   }
 
@@ -101,6 +115,8 @@ class CartItem {
       if (substitutePhotoUrl != null) 'substitutePhotoUrl': substitutePhotoUrl,
       if (substituteForItemId != null)
         'substituteForItemId': substituteForItemId,
+      if (customerCounterSuggestion != null)
+        'customerCounterSuggestion': customerCounterSuggestion,
     };
   }
 
@@ -110,8 +126,10 @@ class CartItem {
     // Structured substitution fields take priority over legacy notes parsing
     final structuredName = json['substituteName'] as String?;
     final structuredPrice = (json['substitutePrice'] as num?)?.toDouble();
-    final substituteName = structuredName ?? parseSubstituteNameFromNotes(shopperNotes);
-    final substitutePrice = structuredPrice ?? parseSubstitutePriceFromNotes(shopperNotes);
+    final substituteName =
+        structuredName ?? parseSubstituteNameFromNotes(shopperNotes);
+    final substitutePrice =
+        structuredPrice ?? parseSubstitutePriceFromNotes(shopperNotes);
 
     return CartItem(
       id: json['id'] as String,
@@ -127,6 +145,7 @@ class CartItem {
       substitutePrice: substitutePrice,
       substitutePhotoUrl: json['substitutePhotoUrl'] as String?,
       substituteForItemId: json['substituteForItemId'] as String?,
+      customerCounterSuggestion: json['customerCounterSuggestion'] as String?,
     );
   }
 }
