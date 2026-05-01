@@ -177,7 +177,10 @@ class _OrdersScreenState extends State<OrdersScreen>
                                       GoRouter.of(context).go('/customer/home');
                                     }
                                   },
-                                  child: const Icon(Iconsax.arrow_left, size: 24),
+                                  child: const Icon(
+                                    Iconsax.arrow_left,
+                                    size: 24,
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
@@ -200,7 +203,10 @@ class _OrdersScreenState extends State<OrdersScreen>
                                 context.horizontalPadding,
                                 AppSizes.lg,
                               ),
-                              child: _buildActiveOrderCard(context, activeOrder),
+                              child: _buildActiveOrderCard(
+                                context,
+                                activeOrder,
+                              ),
                             ),
                           ),
                         if (grouped.isEmpty)
@@ -214,9 +220,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                           )
                         else
                           ..._buildPastOrderSlivers(context, grouped),
-                        const SliverToBoxAdapter(
-                          child: SizedBox(height: 100),
-                        ),
+                        const SliverToBoxAdapter(child: SizedBox(height: 100)),
                       ],
                     ),
             ),
@@ -355,7 +359,8 @@ class _OrdersScreenState extends State<OrdersScreen>
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () => context.push('/customer/order-tracking', extra: order),
+              onPressed: () =>
+                  context.push('/customer/order-tracking', extra: order),
               icon: const Icon(Iconsax.location, size: 18),
               label: const Text('Track on map'),
               style: ElevatedButton.styleFrom(
@@ -682,9 +687,9 @@ class _OrdersScreenState extends State<OrdersScreen>
       }
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Added $added items to cart')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Added $added items to cart')));
   }
 
   Widget _buildEmptyState(BuildContext context, String message) {

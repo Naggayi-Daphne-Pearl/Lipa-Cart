@@ -102,14 +102,24 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
             actions: [
               GestureDetector(
                 onTap: () {
-                  final ingredients = recipe.ingredients.asMap().entries
-                      .map((e) => '${e.key + 1}. ${e.value.name} — ${e.value.quantity}')
+                  final ingredients = recipe.ingredients
+                      .asMap()
+                      .entries
+                      .map(
+                        (e) =>
+                            '${e.key + 1}. ${e.value.name} — ${e.value.quantity}',
+                      )
                       .join('\n');
-                  final text = '🍳 *${recipe.name}*\n\n'
+                  final text =
+                      '🍳 *${recipe.name}*\n\n'
                       '⏱ Prep: ${recipe.prepTime} min • Cook: ${recipe.cookTime} min • Serves ${recipe.servings}\n\n'
                       '*Ingredients:*\n$ingredients\n\n'
                       '— Shared via *LipaCart*\n📲 lipacart.com';
-                  launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(text)}'));
+                  launchUrl(
+                    Uri.parse(
+                      'https://wa.me/?text=${Uri.encodeComponent(text)}',
+                    ),
+                  );
                 },
                 child: Container(
                   margin: const EdgeInsets.all(8),
@@ -120,7 +130,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                     shape: BoxShape.circle,
                     boxShadow: AppColors.shadowSm,
                   ),
-                  child: const Icon(Iconsax.share, color: AppColors.grey400, size: 20),
+                  child: const Icon(
+                    Iconsax.share,
+                    color: AppColors.grey400,
+                    size: 20,
+                  ),
                 ),
               ),
               GestureDetector(
@@ -314,7 +328,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                           ),
                           decoration: BoxDecoration(
                             color: AppColors.grey50,
-                            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusMd,
+                            ),
                             border: Border.all(color: AppColors.grey200),
                           ),
                           child: Row(
@@ -341,7 +357,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                                   decoration: BoxDecoration(
                                     color: AppColors.surface,
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: AppColors.grey300),
+                                    border: Border.all(
+                                      color: AppColors.grey300,
+                                    ),
                                   ),
                                   child: const Center(
                                     child: Icon(Icons.remove, size: 18),
@@ -371,7 +389,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                                   decoration: BoxDecoration(
                                     color: AppColors.surface,
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: AppColors.grey300),
+                                    border: Border.all(
+                                      color: AppColors.grey300,
+                                    ),
                                   ),
                                   child: const Center(
                                     child: Icon(Icons.add, size: 18),
@@ -550,7 +570,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                           color: _selectedIngredients.isEmpty
                               ? AppColors.grey200
                               : AppColors.grey100,
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
                           border: Border.all(
                             color: _selectedIngredients.isEmpty
                                 ? AppColors.grey300
@@ -590,7 +612,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                           color: _selectedIngredients.isEmpty
                               ? AppColors.grey200
                               : AppColors.accentSoft,
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
                           border: Border.all(
                             color: _selectedIngredients.isEmpty
                                 ? AppColors.grey300
@@ -636,13 +660,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                           color: _selectedIngredients.isEmpty
                               ? AppColors.grey400
                               : AppColors.primary,
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Iconsax.shopping_cart,
-                                color: Colors.white, size: 18),
+                            const Icon(
+                              Iconsax.shopping_cart,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                             const SizedBox(width: AppSizes.xs),
                             Text(
                               'Order',
@@ -718,7 +747,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   Widget _buildIngredientsTab(Recipe recipe) {
     final visibleIngredients = _hideAlreadyOwned
         ? recipe.ingredients
-              .where((ingredient) => _selectedIngredients.contains(ingredient.id))
+              .where(
+                (ingredient) => _selectedIngredients.contains(ingredient.id),
+              )
               .toList()
         : recipe.ingredients;
 
@@ -731,11 +762,15 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           contentPadding: EdgeInsets.zero,
           title: Text(
             'Hide what I already have',
-            style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w600),
+            style: AppTextStyles.labelMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           subtitle: Text(
             'Only show ingredients you plan to buy',
-            style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
         ),
         const SizedBox(height: AppSizes.sm),
@@ -976,14 +1011,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
           contentPadding: EdgeInsets.zero,
           title: Text(
             'Keep screen on while cooking',
-            style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w600),
+            style: AppTextStyles.labelMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         const SizedBox(height: AppSizes.sm),
         ...recipe.instructions.asMap().entries.map((entry) {
           final index = entry.key;
           final step = entry.value;
-          final durationMatch = RegExp(r'(\d+)\s*(minute|minutes|min)').firstMatch(step.toLowerCase());
+          final durationMatch = RegExp(
+            r'(\d+)\s*(minute|minutes|min)',
+          ).firstMatch(step.toLowerCase());
 
           return Container(
             margin: const EdgeInsets.only(bottom: AppSizes.md),
@@ -1031,12 +1070,16 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                             onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Timer started for ${durationMatch.group(1)} minutes'),
+                                  content: Text(
+                                    'Timer started for ${durationMatch.group(1)} minutes',
+                                  ),
                                 ),
                               );
                             },
                             icon: const Icon(Iconsax.timer_1, size: 14),
-                            label: Text('Set ${durationMatch.group(1)} min timer'),
+                            label: Text(
+                              'Set ${durationMatch.group(1)} min timer',
+                            ),
                           ),
                         ],
                       ],
@@ -1079,7 +1122,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
       if (_selectedIngredients.contains(ingredient.id)) {
         if (ingredient.linkedProduct != null) {
           // Extract numeric quantity from ingredient quantity string
-          final quantity = _extractQuantityFromString(ingredient.quantity) *
+          final quantity =
+              _extractQuantityFromString(ingredient.quantity) *
               _servingsMultiplier;
           cartProvider.addToCart(ingredient.linkedProduct!, quantity: quantity);
           addedCount++;
@@ -1217,8 +1261,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
 
   void _showOrderReview(Recipe recipe, CartProvider cartProvider) {
     final selectedItems = recipe.ingredients
-        .where((i) =>
-            _selectedIngredients.contains(i.id) && i.linkedProduct != null)
+        .where(
+          (i) => _selectedIngredients.contains(i.id) && i.linkedProduct != null,
+        )
         .toList();
 
     if (selectedItems.isEmpty) {
@@ -1270,7 +1315,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
                   itemCount: selectedItems.length,
                   itemBuilder: (context, index) {
                     final item = selectedItems[index];
-                    final qty = _extractQuantityFromString(item.quantity) *
+                    final qty =
+                        _extractQuantityFromString(item.quantity) *
                         _servingsMultiplier;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: AppSizes.xs),
@@ -1361,7 +1407,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
     for (final ingredient in recipe.ingredients) {
       if (_selectedIngredients.contains(ingredient.id)) {
         if (ingredient.linkedProduct != null) {
-          final quantity = _extractQuantityFromString(ingredient.quantity) *
+          final quantity =
+              _extractQuantityFromString(ingredient.quantity) *
               _servingsMultiplier;
           cartProvider.addToCart(ingredient.linkedProduct!, quantity: quantity);
           addedCount++;

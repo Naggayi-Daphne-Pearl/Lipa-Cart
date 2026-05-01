@@ -14,6 +14,7 @@ class CartItem {
   double? substitutePrice;
   String? substitutePhotoUrl;
   String? substituteForItemId;
+
   /// Counter-suggestion the customer sent back after rejecting the shopper's substitute.
   String? customerCounterSuggestion;
 
@@ -37,7 +38,10 @@ class CartItem {
   /// Parse substitute name from legacy "SUBSTITUTE: Name (UGX Price)" notes.
   static String? parseSubstituteNameFromNotes(String? notes) {
     if (notes == null || !notes.startsWith('SUBSTITUTE:')) return null;
-    return notes.replaceFirst('SUBSTITUTE: ', '').replaceFirst(RegExp(r'\s*\(UGX\s*[\d,]+\)\s*$'), '').trim();
+    return notes
+        .replaceFirst('SUBSTITUTE: ', '')
+        .replaceFirst(RegExp(r'\s*\(UGX\s*[\d,]+\)\s*$'), '')
+        .trim();
   }
 
   /// Parse substitute price from legacy "SUBSTITUTE: ... (UGX Price)" notes.
@@ -89,7 +93,8 @@ class CartItem {
       substitutePrice: substitutePrice ?? this.substitutePrice,
       substitutePhotoUrl: substitutePhotoUrl ?? this.substitutePhotoUrl,
       substituteForItemId: substituteForItemId ?? this.substituteForItemId,
-      customerCounterSuggestion: customerCounterSuggestion ?? this.customerCounterSuggestion,
+      customerCounterSuggestion:
+          customerCounterSuggestion ?? this.customerCounterSuggestion,
     );
   }
 
@@ -121,8 +126,10 @@ class CartItem {
     // Structured substitution fields take priority over legacy notes parsing
     final structuredName = json['substituteName'] as String?;
     final structuredPrice = (json['substitutePrice'] as num?)?.toDouble();
-    final substituteName = structuredName ?? parseSubstituteNameFromNotes(shopperNotes);
-    final substitutePrice = structuredPrice ?? parseSubstitutePriceFromNotes(shopperNotes);
+    final substituteName =
+        structuredName ?? parseSubstituteNameFromNotes(shopperNotes);
+    final substitutePrice =
+        structuredPrice ?? parseSubstitutePriceFromNotes(shopperNotes);
 
     return CartItem(
       id: json['id'] as String,

@@ -150,782 +150,911 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Stack(
         children: [
           RefreshIndicator(
-        onRefresh: () => productProvider.refreshProducts(),
-        color: AppColors.accent,
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          child: ResponsiveContainer(
-            centerContent: true,
-            padding: EdgeInsets.zero,
-            child: productProvider.isLoading && productProvider.products.isEmpty
-                ? const HomePageSkeleton()
-                : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (context.isDesktop)
-                  const DesktopTopNavBar(activeSection: 'home'),
-                // Hero Section with Gradient Background
-                Container(
-                  decoration: const BoxDecoration(
-                    // Warm-grocer hero: green identity at top fading to cream.
-                    // Palette-native — no cool greys. See design_direction.md.
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        AppColors.primarySoft,
-                        AppColors.background,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(32),
-                      bottomRight: Radius.circular(32),
-                    ),
-                  ),
-                  child: SafeArea(
-                    bottom: false,
-                    child: Column(
-                      children: [
-                        // Header Bar
-                        if (!context.isDesktop)
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              context.horizontalPadding,
-                              context.responsive<double>(
-                                mobile: AppSizes.sm,
-                                tablet: AppSizes.md,
-                                desktop: AppSizes.lg,
+            onRefresh: () => productProvider.refreshProducts(),
+            color: AppColors.accent,
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              child: ResponsiveContainer(
+                centerContent: true,
+                padding: EdgeInsets.zero,
+                child:
+                    productProvider.isLoading &&
+                        productProvider.products.isEmpty
+                    ? const HomePageSkeleton()
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (context.isDesktop)
+                            const DesktopTopNavBar(activeSection: 'home'),
+                          // Hero Section with Gradient Background
+                          Container(
+                            decoration: const BoxDecoration(
+                              // Warm-grocer hero: green identity at top fading to cream.
+                              // Palette-native — no cool greys. See design_direction.md.
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  AppColors.primarySoft,
+                                  AppColors.background,
+                                ],
                               ),
-                              context.horizontalPadding,
-                              context.responsive<double>(
-                                mobile: AppSizes.xs,
-                                tablet: AppSizes.sm,
-                                desktop: AppSizes.md,
+                              borderRadius: BorderRadius.only(
+                                bottomLeft: Radius.circular(32),
+                                bottomRight: Radius.circular(32),
                               ),
                             ),
-                            child: Row(
-                              children: [
-                                if (context.isMobile)
-                                  SvgPicture.asset(
-                                    'assets/images/logos/logo-on-white.svg',
-                                    height: context.responsive<double>(
-                                      mobile: 20.0,
-                                      tablet: 24.0,
-                                      desktop: 28.0,
-                                    ),
-                                    fit: BoxFit.contain,
-                                  )
-                                else
-                                  Text(
-                                    'Hi, ${authProvider.user?.name ?? 'there'}',
-                                    style: AppTextStyles.bodyLarge.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                const Spacer(),
-                                _buildHeaderActionButton(
-                                  context: context,
-                                  icon: Iconsax.notification,
-                                  badgeCount: _unreadNotifications,
-                                  onTap: () async {
-                                    await context.push(
-                                      '/customer/notifications',
-                                    );
-                                    _fetchUnreadCount();
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        // Greeting section
-                        if (context.isMobile)
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: context.horizontalPadding,
-                              vertical: AppSizes.md,
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surface,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: AppColors.primary.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                      width: 2,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.05,
+                            child: SafeArea(
+                              bottom: false,
+                              child: Column(
+                                children: [
+                                  // Header Bar
+                                  if (!context.isDesktop)
+                                    Padding(
+                                      padding: EdgeInsets.fromLTRB(
+                                        context.horizontalPadding,
+                                        context.responsive<double>(
+                                          mobile: AppSizes.sm,
+                                          tablet: AppSizes.md,
+                                          desktop: AppSizes.lg,
                                         ),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 1),
+                                        context.horizontalPadding,
+                                        context.responsive<double>(
+                                          mobile: AppSizes.xs,
+                                          tablet: AppSizes.sm,
+                                          desktop: AppSizes.md,
+                                        ),
                                       ),
-                                    ],
-                                  ),
-                                  child: authProvider.user?.profileImage != null
-                                      ? ClipOval(
-                                          child: Image.network(
-                                            authProvider.user!.profileImage!,
-                                            fit: BoxFit.cover,
+                                      child: Row(
+                                        children: [
+                                          if (context.isMobile)
+                                            SvgPicture.asset(
+                                              'assets/images/logos/logo-on-white.svg',
+                                              height: context
+                                                  .responsive<double>(
+                                                    mobile: 20.0,
+                                                    tablet: 24.0,
+                                                    desktop: 28.0,
+                                                  ),
+                                              fit: BoxFit.contain,
+                                            )
+                                          else
+                                            Text(
+                                              'Hi, ${authProvider.user?.name ?? 'there'}',
+                                              style: AppTextStyles.bodyLarge
+                                                  .copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                    color:
+                                                        AppColors.textPrimary,
+                                                  ),
+                                            ),
+                                          const Spacer(),
+                                          _buildHeaderActionButton(
+                                            context: context,
+                                            icon: Iconsax.notification,
+                                            badgeCount: _unreadNotifications,
+                                            onTap: () async {
+                                              await context.push(
+                                                '/customer/notifications',
+                                              );
+                                              _fetchUnreadCount();
+                                            },
                                           ),
-                                        )
-                                      : Center(
-                                          child: Text(
-                                            authProvider.user?.name
-                                                    ?.substring(0, 1)
-                                                    .toUpperCase() ??
-                                                'G',
-                                            style: AppTextStyles.h4.copyWith(
-                                              color: AppColors.primary,
-                                              fontWeight: FontWeight.w700,
+                                        ],
+                                      ),
+                                    ),
+                                  // Greeting section
+                                  if (context.isMobile)
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: context.horizontalPadding,
+                                        vertical: AppSizes.md,
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            width: 48,
+                                            height: 48,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.surface,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: AppColors.primary
+                                                    .withValues(alpha: 0.2),
+                                                width: 2,
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.05),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 1),
+                                                ),
+                                              ],
+                                            ),
+                                            child:
+                                                authProvider
+                                                        .user
+                                                        ?.profileImage !=
+                                                    null
+                                                ? ClipOval(
+                                                    child: Image.network(
+                                                      authProvider
+                                                          .user!
+                                                          .profileImage!,
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                  )
+                                                : Center(
+                                                    child: Text(
+                                                      authProvider.user?.name
+                                                              ?.substring(0, 1)
+                                                              .toUpperCase() ??
+                                                          'G',
+                                                      style: AppTextStyles.h4
+                                                          .copyWith(
+                                                            color: AppColors
+                                                                .primary,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                          ),
+                                                    ),
+                                                  ),
+                                          ),
+                                          const SizedBox(width: AppSizes.md),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  _getGreeting(
+                                                    authProvider.user?.name
+                                                            ?.split(' ')
+                                                            .first ??
+                                                        'there',
+                                                  ),
+                                                  style:
+                                                      AppTextStyles.displayMd,
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  'What would you buy today?',
+                                                  style: AppTextStyles
+                                                      .bodyMedium
+                                                      .copyWith(
+                                                        color: AppColors
+                                                            .textSecondary,
+                                                      ),
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                        ),
-                                ),
-                                const SizedBox(width: AppSizes.md),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        _getGreeting(
-                                          authProvider.user?.name
-                                                  ?.split(' ')
-                                                  .first ??
-                                              'there',
-                                        ),
-                                        style: AppTextStyles.displayMd,
+                                        ],
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'What would you buy today?',
-                                        style: AppTextStyles.bodyMedium
-                                            .copyWith(
-                                              color: AppColors.textSecondary,
-                                            ),
+                                    ),
+
+                                  // Search Bar
+                                  if (!context.isDesktop)
+                                    Padding(
+                                      padding: EdgeInsets.fromLTRB(
+                                        context.horizontalPadding,
+                                        context.responsive<double>(
+                                          mobile: AppSizes.md,
+                                          tablet: AppSizes.sm,
+                                          desktop: 0.0,
+                                        ),
+                                        context.horizontalPadding,
+                                        context.responsive<double>(
+                                          mobile: AppSizes.sm,
+                                          tablet: AppSizes.md,
+                                          desktop: AppSizes.lg,
+                                        ),
                                       ),
-                                    ],
+                                      child: _buildSearchBar(context),
+                                    ),
+                                  // Trust strip — three quick credibility signals.
+                                  if (!context.isDesktop)
+                                    Padding(
+                                      padding: EdgeInsets.fromLTRB(
+                                        context.horizontalPadding,
+                                        0,
+                                        context.horizontalPadding,
+                                        AppSizes.sm,
+                                      ),
+                                      child: _buildTrustStrip(),
+                                    ),
+                                  // Editorial hero — warm grocer positioning.
+                                  Padding(
+                                    padding: EdgeInsets.fromLTRB(
+                                      context.horizontalPadding,
+                                      AppSizes.md,
+                                      context.horizontalPadding,
+                                      AppSizes.md,
+                                    ),
+                                    child: _buildEditorialHero(context),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
 
-                        // Search Bar
-                        if (!context.isDesktop)
+                          if (_showQuickTour)
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                context.horizontalPadding,
+                                AppSizes.md,
+                                context.horizontalPadding,
+                                AppSizes.sm,
+                              ),
+                              child: FeatureSpotlightCard(
+                                icon: Iconsax.routing_2,
+                                eyebrow: 'QUICK START',
+                                title: 'Take a quick tour of LipaCart',
+                                description:
+                                    'Browse products, save repeat orders in Shopping Lists, and track deliveries without interrupting your flow.',
+                                highlights: const [
+                                  'Browse fresh picks',
+                                  'Save lists for later',
+                                  'Track each order live',
+                                ],
+                                primaryLabel: 'Browse Products',
+                                onPrimaryTap: () =>
+                                    context.push('/customer/browse'),
+                                secondaryLabel: 'Open Lists',
+                                onSecondaryTap: () =>
+                                    context.push('/customer/shopping-lists'),
+                                onDismiss: _dismissQuickTour,
+                                accentColor: AppColors.accent,
+                              ),
+                            ),
+
+                          // Categories section
                           Padding(
                             padding: EdgeInsets.fromLTRB(
                               context.horizontalPadding,
-                              context.responsive<double>(
-                                mobile: AppSizes.md,
-                                tablet: AppSizes.sm,
-                                desktop: 0.0,
-                              ),
+                              AppSizes.sm,
                               context.horizontalPadding,
-                              context.responsive<double>(
-                                mobile: AppSizes.sm,
-                                tablet: AppSizes.md,
-                                desktop: AppSizes.lg,
-                              ),
+                              AppSizes.sm,
                             ),
-                            child: _buildSearchBar(context),
+                            child: _buildSectionHeader(
+                              'Categories',
+                              onSeeAll: () =>
+                                  context.push('/customer/categories'),
+                            ),
                           ),
-                        // Trust strip — three quick credibility signals.
-                        if (!context.isDesktop)
+                          AdaptiveCategorySection(
+                            categories: productProvider.categories,
+                            onCategoryTap: (category) => context.push(
+                              '/customer/category',
+                              extra: category,
+                            ),
+                          ),
+                          const SizedBox(height: AppSizes.xl),
+
+                          // Buy Again section (authenticated users with past orders)
+                          if (authProvider.isAuthenticated)
+                            Builder(
+                              builder: (context) {
+                                final orderService = context
+                                    .watch<OrderService>();
+                                // Collect all products from delivered orders, deduplicated
+                                final seen = <String>{};
+                                final buyAgainProducts = orderService.orders
+                                    .where(
+                                      (o) => o.status == OrderStatus.delivered,
+                                    )
+                                    .expand((o) => o.items)
+                                    .where(
+                                      (item) =>
+                                          seen.add(item.product.id.toString()),
+                                    )
+                                    .take(10)
+                                    .toList();
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: context.horizontalPadding,
+                                      ),
+                                      child: _buildSectionHeader(
+                                        buyAgainProducts.isEmpty
+                                            ? 'Popular in Kampala'
+                                            : 'Buy Again',
+                                        onSeeAll: buyAgainProducts.isEmpty
+                                            ? null
+                                            : () => context.push(
+                                                '/customer/orders',
+                                              ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppSizes.sm),
+                                    if (buyAgainProducts.isEmpty)
+                                      // New customer: show Popular in Kampala placeholder
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: context.horizontalPadding,
+                                        ),
+                                        child: _buildPopularInKampalaHint(
+                                          context,
+                                        ),
+                                      )
+                                    else
+                                      SizedBox(
+                                        height: 110,
+                                        child: ListView.builder(
+                                          scrollDirection: Axis.horizontal,
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal:
+                                                context.horizontalPadding,
+                                          ),
+                                          itemCount: buyAgainProducts.length,
+                                          itemBuilder: (context, index) {
+                                            final item =
+                                                buyAgainProducts[index];
+                                            return GestureDetector(
+                                              onTap: () {
+                                                cartProvider.addToCart(
+                                                  item.product,
+                                                );
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      '${item.product.name} added to cart',
+                                                    ),
+                                                    backgroundColor:
+                                                        AppColors.success,
+                                                    duration: const Duration(
+                                                      seconds: 2,
+                                                    ),
+                                                    action: SnackBarAction(
+                                                      label: 'View Cart',
+                                                      textColor: Colors.white,
+                                                      onPressed: () =>
+                                                          context.push(
+                                                            '/customer/cart',
+                                                          ),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                              child: Container(
+                                                width: 88,
+                                                margin: const EdgeInsets.only(
+                                                  right: 12,
+                                                ),
+                                                child: Column(
+                                                  children: [
+                                                    Stack(
+                                                      children: [
+                                                        Container(
+                                                          width: 72,
+                                                          height: 72,
+                                                          decoration: BoxDecoration(
+                                                            color: AppColors
+                                                                .grey100,
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  12,
+                                                                ),
+                                                            border: Border.all(
+                                                              color: AppColors
+                                                                  .grey200,
+                                                            ),
+                                                          ),
+                                                          child: ClipRRect(
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  12,
+                                                                ),
+                                                            child: CachedNetworkImage(
+                                                              imageUrl: item
+                                                                  .product
+                                                                  .image,
+                                                              fit: BoxFit.cover,
+                                                              errorWidget:
+                                                                  (
+                                                                    _,
+                                                                    __,
+                                                                    ___,
+                                                                  ) => Icon(
+                                                                    Iconsax
+                                                                        .image,
+                                                                    color: AppColors
+                                                                        .grey400,
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Positioned(
+                                                          bottom: 0,
+                                                          right: 0,
+                                                          child: Container(
+                                                            width: 24,
+                                                            height: 24,
+                                                            decoration:
+                                                                const BoxDecoration(
+                                                                  color: AppColors
+                                                                      .primary,
+                                                                  shape: BoxShape
+                                                                      .circle,
+                                                                ),
+                                                            child: const Icon(
+                                                              Iconsax.add,
+                                                              color:
+                                                                  Colors.white,
+                                                              size: 14,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      item.product.name,
+                                                      style: AppTextStyles
+                                                          .caption
+                                                          .copyWith(
+                                                            fontWeight:
+                                                                FontWeight.w500,
+                                                            fontSize: 11,
+                                                          ),
+                                                      maxLines: 2,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    const SizedBox(height: AppSizes.xl),
+                                  ],
+                                );
+                              },
+                            ),
+
+                          // Your Shopping Lists
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Your Lists',
+                                  style: AppTextStyles.sectionTitle,
+                                ),
+                                GestureDetector(
+                                  onTap: () =>
+                                      context.push('/customer/shopping-lists'),
+                                  child: Text(
+                                    'See All',
+                                    style: AppTextStyles.labelLarge.copyWith(
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Consumer<ShoppingListProvider>(
+                            builder: (context, listProvider, _) {
+                              final lists = listProvider.lists;
+                              if (lists.isEmpty) {
+                                return Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: context.horizontalPadding,
+                                  ),
+                                  child: GestureDetector(
+                                    onTap: () => context.push(
+                                      '/customer/shopping-lists',
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(
+                                        AppSizes.lg,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primarySoft,
+                                        borderRadius: BorderRadius.circular(
+                                          AppSizes.radiusLg,
+                                        ),
+                                        border: Border.all(
+                                          color: AppColors.primaryMuted,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          // Stacked illustration — clipboard with plus badge.
+                                          SizedBox(
+                                            width: 72,
+                                            height: 72,
+                                            child: Stack(
+                                              clipBehavior: Clip.none,
+                                              children: [
+                                                Container(
+                                                  width: 64,
+                                                  height: 64,
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.surface,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          AppSizes.radiusMd,
+                                                        ),
+                                                    boxShadow:
+                                                        AppColors.shadowSm,
+                                                  ),
+                                                  alignment: Alignment.center,
+                                                  child: const Icon(
+                                                    Iconsax.clipboard_text,
+                                                    color: AppColors.primary,
+                                                    size: 30,
+                                                  ),
+                                                ),
+                                                Positioned(
+                                                  right: 0,
+                                                  bottom: 0,
+                                                  child: Container(
+                                                    width: 26,
+                                                    height: 26,
+                                                    decoration: BoxDecoration(
+                                                      color: AppColors.accent,
+                                                      shape: BoxShape.circle,
+                                                      border: Border.all(
+                                                        color:
+                                                            AppColors.surface,
+                                                        width: 2,
+                                                      ),
+                                                    ),
+                                                    child: const Icon(
+                                                      Iconsax.add,
+                                                      color: Colors.white,
+                                                      size: 14,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: AppSizes.md),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Start your grocery list',
+                                                  style: AppTextStyles.bodyLarge
+                                                      .copyWith(
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: AppColors
+                                                            .textPrimary,
+                                                      ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  'Plan your shopping and order in one tap',
+                                                  style: AppTextStyles.bodySmall
+                                                      .copyWith(
+                                                        color: AppColors
+                                                            .textSecondary,
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const Icon(
+                                            Iconsax.arrow_right_3,
+                                            size: 18,
+                                            color: AppColors.primary,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              return SizedBox(
+                                height: 100,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  itemCount: lists.length,
+                                  itemBuilder: (context, index) {
+                                    final list = lists[index];
+                                    final color = Color(
+                                      int.parse(
+                                        'FF${list.color.replaceAll('#', '')}',
+                                        radix: 16,
+                                      ),
+                                    );
+                                    return GestureDetector(
+                                      onTap: () => context.push(
+                                        '/customer/shopping-list-detail',
+                                        extra: list.id,
+                                      ),
+                                      child: Container(
+                                        width: 180,
+                                        margin: const EdgeInsets.only(
+                                          right: 12,
+                                        ),
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: color.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: color.withValues(alpha: 0.2),
+                                          ),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  list.emoji ?? '🛒',
+                                                  style: const TextStyle(
+                                                    fontSize: 22,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    list.name,
+                                                    style: AppTextStyles
+                                                        .labelLarge
+                                                        .copyWith(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const Spacer(),
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Text(
+                                                  '${list.totalItems} items',
+                                                  style: AppTextStyles.caption
+                                                      .copyWith(
+                                                        color: AppColors
+                                                            .textSecondary,
+                                                      ),
+                                                ),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 4,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: color,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    'Shop',
+                                                    style: AppTextStyles
+                                                        .labelSmall
+                                                        .copyWith(
+                                                          color: Colors.white,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Fresh Picks Today section
+                          const SizedBox(height: AppSizes.xl),
                           Padding(
                             padding: EdgeInsets.fromLTRB(
                               context.horizontalPadding,
                               0,
                               context.horizontalPadding,
-                              AppSizes.sm,
-                            ),
-                            child: _buildTrustStrip(),
-                          ),
-                        // Editorial hero — warm grocer positioning.
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            context.horizontalPadding,
-                            AppSizes.md,
-                            context.horizontalPadding,
-                            AppSizes.md,
-                          ),
-                          child: _buildEditorialHero(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                if (_showQuickTour)
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      context.horizontalPadding,
-                      AppSizes.md,
-                      context.horizontalPadding,
-                      AppSizes.sm,
-                    ),
-                    child: FeatureSpotlightCard(
-                      icon: Iconsax.routing_2,
-                      eyebrow: 'QUICK START',
-                      title: 'Take a quick tour of LipaCart',
-                      description:
-                          'Browse products, save repeat orders in Shopping Lists, and track deliveries without interrupting your flow.',
-                      highlights: const [
-                        'Browse fresh picks',
-                        'Save lists for later',
-                        'Track each order live',
-                      ],
-                      primaryLabel: 'Browse Products',
-                      onPrimaryTap: () => context.push('/customer/browse'),
-                      secondaryLabel: 'Open Lists',
-                      onSecondaryTap: () =>
-                          context.push('/customer/shopping-lists'),
-                      onDismiss: _dismissQuickTour,
-                      accentColor: AppColors.accent,
-                    ),
-                  ),
-
-                // Categories section
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    context.horizontalPadding,
-                    AppSizes.sm,
-                    context.horizontalPadding,
-                    AppSizes.sm,
-                  ),
-                  child: _buildSectionHeader(
-                    'Categories',
-                    onSeeAll: () => context.push('/customer/categories'),
-                  ),
-                ),
-                AdaptiveCategorySection(
-                  categories: productProvider.categories,
-                  onCategoryTap: (category) =>
-                      context.push('/customer/category', extra: category),
-                ),
-                const SizedBox(height: AppSizes.xl),
-
-                // Buy Again section (authenticated users with past orders)
-                if (authProvider.isAuthenticated)
-                  Builder(
-                    builder: (context) {
-                      final orderService = context.watch<OrderService>();
-                      // Collect all products from delivered orders, deduplicated
-                      final seen = <String>{};
-                      final buyAgainProducts = orderService.orders
-                          .where((o) => o.status == OrderStatus.delivered)
-                          .expand((o) => o.items)
-                          .where((item) => seen.add(item.product.id.toString()))
-                          .take(10)
-                          .toList();
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: context.horizontalPadding,
+                              AppSizes.lg,
                             ),
                             child: _buildSectionHeader(
-                              buyAgainProducts.isEmpty
-                                  ? 'Popular in Kampala'
-                                  : 'Buy Again',
-                              onSeeAll: buyAgainProducts.isEmpty
-                                  ? null
-                                  : () => context.push('/customer/orders'),
+                              'Fresh Picks Today',
+                              onSeeAll: () {},
                             ),
                           ),
-                          const SizedBox(height: AppSizes.sm),
-                          if (buyAgainProducts.isEmpty)
-                            // New customer: show Popular in Kampala placeholder
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
-                              child: _buildPopularInKampalaHint(context),
+                          if (productProvider.isLoading)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSizes.lg,
+                              ),
+                              child: ShimmerHorizontalRow(),
                             )
                           else
-                            SizedBox(
-                              height: 110,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: context.horizontalPadding,
-                                ),
-                                itemCount: buyAgainProducts.length,
-                                itemBuilder: (context, index) {
-                                  final item = buyAgainProducts[index];
-                                  return GestureDetector(
-                                    onTap: () {
-                                      cartProvider.addToCart(item.product);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('${item.product.name} added to cart'),
-                                          backgroundColor: AppColors.success,
-                                          duration: const Duration(seconds: 2),
-                                          action: SnackBarAction(
-                                            label: 'View Cart',
-                                            textColor: Colors.white,
-                                            onPressed: () => context.push('/customer/cart'),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: Container(
-                                      width: 88,
-                                      margin: const EdgeInsets.only(right: 12),
-                                      child: Column(
-                                        children: [
-                                          Stack(
-                                            children: [
-                                              Container(
-                                                width: 72,
-                                                height: 72,
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.grey100,
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  border: Border.all(color: AppColors.grey200),
-                                                ),
-                                                child: ClipRRect(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  child: CachedNetworkImage(
-                                                    imageUrl: item.product.image,
-                                                    fit: BoxFit.cover,
-                                                    errorWidget: (_, __, ___) => Icon(Iconsax.image, color: AppColors.grey400),
-                                                  ),
-                                                ),
-                                              ),
-                                              Positioned(
-                                                bottom: 0,
-                                                right: 0,
-                                                child: Container(
-                                                  width: 24,
-                                                  height: 24,
-                                                  decoration: const BoxDecoration(
-                                                    color: AppColors.primary,
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                  child: const Icon(Iconsax.add, color: Colors.white, size: 14),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            item.product.name,
-                                            style: AppTextStyles.caption.copyWith(
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 11,
-                                            ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
+                            AdaptiveProductSection(
+                              itemWidth: context.responsive<double>(
+                                mobile: 160,
+                                tablet: 150,
+                                desktop: 145,
                               ),
+                              itemHeight: context.responsive<double>(
+                                mobile: 270,
+                                tablet: 260,
+                                desktop: 255,
+                              ),
+                              products:
+                                  (productProvider.featuredProducts.isNotEmpty
+                                          ? productProvider.featuredProducts
+                                          : productProvider.products.take(12))
+                                      .map(
+                                        (product) =>
+                                            _buildHorizontalProductCard(
+                                              product,
+                                              cartProvider,
+                                            ),
+                                      )
+                                      .toList(),
                             ),
+
+                          // Popular This Week section
                           const SizedBox(height: AppSizes.xl),
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              context.horizontalPadding,
+                              0,
+                              context.horizontalPadding,
+                              AppSizes.lg,
+                            ),
+                            child: _buildSectionHeader(
+                              'Popular This Week',
+                              onSeeAll: () {},
+                            ),
+                          ),
+                          if (!productProvider.isLoading)
+                            AdaptiveProductSection(
+                              itemWidth: context.responsive<double>(
+                                mobile: 160,
+                                tablet: 150,
+                                desktop: 145,
+                              ),
+                              itemHeight: context.responsive<double>(
+                                mobile: 270,
+                                tablet: 260,
+                                desktop: 255,
+                              ),
+                              products: productProvider.products.reversed
+                                  .take(12)
+                                  .map(
+                                    (product) => _buildHorizontalProductCard(
+                                      product,
+                                      cartProvider,
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+
+                          // Popular Recipes section
+                          const SizedBox(height: AppSizes.xl),
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              context.horizontalPadding,
+                              0,
+                              context.horizontalPadding,
+                              AppSizes.lg,
+                            ),
+                            child: _buildSectionHeader(
+                              'Popular Recipes',
+                              onSeeAll: () => context.push('/customer/recipes'),
+                            ),
+                          ),
+                          if (!recipeProvider.isLoading &&
+                              recipeProvider.popularRecipes.isNotEmpty)
+                            AdaptiveProductSection(
+                              itemWidth: 200,
+                              products: recipeProvider.popularRecipes
+                                  .take(12)
+                                  .map((recipe) => _buildRecipeCard(recipe))
+                                  .toList(),
+                            ),
+
+                          const SizedBox(height: AppSizes.xl),
+                          const DesktopFooter(),
+                          const SizedBox(height: 100),
                         ],
-                      );
-                    },
-                  ),
-
-                // Your Shopping Lists
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Your Lists', style: AppTextStyles.sectionTitle),
-                      GestureDetector(
-                        onTap: () => context.push('/customer/shopping-lists'),
-                        child: Text(
-                          'See All',
-                          style: AppTextStyles.labelLarge.copyWith(
-                            color: AppColors.primary,
-                          ),
-                        ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Consumer<ShoppingListProvider>(
-                  builder: (context, listProvider, _) {
-                    final lists = listProvider.lists;
-                    if (lists.isEmpty) {
-                      return Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: context.horizontalPadding,
-                        ),
-                        child: GestureDetector(
-                          onTap: () => context.push('/customer/shopping-lists'),
-                          child: Container(
-                            padding: const EdgeInsets.all(AppSizes.lg),
-                            decoration: BoxDecoration(
-                              color: AppColors.primarySoft,
-                              borderRadius: BorderRadius.circular(
-                                AppSizes.radiusLg,
-                              ),
-                              border: Border.all(
-                                color: AppColors.primaryMuted,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                // Stacked illustration — clipboard with plus badge.
-                                SizedBox(
-                                  width: 72,
-                                  height: 72,
-                                  child: Stack(
-                                    clipBehavior: Clip.none,
-                                    children: [
-                                      Container(
-                                        width: 64,
-                                        height: 64,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.surface,
-                                          borderRadius: BorderRadius.circular(
-                                            AppSizes.radiusMd,
-                                          ),
-                                          boxShadow: AppColors.shadowSm,
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: const Icon(
-                                          Iconsax.clipboard_text,
-                                          color: AppColors.primary,
-                                          size: 30,
-                                        ),
-                                      ),
-                                      Positioned(
-                                        right: 0,
-                                        bottom: 0,
-                                        child: Container(
-                                          width: 26,
-                                          height: 26,
-                                          decoration: BoxDecoration(
-                                            color: AppColors.accent,
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: AppColors.surface,
-                                              width: 2,
-                                            ),
-                                          ),
-                                          child: const Icon(
-                                            Iconsax.add,
-                                            color: Colors.white,
-                                            size: 14,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: AppSizes.md),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Start your grocery list',
-                                        style: AppTextStyles.bodyLarge
-                                            .copyWith(
-                                              fontWeight: FontWeight.w700,
-                                              color: AppColors.textPrimary,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Plan your shopping and order in one tap',
-                                        style: AppTextStyles.bodySmall.copyWith(
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Icon(
-                                  Iconsax.arrow_right_3,
-                                  size: 18,
-                                  color: AppColors.primary,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    return SizedBox(
-                      height: 100,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: lists.length,
-                        itemBuilder: (context, index) {
-                          final list = lists[index];
-                          final color = Color(
-                            int.parse(
-                              'FF${list.color.replaceAll('#', '')}',
-                              radix: 16,
-                            ),
-                          );
-                          return GestureDetector(
-                            onTap: () => context.push(
-                              '/customer/shopping-list-detail',
-                              extra: list.id,
-                            ),
-                            child: Container(
-                              width: 180,
-                              margin: const EdgeInsets.only(right: 12),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: color.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: color.withValues(alpha: 0.2),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        list.emoji ?? '🛒',
-                                        style: const TextStyle(fontSize: 22),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          list.name,
-                                          style: AppTextStyles.labelLarge
-                                              .copyWith(
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const Spacer(),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        '${list.totalItems} items',
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: color,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          'Shop',
-                                          style: AppTextStyles.labelSmall
-                                              .copyWith(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 24),
-
-                // Fresh Picks Today section
-                const SizedBox(height: AppSizes.xl),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    context.horizontalPadding,
-                    0,
-                    context.horizontalPadding,
-                    AppSizes.lg,
-                  ),
-                  child: _buildSectionHeader(
-                    'Fresh Picks Today',
-                    onSeeAll: () {},
-                  ),
-                ),
-                if (productProvider.isLoading)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: AppSizes.lg),
-                    child: ShimmerHorizontalRow(),
-                  )
-                else
-                  AdaptiveProductSection(
-                    itemWidth: context.responsive<double>(
-                      mobile: 160,
-                      tablet: 150,
-                      desktop: 145,
-                    ),
-                    itemHeight: context.responsive<double>(
-                      mobile: 270,
-                      tablet: 260,
-                      desktop: 255,
-                    ),
-                    products:
-                        (productProvider.featuredProducts.isNotEmpty
-                                ? productProvider.featuredProducts
-                                : productProvider.products.take(12))
-                            .map(
-                              (product) => _buildHorizontalProductCard(
-                                product,
-                                cartProvider,
-                              ),
-                            )
-                            .toList(),
-                  ),
-
-                // Popular This Week section
-                const SizedBox(height: AppSizes.xl),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    context.horizontalPadding,
-                    0,
-                    context.horizontalPadding,
-                    AppSizes.lg,
-                  ),
-                  child: _buildSectionHeader(
-                    'Popular This Week',
-                    onSeeAll: () {},
-                  ),
-                ),
-                if (!productProvider.isLoading)
-                  AdaptiveProductSection(
-                    itemWidth: context.responsive<double>(
-                      mobile: 160,
-                      tablet: 150,
-                      desktop: 145,
-                    ),
-                    itemHeight: context.responsive<double>(
-                      mobile: 270,
-                      tablet: 260,
-                      desktop: 255,
-                    ),
-                    products: productProvider.products.reversed
-                        .take(12)
-                        .map(
-                          (product) => _buildHorizontalProductCard(
-                            product,
-                            cartProvider,
-                          ),
-                        )
-                        .toList(),
-                  ),
-
-                // Popular Recipes section
-                const SizedBox(height: AppSizes.xl),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    context.horizontalPadding,
-                    0,
-                    context.horizontalPadding,
-                    AppSizes.lg,
-                  ),
-                  child: _buildSectionHeader(
-                    'Popular Recipes',
-                    onSeeAll: () => context.push('/customer/recipes'),
-                  ),
-                ),
-                if (!recipeProvider.isLoading &&
-                    recipeProvider.popularRecipes.isNotEmpty)
-                  AdaptiveProductSection(
-                    itemWidth: 200,
-                    products: recipeProvider.popularRecipes
-                        .take(12)
-                        .map((recipe) => _buildRecipeCard(recipe))
-                        .toList(),
-                  ),
-
-                const SizedBox(height: AppSizes.xl),
-                const DesktopFooter(),
-                const SizedBox(height: 100),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
-        // Sticky search bar — appears after scrolling past hero
-        AnimatedPositioned(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          top: _showStickySearch ? 0 : -80,
-          left: 0,
-          right: 0,
-          child: SafeArea(
-            bottom: false,
-            child: Container(
-              color: AppColors.surface,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: GestureDetector(
-                onTap: () => context.push('/customer/search'),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 400),
-                  child: Container(
-                    key: ValueKey(_hintIndex),
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.grey50,
-                      borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                      border: Border.all(color: AppColors.grey200),
-                    ),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 16),
-                        Icon(Iconsax.search_normal, color: AppColors.textTertiary, size: 20),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            _searchHints[_hintIndex],
-                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textTertiary),
-                          ),
+          // Sticky search bar — appears after scrolling past hero
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            top: _showStickySearch ? 0 : -80,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Container(
+                color: AppColors.surface,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: GestureDetector(
+                  onTap: () => context.push('/customer/search'),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    child: Container(
+                      key: ValueKey(_hintIndex),
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.grey50,
+                        borderRadius: BorderRadius.circular(
+                          AppSizes.radiusFull,
                         ),
-                      ],
+                        border: Border.all(color: AppColors.grey200),
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 16),
+                          Icon(
+                            Iconsax.search_normal,
+                            color: AppColors.textTertiary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              _searchHints[_hintIndex],
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textTertiary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-        const FloatingCartButton(),
-        const WhatsAppSupportButton(
-          phoneNumber: AppConstants.supportWhatsAppNumber,
-        ),
+          const FloatingCartButton(),
+          const WhatsAppSupportButton(
+            phoneNumber: AppConstants.supportWhatsAppNumber,
+          ),
         ],
       ),
     );
@@ -1031,7 +1160,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: AppSizes.sm),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: 10),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSizes.sm,
+            vertical: 10,
+          ),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppSizes.radiusMd),
@@ -1043,16 +1175,27 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 6),
               Text(
                 'Pay with:',
-                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                ),
               ),
               const SizedBox(width: 8),
               _buildPaymentBadge('MTN', const Color(0xFFFFCC00), Colors.black),
               const SizedBox(width: 6),
-              _buildPaymentBadge('Airtel', const Color(0xFFE40000), Colors.white),
+              _buildPaymentBadge(
+                'Airtel',
+                const Color(0xFFE40000),
+                Colors.white,
+              ),
               const SizedBox(width: 6),
               _buildPaymentBadge('VISA', const Color(0xFF1A1F71), Colors.white),
               const SizedBox(width: 6),
-              _buildPaymentBadge('Cash', AppColors.primarySoft, AppColors.primary),
+              _buildPaymentBadge(
+                'Cash',
+                AppColors.primarySoft,
+                AppColors.primary,
+              ),
             ],
           ),
         ),
@@ -1313,9 +1456,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.surface.withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(
-                        AppSizes.radiusFull,
-                      ),
+                      borderRadius: BorderRadius.circular(AppSizes.radiusFull),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -1364,8 +1505,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     children: [
                       ElevatedButton.icon(
-                        onPressed: () =>
-                            context.push('/customer/categories'),
+                        onPressed: () => context.push('/customer/categories'),
                         icon: const Icon(Iconsax.shop, size: 18),
                         label: const Text('Shop now'),
                         style: ElevatedButton.styleFrom(
@@ -1429,7 +1569,9 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(
             'Start your first order',
-            style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w700),
+            style: AppTextStyles.labelMedium.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 10),
           Row(
@@ -1450,7 +1592,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 4),
                         Text(
                           cat.$1,
-                          style: AppTextStyles.caption.copyWith(fontSize: 10, fontWeight: FontWeight.w600),
+                          style: AppTextStyles.caption.copyWith(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -1576,11 +1721,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        Icon(
-                          Iconsax.star1,
-                          size: 13,
-                          color: AppColors.accent,
-                        ),
+                        Icon(Iconsax.star1, size: 13, color: AppColors.accent),
                         const SizedBox(width: 4),
                         Text(
                           product.rating.toStringAsFixed(1),
@@ -1618,9 +1759,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             cartProvider.addToCart(product);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(
-                                  '${product.name} added to cart',
-                                ),
+                                content: Text('${product.name} added to cart'),
                                 backgroundColor: AppColors.success,
                                 behavior: SnackBarBehavior.floating,
                                 shape: RoundedRectangleBorder(
@@ -1641,7 +1780,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   height: 40,
                                   decoration: BoxDecoration(
                                     color: AppColors.primarySoft,
-                                    borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                                    borderRadius: BorderRadius.circular(
+                                      AppSizes.radiusFull,
+                                    ),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -1649,14 +1790,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                       GestureDetector(
                                         onTap: () {
                                           HapticFeedback.lightImpact();
-                                          cartProvider.decrementQuantity(product.id);
+                                          cartProvider.decrementQuantity(
+                                            product.id,
+                                          );
                                         },
                                         child: SizedBox(
                                           width: 44,
                                           height: 44,
                                           child: Center(
                                             child: Icon(
-                                              qty == 1 ? Iconsax.trash : Icons.remove,
+                                              qty == 1
+                                                  ? Iconsax.trash
+                                                  : Icons.remove,
                                               size: 18,
                                               color: AppColors.primary,
                                             ),
@@ -1665,21 +1810,28 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                       Text(
                                         '$qty',
-                                        style: AppTextStyles.labelMedium.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.primary,
-                                        ),
+                                        style: AppTextStyles.labelMedium
+                                            .copyWith(
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.primary,
+                                            ),
                                       ),
                                       GestureDetector(
                                         onTap: () {
                                           HapticFeedback.lightImpact();
-                                          cartProvider.incrementQuantity(product.id);
+                                          cartProvider.incrementQuantity(
+                                            product.id,
+                                          );
                                         },
                                         child: const SizedBox(
                                           width: 44,
                                           height: 44,
                                           child: Center(
-                                            child: Icon(Icons.add, size: 18, color: AppColors.primary),
+                                            child: Icon(
+                                              Icons.add,
+                                              size: 18,
+                                              color: AppColors.primary,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -1691,19 +1843,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: isInCart ? AppColors.primary : AppColors.accent,
+                                    color: isInCart
+                                        ? AppColors.primary
+                                        : AppColors.accent,
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: (isInCart ? AppColors.primary : AppColors.accent)
-                                            .withValues(alpha: 0.28),
+                                        color:
+                                            (isInCart
+                                                    ? AppColors.primary
+                                                    : AppColors.accent)
+                                                .withValues(alpha: 0.28),
                                         blurRadius: 10,
                                         offset: const Offset(0, 4),
                                       ),
                                     ],
                                   ),
                                   child: Icon(
-                                    isInCart ? Iconsax.tick_circle5 : Iconsax.add,
+                                    isInCart
+                                        ? Iconsax.tick_circle5
+                                        : Iconsax.add,
                                     color: Colors.white,
                                     size: 20,
                                   ),

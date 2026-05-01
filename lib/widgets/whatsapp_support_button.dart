@@ -31,9 +31,10 @@ class _WhatsAppSupportButtonState extends State<WhatsAppSupportButton>
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.92).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.92,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -44,9 +45,7 @@ class _WhatsAppSupportButtonState extends State<WhatsAppSupportButton>
 
   Future<void> _openWhatsApp() async {
     final encoded = Uri.encodeComponent(widget.message ?? '');
-    final uri = Uri.parse(
-      'https://wa.me/${widget.phoneNumber}?text=$encoded',
-    );
+    final uri = Uri.parse('https://wa.me/${widget.phoneNumber}?text=$encoded');
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!launched && mounted) {
       setState(() => _expanded = !_expanded);
@@ -116,9 +115,7 @@ class _WhatsAppSupportButtonState extends State<WhatsAppSupportButton>
                     ),
                   ],
                 ),
-                child: const Center(
-                  child: _WhatsAppIcon(),
-                ),
+                child: const Center(child: _WhatsAppIcon()),
               ),
             ),
           ),

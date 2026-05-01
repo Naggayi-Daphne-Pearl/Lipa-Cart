@@ -449,7 +449,9 @@ class CartScreen extends StatelessWidget {
                           ),
                         ),
                         _buildCrossSellRow(
-                          context.read<OrderProvider>().frequentlyOrderedProducts,
+                          context
+                              .read<OrderProvider>()
+                              .frequentlyOrderedProducts,
                           cartProvider,
                         ),
                       ],
@@ -765,7 +767,10 @@ class CartScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.grey50,
                     borderRadius: BorderRadius.circular(AppSizes.radiusSm),
@@ -852,7 +857,9 @@ class CartScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: cat.$3.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                        border: Border.all(color: cat.$3.withValues(alpha: 0.25)),
+                        border: Border.all(
+                          color: cat.$3.withValues(alpha: 0.25),
+                        ),
                       ),
                       child: Column(
                         children: [
@@ -890,7 +897,9 @@ class CartScreen extends StatelessWidget {
                 height: 94,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  itemCount: buyAgainProducts.length > 6 ? 6 : buyAgainProducts.length,
+                  itemCount: buyAgainProducts.length > 6
+                      ? 6
+                      : buyAgainProducts.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     final p = buyAgainProducts[index];
@@ -910,7 +919,8 @@ class CartScreen extends StatelessWidget {
                               child: CachedNetworkImage(
                                 imageUrl: p.image,
                                 fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) => const Icon(Iconsax.image),
+                                errorWidget: (_, __, ___) =>
+                                    const Icon(Iconsax.image),
                               ),
                             ),
                           ),

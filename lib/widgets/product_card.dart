@@ -272,28 +272,46 @@ class ProductCard extends StatelessWidget {
                                       onAddToCart?.call();
                                     },
                                     child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 200),
+                                      duration: const Duration(
+                                        milliseconds: 200,
+                                      ),
                                       width: 44,
                                       height: 44,
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           colors: isInCart
-                                              ? [AppColors.success, AppColors.success.withValues(alpha: 0.8)]
-                                              : [AppColors.primary, AppColors.primary.withValues(alpha: 0.85)],
+                                              ? [
+                                                  AppColors.success,
+                                                  AppColors.success.withValues(
+                                                    alpha: 0.8,
+                                                  ),
+                                                ]
+                                              : [
+                                                  AppColors.primary,
+                                                  AppColors.primary.withValues(
+                                                    alpha: 0.85,
+                                                  ),
+                                                ],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
-                                            color: (isInCart ? AppColors.success : AppColors.primary).withValues(alpha: 0.3),
+                                            color:
+                                                (isInCart
+                                                        ? AppColors.success
+                                                        : AppColors.primary)
+                                                    .withValues(alpha: 0.3),
                                             blurRadius: 8,
                                             offset: const Offset(0, 3),
                                           ),
                                         ],
                                       ),
                                       child: Icon(
-                                        isInCart ? Iconsax.tick_circle5 : Iconsax.add,
+                                        isInCart
+                                            ? Iconsax.tick_circle5
+                                            : Iconsax.add,
                                         color: Colors.white,
                                         size: 20,
                                       ),

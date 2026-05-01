@@ -54,7 +54,11 @@ class FloatingCartButton extends StatelessWidget {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  const Icon(Iconsax.shopping_bag, color: Colors.white, size: 22),
+                  const Icon(
+                    Iconsax.shopping_bag,
+                    color: Colors.white,
+                    size: 22,
+                  ),
                   Positioned(
                     top: -6,
                     right: -8,
@@ -64,7 +68,10 @@ class FloatingCartButton extends StatelessWidget {
                         color: AppColors.accent,
                         shape: BoxShape.circle,
                       ),
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
                       child: Text(
                         '${cartProvider.totalQuantity}',
                         style: AppTextStyles.caption.copyWith(

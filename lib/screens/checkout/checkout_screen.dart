@@ -125,17 +125,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (customerId == null || customerId.isEmpty) return;
 
     if (addressService.userAddresses.isEmpty) {
-      await addressService.fetchAddresses(
-        authProvider.token!,
-        customerId,
-      );
+      await addressService.fetchAddresses(authProvider.token!, customerId);
     }
 
     if (!mounted) return;
     // If the user explicitly picked an address on the addresses screen, keep
     // it selected after the fetch completes. Otherwise fall back to default.
     final picked = _resolveSelectedAddress(addressService);
-    setState(() => _selectedAddress = picked ?? addressService.defaultUserAddress);
+    setState(
+      () => _selectedAddress = picked ?? addressService.defaultUserAddress,
+    );
 
     if (_selectedAddress == null && !_didAutoRedirectForMissingAddress) {
       _didAutoRedirectForMissingAddress = true;
@@ -354,9 +353,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                orderService.error ?? 'Failed to place order',
-              ),
+              content: Text(orderService.error ?? 'Failed to place order'),
               backgroundColor: AppColors.error,
             ),
           );
@@ -492,17 +489,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 final orderRef = backendOrder.documentId ?? backendOrder.id;
                 final result =
                     await PaymentService.initiateFlutterwaveMobileMoney(
-                  token: authProvider.token!,
-                  orderId: orderRef,
-                  phoneNumber: paymentPhone,
-                );
+                      token: authProvider.token!,
+                      orderId: orderRef,
+                      phoneNumber: paymentPhone,
+                    );
 
                 setState(() => _isLoading = false);
                 if (!mounted) return;
 
                 final data = result['data'] as Map<String, dynamic>? ?? {};
                 final payment = data['payment'] as Map<String, dynamic>? ?? {};
-                final paymentId = payment['documentId'] as String? ??
+                final paymentId =
+                    payment['documentId'] as String? ??
                     payment['id']?.toString() ??
                     '';
 
@@ -602,187 +600,191 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           child: WebLayoutWrapper(
             addPadding: false,
             child: Column(
-            children: [
-              // Progress Stepper
-              _buildProgressStepper(),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppSizes.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Delivery address or guest form
-                      if (widget.isGuest)
-                        _buildSection(
-                          title: 'Sign Up & Delivery Details',
-                          icon: Iconsax.user_add,
-                          child: _buildGuestAddressForm(),
-                        )
-                      else
-                        _buildSection(
-                          title: 'Delivery Address',
-                          icon: Iconsax.location,
-                          child: _selectedAddress == null
-                              ? (_showAddressForm
-                                    ? _buildAuthAddressForm()
-                                    : _buildAddAddressButton())
-                              : _buildAddressCard(authProvider),
-                        ),
-                      const SizedBox(height: AppSizes.md),
+              children: [
+                // Progress Stepper
+                _buildProgressStepper(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(AppSizes.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Delivery address or guest form
+                        if (widget.isGuest)
+                          _buildSection(
+                            title: 'Sign Up & Delivery Details',
+                            icon: Iconsax.user_add,
+                            child: _buildGuestAddressForm(),
+                          )
+                        else
+                          _buildSection(
+                            title: 'Delivery Address',
+                            icon: Iconsax.location,
+                            child: _selectedAddress == null
+                                ? (_showAddressForm
+                                      ? _buildAuthAddressForm()
+                                      : _buildAddAddressButton())
+                                : _buildAddressCard(authProvider),
+                          ),
+                        const SizedBox(height: AppSizes.md),
 
-                      // Order items
-                      _buildSection(
-                        title: 'Order Items (${cartProvider.itemCount})',
-                        icon: Iconsax.shopping_bag,
-                        child: Column(
-                          children: cartProvider.items.map((item) {
-                            return Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: AppSizes.sm,
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      '${item.quantity.toInt()}x ${item.product.name}',
-                                      style: AppTextStyles.bodyMedium,
+                        // Order items
+                        _buildSection(
+                          title: 'Order Items (${cartProvider.itemCount})',
+                          icon: Iconsax.shopping_bag,
+                          child: Column(
+                            children: cartProvider.items.map((item) {
+                              return Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSizes.sm,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '${item.quantity.toInt()}x ${item.product.name}',
+                                        style: AppTextStyles.bodyMedium,
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    Formatters.formatCurrency(item.totalPrice),
-                                    style: AppTextStyles.labelMedium,
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
+                                    Text(
+                                      Formatters.formatCurrency(
+                                        item.totalPrice,
+                                      ),
+                                      style: AppTextStyles.labelMedium,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: AppSizes.md),
+                        const SizedBox(height: AppSizes.md),
 
-                      // Payment method — all options shown with clear branding.
-                      // Logic: only CoD is active for MVP (others show "coming soon").
-                      _buildSection(
-                        title: 'Payment Method',
-                        icon: Iconsax.card,
-                        child: Column(
-                          children: [
-                            _buildMobileMoneyCard(
-                              method: PaymentMethod.mobileMoney,
-                              label: 'MTN Mobile Money',
-                              accent: const Color(0xFFFFCC00),
-                              textColor: Colors.black,
-                              badge: 'MTN',
-                              prompt: 'You\'ll get a prompt to approve',
-                              comingSoon: true,
-                            ),
-                            const SizedBox(height: AppSizes.sm),
-                            _buildMobileMoneyCard(
-                              method: PaymentMethod.mobileMoney,
-                              label: 'Airtel Money',
-                              accent: const Color(0xFFE40000),
-                              textColor: Colors.white,
-                              badge: 'Airtel',
-                              prompt: 'You\'ll get a prompt to approve',
-                              comingSoon: true,
-                            ),
-                            const SizedBox(height: AppSizes.sm),
-                            _buildPaymentOption(PaymentMethod.cashOnDelivery),
-                          ],
+                        // Payment method — all options shown with clear branding.
+                        // Logic: only CoD is active for MVP (others show "coming soon").
+                        _buildSection(
+                          title: 'Payment Method',
+                          icon: Iconsax.card,
+                          child: Column(
+                            children: [
+                              _buildMobileMoneyCard(
+                                method: PaymentMethod.mobileMoney,
+                                label: 'MTN Mobile Money',
+                                accent: const Color(0xFFFFCC00),
+                                textColor: Colors.black,
+                                badge: 'MTN',
+                                prompt: 'You\'ll get a prompt to approve',
+                                comingSoon: true,
+                              ),
+                              const SizedBox(height: AppSizes.sm),
+                              _buildMobileMoneyCard(
+                                method: PaymentMethod.mobileMoney,
+                                label: 'Airtel Money',
+                                accent: const Color(0xFFE40000),
+                                textColor: Colors.white,
+                                badge: 'Airtel',
+                                prompt: 'You\'ll get a prompt to approve',
+                                comingSoon: true,
+                              ),
+                              const SizedBox(height: AppSizes.sm),
+                              _buildPaymentOption(PaymentMethod.cashOnDelivery),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: AppSizes.md),
+                        const SizedBox(height: AppSizes.md),
 
-                      // Order summary
-                      _buildSection(
-                        title: 'Order Summary',
-                        icon: Iconsax.receipt_2,
-                        child: Column(
-                          children: [
-                            _buildSummaryRow(
-                              'Subtotal',
-                              Formatters.formatCurrency(cartProvider.subtotal),
-                            ),
-                            const SizedBox(height: AppSizes.sm),
-                            _buildSummaryRow(
-                              'Service Fee (5%)',
-                              Formatters.formatCurrency(
-                                cartProvider.serviceFee,
+                        // Order summary
+                        _buildSection(
+                          title: 'Order Summary',
+                          icon: Iconsax.receipt_2,
+                          child: Column(
+                            children: [
+                              _buildSummaryRow(
+                                'Subtotal',
+                                Formatters.formatCurrency(
+                                  cartProvider.subtotal,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: AppSizes.sm),
-                            _buildSummaryRow(
-                              'Delivery Fee',
-                              Formatters.formatCurrency(
-                                cartProvider.deliveryFee,
+                              const SizedBox(height: AppSizes.sm),
+                              _buildSummaryRow(
+                                'Service Fee (5%)',
+                                Formatters.formatCurrency(
+                                  cartProvider.serviceFee,
+                                ),
                               ),
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(
-                                vertical: AppSizes.sm,
+                              const SizedBox(height: AppSizes.sm),
+                              _buildSummaryRow(
+                                'Delivery Fee',
+                                Formatters.formatCurrency(
+                                  cartProvider.deliveryFee,
+                                ),
                               ),
-                              child: Divider(),
-                            ),
-                            _buildSummaryRow(
-                              'Total',
-                              Formatters.formatCurrency(cartProvider.total),
-                              isTotal: true,
-                            ),
-                          ],
+                              const Padding(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: AppSizes.sm,
+                                ),
+                                child: Divider(),
+                              ),
+                              _buildSummaryRow(
+                                'Total',
+                                Formatters.formatCurrency(cartProvider.total),
+                                isTotal: true,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Consent checkbox and Place order button
-              Container(
-                padding: const EdgeInsets.all(AppSizes.md),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, -4),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-                child: SafeArea(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Consent checkbox
-                      CheckboxListTile(
-                        value: _consentChecked,
-                        onChanged: (val) {
-                          setState(() => _consentChecked = val ?? false);
-                        },
-                        title: Text(
-                          widget.isGuest
-                              ? 'I confirm my details and agree to create an account'
-                              : 'I confirm my order details are correct and agree to the terms',
-                          style: AppTextStyles.bodySmall,
-                        ),
-                        activeColor: AppColors.accent,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      const SizedBox(height: AppSizes.md),
-                      // Place order button
-                      CustomButton(
-                        text:
-                            'Place Order - ${Formatters.formatCurrency(cartProvider.total)}',
-                        isLoading: _isLoading,
-                        onPressed: _consentChecked ? _placeOrder : null,
+
+                // Consent checkbox and Place order button
+                Container(
+                  padding: const EdgeInsets.all(AppSizes.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, -4),
                       ),
                     ],
                   ),
+                  child: SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Consent checkbox
+                        CheckboxListTile(
+                          value: _consentChecked,
+                          onChanged: (val) {
+                            setState(() => _consentChecked = val ?? false);
+                          },
+                          title: Text(
+                            widget.isGuest
+                                ? 'I confirm my details and agree to create an account'
+                                : 'I confirm my order details are correct and agree to the terms',
+                            style: AppTextStyles.bodySmall,
+                          ),
+                          activeColor: AppColors.accent,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        const SizedBox(height: AppSizes.md),
+                        // Place order button
+                        CustomButton(
+                          text:
+                              'Place Order - ${Formatters.formatCurrency(cartProvider.total)}',
+                          isLoading: _isLoading,
+                          onPressed: _consentChecked ? _placeOrder : null,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1305,12 +1307,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               children: [
                 Text(
                   label,
-                  style: AppTextStyles.labelMedium.copyWith(color: AppColors.textDark),
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: AppColors.textDark,
+                  ),
                 ),
                 Text(
                   comingSoon ? 'Coming soon' : prompt,
                   style: AppTextStyles.caption.copyWith(
-                    color: comingSoon ? AppColors.textSecondary : AppColors.primary,
+                    color: comingSoon
+                        ? AppColors.textSecondary
+                        : AppColors.primary,
                     fontStyle: comingSoon ? FontStyle.italic : FontStyle.normal,
                   ),
                 ),
@@ -1412,5 +1418,4 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ],
     );
   }
-
 }

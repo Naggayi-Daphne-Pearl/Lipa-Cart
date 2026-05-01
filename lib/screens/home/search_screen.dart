@@ -224,18 +224,27 @@ class _SearchScreenState extends State<SearchScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 alignment: WrapAlignment.center,
-                children: ['fresh fruit', 'rice', 'eggs', 'milk', 'bread'].map((term) {
+                children: ['fresh fruit', 'rice', 'eggs', 'milk', 'bread'].map((
+                  term,
+                ) {
                   return GestureDetector(
                     onTap: () {
                       _performSearch(term, productProvider);
                     },
                     child: Container(
                       constraints: const BoxConstraints(minHeight: 44),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.primarySoft,
-                        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                        borderRadius: BorderRadius.circular(
+                          AppSizes.radiusFull,
+                        ),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.2),
+                        ),
                       ),
                       child: Text(
                         term,

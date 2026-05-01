@@ -137,7 +137,9 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                               onTap: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Recurring schedule coming soon'),
+                                    content: Text(
+                                      'Recurring schedule coming soon',
+                                    ),
                                   ),
                                 );
                               },
@@ -1415,9 +1417,7 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
     final progress = total > 0 ? '($checked/$total done)\n' : '';
     final text =
         '🛒 *${list.name}*\n$progress\n$items\n\n— Shared via *LipaCart*\n📲 lipacart.com';
-    launchUrl(
-      Uri.parse('https://wa.me/?text=${Uri.encodeComponent(text)}'),
-    );
+    launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(text)}'));
   }
 
   Future<void> _duplicateList(ShoppingList list) async {

@@ -405,7 +405,8 @@ class Order {
       rating: json['rating'] != null
           ? Rating.fromJson(json['rating'] as Map<String, dynamic>)
           : null,
-      hasBeenRated: json['hasBeenRated'] as bool? ??
+      hasBeenRated:
+          json['hasBeenRated'] as bool? ??
           (() {
             final ratingData = json['rating'];
             if (ratingData == null) return false;

@@ -31,7 +31,11 @@ class ShimmerProductCard extends StatelessWidget {
 class ShimmerProductGrid extends StatelessWidget {
   final int itemCount;
   final int crossAxisCount;
-  const ShimmerProductGrid({super.key, this.itemCount = 6, this.crossAxisCount = 2});
+  const ShimmerProductGrid({
+    super.key,
+    this.itemCount = 6,
+    this.crossAxisCount = 2,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +70,12 @@ class ShimmerHorizontalRow extends StatelessWidget {
   final int itemCount;
   final double cardWidth;
   final double cardHeight;
-  const ShimmerHorizontalRow({super.key, this.itemCount = 4, this.cardWidth = 160, this.cardHeight = 220});
+  const ShimmerHorizontalRow({
+    super.key,
+    this.itemCount = 4,
+    this.cardWidth = 160,
+    this.cardHeight = 220,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +84,8 @@ class ShimmerHorizontalRow extends StatelessWidget {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: itemCount,
-        itemBuilder: (context, index) => ShimmerProductCard(width: cardWidth, height: cardHeight),
+        itemBuilder: (context, index) =>
+            ShimmerProductCard(width: cardWidth, height: cardHeight),
       ),
     );
   }
@@ -302,16 +312,19 @@ class HomePageSkeleton extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
-                children: List.generate(3, (i) => Expanded(
-                  child: Container(
-                    margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                children: List.generate(
+                  3,
+                  (i) => Expanded(
+                    child: Container(
+                      margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
-                )),
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -332,27 +345,30 @@ class HomePageSkeleton extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 physics: const NeverScrollableScrollPhysics(),
                 child: Row(
-                  children: List.generate(_catCount, (i) => Padding(
-                    padding: const EdgeInsets.only(right: 16),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: _catSize,
-                          height: _catSize,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
+                  children: List.generate(
+                    _catCount,
+                    (i) => Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: _catSize,
+                            height: _catSize,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Container(
-                          width: _catSize * 0.7,
-                          height: 10,
-                          color: Colors.white,
-                        ),
-                      ],
+                          const SizedBox(height: 6),
+                          Container(
+                            width: _catSize * 0.7,
+                            height: 10,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
                     ),
-                  )),
+                  ),
                 ),
               ),
             ),

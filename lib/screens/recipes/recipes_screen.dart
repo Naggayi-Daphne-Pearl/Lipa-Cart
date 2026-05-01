@@ -109,17 +109,13 @@ class _RecipesScreenState extends State<RecipesScreen> {
     );
     final averageTime = filteredRecipes.isEmpty
         ? 0
-        : (filteredRecipes
-                    .map((r) => r.totalTime)
-                    .reduce((a, b) => a + b) /
-                filteredRecipes.length)
-            .round();
+        : (filteredRecipes.map((r) => r.totalTime).reduce((a, b) => a + b) /
+                  filteredRecipes.length)
+              .round();
     final averageCost = filteredRecipes.isEmpty
         ? 0.0
-        : filteredRecipes
-                .map((r) => r.estimatedCost)
-                .reduce((a, b) => a + b) /
-            filteredRecipes.length;
+        : filteredRecipes.map((r) => r.estimatedCost).reduce((a, b) => a + b) /
+              filteredRecipes.length;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -331,8 +327,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
                         _buildRecipeMetricChip(
                           icon: Iconsax.box,
                           label: 'Ingredients in stock',
-                          value:
-                              '$totalAvailableIngredients/$totalIngredients',
+                          value: '$totalAvailableIngredients/$totalIngredients',
                         ),
                         const SizedBox(width: AppSizes.sm),
                         _buildRecipeMetricChip(
@@ -794,7 +789,9 @@ class _RecipesScreenState extends State<RecipesScreen> {
                         foregroundColor: AppColors.primary,
                         side: const BorderSide(color: AppColors.primary),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppSizes.radiusMd,
+                          ),
                         ),
                       ),
                     ),

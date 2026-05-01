@@ -58,5 +58,5 @@ class AppConstants {
 
     // Support
     /// Production WhatsApp support number (Uganda, no leading +).
-    static const String supportWhatsAppNumber = '256700000000'; // TODO: replace with real support number before launch
+    static const String supportWhatsAppNumber = '256785796401'; 
 }
