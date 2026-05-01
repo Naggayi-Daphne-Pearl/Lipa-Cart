@@ -97,6 +97,9 @@ class _WhatsAppSupportButtonState extends State<WhatsAppSupportButton>
           GestureDetector(
             onTap: _openWhatsApp,
             onLongPress: () => setState(() => _expanded = !_expanded),
+            onTapDown: (_) => _controller.forward(),
+            onTapUp: (_) => _controller.reverse(),
+            onTapCancel: () => _controller.reverse(),
             child: ScaleTransition(
               scale: _scaleAnimation,
               child: Container(

@@ -140,9 +140,11 @@ class Order {
   final String? shopperId;
   final String? shopperName;
   final String? shopperPhone;
+  final String? shopperPhotoUrl;
   final String? riderId;
   final String? riderName;
   final String? riderPhone;
+  final String? riderPhotoUrl;
   final double? riderLatitude;
   final double? riderLongitude;
   final DateTime createdAt;
@@ -178,9 +180,11 @@ class Order {
     this.shopperId,
     this.shopperName,
     this.shopperPhone,
+    this.shopperPhotoUrl,
     this.riderId,
     this.riderName,
     this.riderPhone,
+    this.riderPhotoUrl,
     this.riderLatitude,
     this.riderLongitude,
     required this.createdAt,
@@ -229,9 +233,11 @@ class Order {
     String? shopperId,
     String? shopperName,
     String? shopperPhone,
+    String? shopperPhotoUrl,
     String? riderId,
     String? riderName,
     String? riderPhone,
+    String? riderPhotoUrl,
     double? riderLatitude,
     double? riderLongitude,
     DateTime? createdAt,
@@ -266,9 +272,11 @@ class Order {
       shopperId: shopperId ?? this.shopperId,
       shopperName: shopperName ?? this.shopperName,
       shopperPhone: shopperPhone ?? this.shopperPhone,
+      shopperPhotoUrl: shopperPhotoUrl ?? this.shopperPhotoUrl,
       riderId: riderId ?? this.riderId,
       riderName: riderName ?? this.riderName,
       riderPhone: riderPhone ?? this.riderPhone,
+      riderPhotoUrl: riderPhotoUrl ?? this.riderPhotoUrl,
       riderLatitude: riderLatitude ?? this.riderLatitude,
       riderLongitude: riderLongitude ?? this.riderLongitude,
       createdAt: createdAt ?? this.createdAt,
@@ -306,9 +314,11 @@ class Order {
       'shopperId': shopperId,
       'shopperName': shopperName,
       'shopperPhone': shopperPhone,
+      'shopperPhotoUrl': shopperPhotoUrl,
       'riderId': riderId,
       'riderName': riderName,
       'riderPhone': riderPhone,
+      'riderPhotoUrl': riderPhotoUrl,
       'riderLatitude': riderLatitude,
       'riderLongitude': riderLongitude,
       'createdAt': createdAt.toIso8601String(),
@@ -352,9 +362,11 @@ class Order {
       shopperId: json['shopperId'] as String?,
       shopperName: json['shopperName'] as String?,
       shopperPhone: json['shopperPhone'] as String?,
+      shopperPhotoUrl: json['shopperPhotoUrl'] as String?,
       riderId: json['riderId'] as String?,
       riderName: json['riderName'] as String?,
       riderPhone: json['riderPhone'] as String?,
+      riderPhotoUrl: json['riderPhotoUrl'] as String?,
       riderLatitude: (json['riderLatitude'] as num?)?.toDouble(),
       riderLongitude: (json['riderLongitude'] as num?)?.toDouble(),
       createdAt: DateTime.parse(json['createdAt'] as String),

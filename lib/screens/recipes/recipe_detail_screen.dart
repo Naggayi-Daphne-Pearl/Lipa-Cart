@@ -31,6 +31,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   final Set<String> _selectedIngredients = {};
   bool _selectAll = true;
   double _servingsMultiplier = 1.0;
+  bool _hideAlreadyOwned = false;
+  bool _keepScreenOnWhileCooking = false;
 
   @override
   void initState() {
@@ -714,9 +716,29 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   }
 
   Widget _buildIngredientsTab(Recipe recipe) {
+    final visibleIngredients = _hideAlreadyOwned
+        ? recipe.ingredients
+              .where((ingredient) => _selectedIngredients.contains(ingredient.id))
+              .toList()
+        : recipe.ingredients;
+
     return ListView(
       padding: const EdgeInsets.all(AppSizes.lg),
       children: [
+        SwitchListTile.adaptive(
+          value: _hideAlreadyOwned,
+          onChanged: (v) => setState(() => _hideAlreadyOwned = v),
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            'Hide what I already have',
+            style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            'Only show ingredients you plan to buy',
+            style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+          ),
+        ),
+        const SizedBox(height: AppSizes.sm),
         // Select all toggle
         Row(
           children: [
@@ -779,7 +801,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
         const SizedBox(height: AppSizes.md),
 
         // Ingredients list
-        ...recipe.ingredients.map((ingredient) {
+        ...visibleIngredients.map((ingredient) {
           final isSelectable = ingredient.linkedProduct != null;
           final isSelected = _selectedIngredients.contains(ingredient.id);
 
@@ -934,52 +956,98 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen>
   }
 
   Widget _buildInstructionsTab(Recipe recipe) {
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.all(AppSizes.lg),
-      itemCount: recipe.instructions.length,
-      itemBuilder: (context, index) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: AppSizes.md),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Step number
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.accent,
-                  shape: BoxShape.circle,
+      children: [
+        SwitchListTile.adaptive(
+          value: _keepScreenOnWhileCooking,
+          onChanged: (v) {
+            setState(() => _keepScreenOnWhileCooking = v);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  v
+                      ? 'Keep screen on enabled for cooking session'
+                      : 'Keep screen on disabled',
                 ),
-                child: Center(
-                  child: Text(
-                    '${index + 1}',
-                    style: AppTextStyles.labelMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
+              ),
+            );
+          },
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            'Keep screen on while cooking',
+            style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+        const SizedBox(height: AppSizes.sm),
+        ...recipe.instructions.asMap().entries.map((entry) {
+          final index = entry.key;
+          final step = entry.value;
+          final durationMatch = RegExp(r'(\d+)\s*(minute|minutes|min)').firstMatch(step.toLowerCase());
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: AppSizes.md),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
+                    color: AppColors.accent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${index + 1}',
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: AppSizes.md),
-              // Step content
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(AppSizes.md),
-                  decoration: BoxDecoration(
-                    color: AppColors.grey50,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  ),
-                  child: Text(
-                    recipe.instructions[index],
-                    style: AppTextStyles.bodyMedium.copyWith(height: 1.6),
+                const SizedBox(width: AppSizes.md),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSizes.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.grey50,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          step,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            height: 1.6,
+                            fontSize: 16,
+                          ),
+                        ),
+                        if (durationMatch != null) ...[
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Timer started for ${durationMatch.group(1)} minutes'),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Iconsax.timer_1, size: 14),
+                            label: Text('Set ${durationMatch.group(1)} min timer'),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 

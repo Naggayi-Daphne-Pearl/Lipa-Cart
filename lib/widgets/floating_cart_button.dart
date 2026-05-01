@@ -66,7 +66,7 @@ class FloatingCartButton extends StatelessWidget {
                       ),
                       constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                       child: Text(
-                        '${cartProvider.itemCount}',
+                        '${cartProvider.totalQuantity}',
                         style: AppTextStyles.caption.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,

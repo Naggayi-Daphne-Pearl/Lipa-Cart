@@ -43,6 +43,10 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
     );
     if (result == true) {
       _loadRiders();
+      // Re-select the same rider so the right pane reflects updated KYC status.
+      if (_selectedRider != null && _selectedRider!['id'] == rider['id']) {
+        _selectRider(rider);
+      }
     }
   }
 
@@ -103,7 +107,14 @@ class _AdminRidersDesktopScreenState extends State<AdminRidersDesktopScreen> {
 
       if (!mounted) return;
       setState(() {
-        _selectedRiderDetails = {...rider, ...details!, 'rider': details};
+        // Preserve the admin-user id/documentId from the original `rider` row so
+        // _showEditDialog sends requests to /admin/users/:userId, not the profile id.
+        _selectedRiderDetails = {
+          ...details!,
+          'id': rider['id'],
+          'documentId': rider['documentId'],
+          'rider': details,
+        };
         _selectedRiderLoading = false;
       });
     } catch (e) {

@@ -21,6 +21,7 @@ import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order.dart';
 import '../../widgets/custom_button.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/utils/responsive.dart';
 
 class OrderTrackingScreen extends StatefulWidget {
@@ -291,7 +292,12 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     ).showSnackBar(const SnackBar(content: Text('Delivery address copied.')));
   }
 
-  Future<void> _respondToSubstitution(CartItem item, bool approved, {String? rejectionReason}) async {
+  Future<void> _respondToSubstitution(
+    CartItem item,
+    bool approved, {
+    String? rejectionReason,
+    String? counterSuggestion,
+  }) async {
     final auth = context.read<AuthProvider>();
     final orderService = context.read<OrderService>();
     if (auth.token == null) return;
@@ -300,7 +306,9 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
       auth.token!,
       item.id,
       approved,
-      rejectionReason: rejectionReason,
+      rejectionReason: counterSuggestion != null
+          ? 'Counter-suggestion: $counterSuggestion'
+          : rejectionReason,
     );
 
     if (!mounted) return;
@@ -330,67 +338,175 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   }
 
   void _showRejectSubstituteSheet(CartItem item) {
-    final reasonController = TextEditingController();
+    final counterController = TextEditingController();
+    // Two-page state: null = choose action, false = skip item, true = suggest alternative
+    bool? _mode;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 20, right: 20, top: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Reject Substitute',
-              style: AppTextStyles.h3,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tell your shopper what you\'d prefer instead (optional):',
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: reasonController,
-              maxLines: 2,
-              decoration: InputDecoration(
-                hintText: 'e.g. I\'d prefer organic bananas',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _respondToSubstitution(
-                    item,
-                    false,
-                    rejectionReason: reasonController.text.trim().isNotEmpty
-                        ? reasonController.text.trim()
-                        : null,
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.error,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          if (_mode == null) {
+            // Step 1: choose path
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.swap_horiz, color: AppColors.accent),
+                      const SizedBox(width: 8),
+                      Text('Not what you wanted?', style: AppTextStyles.h3),
+                    ],
                   ),
-                ),
-                child: const Text('Reject Substitute'),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Your shopper suggested ${item.substituteName ?? "a substitute"} for ${item.product.name}.',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 20),
+                  // Option A: suggest alternative
+                  _negotiationOptionTile(
+                    icon: Iconsax.edit,
+                    iconColor: AppColors.primaryOrange,
+                    title: 'Suggest a different product',
+                    subtitle: 'Tell your shopper exactly what you want',
+                    onTap: () => setSheetState(() => _mode = true),
+                  ),
+                  const SizedBox(height: 12),
+                  // Option B: skip item
+                  _negotiationOptionTile(
+                    icon: Iconsax.close_circle,
+                    iconColor: AppColors.error,
+                    title: 'Skip this item',
+                    subtitle: 'Remove it from the order entirely',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _respondToSubstitution(item, false, rejectionReason: 'Skip item');
+                    },
+                  ),
+                ],
+              ),
+            );
+          } else {
+            // Step 2: counter-suggest input
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20, right: 20, top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 28,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GestureDetector(
+                    onTap: () => setSheetState(() => _mode = null),
+                    child: Row(
+                      children: [
+                        const Icon(Iconsax.arrow_left, size: 18),
+                        const SizedBox(width: 4),
+                        Text('Back', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text('What would you like instead?', style: AppTextStyles.h3),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Your shopper will look for this specific product.',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: counterController,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Wee Milk 500ml',
+                      prefixIcon: const Icon(Iconsax.shopping_bag, size: 18),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final suggestion = counterController.text.trim();
+                        Navigator.pop(ctx);
+                        _respondToSubstitution(
+                          item,
+                          false,
+                          counterSuggestion: suggestion.isNotEmpty ? suggestion : null,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryOrange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text('Send to Shopper'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _negotiationOptionTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.grey200),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: AppTextStyles.labelMedium),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+                ],
               ),
             ),
+            const Icon(Iconsax.arrow_right_3, size: 16, color: AppColors.textSecondary),
           ],
         ),
       ),
@@ -1124,11 +1240,29 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                                       children: [
                                                         const Icon(Icons.swap_horiz, size: 16, color: AppColors.accent),
                                                         const SizedBox(width: 6),
+                                                        Container(
+                                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                          decoration: BoxDecoration(
+                                                            color: AppColors.accent,
+                                                            borderRadius: BorderRadius.circular(10),
+                                                          ),
+                                                          child: Text(
+                                                            'Substituted',
+                                                            style: AppTextStyles.caption.copyWith(
+                                                              color: Colors.white,
+                                                              fontWeight: FontWeight.w700,
+                                                              fontSize: 10,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 6),
                                                         Expanded(
                                                           child: Text(
                                                             item.substitutionApproved == null
-                                                                ? 'Your shopper found a substitute'
-                                                                : 'Substitute Suggested',
+                                                                ? 'Shopper suggests a substitute'
+                                                                : item.isPendingShopperResponse
+                                                                    ? 'Negotiating with shopper'
+                                                                    : 'Substitute resolved',
                                                             style: AppTextStyles.caption.copyWith(
                                                               color: AppColors.accent,
                                                               fontWeight: FontWeight.w600,
@@ -1139,6 +1273,14 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                                       ],
                                                     ),
                                                     const SizedBox(height: 6),
+                                                    Text(
+                                                      item.product.name,
+                                                      style: AppTextStyles.caption.copyWith(
+                                                        color: AppColors.textSecondary,
+                                                        decoration: TextDecoration.lineThrough,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 2),
                                                     // Substitute name
                                                     Text(
                                                       item.substituteName ?? 'Substitute',
@@ -1204,7 +1346,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                                         ),
                                                       ),
                                                     const SizedBox(height: 8),
-                                                    // Accept/Reject or status
+                                                    // Accept/Reject/Waiting or confirmed status
                                                     if (item.substitutionApproved == null)
                                                       Row(
                                                         children: [
@@ -1235,11 +1377,55 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                                                   padding: EdgeInsets.zero,
                                                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                                                                 ),
-                                                                child: const Text('Reject', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                                                child: const Text('Not this one', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                                                               ),
                                                             ),
                                                           ),
                                                         ],
+                                                      )
+                                                    else if (item.isPendingShopperResponse)
+                                                      // Customer rejected and counter-suggested — waiting for shopper
+                                                      Container(
+                                                        width: double.infinity,
+                                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                                        decoration: BoxDecoration(
+                                                          color: AppColors.primaryOrange.withValues(alpha: 0.08),
+                                                          borderRadius: BorderRadius.circular(8),
+                                                          border: Border.all(color: AppColors.primaryOrange.withValues(alpha: 0.3)),
+                                                        ),
+                                                        child: Column(
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Row(
+                                                              children: [
+                                                                const SizedBox(
+                                                                  width: 14,
+                                                                  height: 14,
+                                                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryOrange),
+                                                                ),
+                                                                const SizedBox(width: 8),
+                                                                Text(
+                                                                  'Waiting for your shopper…',
+                                                                  style: AppTextStyles.caption.copyWith(
+                                                                    color: AppColors.primaryOrange,
+                                                                    fontWeight: FontWeight.w700,
+                                                                    fontSize: 11,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            if (item.customerCounterSuggestion != null) ...[
+                                                              const SizedBox(height: 4),
+                                                              Text(
+                                                                'You asked for: ${item.customerCounterSuggestion}',
+                                                                style: AppTextStyles.caption.copyWith(
+                                                                  color: AppColors.textSecondary,
+                                                                  fontSize: 11,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ],
+                                                        ),
                                                       )
                                                     else
                                                       Container(
@@ -1592,6 +1778,33 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                             ],
                           ),
                         ),
+                        const SizedBox(height: AppSizes.sm),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Payment method',
+                              style: AppTextStyles.bodyMedium,
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primarySoft,
+                                borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                              ),
+                              child: Text(
+                                order.paymentMethod.displayName,
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -1707,6 +1920,42 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    height: 84,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.grey100,
+                                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                      border: Border.all(color: AppColors.grey200),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                                            child: Text(
+                                              'Map thumbnail',
+                                              style: AppTextStyles.labelSmall.copyWith(
+                                                color: AppColors.textSecondary,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          width: 84,
+                                          height: 84,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primarySoft,
+                                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                          ),
+                                          child: const Icon(
+                                            Iconsax.map_1,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -1754,6 +2003,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                               role: 'Shopper',
                               name: order.shopperName!,
                               phone: order.shopperPhone,
+                              photoUrl: order.shopperPhotoUrl,
                             ),
                           if (order.shopperName != null &&
                               order.riderName != null)
@@ -1765,6 +2015,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                               role: 'Rider',
                               name: order.riderName!,
                               phone: order.riderPhone,
+                              photoUrl: order.riderPhotoUrl,
                             ),
                         ],
                       ),
@@ -2199,7 +2450,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                     Padding(
                       padding: const EdgeInsets.only(bottom: AppSizes.md),
                       child: OutlinedButton.icon(
-                        onPressed: () => _showReportIssueDialog(context),
+                        onPressed: () => _showReportIssueBottomSheet(context),
                         icon: const Icon(Iconsax.warning_2, size: 18),
                         label: const Text('Report Issue'),
                         style: OutlinedButton.styleFrom(
@@ -2228,6 +2479,36 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                       );
                     },
                   ),
+                  const SizedBox(height: AppSizes.md),
+                  if (order.status == OrderStatus.delivered)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              final cartProvider = Provider.of<CartProvider>(
+                                context,
+                                listen: false,
+                              );
+                              for (final item in order.items) {
+                                cartProvider.addToCart(item.product, quantity: item.quantity);
+                              }
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Reorder all added to cart')),
+                              );
+                            },
+                            child: const Text('Reorder all'),
+                          ),
+                        ),
+                        const SizedBox(width: AppSizes.sm),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _downloadReceipt,
+                            child: const Text('Download receipt'),
+                          ),
+                        ),
+                      ],
+                    ),
                   const SizedBox(height: AppSizes.xl),
                 ],
               ),
@@ -2933,44 +3214,79 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     required String role,
     required String name,
     String? phone,
+    String? photoUrl,
   }) {
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.primaryOrange.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-          ),
-          child: Icon(icon, color: AppColors.primaryOrange, size: 20),
+    Widget avatar;
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      avatar = ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: photoUrl,
+          width: 48,
+          height: 48,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => _personInitialAvatar(name, icon),
+          errorWidget: (_, __, ___) => _personInitialAvatar(name, icon),
         ),
-        const SizedBox(width: AppSizes.sm),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                role,
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textSecondary,
+      );
+    } else {
+      avatar = _personInitialAvatar(name, icon);
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          avatar,
+          const SizedBox(width: AppSizes.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  role,
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
-              ),
-              Text(name, style: AppTextStyles.labelMedium),
-            ],
-          ),
-        ),
-        if (phone != null && phone.isNotEmpty)
-          IconButton(
-            onPressed: () => _showCallDialog(context, role, name, phone),
-            icon: const Icon(
-              Iconsax.call,
-              color: AppColors.primaryGreen,
-              size: 20,
+                Text(name, style: AppTextStyles.labelMedium),
+                if (phone != null && phone.isNotEmpty)
+                  Text(
+                    phone,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+              ],
             ),
-            tooltip: 'Call $role',
           ),
-      ],
+          if (phone != null && phone.isNotEmpty)
+            IconButton(
+              onPressed: () => _showCallDialog(context, role, name, phone),
+              icon: const Icon(
+                Iconsax.call,
+                color: AppColors.primaryGreen,
+                size: 22,
+              ),
+              tooltip: 'Call $role',
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _personInitialAvatar(String name, IconData icon) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : null;
+    return CircleAvatar(
+      radius: 24,
+      backgroundColor: AppColors.primaryOrange.withValues(alpha: 0.15),
+      child: initial != null
+          ? Text(
+              initial,
+              style: AppTextStyles.labelMedium.copyWith(
+                color: AppColors.primaryOrange,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          : Icon(icon, color: AppColors.primaryOrange, size: 20),
     );
   }
 
@@ -3038,94 +3354,121 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     );
   }
 
-  void _showReportIssueDialog(BuildContext context) {
+  void _showReportIssueBottomSheet(BuildContext context) {
     String? selectedIssue;
     final detailsController = TextEditingController();
     final issues = [
-      'Wrong items received',
-      'Damaged items',
-      'Missing items',
-      'Poor quality / expired',
-      'Order was late',
+      'Missing item',
+      'Damaged item',
+      'Wrong item',
+      'Late delivery',
+      'Rider issue',
       'Other',
     ];
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Row(
-            children: [
-              Icon(Iconsax.warning_2, color: AppColors.error, size: 22),
-              const SizedBox(width: 8),
-              const Text('Report an Issue'),
-            ],
-          ),
-          content: SingleChildScrollView(
+        builder: (ctx, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSizes.md,
+              AppSizes.md,
+              AppSizes.md,
+              MediaQuery.of(ctx).viewInsets.bottom + AppSizes.md,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('What went wrong?', style: AppTextStyles.labelMedium),
-                const SizedBox(height: 8),
-                ...issues.map(
-                  (issue) => RadioListTile<String>(
-                    value: issue,
-                    groupValue: selectedIssue,
-                    onChanged: (val) =>
-                        setDialogState(() => selectedIssue = val),
-                    title: Text(issue, style: AppTextStyles.bodySmall),
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    activeColor: AppColors.primary,
+                Text('Report an issue', style: AppTextStyles.h5),
+                const SizedBox(height: AppSizes.sm),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: issues.map((issue) {
+                    final selected = selectedIssue == issue;
+                    return ChoiceChip(
+                      label: Text(issue),
+                      selected: selected,
+                      onSelected: (_) => setSheetState(() => selectedIssue = issue),
+                      selectedColor: AppColors.primarySoft,
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: AppSizes.md),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSizes.sm),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.grey300),
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Iconsax.camera, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Add photo (camera first on mobile)',
+                          style: AppTextStyles.bodySmall,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSizes.sm),
                 TextField(
                   controller: detailsController,
                   maxLines: 3,
                   decoration: InputDecoration(
-                    hintText: 'Add details (optional)',
+                    hintText: 'Describe what happened',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                 ),
+                const SizedBox(height: AppSizes.sm),
+                Text(
+                  'Refunds via Mobile Money within 24 hrs.',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppSizes.md),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: selectedIssue == null
+                        ? null
+                        : () {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Issue submitted. We will follow up shortly.'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          },
+                    child: const Text('Submit issue'),
+                  ),
+                ),
               ],
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: selectedIssue == null
-                  ? null
-                  : () {
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Issue reported. Our team will review and contact you within 24 hours.',
-                          ),
-                          backgroundColor: AppColors.success,
-                          duration: Duration(seconds: 4),
-                        ),
-                      );
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Submit Report'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
+    );
+  }
+
+  void _downloadReceipt() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Receipt download will start shortly.')),
     );
   }
 
@@ -3158,19 +3501,36 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
 
   /// Vertical timeline: Confirmed → Packed → Rider assigned → On the way → Delivered.
   Widget _buildStatusTimeline() {
+    // Don't show the happy-path timeline for terminal error states.
+    if (order.isCancelled ||
+        order.status == OrderStatus.refunded) {
+      return const SizedBox.shrink();
+    }
+
+    // Use stepIndex (0-7 on the happy path) so cancelled/refunded (-1) can't
+    // accidentally satisfy a ">=" comparison against a mid-flow step.
+    final step = order.status.stepIndex;
+    final isConfirmed = step >= 1; // paymentConfirmed and above
+    final isPacked    = step >= OrderStatus.readyForDelivery.stepIndex;
+    final isRiderDone = step >= OrderStatus.inTransit.stepIndex;
+
     final steps = [
       _TimelineStep(
         label: 'Order Confirmed',
         subLabel: 'We received your order',
         icon: Iconsax.tick_circle,
-        done: true,
+        done: isConfirmed,
+        active: order.status == OrderStatus.pending ||
+            order.status == OrderStatus.paymentProcessing ||
+            order.status == OrderStatus.confirmed,
       ),
       _TimelineStep(
         label: 'Packed',
         subLabel: 'Your items are being packed',
         icon: Iconsax.box,
-        done: order.status.index >= OrderStatus.readyForDelivery.index,
-        active: order.status == OrderStatus.shopperAssigned || order.status == OrderStatus.shopping,
+        done: isPacked,
+        active: order.status == OrderStatus.shopperAssigned ||
+            order.status == OrderStatus.shopping,
       ),
       _TimelineStep(
         label: 'Rider Assigned',
@@ -3178,8 +3538,9 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
             ? '${order.riderName} is on it'
             : 'A rider will be assigned soon',
         icon: Iconsax.personalcard,
-        done: order.status.index >= OrderStatus.inTransit.index,
-        active: order.status == OrderStatus.riderAssigned,
+        done: isRiderDone,
+        active: order.status == OrderStatus.riderAssigned ||
+            order.status == OrderStatus.readyForDelivery,
         riderPhone: order.riderPhone,
       ),
       _TimelineStep(

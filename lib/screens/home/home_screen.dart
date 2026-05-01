@@ -923,7 +923,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const FloatingCartButton(),
-        const WhatsAppSupportButton(),
+        const WhatsAppSupportButton(
+          phoneNumber: AppConstants.supportWhatsAppNumber,
+        ),
         ],
       ),
     );

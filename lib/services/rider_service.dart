@@ -190,6 +190,15 @@ class RiderService {
           .timeout(AppConstants.apiTimeout);
 
       if (response.statusCode != 200) return null;
+            if (response.statusCode == 401) {
+              throw Exception('Unauthorized — admin access required');
+            }
+            if (response.statusCode >= 500) {
+              throw Exception(
+                'Server error ${response.statusCode} fetching rider profile',
+              );
+            }
+            if (response.statusCode != 200) return null; // 404 / not-found path
       final parsed = jsonDecode(response.body);
       final data = parsed is Map<String, dynamic> ? parsed['data'] : null;
       if (data is List && data.isNotEmpty) {

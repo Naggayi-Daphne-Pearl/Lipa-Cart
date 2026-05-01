@@ -254,9 +254,10 @@ class ShimmerListItem extends StatelessWidget {
 class HomePageSkeleton extends StatelessWidget {
   const HomePageSkeleton({super.key});
 
-  static const _heroH = 180.0;
-  static const _catSize = 80.0;
-  static const _catCount = 5;
+  static const _searchH = 52.0;
+  static const _editorialH = 340.0; // matches real _buildEditorialHero height
+  static const _catSize = 72.0;
+  static const _catCount = 6;
 
   @override
   Widget build(BuildContext context) {
@@ -268,17 +269,36 @@ class HomePageSkeleton extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Hero placeholder
+            // Greeting line
             Container(
-              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              height: _heroH,
+              margin: const EdgeInsets.fromLTRB(16, 16, 120, 0),
+              height: 20,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
-            const SizedBox(height: 12),
-            // Trust strip
+            const SizedBox(height: 6),
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 200, 0),
+              height: 14,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+            const SizedBox(height: 14),
+            // Search bar
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              height: _searchH,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Trust strip (3 pills)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -294,32 +314,46 @@ class HomePageSkeleton extends StatelessWidget {
                 )),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            // Editorial hero — tall card matching real layout
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              height: _editorialH,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            const SizedBox(height: 24),
             // Category circles row
             Padding(
               padding: const EdgeInsets.only(left: 16),
-              child: Row(
-                children: List.generate(_catCount, (i) => Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: _catSize,
-                        height: _catSize,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const NeverScrollableScrollPhysics(),
+                child: Row(
+                  children: List.generate(_catCount, (i) => Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: _catSize,
+                          height: _catSize,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        width: _catSize * 0.7,
-                        height: 10,
-                        color: Colors.white,
-                      ),
-                    ],
-                  ),
-                )),
+                        const SizedBox(height: 6),
+                        Container(
+                          width: _catSize * 0.7,
+                          height: 10,
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
+                  )),
+                ),
               ),
             ),
             const SizedBox(height: 24),

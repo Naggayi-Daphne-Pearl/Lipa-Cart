@@ -186,16 +186,12 @@ class UploadService {
   }
 
   static bool _isRetryableUploadFailure(int statusCode, String body) {
-    if (statusCode != 500 &&
-        statusCode != 502 &&
-        statusCode != 503 &&
-        statusCode != 504) {
-      return false;
-    }
-    final lowerBody = body.toLowerCase();
-    return lowerBody.contains('timeout') ||
-        lowerBody.contains('request timeout') ||
-        lowerBody.contains('cloudinary');
+    // Retry all 5xx gateway/server errors — body content is unreliable
+    // (proxies often return plain HTML) so don't gate on keywords.
+    if (statusCode >= 500 && statusCode <= 599) return true;
+    // Also retry on 408 Request Timeout and 429 Too Many Requests.
+    if (statusCode == 408 || statusCode == 429) return true;
+    return false;
   }
 
   static Future<List<String>> uploadMultipleImages(
