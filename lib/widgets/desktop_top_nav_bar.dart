@@ -9,16 +9,13 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/utils/responsive.dart';
 import '../providers/cart_provider.dart';
-import '../core/utils/formatters.dart';
 
 class DesktopTopNavBar extends StatelessWidget {
   final String activeSection;
-  final bool showSearch;
 
   const DesktopTopNavBar({
     super.key,
     required this.activeSection,
-    this.showSearch = true,
   });
 
   @override
@@ -67,6 +64,7 @@ class DesktopTopNavBar extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // ── Logo ────────────────────────────────────────────────────────
             GestureDetector(
               onTap: () => context.go('/customer/home'),
               child: SvgPicture.asset(
@@ -75,58 +73,73 @@ class DesktopTopNavBar extends StatelessWidget {
                 fit: BoxFit.contain,
               ),
             ),
-            const SizedBox(width: AppSizes.xl),
-            _buildNavLink(
-              context,
-              label: 'Home',
-              route: '/customer/home',
-              isSelected: activeSection == 'home',
-            ),
-            _buildNavLink(
-              context,
-              label: 'Browse',
-              route: '/customer/browse',
-              isSelected: activeSection == 'browse',
-            ),
-            _buildNavLink(
-              context,
-              label: 'Recipes',
-              route: '/customer/recipes',
-              isSelected: activeSection == 'recipes',
-            ),
-            _buildNavLink(
-              context,
-              label: 'My Lists',
-              route: '/customer/shopping-lists',
-              isSelected: activeSection == 'lists',
-            ),
-            _buildNavLink(
-              context,
-              label: 'Orders',
-              route: '/customer/orders',
-              isSelected: activeSection == 'orders',
-            ),
-            const Spacer(),
-            if (showSearch && !isTightDesktop) ...[
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  minWidth: isCompactDesktop ? 240 : 320,
-                  maxWidth: isCompactDesktop ? 340 : 420,
-                ),
-                child: _buildSearchBar(context),
+            const SizedBox(width: AppSizes.md),
+
+            // ── Nav links (shrinkable) ───────────────────────────────────────
+            Flexible(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildNavLink(
+                    context,
+                    label: 'Home',
+                    route: '/customer/home',
+                    isSelected: activeSection == 'home',
+                  ),
+                  _buildNavLink(
+                    context,
+                    label: 'Browse',
+                    route: '/customer/browse',
+                    isSelected: activeSection == 'browse',
+                  ),
+                  if (!isTightDesktop)
+                    _buildNavLink(
+                      context,
+                      label: 'Recipes',
+                      route: '/customer/recipes',
+                      isSelected: activeSection == 'recipes',
+                    ),
+                  if (!isTightDesktop)
+                    _buildNavLink(
+                      context,
+                      label: 'My Lists',
+                      route: '/customer/shopping-lists',
+                      isSelected: activeSection == 'lists',
+                    ),
+                  _buildNavLink(
+                    context,
+                    label: 'Orders',
+                    route: '/customer/orders',
+                    isSelected: activeSection == 'orders',
+                  ),
+                ],
               ),
-              const SizedBox(width: AppSizes.md),
-            ],
-            if (!isCompactDesktop) ...[
-              _buildDeliverySlotChip(),
-              const SizedBox(width: AppSizes.sm),
-            ],
+            ),
+
+            // ── Divider ─────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
+              child: Container(
+                width: 1,
+                height: 28,
+                color: AppColors.grey200,
+              ),
+            ),
+
+            // ── Right-side actions ───────────────────────────────────────────
+            // Delivery chip — always shown, shrinks label on compact
+            _buildDeliverySlotChip(compact: isCompactDesktop),
+            const SizedBox(width: AppSizes.sm),
+
+            // Notification
             _buildIconButton(
               context,
               icon: Iconsax.notification,
               onTap: () => context.go('/customer/notifications'),
             ),
-            const SizedBox(width: AppSizes.sm),
+            const SizedBox(width: AppSizes.xs),
+
+            // Cart bag with badge
             _buildIconButton(
               context,
               icon: Iconsax.bag_2,
@@ -135,23 +148,28 @@ class DesktopTopNavBar extends StatelessWidget {
               selected: activeSection == 'cart',
             ),
             const SizedBox(width: AppSizes.xs),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              decoration: BoxDecoration(
-                color: AppColors.primarySoft,
-                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-              ),
-              child: Text(
-                isCompactDesktop
-                  ? 'UGX $compactCartTotal'
-                    : Formatters.formatCurrency(cartTotal),
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
+
+            // Cart total pill
+            GestureDetector(
+              onTap: () => context.go('/customer/cart'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                ),
+                child: Text(
+                  'UGX $compactCartTotal',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: AppSizes.sm),
+            const SizedBox(width: AppSizes.xs),
+
+            // Profile
             _buildIconButton(
               context,
               icon: Iconsax.user,
@@ -202,56 +220,7 @@ class DesktopTopNavBar extends StatelessWidget {
     );
   }
 
-  Widget _buildSearchBar(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.go('/customer/search'),
-      child: Container(
-        height: 50,
-        padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
-        decoration: BoxDecoration(
-          color: AppColors.backgroundGrey,
-          borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-          border: Border.all(color: AppColors.grey200),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Iconsax.search_normal,
-              color: AppColors.textSecondary,
-              size: 18,
-            ),
-            const SizedBox(width: AppSizes.sm),
-            Expanded(
-              child: Text(
-                'Search products, recipes... [/]',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: AppSizes.sm),
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-              ),
-              child: const Icon(
-                Iconsax.setting_4,
-                color: Colors.white,
-                size: 17,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDeliverySlotChip() {
+  Widget _buildDeliverySlotChip({bool compact = false}) {
     return Container(
       height: 44,
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -261,11 +230,12 @@ class DesktopTopNavBar extends StatelessWidget {
         border: Border.all(color: AppColors.grey200),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Iconsax.location, size: 16, color: AppColors.textSecondary),
           const SizedBox(width: 6),
           Text(
-            'Delivering to: Bukoto · Today 2-3 PM',
+            compact ? 'Bukoto · Today 2-3 PM' : 'Delivering to: Bukoto · Today 2-3 PM',
             style: AppTextStyles.caption.copyWith(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
