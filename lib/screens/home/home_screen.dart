@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
@@ -30,6 +31,8 @@ import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
 import '../../widgets/desktop_footer.dart';
 import '../../widgets/feature_spotlight_card.dart';
+import '../../widgets/floating_cart_button.dart';
+import '../../widgets/whatsapp_support_button.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -43,10 +46,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int _unreadNotifications = 0;
   bool _showQuickTour = false;
+  bool _showStickySearch = false;
+  int _hintIndex = 0;
+  Timer? _hintTimer;
+  final ScrollController _scrollController = ScrollController();
+
+  static const _searchHints = [
+    'Search for tomatoes',
+    'Search for sugar',
+    'Search for milk',
+    'Search for bread',
+    'Search for eggs',
+  ];
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
+    _hintTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted) {
+        setState(() => _hintIndex = (_hintIndex + 1) % _searchHints.length);
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final productProvider = context.read<ProductProvider>();
       await productProvider.loadProducts();
@@ -58,6 +79,13 @@ class _HomeScreenState extends State<HomeScreen> {
       await _fetchUnreadCount();
       await _loadQuickTourPreference();
     });
+  }
+
+  void _onScroll() {
+    final show = _scrollController.offset > 200;
+    if (show != _showStickySearch) {
+      setState(() => _showStickySearch = show);
+    }
   }
 
   Future<void> _loadQuickTourPreference() async {
@@ -101,6 +129,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _hintTimer?.cancel();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -116,14 +147,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: RefreshIndicator(
+      body: Stack(
+        children: [
+          RefreshIndicator(
         onRefresh: () => productProvider.refreshProducts(),
         color: AppColors.accent,
         child: SingleChildScrollView(
+          controller: _scrollController,
           child: ResponsiveContainer(
             centerContent: true,
             padding: EdgeInsets.zero,
-            child: Column(
+            child: productProvider.isLoading && productProvider.products.isEmpty
+                ? const HomePageSkeleton()
+                : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (context.isDesktop)
@@ -379,17 +415,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: AppSizes.xl),
 
-                // Reorder section (for authenticated users with past orders)
+                // Buy Again section (authenticated users with past orders)
                 if (authProvider.isAuthenticated)
                   Builder(
                     builder: (context) {
                       final orderService = context.watch<OrderService>();
-                      final recentOrders = orderService.orders
+                      // Collect all products from delivered orders, deduplicated
+                      final seen = <String>{};
+                      final buyAgainProducts = orderService.orders
                           .where((o) => o.status == OrderStatus.delivered)
-                          .take(3)
+                          .expand((o) => o.items)
+                          .where((item) => seen.add(item.product.id.toString()))
+                          .take(10)
                           .toList();
-
-                      if (recentOrders.isEmpty) return const SizedBox.shrink();
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,127 +437,105 @@ class _HomeScreenState extends State<HomeScreen> {
                               horizontal: context.horizontalPadding,
                             ),
                             child: _buildSectionHeader(
-                              'Reorder',
-                              onSeeAll: () => context.push('/customer/orders'),
+                              buyAgainProducts.isEmpty
+                                  ? 'Popular in Kampala'
+                                  : 'Buy Again',
+                              onSeeAll: buyAgainProducts.isEmpty
+                                  ? null
+                                  : () => context.push('/customer/orders'),
                             ),
                           ),
                           const SizedBox(height: AppSizes.sm),
-                          SizedBox(
-                            height: 80,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: context.horizontalPadding,
-                              ),
-                              itemCount: recentOrders.length,
-                              itemBuilder: (context, index) {
-                                final order = recentOrders[index];
-                                return GestureDetector(
-                                  onTap: () {
-                                    final cartProvider = context
-                                        .read<CartProvider>();
-                                    for (final item in order.items) {
-                                      cartProvider.addToCart(
-                                        item.product,
-                                        quantity: item.quantity,
+                          if (buyAgainProducts.isEmpty)
+                            // New customer: show Popular in Kampala placeholder
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+                              child: _buildPopularInKampalaHint(context),
+                            )
+                          else
+                            SizedBox(
+                              height: 110,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: context.horizontalPadding,
+                                ),
+                                itemCount: buyAgainProducts.length,
+                                itemBuilder: (context, index) {
+                                  final item = buyAgainProducts[index];
+                                  return GestureDetector(
+                                    onTap: () {
+                                      cartProvider.addToCart(item.product);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('${item.product.name} added to cart'),
+                                          backgroundColor: AppColors.success,
+                                          duration: const Duration(seconds: 2),
+                                          action: SnackBarAction(
+                                            label: 'View Cart',
+                                            textColor: Colors.white,
+                                            onPressed: () => context.push('/customer/cart'),
+                                          ),
+                                        ),
                                       );
-                                    }
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          '${order.items.length} items added to cart',
-                                        ),
-                                        backgroundColor: AppColors.success,
-                                        action: SnackBarAction(
-                                          label: 'Checkout',
-                                          textColor: Colors.white,
-                                          onPressed: () => context.push(
-                                            '/customer/checkout',
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  child: Container(
-                                    width: 220,
-                                    margin: const EdgeInsets.only(
-                                      right: AppSizes.md,
-                                    ),
-                                    padding: const EdgeInsets.all(AppSizes.sm),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.surface,
-                                      borderRadius: BorderRadius.circular(
-                                        AppSizes.radiusMd,
-                                      ),
-                                      border: Border.all(
-                                        color: AppColors.grey200,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 48,
-                                          height: 48,
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primarySoft,
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                          ),
-                                          child: const Icon(
-                                            Iconsax.refresh_2,
-                                            color: AppColors.primary,
-                                            size: 22,
-                                          ),
-                                        ),
-                                        const SizedBox(width: AppSizes.sm),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
+                                    },
+                                    child: Container(
+                                      width: 88,
+                                      margin: const EdgeInsets.only(right: 12),
+                                      child: Column(
+                                        children: [
+                                          Stack(
                                             children: [
-                                              Text(
-                                                '#${order.orderNumber}',
-                                                style: AppTextStyles.labelSmall
-                                                    .copyWith(
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                    ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
+                                              Container(
+                                                width: 72,
+                                                height: 72,
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.grey100,
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(color: AppColors.grey200),
+                                                ),
+                                                child: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  child: CachedNetworkImage(
+                                                    imageUrl: item.product.image,
+                                                    fit: BoxFit.cover,
+                                                    errorWidget: (_, __, ___) => Icon(Iconsax.image, color: AppColors.grey400),
+                                                  ),
+                                                ),
                                               ),
-                                              Text(
-                                                '${order.items.length} items • ${Formatters.formatCurrency(order.total)}',
-                                                style: AppTextStyles.caption
-                                                    .copyWith(
-                                                      color: AppColors
-                                                          .textSecondary,
-                                                    ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              Text(
-                                                'Tap to reorder',
-                                                style: AppTextStyles.caption
-                                                    .copyWith(
-                                                      color: AppColors.primary,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                      fontSize: 11,
-                                                    ),
+                                              Positioned(
+                                                bottom: 0,
+                                                right: 0,
+                                                child: Container(
+                                                  width: 24,
+                                                  height: 24,
+                                                  decoration: const BoxDecoration(
+                                                    color: AppColors.primary,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: const Icon(Iconsax.add, color: Colors.white, size: 14),
+                                                ),
                                               ),
                                             ],
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            item.product.name,
+                                            style: AppTextStyles.caption.copyWith(
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: 11,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             ),
-                          ),
                           const SizedBox(height: AppSizes.xl),
                         ],
                       );
@@ -863,6 +879,53 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+        // Sticky search bar — appears after scrolling past hero
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          top: _showStickySearch ? 0 : -80,
+          left: 0,
+          right: 0,
+          child: SafeArea(
+            bottom: false,
+            child: Container(
+              color: AppColors.surface,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: GestureDetector(
+                onTap: () => context.push('/customer/search'),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  child: Container(
+                    key: ValueKey(_hintIndex),
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.grey50,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                      border: Border.all(color: AppColors.grey200),
+                    ),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 16),
+                        Icon(Iconsax.search_normal, color: AppColors.textTertiary, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _searchHints[_hintIndex],
+                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textTertiary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const FloatingCartButton(),
+        const WhatsAppSupportButton(),
+        ],
+      ),
     );
   }
 
@@ -934,32 +997,82 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTrustStrip() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: _buildTrustPill(
-            icon: Iconsax.truck_fast,
-            stat: 'Free',
-            label: 'over UGX 50k',
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: _buildTrustPill(
+                icon: Iconsax.truck_fast,
+                stat: 'Free',
+                label: 'over UGX 50k',
+              ),
+            ),
+            const SizedBox(width: AppSizes.sm),
+            Expanded(
+              child: _buildTrustPill(
+                icon: Iconsax.timer_1,
+                stat: '60 min',
+                label: 'to your door',
+              ),
+            ),
+            const SizedBox(width: AppSizes.sm),
+            Expanded(
+              child: _buildTrustPill(
+                icon: Iconsax.heart5,
+                stat: '10k+',
+                label: 'happy buyers',
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: AppSizes.sm),
-        Expanded(
-          child: _buildTrustPill(
-            icon: Iconsax.timer_1,
-            stat: '30 min',
-            label: 'avg delivery',
+        const SizedBox(height: AppSizes.sm),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            border: Border.all(color: AppColors.grey200),
           ),
-        ),
-        const SizedBox(width: AppSizes.sm),
-        Expanded(
-          child: _buildTrustPill(
-            icon: Iconsax.heart5,
-            stat: '10k+',
-            label: 'happy buyers',
+          child: Row(
+            children: [
+              Icon(Iconsax.card, size: 14, color: AppColors.textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                'Pay with:',
+                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
+              ),
+              const SizedBox(width: 8),
+              _buildPaymentBadge('MTN', const Color(0xFFFFCC00), Colors.black),
+              const SizedBox(width: 6),
+              _buildPaymentBadge('Airtel', const Color(0xFFE40000), Colors.white),
+              const SizedBox(width: 6),
+              _buildPaymentBadge('VISA', const Color(0xFF1A1F71), Colors.white),
+              const SizedBox(width: 6),
+              _buildPaymentBadge('Cash', AppColors.primarySoft, AppColors.primary),
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPaymentBadge(String label, Color bg, Color fg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.caption.copyWith(
+          color: fg,
+          fontWeight: FontWeight.w700,
+          fontSize: 10,
+        ),
+      ),
     );
   }
 
@@ -1062,17 +1175,21 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(width: AppSizes.md),
             Expanded(
-              child: Text(
-                'Search products, recipes...',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
-                  fontSize: compact
-                      ? 14
-                      : context.responsive<double>(
-                          mobile: 14.0,
-                          tablet: 15.0,
-                          desktop: 16.0,
-                        ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 400),
+                child: Text(
+                  key: ValueKey(_hintIndex),
+                  _searchHints[_hintIndex],
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: compact
+                        ? 14
+                        : context.responsive<double>(
+                            mobile: 14.0,
+                            tablet: 15.0,
+                            desktop: 16.0,
+                          ),
+                  ),
                 ),
               ),
             ),
@@ -1223,7 +1340,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Fresh groceries,\nat your door.',
+                        'Fresh groceries\nto your door in 60 minutes.',
                         style: AppTextStyles.displayLg.copyWith(
                           color: AppColors.primaryDark,
                         ),
@@ -1231,7 +1348,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: AppSizes.sm),
                       Text(
-                        'Shop from local markets — delivered in 30 minutes across Kampala.',
+                        'Shop from local markets — delivered across Kampala & Entebbe.',
                         style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.textSecondary,
                           height: 1.4,
@@ -1293,6 +1410,59 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildPopularInKampalaHint(BuildContext context) {
+    final categories = [
+      ('Fresh Produce', Icons.grass_rounded),
+      ('Snacks', Iconsax.cake),
+      ('Drinks', Icons.local_drink_rounded),
+    ];
+    return Container(
+      padding: const EdgeInsets.all(AppSizes.md),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Start your first order',
+            style: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: categories.map((cat) {
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => context.push('/customer/browse'),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(cat.$2, color: AppColors.primary, size: 22),
+                        const SizedBox(height: 4),
+                        Text(
+                          cat.$1,
+                          style: AppTextStyles.caption.copyWith(fontSize: 10, fontWeight: FontWeight.w600),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSectionHeader(String title, {VoidCallback? onSeeAll}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1329,6 +1499,7 @@ class _HomeScreenState extends State<HomeScreen> {
     CartProvider cartProvider,
   ) {
     final isInCart = cartProvider.isInCart(product.id);
+    final qty = cartProvider.getCartItem(product.id)?.quantity.toInt() ?? 0;
 
     return GestureDetector(
       onTap: () => context.push('/customer/product', extra: product),
@@ -1437,7 +1608,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Substantial add button — solid accent, tuned shadow.
                       GestureDetector(
                         onTap: () {
                           if (isInCart) {
@@ -1461,31 +1631,81 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
                           }
                         },
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: isInCart
-                                ? AppColors.primary
-                                : AppColors.accent,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                    (isInCart
-                                            ? AppColors.primary
-                                            : AppColors.accent)
-                                        .withValues(alpha: 0.28),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            isInCart ? Iconsax.tick_circle5 : Iconsax.add,
-                            color: Colors.white,
-                            size: 20,
-                          ),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 220),
+                          child: (isInCart && qty > 0)
+                              ? Container(
+                                  key: const ValueKey('stepper'),
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primarySoft,
+                                    borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () {
+                                          HapticFeedback.lightImpact();
+                                          cartProvider.decrementQuantity(product.id);
+                                        },
+                                        child: SizedBox(
+                                          width: 44,
+                                          height: 44,
+                                          child: Center(
+                                            child: Icon(
+                                              qty == 1 ? Iconsax.trash : Icons.remove,
+                                              size: 18,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Text(
+                                        '$qty',
+                                        style: AppTextStyles.labelMedium.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: () {
+                                          HapticFeedback.lightImpact();
+                                          cartProvider.incrementQuantity(product.id);
+                                        },
+                                        child: const SizedBox(
+                                          width: 44,
+                                          height: 44,
+                                          child: Center(
+                                            child: Icon(Icons.add, size: 18, color: AppColors.primary),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : Container(
+                                  key: const ValueKey('add'),
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: isInCart ? AppColors.primary : AppColors.accent,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: (isInCart ? AppColors.primary : AppColors.accent)
+                                            .withValues(alpha: 0.28),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    isInCart ? Iconsax.tick_circle5 : Iconsax.add,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
                         ),
                       ),
                     ],

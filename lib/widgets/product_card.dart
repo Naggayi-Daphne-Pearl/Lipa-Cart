@@ -13,16 +13,22 @@ class ProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback? onTap;
   final VoidCallback? onAddToCart;
+  final VoidCallback? onIncrement;
+  final VoidCallback? onDecrement;
   final bool isInCart;
   final bool isFavorite;
+  final int cartQuantity;
 
   const ProductCard({
     super.key,
     required this.product,
     this.onTap,
     this.onAddToCart,
+    this.onIncrement,
+    this.onDecrement,
     this.isInCart = false,
     this.isFavorite = false,
+    this.cartQuantity = 0,
   });
 
   @override
@@ -212,7 +218,7 @@ class ProductCard extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
                           height: 1.18,
-                          fontSize: 12.5,
+                          fontSize: 14,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -222,70 +228,77 @@ class ProductCard extends StatelessWidget {
                         'per ${product.unit}',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.textSecondary,
-                          fontSize: 11,
+                          fontSize: 14,
                         ),
                       ),
-                      // Price and add button row
+                      // Price and add/stepper row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Expanded(
+                          Flexible(
                             child: Text(
                               Formatters.formatCurrency(product.price),
                               style: AppTextStyles.labelLarge.copyWith(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w800,
-                                fontSize: 13.5,
+                                fontSize: 14,
                               ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
-                          GestureDetector(
-                            onTap: () {
-                              HapticFeedback.lightImpact();
-                              onAddToCart?.call();
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: isInCart
-                                      ? [
-                                          AppColors.success,
-                                          AppColors.success.withValues(
-                                            alpha: 0.8,
-                                          ),
-                                        ]
-                                      : [
-                                          AppColors.primary,
-                                          AppColors.primary.withValues(
-                                            alpha: 0.85,
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            transitionBuilder: (child, animation) =>
+                                ScaleTransition(scale: animation, child: child),
+                            child: (isInCart && cartQuantity > 0)
+                                ? _QuantityStepper(
+                                    key: const ValueKey('stepper'),
+                                    quantity: cartQuantity,
+                                    onIncrement: () {
+                                      HapticFeedback.lightImpact();
+                                      onIncrement?.call();
+                                    },
+                                    onDecrement: () {
+                                      HapticFeedback.lightImpact();
+                                      onDecrement?.call();
+                                    },
+                                  )
+                                : GestureDetector(
+                                    key: const ValueKey('add'),
+                                    onTap: () {
+                                      HapticFeedback.lightImpact();
+                                      onAddToCart?.call();
+                                    },
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: isInCart
+                                              ? [AppColors.success, AppColors.success.withValues(alpha: 0.8)]
+                                              : [AppColors.primary, AppColors.primary.withValues(alpha: 0.85)],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: (isInCart ? AppColors.success : AppColors.primary).withValues(alpha: 0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 3),
                                           ),
                                         ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color:
-                                        (isInCart
-                                                ? AppColors.success
-                                                : AppColors.primary)
-                                            .withValues(alpha: 0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 3),
+                                      ),
+                                      child: Icon(
+                                        isInCart ? Iconsax.tick_circle5 : Iconsax.add,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
                                   ),
-                                ],
-                              ),
-                              child: Icon(
-                                isInCart ? Iconsax.tick_circle5 : Iconsax.add,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
                           ),
                         ],
                       ),
@@ -296,6 +309,71 @@ class ProductCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _QuantityStepper extends StatelessWidget {
+  final int quantity;
+  final VoidCallback onIncrement;
+  final VoidCallback onDecrement;
+
+  const _QuantityStepper({
+    super.key,
+    required this.quantity,
+    required this.onIncrement,
+    required this.onDecrement,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: onDecrement,
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: Center(
+                child: Icon(
+                  quantity == 1 ? Iconsax.trash : Icons.remove,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ),
+          Container(
+            constraints: const BoxConstraints(minWidth: 28),
+            alignment: Alignment.center,
+            child: Text(
+              '$quantity',
+              style: AppTextStyles.labelSmall.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: onIncrement,
+            child: const SizedBox(
+              width: 44,
+              height: 44,
+              child: Center(
+                child: Icon(Icons.add, size: 18, color: AppColors.primary),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -738,6 +738,12 @@ class CartScreen extends StatelessWidget {
   }
 
   Widget _buildEmptyCart(BuildContext context) {
+    final categories = [
+      ('Fresh Produce', Icons.grass_rounded, const Color(0xFF15874B)),
+      ('Snacks', Icons.cookie_rounded, const Color(0xFFF89227)),
+      ('Drinks', Icons.local_drink_rounded, const Color(0xFF0D6EFD)),
+    ];
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSizes.xl),
@@ -752,27 +758,66 @@ class CartScreen extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Iconsax.bag_2,
+                Icons.shopping_basket_outlined,
                 size: 56,
                 color: AppColors.accent,
               ),
             ),
             const SizedBox(height: AppSizes.lg),
             Text(
-              'Your cart is empty',
-              style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w600),
+              'Your basket is feeling light',
+              style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSizes.sm),
             Text(
-              'Add some fresh groceries to get started',
+              'Add fresh groceries to get started',
               style: AppTextStyles.bodyMedium.copyWith(
                 color: AppColors.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSizes.xl),
+            // Category shortcut chips
+            Row(
+              children: categories.map((cat) {
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => context.go('/customer/browse'),
+                    child: Container(
+                      margin: EdgeInsets.only(
+                        right: cat == categories.last ? 0 : 8,
+                      ),
+                      constraints: const BoxConstraints(minHeight: 44),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: cat.$3.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        border: Border.all(color: cat.$3.withValues(alpha: 0.25)),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(cat.$2, color: cat.$3, size: 24),
+                          const SizedBox(height: 4),
+                          Text(
+                            cat.$1,
+                            style: AppTextStyles.caption.copyWith(
+                              color: cat.$3,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: AppSizes.xl),
             GestureDetector(
-              onTap: () => Navigator.pop(context),
+              onTap: () => context.go('/customer/browse'),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSizes.xl,
@@ -783,7 +828,7 @@ class CartScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppSizes.radiusFull),
                 ),
                 child: Text(
-                  'Start Shopping',
+                  'Browse Products',
                   style: AppTextStyles.labelMedium.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,

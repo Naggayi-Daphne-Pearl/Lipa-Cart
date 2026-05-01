@@ -571,6 +571,11 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                   ),
                   const SizedBox(height: AppSizes.lg),
 
+                  // Status timeline
+                  _buildStatusTimeline(),
+
+                  const SizedBox(height: AppSizes.lg),
+
                   // Rider + client tracking map
                   if ((order.status == OrderStatus.riderAssigned ||
                           order.status == OrderStatus.inTransit) &&
@@ -3151,6 +3156,186 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     }
   }
 
+  /// Vertical timeline: Confirmed → Packed → Rider assigned → On the way → Delivered.
+  Widget _buildStatusTimeline() {
+    final steps = [
+      _TimelineStep(
+        label: 'Order Confirmed',
+        subLabel: 'We received your order',
+        icon: Iconsax.tick_circle,
+        done: true,
+      ),
+      _TimelineStep(
+        label: 'Packed',
+        subLabel: 'Your items are being packed',
+        icon: Iconsax.box,
+        done: order.status.index >= OrderStatus.readyForDelivery.index,
+        active: order.status == OrderStatus.shopperAssigned || order.status == OrderStatus.shopping,
+      ),
+      _TimelineStep(
+        label: 'Rider Assigned',
+        subLabel: order.riderName != null
+            ? '${order.riderName} is on it'
+            : 'A rider will be assigned soon',
+        icon: Iconsax.personalcard,
+        done: order.status.index >= OrderStatus.inTransit.index,
+        active: order.status == OrderStatus.riderAssigned,
+        riderPhone: order.riderPhone,
+      ),
+      _TimelineStep(
+        label: 'On the Way',
+        subLabel: _routeDuration != null
+            ? 'ETA ~${_routeDuration!.inMinutes} min'
+            : 'Your order is on the way',
+        icon: Iconsax.truck_fast,
+        done: order.isDelivered,
+        active: order.status == OrderStatus.inTransit,
+      ),
+      _TimelineStep(
+        label: 'Delivered',
+        subLabel: 'Enjoy your fresh groceries!',
+        icon: Iconsax.verify5,
+        done: order.isDelivered,
+      ),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(AppSizes.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Order Status',
+            style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: AppSizes.md),
+          ...steps.asMap().entries.map((entry) {
+            final i = entry.key;
+            final step = entry.value;
+            final isLast = i == steps.length - 1;
+            final dotColor = step.done
+                ? AppColors.success
+                : step.active
+                    ? AppColors.primary
+                    : AppColors.grey300;
+            final lineColor = step.done ? AppColors.success : AppColors.grey200;
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: step.done
+                            ? AppColors.success
+                            : step.active
+                                ? AppColors.primarySoft
+                                : AppColors.grey100,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: dotColor, width: 2),
+                      ),
+                      child: Icon(
+                        step.icon,
+                        size: 15,
+                        color: step.done
+                            ? Colors.white
+                            : step.active
+                                ? AppColors.primary
+                                : AppColors.grey400,
+                      ),
+                    ),
+                    if (!isLast)
+                      Container(
+                        width: 2,
+                        height: 32,
+                        color: lineColor,
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 6, bottom: isLast ? 0 : 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          step.label,
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: step.done || step.active
+                                ? AppColors.textPrimary
+                                : AppColors.textTertiary,
+                            fontWeight: step.active ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          step.subLabel,
+                          style: AppTextStyles.caption.copyWith(
+                            color: step.done || step.active
+                                ? AppColors.textSecondary
+                                : AppColors.textTertiary,
+                          ),
+                        ),
+                        if (step.active && step.riderPhone != null) ...[
+                          const SizedBox(height: 4),
+                          GestureDetector(
+                            onTap: () async {
+                              final uri = Uri.parse('tel:${step.riderPhone}');
+                              await launchUrl(uri);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSizes.sm,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primarySoft,
+                                borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Iconsax.call, size: 13, color: AppColors.primary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Call rider',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
   Color _getStatusColor(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:
@@ -3170,4 +3355,22 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
         return AppColors.error;
     }
   }
+}
+
+class _TimelineStep {
+  final String label;
+  final String subLabel;
+  final IconData icon;
+  final bool done;
+  final bool active;
+  final String? riderPhone;
+
+  const _TimelineStep({
+    required this.label,
+    required this.subLabel,
+    required this.icon,
+    this.done = false,
+    this.active = false,
+    this.riderPhone,
+  });
 }

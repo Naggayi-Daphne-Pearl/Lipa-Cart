@@ -660,15 +660,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                       const SizedBox(height: AppSizes.md),
 
-                      // Payment method — MVP exposes CoD only.
+                      // Payment method — all options shown with clear branding.
+                      // Logic: only CoD is active for MVP (others show "coming soon").
                       _buildSection(
                         title: 'Payment Method',
                         icon: Iconsax.card,
                         child: Column(
-                          children: PaymentMethod.values
-                              .where((m) => m == PaymentMethod.cashOnDelivery)
-                              .map(_buildPaymentOption)
-                              .toList(),
+                          children: [
+                            _buildMobileMoneyCard(
+                              method: PaymentMethod.mobileMoney,
+                              label: 'MTN Mobile Money',
+                              accent: const Color(0xFFFFCC00),
+                              textColor: Colors.black,
+                              badge: 'MTN',
+                              prompt: 'You\'ll get a prompt to approve',
+                              comingSoon: true,
+                            ),
+                            const SizedBox(height: AppSizes.sm),
+                            _buildMobileMoneyCard(
+                              method: PaymentMethod.mobileMoney,
+                              label: 'Airtel Money',
+                              accent: const Color(0xFFE40000),
+                              textColor: Colors.white,
+                              badge: 'Airtel',
+                              prompt: 'You\'ll get a prompt to approve',
+                              comingSoon: true,
+                            ),
+                            const SizedBox(height: AppSizes.sm),
+                            _buildPaymentOption(PaymentMethod.cashOnDelivery),
+                          ],
                         ),
                       ),
                       const SizedBox(height: AppSizes.md),
@@ -1241,6 +1261,79 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMobileMoneyCard({
+    required PaymentMethod method,
+    required String label,
+    required Color accent,
+    required Color textColor,
+    required String badge,
+    required String prompt,
+    bool comingSoon = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(AppSizes.sm),
+      margin: const EdgeInsets.only(bottom: 0),
+      decoration: BoxDecoration(
+        color: AppColors.lightGrey,
+        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+        border: Border.all(color: AppColors.grey300),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              badge,
+              style: AppTextStyles.caption.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSizes.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: AppTextStyles.labelMedium.copyWith(color: AppColors.textDark),
+                ),
+                Text(
+                  comingSoon ? 'Coming soon' : prompt,
+                  style: AppTextStyles.caption.copyWith(
+                    color: comingSoon ? AppColors.textSecondary : AppColors.primary,
+                    fontStyle: comingSoon ? FontStyle.italic : FontStyle.normal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (comingSoon)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.grey200,
+                borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+              ),
+              child: Text(
+                'Soon',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 

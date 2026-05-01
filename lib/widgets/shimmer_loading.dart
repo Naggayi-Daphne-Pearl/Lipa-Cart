@@ -248,3 +248,114 @@ class ShimmerListItem extends StatelessWidget {
     );
   }
 }
+
+/// Full homepage skeleton that mimics the real layout while products load.
+/// Uses soft green shimmer tones (#E8F5E9 / #C8E6C9) for brand feel.
+class HomePageSkeleton extends StatelessWidget {
+  const HomePageSkeleton({super.key});
+
+  static const _heroH = 180.0;
+  static const _catSize = 80.0;
+  static const _catCount = 5;
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFFE8F5E9),
+      highlightColor: const Color(0xFFC8E6C9),
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Hero placeholder
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              height: _heroH,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Trust strip
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: List.generate(3, (i) => Expanded(
+                  child: Container(
+                    margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                )),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Category circles row
+            Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Row(
+                children: List.generate(_catCount, (i) => Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: _catSize,
+                        height: _catSize,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        width: _catSize * 0.7,
+                        height: 10,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
+                )),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Section title
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              height: 16,
+              width: 120,
+              color: Colors.white,
+            ),
+            const SizedBox(height: 12),
+            // Product grid 2-col
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.72,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: 6,
+                itemBuilder: (_, __) => Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 100),
+          ],
+        ),
+      ),
+    );
+  }
+}
