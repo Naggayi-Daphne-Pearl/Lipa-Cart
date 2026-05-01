@@ -9,6 +9,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/utils/responsive.dart';
 import '../providers/cart_provider.dart';
+import '../core/utils/formatters.dart';
 
 class DesktopTopNavBar extends StatelessWidget {
   final String activeSection;
@@ -26,7 +27,18 @@ class DesktopTopNavBar extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final cartCount = context.watch<CartProvider>().itemCount;
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final isCompactDesktop = viewportWidth < 1360;
+    final isTightDesktop = viewportWidth < 1220;
+
+    final cartProvider = context.watch<CartProvider>();
+    final cartCount = cartProvider.itemCount;
+    final cartTotal = cartProvider.total;
+    final compactCartTotal = cartTotal >= 1000
+      ? cartTotal >= 10000
+          ? '${(cartTotal / 1000).toStringAsFixed(0)}k'
+          : '${(cartTotal / 1000).toStringAsFixed(1)}k'
+      : cartTotal.toStringAsFixed(0);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -36,9 +48,10 @@ class DesktopTopNavBar extends StatelessWidget {
         AppSizes.md,
       ),
       child: Container(
+        constraints: const BoxConstraints(minHeight: 64),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSizes.xl,
-          vertical: 14,
+          vertical: 8,
         ),
         decoration: BoxDecoration(
           color: AppColors.surface.withValues(alpha: 0.97),
@@ -94,12 +107,19 @@ class DesktopTopNavBar extends StatelessWidget {
               isSelected: activeSection == 'orders',
             ),
             const Spacer(),
-            if (showSearch) ...[
+            if (showSearch && !isTightDesktop) ...[
               ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 380),
+                constraints: BoxConstraints(
+                  minWidth: isCompactDesktop ? 240 : 320,
+                  maxWidth: isCompactDesktop ? 340 : 420,
+                ),
                 child: _buildSearchBar(context),
               ),
               const SizedBox(width: AppSizes.md),
+            ],
+            if (!isCompactDesktop) ...[
+              _buildDeliverySlotChip(),
+              const SizedBox(width: AppSizes.sm),
             ],
             _buildIconButton(
               context,
@@ -113,6 +133,23 @@ class DesktopTopNavBar extends StatelessWidget {
               onTap: () => context.go('/customer/cart'),
               badgeCount: cartCount,
               selected: activeSection == 'cart',
+            ),
+            const SizedBox(width: AppSizes.xs),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              ),
+              child: Text(
+                isCompactDesktop
+                  ? 'UGX $compactCartTotal'
+                    : Formatters.formatCurrency(cartTotal),
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
             const SizedBox(width: AppSizes.sm),
             _buildIconButton(
@@ -186,9 +223,9 @@ class DesktopTopNavBar extends StatelessWidget {
             const SizedBox(width: AppSizes.sm),
             Expanded(
               child: Text(
-                'Search products, recipes...',
+                'Search products, recipes... [/]',
                 style: AppTextStyles.bodyMedium.copyWith(
-                  fontSize: 15,
+                  fontSize: 14,
                   color: AppColors.textSecondary,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -210,6 +247,33 @@ class DesktopTopNavBar extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDeliverySlotChip() {
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundGrey,
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        border: Border.all(color: AppColors.grey200),
+      ),
+      child: Row(
+        children: [
+          const Icon(Iconsax.location, size: 16, color: AppColors.textSecondary),
+          const SizedBox(width: 6),
+          Text(
+            'Delivering to: Bukoto · Today 2-3 PM',
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Iconsax.arrow_down_1, size: 14, color: AppColors.textSecondary),
+        ],
       ),
     );
   }

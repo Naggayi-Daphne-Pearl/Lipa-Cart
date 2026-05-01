@@ -16,6 +16,7 @@ import '../../providers/order_provider.dart';
 import '../../services/address_service.dart';
 import '../../services/order_service.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/desktop_breadcrumbs.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
 import '../../widgets/auth_bottom_sheet.dart';
 
@@ -254,6 +255,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const DesktopTopNavBar(activeSection: 'profile'),
+                if (context.isDesktop)
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSizes.lg,
+                      0,
+                      AppSizes.lg,
+                      AppSizes.sm,
+                    ),
+                    child: DesktopBreadcrumbs(
+                      items: [
+                        DesktopBreadcrumbItem(
+                          label: 'Home',
+                          route: '/customer/home',
+                        ),
+                        DesktopBreadcrumbItem(label: 'Profile'),
+                      ],
+                    ),
+                  ),
                 // Guest state — show Sign In prompt
                 if (isGuest) ...[
                   _buildGuestHeader(context),

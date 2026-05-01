@@ -12,6 +12,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../widgets/adaptive_page_scaffold.dart';
 import '../../widgets/category_card.dart';
+import '../../widgets/desktop_breadcrumbs.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/product_filter_sheet.dart';
 
@@ -28,6 +29,11 @@ class CategoriesScreen extends StatelessWidget {
           'Explore fresh aisles and jump into the section you want faster.',
       currentIndex: 1,
       desktopActiveSection: 'browse',
+      desktopBreadcrumbs: const [
+        DesktopBreadcrumbItem(label: 'Home', route: '/customer/home'),
+        DesktopBreadcrumbItem(label: 'Browse', route: '/customer/browse'),
+        DesktopBreadcrumbItem(label: 'Categories'),
+      ],
       mobileBody: _buildCategoriesGrid(context, productProvider),
       desktopBody: _buildCategoriesGrid(
         context,
@@ -124,6 +130,12 @@ class CategoryProductsScreen extends StatelessWidget {
       subtitle:
           'Scan products faster with a wider desktop grid and easier filter access.',
       currentIndex: 1,
+      desktopActiveSection: 'browse',
+      desktopBreadcrumbs: [
+        const DesktopBreadcrumbItem(label: 'Home', route: '/customer/home'),
+        const DesktopBreadcrumbItem(label: 'Browse', route: '/customer/browse'),
+        DesktopBreadcrumbItem(label: categoryName),
+      ],
       onBack: () {
         if (context.canPop()) {
           context.pop();

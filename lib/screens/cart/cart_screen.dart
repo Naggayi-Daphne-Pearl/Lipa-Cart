@@ -46,6 +46,41 @@ class CartScreen extends StatelessWidget {
   Color _getProductBgColor(String categoryName) =>
       Formatters.getProductBgColor(categoryName);
 
+  String _getUnavailablePreference(CartItem item) {
+    final instructions = (item.specialInstructions ?? '').toLowerCase();
+    if (instructions.contains('if unavailable: refund')) return 'Refund';
+    if (instructions.contains('if unavailable: replace')) return 'Replace';
+    return 'Call me';
+  }
+
+  void _setUnavailablePreference(
+    BuildContext context,
+    CartProvider cartProvider,
+    CartItem item,
+    String preference,
+  ) {
+    final existing = item.specialInstructions?.trim() ?? '';
+    final preservedNotes = existing
+        .split('\n')
+        .where((line) => !line.toLowerCase().startsWith('if unavailable:'))
+        .join('\n')
+        .trim();
+
+    final preferenceLine = 'If unavailable: $preference';
+    final updated = preservedNotes.isEmpty
+        ? preferenceLine
+        : '$preferenceLine\n$preservedNotes';
+
+    cartProvider.updateSpecialInstructions(item.product.id, updated);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$preference selected for ${item.product.name}'),
+        duration: const Duration(milliseconds: 900),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cartProvider = context.watch<CartProvider>();
@@ -619,6 +654,8 @@ class CartScreen extends StatelessWidget {
     CartItem item,
     CartProvider cartProvider,
   ) {
+    final selectedPreference = _getUnavailablePreference(item);
+
     return Container(
       padding: const EdgeInsets.all(AppSizes.sm),
       decoration: BoxDecoration(
@@ -776,20 +813,53 @@ class CartScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                     border: Border.all(color: AppColors.grey200),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'If unavailable:',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      _prefPill('Replace', false),
-                      const SizedBox(width: 6),
-                      _prefPill('Refund', false),
-                      const SizedBox(width: 6),
-                      _prefPill('Call me', true),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _prefPill(
+                            'Replace',
+                            selectedPreference == 'Replace',
+                            onTap: () => _setUnavailablePreference(
+                              context,
+                              cartProvider,
+                              item,
+                              'Replace',
+                            ),
+                          ),
+                          _prefPill(
+                            'Refund',
+                            selectedPreference == 'Refund',
+                            onTap: () => _setUnavailablePreference(
+                              context,
+                              cartProvider,
+                              item,
+                              'Refund',
+                            ),
+                          ),
+                          _prefPill(
+                            'Call me',
+                            selectedPreference == 'Call me',
+                            onTap: () => _setUnavailablePreference(
+                              context,
+                              cartProvider,
+                              item,
+                              'Call me',
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -1026,21 +1096,25 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Widget _prefPill(String label, bool active) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: active ? AppColors.primarySoft : Colors.white,
-        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-        border: Border.all(
-          color: active ? AppColors.primary : AppColors.grey300,
+  Widget _prefPill(String label, bool active, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: active ? AppColors.primarySoft : Colors.white,
+          borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+          border: Border.all(
+            color: active ? AppColors.primary : AppColors.grey300,
+          ),
         ),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.caption.copyWith(
-          color: active ? AppColors.primary : AppColors.textSecondary,
-          fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+        child: Text(
+          label,
+          style: AppTextStyles.caption.copyWith(
+            color: active ? AppColors.primary : AppColors.textSecondary,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+          ),
         ),
       ),
     );

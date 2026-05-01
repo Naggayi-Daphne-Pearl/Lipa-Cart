@@ -16,6 +16,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../services/order_service.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/desktop_breadcrumbs.dart';
 import '../../widgets/error_boundary.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
 
@@ -113,18 +114,24 @@ class _OrdersScreenState extends State<OrdersScreen>
               o.status != OrderStatus.delivered,
         )
         .toList();
-    final activeOrder = activeOrders.isNotEmpty ? activeOrders.first : null;
 
-    final pastOrders = orders
+    final declinedOrders = orders
         .where(
           (o) =>
-              o.status == OrderStatus.delivered ||
               o.status == OrderStatus.cancelled ||
               o.status == OrderStatus.refunded,
         )
         .toList();
 
-    final grouped = _groupByMonth(pastOrders);
+    final deliveredOrders =
+      orders.where((o) => o.status == OrderStatus.delivered).toList();
+
+    final groupedDeclined = _groupByMonth(declinedOrders);
+    final groupedDelivered = _groupByMonth(deliveredOrders);
+    final hasAnyOrders =
+      activeOrders.isNotEmpty ||
+      groupedDeclined.isNotEmpty ||
+      groupedDelivered.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -159,6 +166,26 @@ class _OrdersScreenState extends State<OrdersScreen>
                         const SliverToBoxAdapter(
                           child: DesktopTopNavBar(activeSection: 'orders'),
                         ),
+                        if (context.isDesktop)
+                          const SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                AppSizes.lg,
+                                0,
+                                AppSizes.lg,
+                                AppSizes.sm,
+                              ),
+                              child: DesktopBreadcrumbs(
+                                items: [
+                                  DesktopBreadcrumbItem(
+                                    label: 'Home',
+                                    route: '/customer/home',
+                                  ),
+                                  DesktopBreadcrumbItem(label: 'Orders'),
+                                ],
+                              ),
+                            ),
+                          ),
                         SliverToBoxAdapter(
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(
@@ -194,32 +221,43 @@ class _OrdersScreenState extends State<OrdersScreen>
                             ),
                           ),
                         ),
-                        if (activeOrder != null)
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: EdgeInsets.fromLTRB(
-                                context.horizontalPadding,
-                                0,
-                                context.horizontalPadding,
-                                AppSizes.lg,
-                              ),
-                              child: _buildActiveOrderCard(
-                                context,
-                                activeOrder,
-                              ),
-                            ),
-                          ),
-                        if (grouped.isEmpty)
+                        if (!hasAnyOrders)
                           SliverToBoxAdapter(
                             child: _buildEmptyState(
                               context,
-                              activeOrder == null
-                                  ? 'No orders yet'
-                                  : 'No past orders yet',
+                              'No orders yet',
                             ),
                           )
-                        else
-                          ..._buildPastOrderSlivers(context, grouped),
+                        else ...[
+                          if (activeOrders.isNotEmpty)
+                            _buildSectionHeaderSliver('Active Orders'),
+                          if (activeOrders.isNotEmpty)
+                            SliverPadding(
+                              padding: EdgeInsets.fromLTRB(
+                                context.horizontalPadding,
+                                AppSizes.sm,
+                                context.horizontalPadding,
+                                AppSizes.lg,
+                              ),
+                              sliver: SliverList.separated(
+                                itemBuilder: (_, index) => _buildActiveOrderCard(
+                                  context,
+                                  activeOrders[index],
+                                ),
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: AppSizes.sm),
+                                itemCount: activeOrders.length,
+                              ),
+                            ),
+                          if (groupedDeclined.isNotEmpty)
+                            _buildSectionHeaderSliver('Declined / Cancelled'),
+                          if (groupedDeclined.isNotEmpty)
+                            ..._buildPastOrderSlivers(context, groupedDeclined),
+                          if (groupedDelivered.isNotEmpty)
+                            _buildSectionHeaderSliver('Delivered Orders'),
+                          if (groupedDelivered.isNotEmpty)
+                            ..._buildPastOrderSlivers(context, groupedDelivered),
+                        ],
                         const SliverToBoxAdapter(child: SizedBox(height: 100)),
                       ],
                     ),
@@ -262,6 +300,26 @@ class _OrdersScreenState extends State<OrdersScreen>
       );
     });
     return slivers;
+  }
+
+  Widget _buildSectionHeaderSliver(String title) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSizes.lg,
+          AppSizes.xs,
+          AppSizes.lg,
+          AppSizes.xs,
+        ),
+        child: Text(
+          title,
+          style: AppTextStyles.h4.copyWith(
+            fontWeight: FontWeight.w800,
+            fontSize: 20,
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildActiveOrderCard(BuildContext context, Order order) {
