@@ -15,7 +15,7 @@ class PaymentService {
   }) async {
     final response = await http
         .post(
-          Uri.parse('$_baseUrl/api/payments/flutterwave/initiate'),
+          Uri.parse('$_baseUrl/api/payments/mobile-money/initiate'),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
@@ -54,7 +54,7 @@ class PaymentService {
     try {
       final response = await http
           .get(
-            Uri.parse('$_baseUrl/api/payments/$paymentId/flutterwave-status'),
+            Uri.parse('$_baseUrl/api/payments/$paymentId/status'),
             headers: {'Authorization': 'Bearer $token'},
           )
           .timeout(AppConstants.apiTimeout);

@@ -30,6 +30,7 @@ import 'screens/product/product_detail_screen.dart';
 import 'screens/cart/cart_screen.dart';
 import 'screens/checkout/checkout_screen.dart';
 import 'screens/checkout/order_success_screen.dart';
+import 'screens/checkout/payment_pending_screen.dart';
 import 'screens/orders/orders_screen.dart';
 import 'screens/orders/order_tracking_screen.dart';
 import 'screens/shopping_lists/shopping_lists_screen.dart';
@@ -678,6 +679,36 @@ class RoleBasedRouter {
               return OrderSuccessScreen(order: order, isGuest: isGuest);
             }
             return const MainShell();
+          },
+        ),
+        GoRoute(
+          path: '/customer/payment-pending',
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>?;
+            if (extra == null) return const MainShell();
+
+            final orderData = extra['order'];
+            final String paymentId = (extra['paymentId'] as String?) ?? '';
+            final String phoneNumber = (extra['phoneNumber'] as String?) ?? '';
+
+            final Order? order;
+            if (orderData is Map<String, dynamic>) {
+              order = Order.fromJson(orderData);
+            } else if (orderData is Order) {
+              order = orderData;
+            } else {
+              order = null;
+            }
+
+            if (order == null || paymentId.isEmpty || phoneNumber.isEmpty) {
+              return const MainShell();
+            }
+
+            return PaymentPendingScreen(
+              order: order,
+              paymentId: paymentId,
+              phoneNumber: phoneNumber,
+            );
           },
         ),
         GoRoute(
