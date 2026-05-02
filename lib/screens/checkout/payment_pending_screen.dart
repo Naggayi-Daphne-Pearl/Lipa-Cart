@@ -282,6 +282,35 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
     }
   }
 
+  Future<void> _confirmPayOnDelivery() async {
+    if (_isSwitchingToCod || !mounted) return;
+
+    final shouldSwitch = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Pay on Delivery?'),
+        content: const Text(
+          'This will change your order to Cash on Delivery. '
+          'You will pay cash when your order arrives.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Keep Mobile Money'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Yes, Pay on Delivery'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSwitch == true) {
+      await _switchToCashOnDelivery();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -293,15 +322,23 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
             padding: AppSizes.screenPadding,
             child: Column(
               children: [
-                const Spacer(flex: 1),
-                _buildPhoneIcon(),
-                const SizedBox(height: AppSizes.xl),
-                _buildStatusSection(),
-                const SizedBox(height: AppSizes.xl),
-                _buildPaymentDetails(),
-                const SizedBox(height: AppSizes.lg),
-                if (!_hasFailed && !_hasTimedOut) _buildSteps(),
-                const Spacer(flex: 2),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: AppSizes.md),
+                        _buildPhoneIcon(),
+                        const SizedBox(height: AppSizes.xl),
+                        _buildStatusSection(),
+                        const SizedBox(height: AppSizes.xl),
+                        _buildPaymentDetails(),
+                        const SizedBox(height: AppSizes.lg),
+                        if (!_hasFailed && !_hasTimedOut) _buildSteps(),
+                        const SizedBox(height: AppSizes.lg),
+                      ],
+                    ),
+                  ),
+                ),
                 _buildActions(),
                 const SizedBox(height: AppSizes.md),
               ],
@@ -568,11 +605,9 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
 
     // While waiting — just show a subtle cancel option
     return TextButton(
-      onPressed: () {
-        context.go('/customer/orders');
-      },
+      onPressed: _isSwitchingToCod ? null : _confirmPayOnDelivery,
       child: Text(
-        'I\'ll check later',
+        _isSwitchingToCod ? 'Switching...' : 'I\'ll pay later',
         style: AppTextStyles.bodyMedium.copyWith(
           color: AppColors.textTertiary,
         ),
