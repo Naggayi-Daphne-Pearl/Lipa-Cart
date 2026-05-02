@@ -245,6 +245,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           _priceRow('Subtotal', order.subtotal),
                           _priceRow('Service Fee', order.serviceFee),
                           _priceRow('Delivery Fee', order.deliveryFee),
+                          if (order.pawaPayCharge > 0)
+                            _priceRow('PawaPay Charge', order.pawaPayCharge),
                           if (order.discount > 0)
                             _priceRow('Discount', -order.discount),
                           const Divider(height: 16),

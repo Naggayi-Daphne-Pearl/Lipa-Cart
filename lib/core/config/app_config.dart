@@ -23,7 +23,7 @@ class AppConfig {
   /// Backend API base URL (no trailing slash)
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://lipa-cart-strapi-production.up.railway.app',
+    defaultValue: 'http://localhost:1337',
   );
 
   /// Full API path
@@ -57,4 +57,22 @@ class AppConfig {
     'NTUMA_PAY_LINK',
     defaultValue: 'https://ntuma.app/pay/3d2c8f1b-1d9e-43a1-a72d-ceaef0ce8aa9',
   );
+
+  /// Optional extra charge applied to mobile money checkout for PawaPay.
+  /// Example: --dart-define=PAWAPAY_CHARGE_PERCENT=1.5 --dart-define=PAWAPAY_CHARGE_FLAT=250
+  static const String _pawaPayChargePercentRaw = String.fromEnvironment(
+    'PAWAPAY_CHARGE_PERCENT',
+    defaultValue: '0',
+  );
+
+  static const String _pawaPayChargeFlatRaw = String.fromEnvironment(
+    'PAWAPAY_CHARGE_FLAT',
+    defaultValue: '0',
+  );
+
+  static double get pawaPayChargePercent =>
+      double.tryParse(_pawaPayChargePercentRaw) ?? 0;
+
+  static double get pawaPayChargeFlat =>
+      double.tryParse(_pawaPayChargeFlatRaw) ?? 0;
 }

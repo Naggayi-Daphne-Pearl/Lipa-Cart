@@ -44,11 +44,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // MVP: only Cash on Delivery exposed. See .claude/playbooks/payments_todo.md
   // for the plan to re-enable mobile money (Flutterwave v4 already scaffolded).
   PaymentMethod _selectedPayment = PaymentMethod.cashOnDelivery;
+  String _selectedPawaPayCorrespondent = 'MTN_MOMO_UGA';
   Address? _selectedAddress;
   bool _isLoading = false;
   bool _consentChecked = false;
   bool _showAddressForm = false;
   bool _didAutoRedirectForMissingAddress = false;
+  bool _addressExpanded = true;
+  bool _slotExpanded = true;
+  bool _paymentExpanded = true;
+  bool _summaryExpanded = true;
+  int _selectedSlotIndex = 0;
+  bool _promoExpanded = false;
+  final TextEditingController _promoController = TextEditingController();
+  final TextEditingController _riderNoteController = TextEditingController();
+  late final TextEditingController _paymentPhoneController;
+
+  final List<_DeliverySlot> _slots = const [
+    _DeliverySlot('Now (60 min)', 5000, etaTag: 'Almost full'),
+    _DeliverySlot('Today 2-3 PM', 3000),
+    _DeliverySlot('Today 6-7 PM', 3000),
+    _DeliverySlot('Tomorrow 9-10 AM', 2500, saveTag: 'Save UGX 2,500'),
+  ];
 
   // Guest checkout fields
   late final TextEditingController _guestNameController;
@@ -80,6 +97,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _authAddressController = TextEditingController();
     _authCityController = TextEditingController(text: 'Kampala');
     _authLandmarkController = TextEditingController();
+    _paymentPhoneController = TextEditingController();
+
+    final authPhone = _resolvePaymentPhoneNumber(context.read<AuthProvider>());
+    if (authPhone != null && authPhone.startsWith('+256') && authPhone.length == 13) {
+      _paymentPhoneController.text = authPhone.substring(4);
+    }
 
     // Clear snackbars from previous screens (e.g. "View Cart" actions)
     // so checkout starts with a clean UI.
@@ -125,16 +148,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     if (customerId == null || customerId.isEmpty) return;
 
     if (addressService.userAddresses.isEmpty) {
-      await addressService.fetchAddresses(authProvider.token!, customerId);
+      await addressService.fetchAddresses(
+        authProvider.token!,
+        customerId,
+      );
     }
 
     if (!mounted) return;
     // If the user explicitly picked an address on the addresses screen, keep
     // it selected after the fetch completes. Otherwise fall back to default.
     final picked = _resolveSelectedAddress(addressService);
-    setState(
-      () => _selectedAddress = picked ?? addressService.defaultUserAddress,
-    );
+    setState(() => _selectedAddress = picked ?? addressService.defaultUserAddress);
 
     if (_selectedAddress == null && !_didAutoRedirectForMissingAddress) {
       _didAutoRedirectForMissingAddress = true;
@@ -156,6 +180,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _authAddressController.dispose();
     _authCityController.dispose();
     _authLandmarkController.dispose();
+    _promoController.dispose();
+    _riderNoteController.dispose();
+    _paymentPhoneController.dispose();
     super.dispose();
   }
 
@@ -256,6 +283,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return null;
   }
 
+  String? _normalizedSelectedPaymentPhone() {
+    final raw = _paymentPhoneController.text.trim();
+    if (raw.isEmpty) return null;
+
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('256') && digits.length == 12) return '+$digits';
+    if (digits.startsWith('0') && digits.length == 10) {
+      return '+256${digits.substring(1)}';
+    }
+    if (digits.length == 9) return '+256$digits';
+    return null;
+  }
+
+  double _estimatedPawaPayCharge(double subtotal) {
+    if (_selectedPayment != PaymentMethod.mobileMoney) return 0;
+    final charge =
+        AppConstants.pawaPayChargeFlat +
+        (subtotal * (AppConstants.pawaPayChargePercent / 100));
+    return charge.roundToDouble();
+  }
+
+  double _checkoutDisplayTotal(CartProvider cartProvider) {
+    return cartProvider.subtotal +
+        cartProvider.serviceFee +
+        _slots[_selectedSlotIndex].fee +
+        _estimatedPawaPayCharge(cartProvider.subtotal);
+  }
+
   Future<void> _placeOrder() async {
     setState(() => _isLoading = true);
 
@@ -353,7 +408,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(orderService.error ?? 'Failed to place order'),
+              content: Text(
+                orderService.error ?? 'Failed to place order',
+              ),
               backgroundColor: AppColors.error,
             ),
           );
@@ -455,6 +512,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         final orderProvider = context.read<OrderProvider>();
         final orderService = context.read<OrderService>();
 
+        String? paymentPhone;
+        if (_selectedPayment == PaymentMethod.mobileMoney) {
+          paymentPhone = _normalizedSelectedPaymentPhone();
+          if (paymentPhone == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Enter a valid Uganda Mobile Money number to pay with.'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+            setState(() => _isLoading = false);
+            return;
+          }
+        }
+
         final localOrder = await orderProvider.createOrder(
           items: cartProvider.items,
           deliveryAddress: _selectedAddress!,
@@ -503,7 +575,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           orderProvider.setCurrentOrder(backendOrder);
 
           if (_selectedPayment == PaymentMethod.mobileMoney) {
-            final paymentPhone = _resolvePaymentPhoneNumber(authProvider);
             if (paymentPhone != null) {
               try {
                 final orderRef = backendOrder.documentId ?? backendOrder.id;
@@ -512,6 +583,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       token: authProvider.token!,
                       orderId: orderRef,
                       phoneNumber: paymentPhone,
+                      correspondent: _selectedPawaPayCorrespondent,
                     );
 
                 setState(() => _isLoading = false);
@@ -519,8 +591,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
                 final data = result['data'] as Map<String, dynamic>? ?? {};
                 final payment = data['payment'] as Map<String, dynamic>? ?? {};
-                final paymentId =
-                    payment['documentId'] as String? ??
+                final paymentId = payment['documentId'] as String? ??
                     payment['id']?.toString() ??
                     '';
 
@@ -620,32 +691,46 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           child: WebLayoutWrapper(
             addPadding: false,
             child: Column(
-              children: [
-                // Progress Stepper
-                _buildProgressStepper(),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(AppSizes.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Delivery address or guest form
-                        if (widget.isGuest)
-                          _buildSection(
-                            title: 'Sign Up & Delivery Details',
-                            icon: Iconsax.user_add,
-                            child: _buildGuestAddressForm(),
-                          )
-                        else
-                          _buildSection(
-                            title: 'Delivery Address',
-                            icon: Iconsax.location,
-                            child: _selectedAddress == null
-                                ? (_showAddressForm
-                                      ? _buildAuthAddressForm()
-                                      : _buildAddAddressButton())
-                                : _buildAddressCard(authProvider),
+            children: [
+              // Progress Stepper
+              _buildProgressStepper(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppSizes.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Delivery address or guest form
+                      if (widget.isGuest)
+                        _buildSection(
+                          title: 'Sign Up & Delivery Details',
+                          icon: Iconsax.user_add,
+                          child: _buildGuestAddressForm(),
+                        )
+                      else
+                        _buildSection(
+                          title: 'Delivery Address',
+                          icon: Iconsax.location,
+                          child: _selectedAddress == null
+                              ? (_showAddressForm
+                                    ? _buildAuthAddressForm()
+                                    : _buildAddAddressButton())
+                              : _buildAddressCard(authProvider),
+                        ),
+                      const SizedBox(height: AppSizes.md),
+
+                        // 2) Delivery slot
+                        _buildCollapsibleSection(
+                          title: 'Delivery Slot',
+                          icon: Iconsax.timer_1,
+                          isExpanded: _slotExpanded,
+                          summary:
+                              '${_slots[_selectedSlotIndex].label} · ${Formatters.formatCurrency(_slots[_selectedSlotIndex].fee.toDouble())}',
+                          onToggle: () => setState(
+                            () => _slotExpanded = !_slotExpanded,
                           ),
+                          child: _buildDeliverySlotScroller(),
+                        ),
                         const SizedBox(height: AppSizes.md),
 
                         // Order items
@@ -666,11 +751,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                         style: AppTextStyles.bodyMedium,
                                       ),
                                     ),
-                                    Text(
-                                      Formatters.formatCurrency(
-                                        item.totalPrice,
-                                      ),
-                                      style: AppTextStyles.labelMedium,
+                                    PriceText(
+                                      amount: item.totalPrice,
+                                      showCurrencyCode: false,
                                     ),
                                   ],
                                 ),
@@ -680,64 +763,132 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                         const SizedBox(height: AppSizes.md),
 
-                        // Payment method — all options shown with clear branding.
-                        // Logic: only CoD is active for MVP (others show "coming soon").
-                        _buildSection(
+                        // 3) Payment method
+                        _buildCollapsibleSection(
                           title: 'Payment Method',
                           icon: Iconsax.card,
+                          isExpanded: _paymentExpanded,
+                          summary: _selectedPayment == PaymentMethod.cashOnDelivery
+                              ? 'Pay rider on delivery'
+                              : 'Pay with Mobile Money',
+                          onToggle: () => setState(
+                            () => _paymentExpanded = !_paymentExpanded,
+                          ),
                           child: Column(
                             children: [
                               _buildMobileMoneyCard(
                                 method: PaymentMethod.mobileMoney,
+                                correspondent: 'MTN_MOMO_UGA',
                                 label: 'MTN Mobile Money',
                                 accent: const Color(0xFFFFCC00),
                                 textColor: Colors.black,
                                 badge: 'MTN',
                                 prompt: 'You\'ll get a prompt to approve',
-                                comingSoon: true,
+                                comingSoon: false,
                               ),
                               const SizedBox(height: AppSizes.sm),
                               _buildMobileMoneyCard(
                                 method: PaymentMethod.mobileMoney,
+                                correspondent: 'AIRTEL_OAPI_UGA',
                                 label: 'Airtel Money',
                                 accent: const Color(0xFFE40000),
                                 textColor: Colors.white,
                                 badge: 'Airtel',
                                 prompt: 'You\'ll get a prompt to approve',
-                                comingSoon: true,
+                                comingSoon: false,
                               ),
                               const SizedBox(height: AppSizes.sm),
+                              if (_selectedPayment == PaymentMethod.mobileMoney) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(AppSizes.sm),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                    border: Border.all(color: AppColors.grey200),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Number to charge',
+                                        style: AppTextStyles.labelMedium,
+                                      ),
+                                      const SizedBox(height: AppSizes.xs),
+                                      TextField(
+                                        controller: _paymentPhoneController,
+                                        keyboardType: TextInputType.phone,
+                                        decoration: InputDecoration(
+                                          prefixText: '+256 ',
+                                          hintText: '7XXXXXXXX',
+                                          helperText: _selectedPawaPayCorrespondent == 'AIRTEL_OAPI_UGA'
+                                              ? 'Use an Airtel Money number for this option.'
+                                              : 'Use an MTN Mobile Money number for this option.',
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              AppSizes.radiusSm,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: AppSizes.sm),
+                              ],
                               _buildPaymentOption(PaymentMethod.cashOnDelivery),
                             ],
                           ),
                         ),
                         const SizedBox(height: AppSizes.md),
 
-                        // Order summary
-                        _buildSection(
+                        // 4) Order summary
+                        _buildCollapsibleSection(
                           title: 'Order Summary',
                           icon: Iconsax.receipt_2,
+                          isExpanded: _summaryExpanded,
+                          summary: 'Total · ${Formatters.formatCurrency(_checkoutDisplayTotal(cartProvider))}',
+                          onToggle: () => setState(
+                            () => _summaryExpanded = !_summaryExpanded,
+                          ),
                           child: Column(
                             children: [
-                              _buildSummaryRow(
-                                'Subtotal',
-                                Formatters.formatCurrency(
-                                  cartProvider.subtotal,
+                              _buildSummaryRow('Subtotal', cartProvider.subtotal),
+                              const SizedBox(height: AppSizes.sm),
+                              _buildSummaryRow('Service Fee (5%)', cartProvider.serviceFee),
+                              const SizedBox(height: AppSizes.sm),
+                              _buildSummaryRow('Delivery Fee', _slots[_selectedSlotIndex].fee.toDouble()),
+                              if (_estimatedPawaPayCharge(cartProvider.subtotal) > 0) ...[
+                                const SizedBox(height: AppSizes.sm),
+                                _buildSummaryRow(
+                                  'PawaPay Charge',
+                                  _estimatedPawaPayCharge(cartProvider.subtotal),
+                                ),
+                              ],
+                              const SizedBox(height: AppSizes.sm),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton(
+                                  onPressed: () => setState(() => _promoExpanded = !_promoExpanded),
+                                  child: Text(
+                                    _promoExpanded ? 'Hide promo code' : 'Have a promo code?',
+                                    style: AppTextStyles.labelMedium.copyWith(color: AppColors.primary),
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: AppSizes.sm),
-                              _buildSummaryRow(
-                                'Service Fee (5%)',
-                                Formatters.formatCurrency(
-                                  cartProvider.serviceFee,
-                                ),
-                              ),
-                              const SizedBox(height: AppSizes.sm),
-                              _buildSummaryRow(
-                                'Delivery Fee',
-                                Formatters.formatCurrency(
-                                  cartProvider.deliveryFee,
-                                ),
+                              if (_promoExpanded)
+                                TextField(
+                                  controller: _promoController,
+                                  decoration: InputDecoration(
+                                    hintText: 'Enter promo code',
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                    ),
+                                  ),
+                                  Text(
+                                    Formatters.formatCurrency(item.totalPrice),
+                                    style: AppTextStyles.labelMedium,
+                                  ),
+                                ],
                               ),
                               const Padding(
                                 padding: EdgeInsets.symmetric(
@@ -747,27 +898,65 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               ),
                               _buildSummaryRow(
                                 'Total',
-                                Formatters.formatCurrency(cartProvider.total),
+                                _checkoutDisplayTotal(cartProvider),
                                 isTotal: true,
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
+                      ),
+                      const SizedBox(height: AppSizes.md),
 
-                // Consent checkbox and Place order button
-                Container(
-                  padding: const EdgeInsets.all(AppSizes.md),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, -4),
+                      // Payment method — MVP exposes CoD only.
+                      _buildSection(
+                        title: 'Payment Method',
+                        icon: Iconsax.card,
+                        child: Column(
+                          children: PaymentMethod.values
+                              .where((m) => m == PaymentMethod.cashOnDelivery)
+                              .map(_buildPaymentOption)
+                              .toList(),
+                        ),
+                      ),
+                      const SizedBox(height: AppSizes.md),
+
+                      // Order summary
+                      _buildSection(
+                        title: 'Order Summary',
+                        icon: Iconsax.receipt_2,
+                        child: Column(
+                          children: [
+                            _buildSummaryRow(
+                              'Subtotal',
+                              Formatters.formatCurrency(cartProvider.subtotal),
+                            ),
+                            const SizedBox(height: AppSizes.sm),
+                            _buildSummaryRow(
+                              'Service Fee (5%)',
+                              Formatters.formatCurrency(
+                                cartProvider.serviceFee,
+                              ),
+                            ),
+                            const SizedBox(height: AppSizes.sm),
+                            _buildSummaryRow(
+                              'Delivery Fee',
+                              Formatters.formatCurrency(
+                                cartProvider.deliveryFee,
+                              ),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(
+                                vertical: AppSizes.sm,
+                              ),
+                              child: Divider(),
+                            ),
+                            _buildSummaryRow(
+                              'Total',
+                              Formatters.formatCurrency(cartProvider.total),
+                              isTotal: true,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -794,17 +983,50 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         const SizedBox(height: AppSizes.md),
                         // Place order button
                         CustomButton(
-                          text:
-                              'Place Order - ${Formatters.formatCurrency(cartProvider.total)}',
+                          text: _primaryCheckoutCta(
+                            _checkoutDisplayTotal(cartProvider),
+                          ),
                           isLoading: _isLoading,
                           onPressed: _consentChecked ? _placeOrder : null,
                         ),
                       ],
                     ),
+                  ],
+                ),
+                child: SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Consent checkbox
+                      CheckboxListTile(
+                        value: _consentChecked,
+                        onChanged: (val) {
+                          setState(() => _consentChecked = val ?? false);
+                        },
+                        title: Text(
+                          widget.isGuest
+                              ? 'I confirm my details and agree to create an account'
+                              : 'I confirm my order details are correct and agree to the terms',
+                          style: AppTextStyles.bodySmall,
+                        ),
+                        activeColor: AppColors.accent,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      const SizedBox(height: AppSizes.md),
+                      // Place order button
+                      CustomButton(
+                        text:
+                            'Place Order - ${Formatters.formatCurrency(cartProvider.total)}',
+                        isLoading: _isLoading,
+                        onPressed: _consentChecked ? _placeOrder : null,
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
           ),
         ),
       ),
@@ -1288,6 +1510,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Widget _buildMobileMoneyCard({
     required PaymentMethod method,
+    required String correspondent,
     required String label,
     required Color accent,
     required Color textColor,
@@ -1295,9 +1518,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     required String prompt,
     bool comingSoon = false,
   }) {
-    final isSelected = _selectedPayment == method;
+    final isSelected =
+        _selectedPayment == method && _selectedPawaPayCorrespondent == correspondent;
     return GestureDetector(
-      onTap: comingSoon ? null : () => setState(() => _selectedPayment = method),
+      onTap: comingSoon
+          ? null
+          : () => setState(() {
+              _selectedPayment = method;
+              _selectedPawaPayCorrespondent = correspondent;
+            }),
       child: Container(
         padding: const EdgeInsets.all(AppSizes.sm),
         margin: const EdgeInsets.only(bottom: 0),
@@ -1452,4 +1681,5 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ],
     );
   }
+
 }
