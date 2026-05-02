@@ -214,6 +214,11 @@ class Order {
   // Convenience getters
   String get statusLabel => status.displayName;
   double get discount => 0.0; // Calculate from items or promotions if needed
+  double get pawaPayCharge {
+    if (paymentMethod != PaymentMethod.mobileMoney) return 0.0;
+    final charge = total - subtotal - serviceFee - deliveryFee;
+    return charge > 0 ? charge : 0.0;
+  }
   bool get isPending => status == OrderStatus.pending;
   bool get isDelivered => status == OrderStatus.delivered;
   bool get isCancelled => status == OrderStatus.cancelled;

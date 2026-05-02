@@ -1854,6 +1854,10 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                             order.serviceFee,
                           ),
                           const SizedBox(height: AppSizes.sm),
+                          if (order.pawaPayCharge > 0) ...[
+                            _buildPricingRow('PawaPay Charge', order.pawaPayCharge),
+                            const SizedBox(height: AppSizes.sm),
+                          ],
                           if (order.deliveryFee > 0)
                             _buildPricingRow('Delivery Fee', order.deliveryFee)
                           else

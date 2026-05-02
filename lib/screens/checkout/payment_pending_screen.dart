@@ -38,7 +38,10 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
   bool _hasTimedOut = false;
   bool _hasFailed = false;
   bool _isRetrying = false;
+  bool _isSwitchingToCod = false;
+  bool _insufficientBalance = false;
   String _statusMessage = 'Waiting for payment approval...';
+  late String _paymentPhone;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -46,6 +49,7 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
   @override
   void initState() {
     super.initState();
+    _paymentPhone = widget.phoneNumber;
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -67,6 +71,7 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
     _pollCount = 0;
     _hasTimedOut = false;
     _hasFailed = false;
+    _insufficientBalance = false;
     _statusMessage = 'Waiting for payment approval...';
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(_pollInterval, (_) => _checkStatus());
@@ -90,6 +95,8 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
 
       final paymentStatus = result['paymentStatus'] as String;
       final orderStatus = result['orderStatus'] as String;
+      final failureCode = (result['failureCode'] as String? ?? '').toUpperCase();
+      final failureMessage = result['failureMessage'] as String? ?? '';
 
       if (paymentStatus == 'completed' ||
           orderStatus == 'payment_confirmed') {
@@ -100,9 +107,15 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
 
       if (paymentStatus == 'failed') {
         _pollTimer?.cancel();
+        final isInsufficient =
+            failureCode == 'INSUFFICIENT_BALANCE' ||
+            failureMessage.toLowerCase().contains('enough funds');
         setState(() {
           _hasFailed = true;
-          _statusMessage = 'Payment was not completed. You can try again.';
+          _insufficientBalance = isInsufficient;
+          _statusMessage = isInsufficient
+              ? 'Insufficient Mobile Money balance. Retry with another number or pay cash on delivery.'
+              : 'Payment was not completed. You can try again.';
         });
         return;
       }
@@ -155,7 +168,7 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
       await PaymentService.initiateFlutterwaveMobileMoney(
         token: token,
         orderId: orderRef,
-        phoneNumber: widget.phoneNumber,
+        phoneNumber: _paymentPhone,
       );
 
       if (!mounted) return;
@@ -175,13 +188,98 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
   }
 
   String get _maskedPhone {
-    final phone = widget.phoneNumber;
+    final phone = _paymentPhone;
     if (phone.length < 6) return phone;
     // Show: +256 7XX XXX X89
     final visible = phone.substring(0, 7);
     final last = phone.substring(phone.length - 2);
     final masked = 'X' * (phone.length - 9);
     return '$visible $masked $last';
+  }
+
+  Future<void> _changePaymentPhone() async {
+    final controller = TextEditingController();
+    final current = _paymentPhone.replaceAll('+256', '');
+    if (current.length == 9) controller.text = current;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Use a different phone number'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(
+            prefixText: '+256 ',
+            hintText: '7XXXXXXXX',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final digits = controller.text.trim().replaceAll(RegExp(r'\D'), '');
+              if (digits.length != 9) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Enter a valid 9-digit Uganda number.'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+              setState(() {
+                _paymentPhone = '+256$digits';
+                _insufficientBalance = false;
+                _statusMessage = 'Phone number updated. Tap Retry Payment.';
+              });
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('Use Number'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _switchToCashOnDelivery() async {
+    if (_isSwitchingToCod || !mounted) return;
+    setState(() => _isSwitchingToCod = true);
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final token = authProvider.token;
+      final orderRef = widget.order.documentId ?? widget.order.id;
+      if (token == null || orderRef.isEmpty) return;
+
+      final result = await PaymentService.switchToCashOnDelivery(
+        token: token,
+        orderId: orderRef,
+      );
+
+      if (!mounted) return;
+      final data = result['data'] as Map<String, dynamic>?;
+      if (data != null) {
+        final updatedOrder = Order.fromJson(data);
+        context.pushReplacement('/customer/order-tracking', extra: updatedOrder);
+        return;
+      }
+
+      context.go('/customer/orders');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSwitchingToCod = false);
+    }
   }
 
   @override
@@ -291,6 +389,15 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
           Divider(color: AppColors.grey100, height: 1),
           const SizedBox(height: AppSizes.sm),
           _detailRow('Phone', _maskedPhone),
+          const SizedBox(height: AppSizes.xs),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _changePaymentPhone,
+              icon: const Icon(Iconsax.edit, size: AppSizes.iconXs),
+              label: const Text('Change number'),
+            ),
+          ),
           const SizedBox(height: AppSizes.sm),
           Divider(color: AppColors.grey100, height: 1),
           const SizedBox(height: AppSizes.sm),
@@ -428,6 +535,33 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
               )),
             ),
           ),
+          if (_hasFailed || _hasTimedOut) ...[
+            const SizedBox(height: AppSizes.sm),
+            SizedBox(
+              width: double.infinity,
+              height: AppSizes.buttonHeightLg,
+              child: OutlinedButton(
+                onPressed: _isSwitchingToCod ? null : _switchToCashOnDelivery,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primaryOrange,
+                  side: const BorderSide(color: AppColors.primaryOrange),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                  ),
+                ),
+                child: Text(
+                  _isSwitchingToCod
+                      ? 'Switching...'
+                      : _insufficientBalance
+                          ? 'Switch to Cash on Delivery'
+                          : 'Use Cash on Delivery Instead',
+                  style: AppTextStyles.buttonLarge.copyWith(
+                    color: AppColors.primaryOrange,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       );
     }

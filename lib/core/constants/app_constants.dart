@@ -45,6 +45,8 @@ class AppConstants {
   static const double deliveryFeeBase = 3000;
   static const double deliveryFeePerKm = 500;
   static const double serviceFeePercentage = 0.05;
+  static double get pawaPayChargePercent => AppConfig.pawaPayChargePercent;
+  static double get pawaPayChargeFlat => AppConfig.pawaPayChargeFlat;
 
   // Delivery Zone — service area center + max radius in km
   // Kampala city center (0.3476, 32.5825)

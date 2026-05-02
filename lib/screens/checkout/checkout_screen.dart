@@ -45,6 +45,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // MVP: only Cash on Delivery exposed. See .claude/playbooks/payments_todo.md
   // for the plan to re-enable mobile money (Flutterwave v4 already scaffolded).
   PaymentMethod _selectedPayment = PaymentMethod.cashOnDelivery;
+  String _selectedPawaPayCorrespondent = 'MTN_MOMO_UGA';
   Address? _selectedAddress;
   bool _isLoading = false;
   bool _consentChecked = false;
@@ -58,6 +59,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _promoExpanded = false;
   final TextEditingController _promoController = TextEditingController();
   final TextEditingController _riderNoteController = TextEditingController();
+  late final TextEditingController _paymentPhoneController;
 
   final List<_DeliverySlot> _slots = const [
     _DeliverySlot('Now (60 min)', 5000, etaTag: 'Almost full'),
@@ -96,6 +98,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _authAddressController = TextEditingController();
     _authCityController = TextEditingController(text: 'Kampala');
     _authLandmarkController = TextEditingController();
+    _paymentPhoneController = TextEditingController();
+
+    final authPhone = _resolvePaymentPhoneNumber(context.read<AuthProvider>());
+    if (authPhone != null && authPhone.startsWith('+256') && authPhone.length == 13) {
+      _paymentPhoneController.text = authPhone.substring(4);
+    }
 
     // Clear snackbars from previous screens (e.g. "View Cart" actions)
     // so checkout starts with a clean UI.
@@ -177,6 +185,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _authLandmarkController.dispose();
     _promoController.dispose();
     _riderNoteController.dispose();
+    _paymentPhoneController.dispose();
     super.dispose();
   }
 
@@ -275,6 +284,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
     if (digits.length == 9) return '+256$digits';
     return null;
+  }
+
+  String? _normalizedSelectedPaymentPhone() {
+    final raw = _paymentPhoneController.text.trim();
+    if (raw.isEmpty) return null;
+
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('256') && digits.length == 12) return '+$digits';
+    if (digits.startsWith('0') && digits.length == 10) {
+      return '+256${digits.substring(1)}';
+    }
+    if (digits.length == 9) return '+256$digits';
+    return null;
+  }
+
+  double _estimatedPawaPayCharge(double subtotal) {
+    if (_selectedPayment != PaymentMethod.mobileMoney) return 0;
+    final charge =
+        AppConstants.pawaPayChargeFlat +
+        (subtotal * (AppConstants.pawaPayChargePercent / 100));
+    return charge.roundToDouble();
+  }
+
+  double _checkoutDisplayTotal(CartProvider cartProvider) {
+    return cartProvider.subtotal +
+        cartProvider.serviceFee +
+        _slots[_selectedSlotIndex].fee +
+        _estimatedPawaPayCharge(cartProvider.subtotal);
   }
 
   Future<void> _placeOrder() async {
@@ -476,6 +513,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         final orderProvider = context.read<OrderProvider>();
         final orderService = context.read<OrderService>();
 
+        String? paymentPhone;
+        if (_selectedPayment == PaymentMethod.mobileMoney) {
+          paymentPhone = _normalizedSelectedPaymentPhone();
+          if (paymentPhone == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Enter a valid Uganda Mobile Money number to pay with.'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+            setState(() => _isLoading = false);
+            return;
+          }
+        }
+
         final localOrder = await orderProvider.createOrder(
           items: cartProvider.items,
           deliveryAddress: _selectedAddress!,
@@ -524,7 +576,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           orderProvider.setCurrentOrder(backendOrder);
 
           if (_selectedPayment == PaymentMethod.mobileMoney) {
-            final paymentPhone = _resolvePaymentPhoneNumber(authProvider);
             if (paymentPhone != null) {
               try {
                 final orderRef = backendOrder.documentId ?? backendOrder.id;
@@ -533,6 +584,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       token: authProvider.token!,
                       orderId: orderRef,
                       phoneNumber: paymentPhone,
+                      correspondent: _selectedPawaPayCorrespondent,
                     );
 
                 setState(() => _isLoading = false);
@@ -734,6 +786,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             children: [
                               _buildMobileMoneyCard(
                                 method: PaymentMethod.mobileMoney,
+                                correspondent: 'MTN_MOMO_UGA',
                                 label: 'MTN Mobile Money',
                                 accent: const Color(0xFFFFCC00),
                                 textColor: Colors.black,
@@ -744,6 +797,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               const SizedBox(height: AppSizes.sm),
                               _buildMobileMoneyCard(
                                 method: PaymentMethod.mobileMoney,
+                                correspondent: 'AIRTEL_OAPI_UGA',
                                 label: 'Airtel Money',
                                 accent: const Color(0xFFE40000),
                                 textColor: Colors.white,
@@ -752,6 +806,43 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 comingSoon: false,
                               ),
                               const SizedBox(height: AppSizes.sm),
+                              if (_selectedPayment == PaymentMethod.mobileMoney) ...[
+                                Container(
+                                  padding: const EdgeInsets.all(AppSizes.sm),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                                    border: Border.all(color: AppColors.grey200),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Number to charge',
+                                        style: AppTextStyles.labelMedium,
+                                      ),
+                                      const SizedBox(height: AppSizes.xs),
+                                      TextField(
+                                        controller: _paymentPhoneController,
+                                        keyboardType: TextInputType.phone,
+                                        decoration: InputDecoration(
+                                          prefixText: '+256 ',
+                                          hintText: '7XXXXXXXX',
+                                          helperText: _selectedPawaPayCorrespondent == 'AIRTEL_OAPI_UGA'
+                                              ? 'Use an Airtel Money number for this option.'
+                                              : 'Use an MTN Mobile Money number for this option.',
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              AppSizes.radiusSm,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: AppSizes.sm),
+                              ],
                               _buildPaymentOption(PaymentMethod.cashOnDelivery),
                             ],
                           ),
@@ -763,7 +854,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           title: 'Order Summary',
                           icon: Iconsax.receipt_2,
                           isExpanded: _summaryExpanded,
-                          summary: 'Total · ${Formatters.formatCurrency(cartProvider.total)}',
+                          summary: 'Total · ${Formatters.formatCurrency(_checkoutDisplayTotal(cartProvider))}',
                           onToggle: () => setState(
                             () => _summaryExpanded = !_summaryExpanded,
                           ),
@@ -774,6 +865,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               _buildSummaryRow('Service Fee (5%)', cartProvider.serviceFee),
                               const SizedBox(height: AppSizes.sm),
                               _buildSummaryRow('Delivery Fee', _slots[_selectedSlotIndex].fee.toDouble()),
+                              if (_estimatedPawaPayCharge(cartProvider.subtotal) > 0) ...[
+                                const SizedBox(height: AppSizes.sm),
+                                _buildSummaryRow(
+                                  'PawaPay Charge',
+                                  _estimatedPawaPayCharge(cartProvider.subtotal),
+                                ),
+                              ],
                               const SizedBox(height: AppSizes.sm),
                               Align(
                                 alignment: Alignment.centerLeft,
@@ -816,9 +914,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               ),
                               _buildSummaryRow(
                                 'Total',
-                                cartProvider.subtotal +
-                                    cartProvider.serviceFee +
-                                    _slots[_selectedSlotIndex].fee,
+                                _checkoutDisplayTotal(cartProvider),
                                 isTotal: true,
                               ),
                             ],
@@ -866,9 +962,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         // Place order button
                         CustomButton(
                           text: _primaryCheckoutCta(
-                            cartProvider.subtotal +
-                                cartProvider.serviceFee +
-                                _slots[_selectedSlotIndex].fee,
+                            _checkoutDisplayTotal(cartProvider),
                           ),
                           isLoading: _isLoading,
                           onPressed: _consentChecked ? _placeOrder : null,
@@ -1499,6 +1593,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Widget _buildMobileMoneyCard({
     required PaymentMethod method,
+    required String correspondent,
     required String label,
     required Color accent,
     required Color textColor,
@@ -1506,9 +1601,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     required String prompt,
     bool comingSoon = false,
   }) {
-    final isSelected = _selectedPayment == method;
+    final isSelected =
+        _selectedPayment == method && _selectedPawaPayCorrespondent == correspondent;
     return GestureDetector(
-      onTap: comingSoon ? null : () => setState(() => _selectedPayment = method),
+      onTap: comingSoon
+          ? null
+          : () => setState(() {
+              _selectedPayment = method;
+              _selectedPawaPayCorrespondent = correspondent;
+            }),
       child: Container(
         padding: const EdgeInsets.all(AppSizes.sm),
         margin: const EdgeInsets.only(bottom: 0),
