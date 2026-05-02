@@ -499,7 +499,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
         if (!mounted) return;
 
-        if (backendOrder != null) {
+        final hasValidBackendTotal =
+            backendOrder != null && backendOrder.total > 0;
+
+        if (backendOrder != null && !hasValidBackendTotal) {
+          setState(() => _isLoading = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  orderService.error ??
+                      'Order total is invalid. Please review cart items and try again.',
+                ),
+                backgroundColor: AppColors.error,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+          return;
+        }
+
+        if (hasValidBackendTotal) {
           orderProvider.syncOrdersFromService(orderService.orders);
           orderProvider.setCurrentOrder(backendOrder);
 
@@ -554,7 +574,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
         setState(() => _isLoading = false);
 
-        final orderForSuccess = backendOrder ?? localOrder;
+        final orderForSuccess = hasValidBackendTotal ? backendOrder : localOrder;
         if (orderForSuccess != null && mounted) {
           cartProvider.clearCart();
           context.pushReplacement(
@@ -1486,70 +1506,84 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     required String prompt,
     bool comingSoon = false,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(AppSizes.sm),
-      margin: const EdgeInsets.only(bottom: 0),
-      decoration: BoxDecoration(
-        color: AppColors.lightGrey,
-        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-        border: Border.all(color: AppColors.grey300),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: accent,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              badge,
-              style: AppTextStyles.caption.copyWith(
-                color: textColor,
-                fontWeight: FontWeight.w800,
-                fontSize: 12,
-              ),
-            ),
+    final isSelected = _selectedPayment == method;
+    return GestureDetector(
+      onTap: comingSoon ? null : () => setState(() => _selectedPayment = method),
+      child: Container(
+        padding: const EdgeInsets.all(AppSizes.sm),
+        margin: const EdgeInsets.only(bottom: 0),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primaryOrange.withValues(alpha: 0.1)
+              : AppColors.lightGrey,
+          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+          border: Border.all(
+            color: isSelected ? AppColors.primaryOrange : AppColors.grey300,
           ),
-          const SizedBox(width: AppSizes.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: AppTextStyles.labelMedium.copyWith(
-                    color: AppColors.textDark,
-                  ),
-                ),
-                Text(
-                  comingSoon ? 'Coming soon' : prompt,
-                  style: AppTextStyles.caption.copyWith(
-                    color: comingSoon
-                        ? AppColors.textSecondary
-                        : AppColors.primary,
-                    fontStyle: comingSoon ? FontStyle.italic : FontStyle.normal,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (comingSoon)
+        ),
+        child: Row(
+          children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: AppColors.grey200,
-                borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                color: accent,
+                borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                'Soon',
+                badge,
                 style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textSecondary,
-                  fontSize: 10,
+                  color: textColor,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
                 ),
               ),
             ),
-        ],
+            const SizedBox(width: AppSizes.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  Text(
+                    comingSoon ? 'Coming soon' : prompt,
+                    style: AppTextStyles.caption.copyWith(
+                      color: comingSoon
+                          ? AppColors.textSecondary
+                          : AppColors.primary,
+                      fontStyle: comingSoon ? FontStyle.italic : FontStyle.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (comingSoon)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.grey200,
+                  borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                ),
+                child: Text(
+                  'Soon',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 10,
+                  ),
+                ),
+              )
+            else if (isSelected)
+              const Icon(
+                Iconsax.tick_circle5,
+                color: AppColors.primaryOrange,
+                size: 20,
+              ),
+          ],
+        ),
       ),
     );
   }
