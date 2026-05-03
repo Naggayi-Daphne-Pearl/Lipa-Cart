@@ -42,7 +42,7 @@ class NotFoundScreen extends StatelessWidget {
                   const SizedBox(height: AppSizes.xl),
                   CustomButton(
                     text: 'Go Home',
-                    onPressed: () => context.go('/customer/home'),
+                    onPressed: () => context.go('/'),
                     icon: Iconsax.home,
                   ),
                 ],

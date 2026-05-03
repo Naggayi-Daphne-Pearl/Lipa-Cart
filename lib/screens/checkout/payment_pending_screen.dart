@@ -10,15 +10,18 @@ import '../../core/utils/formatters.dart';
 import '../../models/order.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/payment_service.dart';
+import '../../services/order_service.dart';
 
 class PaymentPendingScreen extends StatefulWidget {
-  final Order order;
+  final Order? initialOrder;
+  final String orderId;
   final String paymentId;
   final String phoneNumber;
 
   const PaymentPendingScreen({
     super.key,
-    required this.order,
+    this.initialOrder,
+    required this.orderId,
     required this.paymentId,
     required this.phoneNumber,
   });
@@ -35,10 +38,15 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
   static const Duration _pollInterval = Duration(seconds: 5);
 
   bool _isPolling = false;
+  bool _isLoadingOrder = false;
   bool _hasTimedOut = false;
   bool _hasFailed = false;
   bool _isRetrying = false;
+  bool _isSwitchingToCod = false;
+  bool _insufficientBalance = false;
   String _statusMessage = 'Waiting for payment approval...';
+  late String _paymentPhone;
+  Order? _order;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -46,6 +54,8 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
   @override
   void initState() {
     super.initState();
+    _paymentPhone = widget.phoneNumber;
+    _order = widget.initialOrder;
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -53,27 +63,57 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
     _pulseAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+    if (_order == null) {
+      _loadOrder();
+    }
     _startPolling();
+  }
+
+  Future<void> _loadOrder() async {
+    if (_isLoadingOrder || !mounted) return;
+    setState(() => _isLoadingOrder = true);
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final token = authProvider.token;
+      if (token == null || widget.orderId.isEmpty) return;
+
+      final orderService = context.read<OrderService>();
+      final ok = await orderService.getOrder(token, widget.orderId);
+      if (!mounted) return;
+
+      if (ok && orderService.currentOrder != null) {
+        setState(() => _order = orderService.currentOrder);
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingOrder = false);
+    }
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    _stopPolling();
     _pulseController.dispose();
     super.dispose();
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
   }
 
   void _startPolling() {
     _pollCount = 0;
     _hasTimedOut = false;
     _hasFailed = false;
+    _insufficientBalance = false;
     _statusMessage = 'Waiting for payment approval...';
-    _pollTimer?.cancel();
+    _stopPolling();
     _pollTimer = Timer.periodic(_pollInterval, (_) => _checkStatus());
   }
 
   Future<void> _checkStatus() async {
-    if (_isPolling || !mounted) return;
+    if (_isPolling || _isRetrying || !mounted) return;
     setState(() => _isPolling = true);
 
     try {
@@ -90,26 +130,34 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
 
       final paymentStatus = result['paymentStatus'] as String;
       final orderStatus = result['orderStatus'] as String;
+      final failureCode = (result['failureCode'] as String? ?? '').toUpperCase();
+      final failureMessage = result['failureMessage'] as String? ?? '';
 
       if (paymentStatus == 'completed' ||
           orderStatus == 'payment_confirmed') {
-        _pollTimer?.cancel();
+        _stopPolling();
         _navigateToSuccess();
         return;
       }
 
       if (paymentStatus == 'failed') {
-        _pollTimer?.cancel();
+        final isInsufficient =
+            failureCode == 'INSUFFICIENT_BALANCE' ||
+            failureMessage.toLowerCase().contains('enough funds');
+        _stopPolling();
         setState(() {
           _hasFailed = true;
-          _statusMessage = 'Payment was not completed. You can try again.';
+          _insufficientBalance = isInsufficient;
+          _statusMessage = isInsufficient
+              ? 'Insufficient Mobile Money balance. Retry with another number or pay cash on delivery.'
+              : 'Payment was not completed. You can try again.';
         });
         return;
       }
 
       _pollCount++;
       if (_pollCount >= _maxPolls) {
-        _pollTimer?.cancel();
+        _stopPolling();
         setState(() {
           _hasTimedOut = true;
           _statusMessage =
@@ -120,7 +168,7 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
       // Network errors during polling are not fatal — keep trying
       _pollCount++;
       if (_pollCount >= _maxPolls) {
-        _pollTimer?.cancel();
+        _stopPolling();
         setState(() {
           _hasTimedOut = true;
           _statusMessage =
@@ -134,7 +182,11 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
 
   void _navigateToSuccess() {
     if (!mounted) return;
-    context.pushReplacement('/customer/order-success', extra: widget.order);
+    if (_order != null) {
+      context.pushReplacement('/customer/order-success', extra: _order);
+      return;
+    }
+    context.go('/customer/orders');
   }
 
   Future<void> _retryPayment() async {
@@ -145,43 +197,161 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
       _hasTimedOut = false;
       _statusMessage = 'Sending payment prompt...';
     });
+    _stopPolling();
 
     try {
       final authProvider = context.read<AuthProvider>();
       final token = authProvider.token;
       if (token == null) return;
 
-      final orderRef = widget.order.documentId ?? widget.order.id;
+      final orderRef = _order?.documentId ?? _order?.id ?? widget.orderId;
       await PaymentService.initiateFlutterwaveMobileMoney(
         token: token,
         orderId: orderRef,
-        phoneNumber: widget.phoneNumber,
+        phoneNumber: _paymentPhone,
       );
 
       if (!mounted) return;
       setState(() {
         _statusMessage = 'Waiting for payment approval...';
-        _isRetrying = false;
       });
       _startPolling();
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _isRetrying = false;
         _hasFailed = true;
         _statusMessage = 'Could not send payment prompt. Please try again.';
       });
+    } finally {
+      if (mounted) {
+        setState(() => _isRetrying = false);
+      }
     }
   }
 
   String get _maskedPhone {
-    final phone = widget.phoneNumber;
+    final phone = _paymentPhone;
     if (phone.length < 6) return phone;
     // Show: +256 7XX XXX X89
     final visible = phone.substring(0, 7);
     final last = phone.substring(phone.length - 2);
     final masked = 'X' * (phone.length - 9);
     return '$visible $masked $last';
+  }
+
+  Future<void> _changePaymentPhone() async {
+    final controller = TextEditingController();
+    final current = _paymentPhone.replaceAll('+256', '');
+    if (current.length == 9) controller.text = current;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Use a different phone number'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(
+            prefixText: '+256 ',
+            hintText: '7XXXXXXXX',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final digits = controller.text.trim().replaceAll(RegExp(r'\D'), '');
+              if (digits.length != 9) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Enter a valid 9-digit Uganda number.'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+              setState(() {
+                _paymentPhone = '+256$digits';
+                _insufficientBalance = false;
+                _statusMessage = 'Phone number updated. Tap Retry Payment.';
+              });
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('Use Number'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _switchToCashOnDelivery() async {
+    if (_isSwitchingToCod || !mounted) return;
+    setState(() => _isSwitchingToCod = true);
+    _stopPolling();
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final token = authProvider.token;
+      final orderRef = _order?.documentId ?? _order?.id ?? widget.orderId;
+      if (token == null || orderRef.isEmpty) return;
+
+      final result = await PaymentService.switchToCashOnDelivery(
+        token: token,
+        orderId: orderRef,
+      );
+
+      if (!mounted) return;
+      final data = result['data'] as Map<String, dynamic>?;
+      if (data != null) {
+        final updatedOrder = Order.fromJson(data);
+        context.pushReplacement('/customer/order-tracking', extra: updatedOrder);
+        return;
+      }
+
+      context.go('/customer/orders');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSwitchingToCod = false);
+    }
+  }
+
+  Future<void> _confirmPayOnDelivery() async {
+    if (_isSwitchingToCod || !mounted) return;
+
+    final shouldSwitch = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Pay on Delivery?'),
+        content: const Text(
+          'This will change your order to Cash on Delivery. '
+          'You will pay cash when your order arrives.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Keep Mobile Money'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Yes, Pay on Delivery'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSwitch == true) {
+      await _switchToCashOnDelivery();
+    }
   }
 
   @override
@@ -195,15 +365,23 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
             padding: AppSizes.screenPadding,
             child: Column(
               children: [
-                const Spacer(flex: 1),
-                _buildPhoneIcon(),
-                const SizedBox(height: AppSizes.xl),
-                _buildStatusSection(),
-                const SizedBox(height: AppSizes.xl),
-                _buildPaymentDetails(),
-                const SizedBox(height: AppSizes.lg),
-                if (!_hasFailed && !_hasTimedOut) _buildSteps(),
-                const Spacer(flex: 2),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: AppSizes.md),
+                        _buildPhoneIcon(),
+                        const SizedBox(height: AppSizes.xl),
+                        _buildStatusSection(),
+                        const SizedBox(height: AppSizes.xl),
+                        _buildPaymentDetails(),
+                        const SizedBox(height: AppSizes.lg),
+                        if (!_hasFailed && !_hasTimedOut) _buildSteps(),
+                        const SizedBox(height: AppSizes.lg),
+                      ],
+                    ),
+                  ),
+                ),
                 _buildActions(),
                 const SizedBox(height: AppSizes.md),
               ],
@@ -277,6 +455,10 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
   }
 
   Widget _buildPaymentDetails() {
+    final order = _order;
+    final amount = order?.total ?? 0;
+    final orderNumber = order?.orderNumber ?? '';
+
     return Container(
       padding: AppSizes.cardPadding,
       decoration: BoxDecoration(
@@ -286,20 +468,35 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
       ),
       child: Column(
         children: [
-          _detailRow('Amount', Formatters.formatCurrency(widget.order.total)),
+          _detailRow('Amount', Formatters.formatCurrency(amount)),
           const SizedBox(height: AppSizes.sm),
           Divider(color: AppColors.grey100, height: 1),
           const SizedBox(height: AppSizes.sm),
           _detailRow('Phone', _maskedPhone),
+          const SizedBox(height: AppSizes.xs),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _changePaymentPhone,
+              icon: const Icon(Iconsax.edit, size: AppSizes.iconXs),
+              label: const Text('Change number'),
+            ),
+          ),
           const SizedBox(height: AppSizes.sm),
           Divider(color: AppColors.grey100, height: 1),
           const SizedBox(height: AppSizes.sm),
           _detailRow('Method', 'Mobile Money'),
-          if (widget.order.orderNumber.isNotEmpty) ...[
+          if (orderNumber.isNotEmpty) ...[
             const SizedBox(height: AppSizes.sm),
             Divider(color: AppColors.grey100, height: 1),
             const SizedBox(height: AppSizes.sm),
-            _detailRow('Order', '#${widget.order.orderNumber}'),
+            _detailRow('Order', '#$orderNumber'),
+          ],
+          if (_isLoadingOrder) ...[
+            const SizedBox(height: AppSizes.sm),
+            Divider(color: AppColors.grey100, height: 1),
+            const SizedBox(height: AppSizes.sm),
+            _detailRow('Status', 'Loading order details...'),
           ],
         ],
       ),
@@ -383,7 +580,9 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
             width: double.infinity,
             height: AppSizes.buttonHeightLg,
             child: ElevatedButton.icon(
-              onPressed: _isRetrying ? null : _retryPayment,
+              onPressed: (_isRetrying || _isPolling || _isSwitchingToCod)
+                  ? null
+                  : _retryPayment,
               icon: _isRetrying
                   ? SizedBox(
                       width: 20,
@@ -413,7 +612,9 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
             width: double.infinity,
             height: AppSizes.buttonHeightLg,
             child: OutlinedButton(
-              onPressed: () {
+              onPressed: _isRetrying
+                  ? null
+                  : () {
                 context.go('/customer/orders');
               },
               style: OutlinedButton.styleFrom(
@@ -428,17 +629,42 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
               )),
             ),
           ),
+          if (_hasFailed || _hasTimedOut) ...[
+            const SizedBox(height: AppSizes.sm),
+            SizedBox(
+              width: double.infinity,
+              height: AppSizes.buttonHeightLg,
+              child: OutlinedButton(
+                onPressed: _isSwitchingToCod ? null : _switchToCashOnDelivery,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primaryOrange,
+                  side: const BorderSide(color: AppColors.primaryOrange),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                  ),
+                ),
+                child: Text(
+                  _isSwitchingToCod
+                      ? 'Switching...'
+                      : _insufficientBalance
+                          ? 'Switch to Cash on Delivery'
+                          : 'Use Cash on Delivery Instead',
+                  style: AppTextStyles.buttonLarge.copyWith(
+                    color: AppColors.primaryOrange,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       );
     }
 
     // While waiting — just show a subtle cancel option
     return TextButton(
-      onPressed: () {
-        context.go('/customer/orders');
-      },
+      onPressed: _isSwitchingToCod ? null : _confirmPayOnDelivery,
       child: Text(
-        'I\'ll check later',
+        _isSwitchingToCod ? 'Switching...' : 'I\'ll pay later',
         style: AppTextStyles.bodyMedium.copyWith(
           color: AppColors.textTertiary,
         ),
