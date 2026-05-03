@@ -364,6 +364,7 @@ class OrderService extends ChangeNotifier {
         ),
         isPaid: paidStatuses.contains(backendStatus),
         deliveryProofUrl: attributes['delivery_proof_url'] as String?,
+        deliveryCode: attributes['delivery_code'] as String?,
         rating: () {
           final ratingData = attributes['rating'];
           if (ratingData == null) return null;

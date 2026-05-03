@@ -21,6 +21,7 @@ import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../models/order.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/delivery_code_widget.dart';
 import '../../core/utils/responsive.dart';
 
 class OrderTrackingScreen extends StatefulWidget {
@@ -51,6 +52,100 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   LatLng? _animationEndPoint;
   bool _isTrackingMapReady = false;
   bool _isRetryingPayment = false;
+  bool _isDeliveryCodeLoading = false;
+
+  bool get _showDeliveryCodeCard {
+    return order.deliveryCode != null &&
+        order.deliveryCode!.isNotEmpty &&
+        !order.isDelivered &&
+        !order.isCancelled;
+  }
+
+  bool get _showMissingDeliveryCodeFallback {
+    return !_showDeliveryCodeCard &&
+        (order.status == OrderStatus.riderAssigned ||
+            order.status == OrderStatus.inTransit);
+  }
+
+  Future<void> _resendDeliveryCode() async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    setState(() => _isDeliveryCodeLoading = true);
+    final success = await PaymentService.resendDeliveryCode(
+      order.documentId ?? order.id,
+      'sms',
+      token: token,
+    );
+    if (!mounted) return;
+    setState(() => _isDeliveryCodeLoading = false);
+
+    if (success) {
+      await _refreshOrder();
+      if (!mounted) return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success
+            ? 'Delivery code sent again to your phone.'
+            : (PaymentService.lastError ?? 'Failed to resend delivery code')),
+        backgroundColor: success ? AppColors.success : AppColors.error,
+      ),
+    );
+  }
+
+  Future<void> _forwardDeliveryCode() async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    final controller = TextEditingController();
+    final recipientPhone = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Forward Delivery Code'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(
+            hintText: 'Enter phone number',
+            labelText: 'Recipient phone',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+            child: const Text('Forward'),
+          ),
+        ],
+      ),
+    );
+
+    final phone = recipientPhone?.trim() ?? '';
+    if (phone.isEmpty) return;
+
+    setState(() => _isDeliveryCodeLoading = true);
+    final success = await PaymentService.forwardDeliveryCode(
+      order.documentId ?? order.id,
+      phone,
+      token: token,
+    );
+    if (!mounted) return;
+    setState(() => _isDeliveryCodeLoading = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success
+            ? 'Delivery code forwarded.'
+            : (PaymentService.lastError ?? 'Failed to forward delivery code')),
+        backgroundColor: success ? AppColors.success : AppColors.error,
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -1604,6 +1699,88 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                     ),
                   ),
                   const SizedBox(height: AppSizes.lg),
+
+                  if (_showDeliveryCodeCard) ...[
+                    DeliveryCodeWidget(
+                      code: order.deliveryCode!,
+                      onResend: _resendDeliveryCode,
+                      onForward: _forwardDeliveryCode,
+                      isLoading: _isDeliveryCodeLoading,
+                    ),
+                    const SizedBox(height: AppSizes.sm),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSizes.sm),
+                      decoration: BoxDecoration(
+                        color: AppColors.info.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                        border: Border.all(
+                          color: AppColors.info.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Text(
+                        'Give this code to your rider only when you receive your groceries. The rider must enter it before handing over the package.',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSizes.lg),
+                  ],
+                  if (_showMissingDeliveryCodeFallback) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSizes.sm),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                        border: Border.all(
+                          color: AppColors.warning.withValues(alpha: 0.28),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Delivery code is not visible yet.',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Tap resend to request a fresh code to your phone.',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            onPressed: _isDeliveryCodeLoading
+                                ? null
+                                : _resendDeliveryCode,
+                            icon: _isDeliveryCodeLoading
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Iconsax.refresh, size: 16),
+                            label: const Text('Resend Code'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.info,
+                              side: const BorderSide(color: AppColors.info),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSizes.lg),
+                  ],
 
                   // Delivery address
                   Container(

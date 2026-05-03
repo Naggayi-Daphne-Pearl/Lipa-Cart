@@ -6,6 +6,24 @@ import '../core/constants/app_constants.dart';
 
 class PaymentService {
   static String get _baseUrl => AppConstants.baseUrl;
+  static String? lastError;
+
+  static String _extractErrorMessage(
+    Map<String, dynamic> body, {
+    required String fallback,
+  }) {
+    final message = body['message'];
+    if (message is String && message.isNotEmpty) return message;
+
+    final error = body['error'];
+    if (error is String && error.isNotEmpty) return error;
+    if (error is Map<String, dynamic>) {
+      final nested = error['message'];
+      if (nested is String && nested.isNotEmpty) return nested;
+    }
+
+    return fallback;
+  }
 
   static Map<String, String?> _extractFailureReason(Map<String, dynamic> payment) {
     final providerResponse = payment['provider_response'];
@@ -193,5 +211,141 @@ class PaymentService {
         (body['message'] as String?) ??
         'Failed to switch to cash on delivery';
     throw Exception(message);
+  }
+
+  /// Verify delivery code for an order
+  /// Rider enters the 4-digit code to confirm delivery
+  static Future<bool> verifyDeliveryCode(
+    String orderId,
+    String code, {
+    double? gpsLat,
+    double? gpsLng,
+    String? photoUrl,
+  }) async {
+    try {
+      lastError = null;
+
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/api/orders/$orderId/verify-delivery-code'),
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'code': code,
+              if (gpsLat != null) 'gps_lat': gpsLat,
+              if (gpsLng != null) 'gps_lng': gpsLng,
+              if (photoUrl != null) 'photo_url': photoUrl,
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      final body = response.body.isNotEmpty
+          ? jsonDecode(response.body) as Map<String, dynamic>
+          : <String, dynamic>{};
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return true;
+      }
+
+      lastError = _extractErrorMessage(
+        body,
+        fallback: 'Code verification failed',
+      );
+
+      // Extract attempt info if available
+      final attemptsRemaining = body['attempts_remaining'];
+      if (attemptsRemaining != null) {
+        lastError = '$lastError (${attemptsRemaining} attempts remaining)';
+      }
+
+      return false;
+    } catch (e) {
+      lastError = 'Failed to verify code: ${e.toString()}';
+      return false;
+    }
+  }
+
+  /// Resend delivery code to customer
+  /// Method can be 'sms', 'push', or 'whatsapp'
+  static Future<bool> resendDeliveryCode(
+    String orderId,
+    String method,
+    {String? token}
+  ) async {
+    try {
+      lastError = null;
+
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/api/orders/$orderId/resend-delivery-code'),
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'method': method,
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      final body = response.body.isNotEmpty
+          ? jsonDecode(response.body) as Map<String, dynamic>
+          : <String, dynamic>{};
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return true;
+      }
+
+      lastError = _extractErrorMessage(
+        body,
+        fallback: 'Failed to resend code',
+      );
+      return false;
+    } catch (e) {
+      lastError = 'Failed to resend code: ${e.toString()}';
+      return false;
+    }
+  }
+
+  /// Forward delivery code to third party (gift scenario)
+  static Future<bool> forwardDeliveryCode(
+    String orderId,
+    String recipientPhone,
+    {String? token}
+  ) async {
+    try {
+      lastError = null;
+
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/api/orders/$orderId/forward-delivery-code'),
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'recipient_phone': recipientPhone,
+            }),
+          )
+          .timeout(AppConstants.apiTimeout);
+
+      final body = response.body.isNotEmpty
+          ? jsonDecode(response.body) as Map<String, dynamic>
+          : <String, dynamic>{};
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return true;
+      }
+
+      lastError = _extractErrorMessage(
+        body,
+        fallback: 'Failed to forward code',
+      );
+      return false;
+    } catch (e) {
+      lastError = 'Failed to forward code: ${e.toString()}';
+      return false;
+    }
   }
 }

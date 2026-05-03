@@ -1189,8 +1189,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 Colors.white,
               ),
               const SizedBox(width: 6),
-              _buildPaymentBadge('VISA', const Color(0xFF1A1F71), Colors.white),
-              const SizedBox(width: 6),
               _buildPaymentBadge(
                 'Cash',
                 AppColors.primarySoft,

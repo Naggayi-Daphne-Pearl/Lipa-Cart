@@ -132,6 +132,8 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
         return Iconsax.message_text;
       case 'promo':
         return Iconsax.discount_shape;
+      case 'delivery_code':
+        return Iconsax.password_check;
       default:
         return Iconsax.notification;
     }
@@ -151,6 +153,8 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
         return AppColors.success;
       case 'promo':
         return AppColors.warning;
+      case 'delivery_code':
+        return AppColors.success;
       default:
         return AppColors.grey500;
     }
@@ -198,6 +202,9 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
         break;
       case 'new_delivery':
         context.go('/rider/available-deliveries');
+        break;
+      case 'delivery_code':
+        context.go('/customer/orders');
         break;
     }
   }

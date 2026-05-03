@@ -755,6 +755,7 @@ class StrapiService {
         attrs['payment_method'] as String?,
       ),
       isPaid: attrs['is_paid'] as bool? ?? false,
+      deliveryCode: attrs['delivery_code'] as String?,
     );
   }
 

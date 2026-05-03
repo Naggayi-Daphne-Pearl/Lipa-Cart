@@ -6,7 +6,9 @@ import '../../core/theme/app_order_status_colors.dart';
 import '../../models/order.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/order_service.dart';
+import '../../services/payment_service.dart';
 import '../../widgets/app_loading_indicator.dart';
+import '../../widgets/delivery_code_widget.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final String orderId;
@@ -18,6 +20,8 @@ class OrderDetailScreen extends StatefulWidget {
 }
 
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
+  bool _isDeliveryCodeLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -31,6 +35,96 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     if (auth.token != null) {
       await orderService.getOrder(auth.token!, widget.orderId);
     }
+  }
+
+  bool _shouldShowDeliveryCode(Order order) {
+    return order.deliveryCode != null &&
+        order.deliveryCode!.isNotEmpty &&
+        !order.isDelivered &&
+        !order.isCancelled;
+  }
+
+  Future<void> _resendDeliveryCode(Order order) async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    setState(() => _isDeliveryCodeLoading = true);
+    final success = await PaymentService.resendDeliveryCode(
+      order.documentId ?? order.id,
+      'sms',
+      token: token,
+    );
+    if (!mounted) return;
+    setState(() => _isDeliveryCodeLoading = false);
+
+    if (success) {
+      await _loadOrderDetail();
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Delivery code sent to your phone.'
+              : (PaymentService.lastError ?? 'Could not resend code.'),
+        ),
+        backgroundColor: success ? AppColors.success : AppColors.error,
+      ),
+    );
+  }
+
+  Future<void> _forwardDeliveryCode(Order order) async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    final controller = TextEditingController();
+    final recipientPhone = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Forward Delivery Code'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(
+            labelText: 'Recipient phone',
+            hintText: 'Enter phone number',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+            child: const Text('Forward'),
+          ),
+        ],
+      ),
+    );
+
+    final phone = recipientPhone?.trim() ?? '';
+    if (phone.isEmpty) return;
+
+    setState(() => _isDeliveryCodeLoading = true);
+    final success = await PaymentService.forwardDeliveryCode(
+      order.documentId ?? order.id,
+      phone,
+      token: token,
+    );
+    if (!mounted) return;
+    setState(() => _isDeliveryCodeLoading = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Delivery code forwarded.'
+              : (PaymentService.lastError ?? 'Could not forward code.'),
+        ),
+        backgroundColor: success ? AppColors.success : AppColors.error,
+      ),
+    );
   }
 
   @override
@@ -125,6 +219,91 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ),
 
                 // Order items
+                if (_shouldShowDeliveryCode(order))
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        DeliveryCodeWidget(
+                          code: order.deliveryCode!,
+                          onResend: () => _resendDeliveryCode(order),
+                          onForward: () => _forwardDeliveryCode(order),
+                          isLoading: _isDeliveryCodeLoading,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Share this code with your rider only when groceries are in your hands.',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (!_shouldShowDeliveryCode(order) &&
+                    (order.status == OrderStatus.riderAssigned ||
+                        order.status == OrderStatus.inTransit))
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppColors.warning.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Delivery code not visible yet.',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Tap resend to request the code now.',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            onPressed: _isDeliveryCodeLoading
+                                ? null
+                                : () => _resendDeliveryCode(order),
+                            icon: _isDeliveryCodeLoading
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.refresh, size: 16),
+                            label: const Text('Resend Code'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.info,
+                              side: const BorderSide(color: AppColors.info),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
