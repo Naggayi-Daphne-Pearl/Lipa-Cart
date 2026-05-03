@@ -2560,9 +2560,17 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
       final payment = data['payment'] as Map<String, dynamic>? ?? {};
       final paymentId =
           payment['documentId'] as String? ?? payment['id']?.toString() ?? '';
+      final paymentRoute = Uri(
+        path: '/customer/payment-pending',
+        queryParameters: {
+          'orderId': orderRef,
+          'paymentId': paymentId,
+          'phone': paymentPhone,
+        },
+      ).toString();
 
       context.push(
-        '/customer/payment-pending',
+        paymentRoute,
         extra: {
           'order': order,
           'paymentId': paymentId,

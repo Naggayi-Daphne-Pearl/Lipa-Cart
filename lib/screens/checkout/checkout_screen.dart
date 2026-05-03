@@ -772,10 +772,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     payment['documentId'] as String? ??
                     payment['id']?.toString() ??
                     '';
+                final paymentRoute = Uri(
+                  path: '/customer/payment-pending',
+                  queryParameters: {
+                    'orderId': orderRef,
+                    'paymentId': paymentId,
+                    'phone': paymentPhone,
+                  },
+                ).toString();
 
                 cartProvider.clearCart();
                 context.pushReplacement(
-                  '/customer/payment-pending',
+                  paymentRoute,
                   extra: {
                     'order': backendOrder,
                     'paymentId': paymentId,
