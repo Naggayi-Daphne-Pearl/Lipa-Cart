@@ -94,6 +94,104 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
 
   Order get order => _order;
 
+  bool get _isCashOnDelivery =>
+      order.paymentMethod == PaymentMethod.cashOnDelivery;
+
+  String get _headline =>
+      _isCashOnDelivery ? 'Order placed - Pay on delivery' : 'Order Placed!';
+
+  String get _subheadline => _isCashOnDelivery
+      ? 'Your order is confirmed. Pay the rider in cash when it arrives.'
+      : 'Your order has been successfully placed';
+
+  List<({int step, String title, String subtitle, bool isActive, bool isEmphasis})>
+      get _nextSteps {
+    if (_isCashOnDelivery) {
+      return [
+        (
+          step: 1,
+          title: 'Order confirmed',
+          subtitle: 'Your COD order is confirmed and queued for shopping',
+          isActive: true,
+          isEmphasis: false,
+        ),
+        (
+          step: 2,
+          title: 'Shopper assigned',
+          subtitle: 'A personal shopper picks your items',
+          isActive: false,
+          isEmphasis: false,
+        ),
+        (
+          step: 3,
+          title: 'Shopping in progress',
+          subtitle: 'Your shopper selects the freshest items',
+          isActive: false,
+          isEmphasis: false,
+        ),
+        (
+          step: 4,
+          title: 'Rider picks up',
+          subtitle: 'A rider collects your order and heads your way',
+          isActive: false,
+          isEmphasis: false,
+        ),
+        (
+          step: 5,
+          title: 'Pay rider on delivery',
+          subtitle: 'Prepare ${Formatters.formatCurrency(order.total)} in cash if possible',
+          isActive: false,
+          isEmphasis: true,
+        ),
+        (
+          step: 6,
+          title: 'Delivered to you',
+          subtitle: 'Receive your groceries and your payment receipt',
+          isActive: false,
+          isEmphasis: false,
+        ),
+      ];
+    }
+
+    return [
+      (
+        step: 1,
+        title: 'Payment confirmed',
+        subtitle: 'We\'ll verify your payment',
+        isActive: true,
+        isEmphasis: false,
+      ),
+      (
+        step: 2,
+        title: 'Shopper assigned',
+        subtitle: 'A personal shopper picks your items',
+        isActive: false,
+        isEmphasis: false,
+      ),
+      (
+        step: 3,
+        title: 'Shopping in progress',
+        subtitle: 'Your shopper selects the freshest items',
+        isActive: false,
+        isEmphasis: false,
+      ),
+      (
+        step: 4,
+        title: 'Rider picks up',
+        subtitle: 'A rider collects your order',
+        isActive: false,
+        isEmphasis: false,
+      ),
+      (
+        step: 5,
+        title: 'Delivered to you',
+        subtitle: 'Enjoy your fresh groceries!',
+        isActive: false,
+        isEmphasis: false,
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -149,13 +247,17 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                 const SizedBox(height: AppSizes.xl),
                 FadeTransition(
                   opacity: _fadeAnimation,
-                  child: Text('Order Placed!', style: AppTextStyles.h2),
+                  child: Text(
+                    _headline,
+                    style: AppTextStyles.h2,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
                 const SizedBox(height: AppSizes.sm),
                 FadeTransition(
                   opacity: _fadeAnimation,
                   child: Text(
-                    'Your order has been successfully placed',
+                    _subheadline,
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: AppColors.textMedium,
                     ),
@@ -193,10 +295,63 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                         'Payment',
                         order.paymentMethod.displayName,
                       ),
+                      if (_isCashOnDelivery) ...[
+                        const SizedBox(height: AppSizes.sm),
+                        _buildDetailRow(
+                          'Amount Due',
+                          Formatters.formatCurrency(order.total),
+                        ),
+                      ],
                     ],
                   ),
                 ),
                 const SizedBox(height: 16),
+
+                if (_isCashOnDelivery) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(AppSizes.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGreen.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      border: Border.all(
+                        color: AppColors.primaryGreen.withValues(alpha: 0.18),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Please prepare cash for the rider',
+                          style: AppTextStyles.labelLarge.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: AppSizes.sm),
+                        Text(
+                          'Amount to pay: ${Formatters.formatCurrency(order.total)}',
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: AppColors.primaryGreen,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: AppSizes.sm),
+                        Text(
+                          'Have the exact amount ready if possible - riders may not carry change for large notes.',
+                          style: AppTextStyles.bodySmall,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Payment is collected when your order is delivered. We\'ll keep you updated in the app, and a receipt will be issued after cash collection is confirmed.',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
                 // What happens next timeline
                 Container(
@@ -210,11 +365,17 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                     children: [
                       Text('What happens next?', style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w600)),
                       const SizedBox(height: AppSizes.md),
-                      _buildNextStep(1, 'Payment confirmed', 'We\'ll verify your payment', true),
-                      _buildNextStep(2, 'Shopper assigned', 'A personal shopper picks your items', false),
-                      _buildNextStep(3, 'Shopping in progress', 'Your shopper selects the freshest items', false),
-                      _buildNextStep(4, 'Rider picks up', 'A rider collects your order', false),
-                      _buildNextStep(5, 'Delivered to you', 'Enjoy your fresh groceries!', false, isLast: true),
+                      ..._nextSteps.asMap().entries.map((entry) {
+                        final step = entry.value;
+                        return _buildNextStep(
+                          step.step,
+                          step.title,
+                          step.subtitle,
+                          step.isActive,
+                          isEmphasis: step.isEmphasis,
+                          isLast: entry.key == _nextSteps.length - 1,
+                        );
+                      }),
                     ],
                   ),
                 ),
@@ -326,7 +487,20 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
     );
   }
 
-  Widget _buildNextStep(int step, String title, String subtitle, bool isActive, {bool isLast = false}) {
+  Widget _buildNextStep(
+    int step,
+    String title,
+    String subtitle,
+    bool isActive, {
+    bool isLast = false,
+    bool isEmphasis = false,
+  }) {
+    final accentColor = isEmphasis
+        ? AppColors.primaryOrange
+        : (isActive ? AppColors.primary : AppColors.grey300);
+    final titleColor = isEmphasis
+        ? AppColors.primaryOrange
+        : (isActive ? AppColors.textPrimary : AppColors.textSecondary);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -336,7 +510,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
               width: 24, height: 24,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isActive ? AppColors.primary : AppColors.grey300,
+                color: accentColor,
               ),
               child: Center(
                 child: isActive
@@ -345,7 +519,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
               ),
             ),
             if (!isLast)
-              Container(width: 2, height: 24, color: isActive ? AppColors.primary : AppColors.grey300),
+              Container(width: 2, height: 24, color: accentColor),
           ],
         ),
         const SizedBox(width: AppSizes.sm),
@@ -357,7 +531,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
               children: [
                 Text(title, style: AppTextStyles.labelSmall.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: isActive ? AppColors.textPrimary : AppColors.textSecondary,
+                  color: titleColor,
                 )),
                 Text(subtitle, style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
               ],

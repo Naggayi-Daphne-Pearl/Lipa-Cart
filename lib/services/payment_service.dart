@@ -42,6 +42,8 @@ class PaymentService {
     required String orderId,
     required String phoneNumber,
     String? correspondent,
+    bool rollbackOrderOnFailure = false,
+    bool forceRetry = false,
   }) async {
     final response = await http
         .post(
@@ -52,6 +54,43 @@ class PaymentService {
           },
           body: jsonEncode({
             'orderId': orderId,
+            'phoneNumber': phoneNumber,
+            if (correspondent != null) 'correspondent': correspondent,
+            'rollbackOrderOnFailure': rollbackOrderOnFailure,
+            'forceRetry': forceRetry,
+          }),
+        )
+        .timeout(AppConstants.apiTimeout);
+
+    final body = response.body.isNotEmpty
+        ? jsonDecode(response.body) as Map<String, dynamic>
+        : <String, dynamic>{};
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return body;
+    }
+
+    final error = body['error'] as Map<String, dynamic>?;
+    final message =
+        (error?['message'] as String?) ??
+        (body['message'] as String?) ??
+        'Failed to initiate mobile money payment';
+    throw Exception(message);
+  }
+
+  static Future<Map<String, dynamic>> validateMobileMoneyDetails({
+    required String token,
+    required String phoneNumber,
+    String? correspondent,
+  }) async {
+    final response = await http
+        .post(
+          Uri.parse('$_baseUrl/api/payments/validate-details'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
             'phoneNumber': phoneNumber,
             if (correspondent != null) 'correspondent': correspondent,
           }),
@@ -70,7 +109,7 @@ class PaymentService {
     final message =
         (error?['message'] as String?) ??
         (body['message'] as String?) ??
-        'Failed to initiate mobile money payment';
+        'Failed to validate mobile money details';
     throw Exception(message);
   }
 

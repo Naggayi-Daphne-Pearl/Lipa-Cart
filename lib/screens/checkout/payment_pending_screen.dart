@@ -209,6 +209,7 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
         token: token,
         orderId: orderRef,
         phoneNumber: _paymentPhone,
+        forceRetry: true,
       );
 
       if (!mounted) return;
@@ -291,6 +292,13 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
     if (_isSwitchingToCod || !mounted) return;
     setState(() => _isSwitchingToCod = true);
     _stopPolling();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Switched to Cash on Delivery. Placing your order...'),
+        backgroundColor: AppColors.info,
+        duration: Duration(seconds: 2),
+      ),
+    );
 
     try {
       final authProvider = context.read<AuthProvider>();
@@ -304,10 +312,28 @@ class _PaymentPendingScreenState extends State<PaymentPendingScreen>
       );
 
       if (!mounted) return;
+      final orderService = context.read<OrderService>();
+      final refreshed = await orderService.getOrder(token, orderRef);
+      if (!mounted) return;
+
+      if (refreshed && orderService.currentOrder != null) {
+        _order = orderService.currentOrder;
+        context.pushReplacement(
+          '/customer/order-success',
+          extra: orderService.currentOrder,
+        );
+        return;
+      }
+
       final data = result['data'] as Map<String, dynamic>?;
-      if (data != null) {
-        final updatedOrder = Order.fromJson(data);
-        context.pushReplacement('/customer/order-tracking', extra: updatedOrder);
+      if (data != null && _order != null) {
+        final updatedOrder = _order!.copyWith(
+          paymentMethod: PaymentMethod.cashOnDelivery,
+          status: OrderStatus.confirmed,
+          paymentConfirmedAt: DateTime.now(),
+        );
+        _order = updatedOrder;
+        context.pushReplacement('/customer/order-success', extra: updatedOrder);
         return;
       }
 

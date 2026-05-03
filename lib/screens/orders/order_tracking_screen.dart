@@ -399,6 +399,11 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isCashOnDelivery =
+      order.paymentMethod == PaymentMethod.cashOnDelivery;
+    final isCashDue =
+      isCashOnDelivery && !order.isDelivered && !order.isCancelled;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -489,7 +494,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                   ),
                                 ),
                                 child: Text(
-                                  order.status.displayName,
+                                  _statusLabelForOrder(order),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: AppTextStyles.labelSmall.copyWith(
@@ -1531,9 +1536,11 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                             vertical: AppSizes.xs,
                           ),
                           decoration: BoxDecoration(
-                            color: order.isPaid
-                                ? AppColors.success.withValues(alpha: 0.1)
-                                : AppColors.warning.withValues(alpha: 0.1),
+                            color: isCashDue
+                                ? AppColors.primaryOrange.withValues(alpha: 0.1)
+                                : order.isPaid
+                                    ? AppColors.success.withValues(alpha: 0.1)
+                                    : AppColors.warning.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(
                               AppSizes.radiusSm,
                             ),
@@ -1541,25 +1548,58 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                           child: Row(
                             children: [
                               Icon(
-                                order.isPaid ? Iconsax.verify : Iconsax.clock,
-                                color: order.isPaid
-                                    ? AppColors.success
-                                    : AppColors.warning,
+                                isCashDue
+                                    ? Iconsax.money_recive
+                                    : order.isPaid
+                                        ? Iconsax.verify
+                                        : Iconsax.clock,
+                                color: isCashDue
+                                    ? AppColors.primaryOrange
+                                    : order.isPaid
+                                        ? AppColors.success
+                                        : AppColors.warning,
                                 size: 16,
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                order.isPaid ? 'Paid' : 'Pending Payment',
+                                isCashDue
+                                    ? 'Cash on Delivery - ${Formatters.formatCurrency(order.total)} due'
+                                    : order.isPaid
+                                        ? 'Paid'
+                                        : 'Pending Payment',
                                 style: AppTextStyles.caption.copyWith(
-                                  color: order.isPaid
-                                      ? AppColors.success
-                                      : AppColors.warning,
+                                  color: isCashDue
+                                      ? AppColors.primaryOrange
+                                      : order.isPaid
+                                          ? AppColors.success
+                                          : AppColors.warning,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
                           ),
                         ),
+                        if (isCashDue) ...[
+                          const SizedBox(height: AppSizes.sm),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(AppSizes.sm),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryOrange.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                              border: Border.all(
+                                color: AppColors.primaryOrange.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Text(
+                              'Payment: Cash on Delivery - ${Formatters.formatCurrency(order.total)} due. Please prepare cash for the rider, ideally with the exact amount.',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -2729,6 +2769,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   }
 
   Widget _buildTrackingTimeline(BuildContext context) {
+    final isCashOnDelivery =
+        order.paymentMethod == PaymentMethod.cashOnDelivery;
     final steps = [
       OrderStatus.pending,
       OrderStatus.confirmed,
@@ -2769,7 +2811,10 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                   ),
                   child: isCompleted
                       ? Icon(
-                          _getStatusIcon(status),
+                          _getStatusIcon(
+                            status,
+                            isCashOnDelivery: isCashOnDelivery,
+                          ),
                           size: 14,
                           color: Colors.white,
                         )
@@ -2802,7 +2847,10 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      status.displayName,
+                      _timelineStepTitle(
+                        status,
+                        isCashOnDelivery: isCashOnDelivery,
+                      ),
                       style: AppTextStyles.labelMedium.copyWith(
                         color: isCompleted
                             ? AppColors.textDark
@@ -2892,7 +2940,13 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                         ],
                       )
                     else
-                      Text(status.description, style: AppTextStyles.caption),
+                      Text(
+                        _timelineStepDescription(
+                          status,
+                          isCashOnDelivery: isCashOnDelivery,
+                        ),
+                        style: AppTextStyles.caption,
+                      ),
                   ],
                 ),
               ),
@@ -3105,12 +3159,49 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     );
   }
 
-  IconData _getStatusIcon(OrderStatus status) {
+  String _statusLabelForOrder(Order order) {
+    final isCashOnDelivery = order.paymentMethod == PaymentMethod.cashOnDelivery;
+    if (isCashOnDelivery && order.status == OrderStatus.confirmed) {
+      return 'Order Confirmed - Pay on Delivery';
+    }
+    return order.status.displayName;
+  }
+
+  String _timelineStepTitle(
+    OrderStatus status, {
+    required bool isCashOnDelivery,
+  }) {
+    if (isCashOnDelivery && status == OrderStatus.confirmed) {
+      return 'Order Confirmed';
+    }
+    if (isCashOnDelivery && status == OrderStatus.delivered) {
+      return 'Delivered and Paid';
+    }
+    return status.displayName;
+  }
+
+  String _timelineStepDescription(
+    OrderStatus status, {
+    required bool isCashOnDelivery,
+  }) {
+    if (isCashOnDelivery && status == OrderStatus.confirmed) {
+      return 'Cash payment will be collected on delivery';
+    }
+    if (isCashOnDelivery && status == OrderStatus.inTransit) {
+      return 'Your rider is on the way - please prepare cash';
+    }
+    if (isCashOnDelivery && status == OrderStatus.delivered) {
+      return 'Payment collected and order completed';
+    }
+    return status.description;
+  }
+
+  IconData _getStatusIcon(OrderStatus status, {bool isCashOnDelivery = false}) {
     switch (status) {
       case OrderStatus.pending:
         return Icons.access_time;
       case OrderStatus.confirmed:
-        return Icons.payment;
+        return isCashOnDelivery ? Iconsax.box : Icons.payment;
       case OrderStatus.shopperAssigned:
         return Icons.person;
       case OrderStatus.shopping:

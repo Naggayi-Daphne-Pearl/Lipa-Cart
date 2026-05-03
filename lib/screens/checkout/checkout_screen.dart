@@ -65,6 +65,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _summaryExpanded = true;
   int _selectedSlotIndex = 0;
   bool _promoExpanded = false;
+  int _mobileMoneyConsecutiveFailures = 0;
   final TextEditingController _promoController = TextEditingController();
   final TextEditingController _riderNoteController = TextEditingController();
   late final TextEditingController _paymentPhoneController;
@@ -305,6 +306,98 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
     if (digits.length == 9) return '+256$digits';
     return null;
+  }
+
+  String? _clientSideNetworkMismatchMessage(String phoneNumber) {
+    if (!phoneNumber.startsWith('+256') || phoneNumber.length != 13) {
+      return null;
+    }
+
+    final localDigits = phoneNumber.substring(4);
+    if (localDigits.length < 2) return null;
+    final prefix = localDigits.substring(0, 2);
+
+    const mtnPrefixes = {'76', '77', '78', '39'};
+    const airtelPrefixes = {'70', '74', '75', '20'};
+
+    final isMtn = mtnPrefixes.contains(prefix);
+    final isAirtel = airtelPrefixes.contains(prefix);
+    if (!isMtn && !isAirtel) return null;
+
+    if (_selectedPawaPayCorrespondent == 'MTN_MOMO_UGA' && !isMtn) {
+      return 'That number looks like Airtel. Select Airtel Money or use an MTN number.';
+    }
+    if (_selectedPawaPayCorrespondent == 'AIRTEL_OAPI_UGA' && !isAirtel) {
+      return 'That number looks like MTN. Select MTN MoMo or use an Airtel number.';
+    }
+    return null;
+  }
+
+  String _friendlyPaymentError(Object error) {
+    final raw = error.toString().replaceFirst('Exception: ', '').trim();
+    final lower = raw.toLowerCase();
+    if (lower.contains('does not match the payment phone number')) {
+      return 'Selected network does not match the phone number. Switch network option or use a matching number.';
+    }
+    if (lower.contains('valid uganda phone number is required')) {
+      return 'Enter a valid Uganda mobile money number in the format 7XXXXXXXX.';
+    }
+    if (lower.contains('payment could not be initiated')) {
+      return 'We could not start your mobile money charge. Please retry or switch to Cash on Delivery.';
+    }
+    return raw.isEmpty ? 'Unable to process mobile money payment right now.' : raw;
+  }
+
+  Future<void> _recordMobileMoneyFailureAndMaybeSuggestCod(String message) async {
+    if (!mounted) return;
+    _mobileMoneyConsecutiveFailures += 1;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+        duration: const Duration(seconds: 5),
+      ),
+    );
+
+    if (_mobileMoneyConsecutiveFailures < 2 || _selectedPayment != PaymentMethod.mobileMoney) {
+      return;
+    }
+
+    final switchToCod = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Having trouble with Mobile Money?'),
+          content: const Text(
+            'We noticed multiple payment failures. You can switch to Cash on Delivery and complete your order now.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Try Mobile Money again'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Switch to Cash on Delivery'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || switchToCod != true) return;
+
+    setState(() {
+      _selectedPayment = PaymentMethod.cashOnDelivery;
+      _mobileMoneyConsecutiveFailures = 0;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Payment method switched to Cash on Delivery.'),
+        backgroundColor: AppColors.success,
+      ),
+    );
   }
 
   double _estimatedPawaPayCharge(double subtotal) {
@@ -706,16 +799,31 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             _clearCheckoutSubmitState();
             return;
           }
+
+          final clientMismatch = _clientSideNetworkMismatchMessage(paymentPhone);
+          if (clientMismatch != null) {
+            _clearCheckoutSubmitState();
+            await _recordMobileMoneyFailureAndMaybeSuggestCod(clientMismatch);
+            return;
+          }
+
+          _setCheckoutSubmitPhase(_CheckoutSubmitPhase.initiatingPayment);
+          try {
+            await PaymentService.validateMobileMoneyDetails(
+              token: authProvider.token!,
+              phoneNumber: paymentPhone,
+              correspondent: _selectedPawaPayCorrespondent,
+            );
+          } catch (e) {
+            _clearCheckoutSubmitState();
+            await _recordMobileMoneyFailureAndMaybeSuggestCod(
+              _friendlyPaymentError(e),
+            );
+            return;
+          }
         }
 
-        final localOrder = await orderProvider.createOrder(
-          items: cartProvider.items,
-          deliveryAddress: _selectedAddress!,
-          subtotal: cartProvider.subtotal,
-          serviceFee: cartProvider.serviceFee,
-          deliveryFee: cartProvider.deliveryFee,
-          paymentMethod: _selectedPayment,
-        );
+        _setCheckoutSubmitPhase(_CheckoutSubmitPhase.placingOrder);
 
         final backendOrder = await orderService.createOrderWithItems(
           token: authProvider.token!,
@@ -731,7 +839,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
 
         if (!mounted) return;
-        _setCheckoutSubmitPhase(_CheckoutSubmitPhase.initiatingPayment);
         final hasValidBackendTotal =
             backendOrder != null && backendOrder.total > 0;
 
@@ -766,7 +873,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       orderId: orderRef,
                       phoneNumber: paymentPhone,
                       correspondent: _selectedPawaPayCorrespondent,
+                      rollbackOrderOnFailure: true,
                     );
+
+                _mobileMoneyConsecutiveFailures = 0;
 
                 _setCheckoutSubmitPhase(
                   _CheckoutSubmitPhase.waitingForConfirmation,
@@ -804,17 +914,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 return;
               } catch (e) {
                 _clearCheckoutSubmitState();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Order placed, but payment prompt failed. You can retry from your order details.',
-                      ),
-                      backgroundColor: AppColors.warning,
-                      duration: const Duration(seconds: 5),
-                    ),
-                  );
-                }
+                await _recordMobileMoneyFailureAndMaybeSuggestCod(
+                  _friendlyPaymentError(e),
+                );
+                return;
               }
             }
           }
@@ -822,12 +925,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
         _clearCheckoutSubmitState();
 
-        final orderForSuccess = hasValidBackendTotal ? backendOrder : localOrder;
-        if (orderForSuccess != null && mounted) {
+        if (hasValidBackendTotal && mounted) {
+          _mobileMoneyConsecutiveFailures = 0;
           cartProvider.clearCart();
           context.pushReplacement(
             '/customer/order-success',
-            extra: orderForSuccess,
+            extra: backendOrder,
           );
         } else if (mounted) {
           // Prefer the backend's actual reason (e.g. service-area rejection,
