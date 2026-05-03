@@ -685,12 +685,7 @@ class RoleBasedRouter {
           path: '/customer/payment-pending',
           builder: (context, state) {
             final extra = state.extra as Map<String, dynamic>?;
-            if (extra == null) return const MainShell();
-
-            final orderData = extra['order'];
-            final String paymentId = (extra['paymentId'] as String?) ?? '';
-            final String phoneNumber = (extra['phoneNumber'] as String?) ?? '';
-
+            final orderData = extra?['order'];
             final Order? order;
             if (orderData is Map<String, dynamic>) {
               order = Order.fromJson(orderData);
@@ -700,12 +695,32 @@ class RoleBasedRouter {
               order = null;
             }
 
-            if (order == null || paymentId.isEmpty || phoneNumber.isEmpty) {
+            final query = state.uri.queryParameters;
+            final paymentId =
+                (query['paymentId'] ??
+                        (extra?['paymentId'] as String?) ??
+                        '')
+                    .trim();
+            final phoneNumber =
+                (query['phone'] ??
+                        query['phoneNumber'] ??
+                        (extra?['phoneNumber'] as String?) ??
+                        '')
+                    .trim();
+            final orderId =
+                (query['orderId'] ??
+                        order?.documentId ??
+                        order?.id ??
+                        '')
+                    .trim();
+
+            if (paymentId.isEmpty || phoneNumber.isEmpty || orderId.isEmpty) {
               return const MainShell();
             }
 
             return PaymentPendingScreen(
-              order: order,
+              initialOrder: order,
+              orderId: orderId,
               paymentId: paymentId,
               phoneNumber: phoneNumber,
             );

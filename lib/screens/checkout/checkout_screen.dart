@@ -23,6 +23,12 @@ import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/web_layout_wrapper.dart';
 import '../../widgets/price_text.dart';
 
+enum _CheckoutSubmitPhase {
+  placingOrder,
+  initiatingPayment,
+  waitingForConfirmation,
+}
+
 class CheckoutScreen extends StatefulWidget {
   final bool isGuest;
 
@@ -48,6 +54,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String _selectedPawaPayCorrespondent = 'MTN_MOMO_UGA';
   Address? _selectedAddress;
   bool _isLoading = false;
+  bool _isCheckoutSubmitting = false;
+  _CheckoutSubmitPhase? _checkoutSubmitPhase;
   bool _consentChecked = false;
   bool _showAddressForm = false;
   bool _didAutoRedirectForMissingAddress = false;
@@ -314,8 +322,168 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _estimatedPawaPayCharge(cartProvider.subtotal);
   }
 
+  void _setCheckoutSubmitPhase(_CheckoutSubmitPhase phase) {
+    if (!mounted) return;
+    setState(() {
+      _isCheckoutSubmitting = true;
+      _checkoutSubmitPhase = phase;
+    });
+  }
+
+  void _clearCheckoutSubmitState() {
+    if (!mounted) return;
+    setState(() {
+      _isCheckoutSubmitting = false;
+      _checkoutSubmitPhase = null;
+    });
+  }
+
+  String get _checkoutPhaseLabel {
+    switch (_checkoutSubmitPhase) {
+      case _CheckoutSubmitPhase.placingOrder:
+        return 'Placing your order...';
+      case _CheckoutSubmitPhase.initiatingPayment:
+        return 'Initiating payment...';
+      case _CheckoutSubmitPhase.waitingForConfirmation:
+        return 'Waiting for confirmation...';
+      case null:
+        return 'Processing checkout...';
+    }
+  }
+
+  double get _checkoutPhaseProgress {
+    switch (_checkoutSubmitPhase) {
+      case _CheckoutSubmitPhase.placingOrder:
+        return 0.33;
+      case _CheckoutSubmitPhase.initiatingPayment:
+        return 0.66;
+      case _CheckoutSubmitPhase.waitingForConfirmation:
+        return 1.0;
+      case null:
+        return 0.0;
+    }
+  }
+
+  Widget _buildCheckoutLoadingButton() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSizes.md,
+        vertical: AppSizes.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+        boxShadow: AppColors.shadowSm,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.2,
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.white),
+                ),
+              ),
+              const SizedBox(width: AppSizes.sm),
+              Flexible(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  child: Text(
+                    _checkoutPhaseLabel,
+                    key: ValueKey<String>(_checkoutPhaseLabel),
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.buttonMedium.copyWith(
+                      color: AppColors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSizes.sm),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppSizes.radiusXs),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(end: _checkoutPhaseProgress),
+              duration: const Duration(milliseconds: 280),
+              builder: (context, value, _) {
+                return LinearProgressIndicator(
+                  value: value,
+                  minHeight: 6,
+                  backgroundColor: AppColors.primarySoft.withValues(alpha: 0.35),
+                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.white),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckoutLoadingOverlay() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Container(
+          color: AppColors.background.withValues(alpha: 0.55),
+          padding: const EdgeInsets.all(AppSizes.lg),
+          child: Align(
+            alignment: Alignment.center,
+            child: Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(maxWidth: 420),
+              padding: const EdgeInsets.all(AppSizes.lg),
+              decoration: BoxDecoration(
+                color: AppColors.white.withValues(alpha: 0.94),
+                borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+                boxShadow: AppColors.shadowSm,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Checkout in progress', style: AppTextStyles.labelLarge),
+                  const SizedBox(height: AppSizes.xs),
+                  Text(
+                    _checkoutPhaseLabel,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppSizes.radiusXs),
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween<double>(end: _checkoutPhaseProgress),
+                      duration: const Duration(milliseconds: 280),
+                      builder: (context, value, _) {
+                        return LinearProgressIndicator(
+                          value: value,
+                          minHeight: 8,
+                          backgroundColor: AppColors.primarySoft,
+                          valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _placeOrder() async {
-    setState(() => _isLoading = true);
+    _setCheckoutSubmitPhase(_CheckoutSubmitPhase.placingOrder);
 
     try {
       final cartProvider = context.read<CartProvider>();
@@ -334,7 +502,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               backgroundColor: AppColors.error,
             ),
           );
-          setState(() => _isLoading = false);
+          _clearCheckoutSubmitState();
           return;
         }
 
@@ -346,7 +514,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               backgroundColor: AppColors.error,
             ),
           );
-          setState(() => _isLoading = false);
+          _clearCheckoutSubmitState();
           return;
         }
 
@@ -358,7 +526,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               backgroundColor: AppColors.error,
             ),
           );
-          setState(() => _isLoading = false);
+          _clearCheckoutSubmitState();
           return;
         }
 
@@ -369,7 +537,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               backgroundColor: AppColors.error,
             ),
           );
-          setState(() => _isLoading = false);
+          _clearCheckoutSubmitState();
           return;
         }
 
@@ -396,7 +564,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           items: cartProvider.items,
         );
 
-        setState(() => _isLoading = false);
+        _clearCheckoutSubmitState();
 
         if (backendGuestOrder != null && mounted) {
           // Mirror the order locally so the order list is populated immediately,
@@ -424,7 +592,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           final phoneNumber = await _promptForMissingPhoneNumber();
           if (!mounted) return;
           if (phoneNumber == null) {
-            setState(() => _isLoading = false);
+            _clearCheckoutSubmitState();
             return;
           }
 
@@ -434,7 +602,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           if (!mounted) return;
 
           if (!saved) {
-            setState(() => _isLoading = false);
+            _clearCheckoutSubmitState();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
@@ -457,7 +625,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
 
         if (_selectedAddress == null) {
-          setState(() => _isLoading = false);
+          _clearCheckoutSubmitState();
           _goToAddressSelection();
           return;
         }
@@ -481,7 +649,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
             );
           }
-          setState(() => _isLoading = false);
+          _clearCheckoutSubmitState();
           _goToAddressSelection();
           return;
         }
@@ -505,7 +673,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               );
             }
-            setState(() => _isLoading = false);
+            _clearCheckoutSubmitState();
             return;
           }
         }
@@ -525,7 +693,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         final specialInstructions = specialInstructionsParts.isEmpty
             ? null
             : specialInstructionsParts.join('\n');
-
         String? paymentPhone;
         if (_selectedPayment == PaymentMethod.mobileMoney) {
           paymentPhone = _normalizedSelectedPaymentPhone();
@@ -536,7 +703,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 backgroundColor: AppColors.error,
               ),
             );
-            setState(() => _isLoading = false);
+            _clearCheckoutSubmitState();
             return;
           }
         }
@@ -564,12 +731,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
 
         if (!mounted) return;
-
+        _setCheckoutSubmitPhase(_CheckoutSubmitPhase.initiatingPayment);
         final hasValidBackendTotal =
             backendOrder != null && backendOrder.total > 0;
 
         if (backendOrder != null && !hasValidBackendTotal) {
-          setState(() => _isLoading = false);
+          _clearCheckoutSubmitState();
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -601,7 +768,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       correspondent: _selectedPawaPayCorrespondent,
                     );
 
-                setState(() => _isLoading = false);
+                _setCheckoutSubmitPhase(
+                  _CheckoutSubmitPhase.waitingForConfirmation,
+                );
+                await Future<void>.delayed(
+                  const Duration(milliseconds: 180),
+                );
+                _clearCheckoutSubmitState();
                 if (!mounted) return;
 
                 final data = result['data'] as Map<String, dynamic>? ?? {};
@@ -610,10 +783,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     payment['documentId'] as String? ??
                     payment['id']?.toString() ??
                     '';
+                final paymentRoute = Uri(
+                  path: '/customer/payment-pending',
+                  queryParameters: {
+                    'orderId': orderRef,
+                    'paymentId': paymentId,
+                    'phone': paymentPhone,
+                  },
+                ).toString();
 
                 cartProvider.clearCart();
                 context.pushReplacement(
-                  '/customer/payment-pending',
+                  paymentRoute,
                   extra: {
                     'order': backendOrder,
                     'paymentId': paymentId,
@@ -622,6 +803,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 );
                 return;
               } catch (e) {
+                _clearCheckoutSubmitState();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -638,7 +820,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           }
         }
 
-        setState(() => _isLoading = false);
+        _clearCheckoutSubmitState();
 
         final orderForSuccess = hasValidBackendTotal ? backendOrder : localOrder;
         if (orderForSuccess != null && mounted) {
@@ -665,7 +847,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
       }
     } catch (e) {
-      setState(() => _isLoading = false);
+      _clearCheckoutSubmitState();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -685,13 +867,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       extendBodyBehindAppBar: true,
-      bottomNavigationBar: const AppBottomNav(currentIndex: 3),
+      bottomNavigationBar: IgnorePointer(
+        ignoring: _isCheckoutSubmitting,
+        child: const AppBottomNav(currentIndex: 3),
+      ),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Iconsax.arrow_left),
-          onPressed: () {
+          onPressed: _isCheckoutSubmitting
+              ? null
+              : () {
             if (Navigator.canPop(context)) {
               Navigator.pop(context);
             } else {
@@ -704,10 +891,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       body: Container(
         decoration: const BoxDecoration(gradient: AppColors.elegantBgGradient),
         child: SafeArea(
-          child: WebLayoutWrapper(
-            addPadding: false,
-            child: Column(
-              children: [
+          child: Stack(
+            children: [
+              AbsorbPointer(
+                absorbing: _isCheckoutSubmitting,
+                child: WebLayoutWrapper(
+                  addPadding: false,
+                  child: Column(
+                    children: [
                 // Progress Stepper
                 _buildProgressStepper(),
                 Expanded(
@@ -974,19 +1165,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                         const SizedBox(height: AppSizes.md),
                         // Place order button
-                        CustomButton(
-                          text: _primaryCheckoutCta(
-                            _checkoutDisplayTotal(cartProvider),
-                          ),
-                          isLoading: _isLoading,
-                          onPressed: _consentChecked ? _placeOrder : null,
-                        ),
+                        _isCheckoutSubmitting
+                            ? _buildCheckoutLoadingButton()
+                            : CustomButton(
+                                text: _primaryCheckoutCta(
+                                  _checkoutDisplayTotal(cartProvider),
+                                ),
+                                onPressed: _consentChecked ? _placeOrder : null,
+                              ),
                       ],
                     ),
                   ),
                 ),
-              ],
-            ),
+                    ],
+                  ),
+                ),
+              ),
+              if (_isCheckoutSubmitting) _buildCheckoutLoadingOverlay(),
+            ],
           ),
         ),
       ),
@@ -1385,7 +1581,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Expanded(
               child: CustomButton(
                 text: 'Save Address',
-                onPressed: _saveAddress,
+                isLoading: _isLoading,
+                onPressed: _isLoading ? null : _saveAddress,
               ),
             ),
           ],
