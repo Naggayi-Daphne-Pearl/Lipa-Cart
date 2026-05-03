@@ -513,6 +513,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         final orderProvider = context.read<OrderProvider>();
         final orderService = context.read<OrderService>();
 
+        final promoCode = _promoController.text.trim();
+        final riderNote = _riderNoteController.text.trim();
+        final specialInstructionsParts = <String>[];
+        if (promoCode.isNotEmpty) {
+          specialInstructionsParts.add('Promo code: $promoCode');
+        }
+        if (riderNote.isNotEmpty) {
+          specialInstructionsParts.add('Rider note: $riderNote');
+        }
+        final specialInstructions = specialInstructionsParts.isEmpty
+            ? null
+            : specialInstructionsParts.join('\n');
+
         String? paymentPhone;
         if (_selectedPayment == PaymentMethod.mobileMoney) {
           paymentPhone = _normalizedSelectedPaymentPhone();
@@ -546,6 +559,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           serviceFee: cartProvider.serviceFee,
           deliveryFee: cartProvider.deliveryFee,
           total: cartProvider.total,
+          specialInstructions: specialInstructions,
           paymentMethod: _selectedPayment.toBackendValue,
         );
 

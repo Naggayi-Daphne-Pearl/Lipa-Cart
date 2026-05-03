@@ -1736,26 +1736,24 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(width: 8),
                         GestureDetector(
-                          onTap: () {
-                            if (isInCart) {
-                              cartProvider.removeFromCart(product.id);
-                            } else {
-                              cartProvider.addToCart(product);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('${product.name} added to cart'),
-                                  backgroundColor: AppColors.success,
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      AppSizes.radiusMd,
+                          onTap: (isInCart && qty > 0)
+                              ? null
+                              : () {
+                                  cartProvider.addToCart(product);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('${product.name} added to cart'),
+                                      backgroundColor: AppColors.success,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          AppSizes.radiusMd,
+                                        ),
+                                      ),
+                                      duration: const Duration(seconds: 1),
                                     ),
-                                  ),
-                                  duration: const Duration(seconds: 1),
-                                ),
-                              );
-                            }
-                          },
+                                  );
+                                },
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 220),
                             child: (isInCart && qty > 0)

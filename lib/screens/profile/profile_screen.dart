@@ -620,7 +620,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: EdgeInsets.symmetric(
                         horizontal: context.horizontalPadding,
                       ),
-                      child: _buildMenuSection(context, 'Preferences', [
+                      child: _buildMenuSection(context, 'Account', [
                         _MenuItem(
                           icon: Iconsax.location,
                           title: 'Saved Addresses',

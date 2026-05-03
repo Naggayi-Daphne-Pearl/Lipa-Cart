@@ -55,7 +55,7 @@ class CategoryCard extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              const labelHeight = 20.0;
+              final labelHeight = MediaQuery.textScalerOf(context).scale(34.0);
               const gap = 6.0;
 
               final imageSize = constraints.hasBoundedHeight

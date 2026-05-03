@@ -667,7 +667,7 @@ class AddressCard extends StatelessWidget {
   String _labelEmoji(String label) {
     final lower = label.toLowerCase();
     if (lower.contains('home')) return '🏠';
-    if (lower.contains('work')) return '🏢';
+    if (lower.contains('work') || lower.contains('office')) return '🏢';
     return '💚';
   }
 

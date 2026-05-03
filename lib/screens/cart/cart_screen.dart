@@ -46,11 +46,12 @@ class CartScreen extends StatelessWidget {
   Color _getProductBgColor(String categoryName) =>
       Formatters.getProductBgColor(categoryName);
 
-  String _getUnavailablePreference(CartItem item) {
+  String? _getUnavailablePreference(CartItem item) {
     final instructions = (item.specialInstructions ?? '').toLowerCase();
     if (instructions.contains('if unavailable: refund')) return 'Refund';
     if (instructions.contains('if unavailable: replace')) return 'Replace';
-    return 'Call me';
+    if (instructions.contains('if unavailable: call me')) return 'Call me';
+    return null;
   }
 
   void _setUnavailablePreference(
