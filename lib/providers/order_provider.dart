@@ -7,6 +7,7 @@ import '../models/cart_item.dart';
 import '../models/product.dart';
 import '../models/user.dart';
 import '../core/constants/app_constants.dart';
+import '../services/payment_service.dart';
 
 class OrderProvider extends ChangeNotifier {
   final List<Order> _orders = [];
@@ -291,6 +292,109 @@ class OrderProvider extends ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  /// Verify delivery code for an order
+  /// Called when rider enters the 4-digit code
+  Future<bool> verifyDeliveryCode(
+    String orderId,
+    String code, {
+    double? gpsLat,
+    double? gpsLng,
+    String? photoUrl,
+  }) async {
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+
+      final success = await PaymentService.verifyDeliveryCode(
+        orderId,
+        code,
+        gpsLat: gpsLat,
+        gpsLng: gpsLng,
+        photoUrl: photoUrl,
+      );
+
+      if (success) {
+        // Refresh the current order to update status
+        final index = _orders.indexWhere((o) => o.id == orderId);
+        if (index >= 0) {
+          // Mark as verified locally while waiting for refresh
+          _orders[index] = _orders[index].copyWith();
+          if (_currentOrder?.id == orderId) {
+            _currentOrder = _orders[index];
+          }
+          _persistOrders();
+        }
+      } else {
+        _errorMessage = PaymentService.lastError ?? 'Verification failed';
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return success;
+    } catch (e) {
+      _errorMessage = 'Failed to verify code: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Resend delivery code to customer
+  /// Method can be 'sms', 'push', or 'whatsapp'
+  Future<bool> resendDeliveryCode(String orderId, String method) async {
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+
+      final success = await PaymentService.resendDeliveryCode(
+        orderId,
+        method,
+      );
+
+      if (!success) {
+        _errorMessage = PaymentService.lastError ?? 'Resend failed';
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return success;
+    } catch (e) {
+      _errorMessage = 'Failed to resend code: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Forward delivery code to third party (gift scenario)
+  Future<bool> forwardDeliveryCode(String orderId, String recipientPhone) async {
+    try {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+
+      final success = await PaymentService.forwardDeliveryCode(
+        orderId,
+        recipientPhone,
+      );
+
+      if (!success) {
+        _errorMessage = PaymentService.lastError ?? 'Forward failed';
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return success;
+    } catch (e) {
+      _errorMessage = 'Failed to forward code: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<void> clearAll() async {

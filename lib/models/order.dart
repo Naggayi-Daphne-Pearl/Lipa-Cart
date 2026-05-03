@@ -163,6 +163,7 @@ class Order {
   final Rating? rating;
   final bool hasBeenRated;
   final String? deliveryProofUrl;
+  final String? deliveryCode;
 
   Order({
     required this.id,
@@ -203,6 +204,7 @@ class Order {
     this.rating,
     this.hasBeenRated = false,
     this.deliveryProofUrl,
+    this.deliveryCode,
   });
 
   int get itemCount {
@@ -261,6 +263,7 @@ class Order {
     Rating? rating,
     bool? hasBeenRated,
     String? deliveryProofUrl,
+    String? deliveryCode,
   }) {
     return Order(
       id: id ?? this.id,
@@ -300,6 +303,7 @@ class Order {
       rating: rating ?? this.rating,
       hasBeenRated: hasBeenRated ?? this.hasBeenRated,
       deliveryProofUrl: deliveryProofUrl ?? this.deliveryProofUrl,
+      deliveryCode: deliveryCode ?? this.deliveryCode,
     );
   }
 
@@ -342,6 +346,7 @@ class Order {
       'rating': rating?.toJson(),
       'hasBeenRated': hasBeenRated,
       'deliveryProofUrl': deliveryProofUrl,
+      'deliveryCode': deliveryCode,
     };
   }
 
@@ -425,6 +430,7 @@ class Order {
             return false;
           }()),
       deliveryProofUrl: json['deliveryProofUrl'] as String?,
+      deliveryCode: json['deliveryCode'] as String?,
     );
   }
 }

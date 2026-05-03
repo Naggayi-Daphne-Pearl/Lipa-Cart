@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
@@ -15,6 +17,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/utils/formatters.dart';
 import '../../services/strapi_service.dart';
+import '../../services/payment_service.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/rider_button.dart';
 
@@ -34,6 +37,7 @@ class _RiderActiveDeliveriesScreenState
   StreamSubscription<Position>? _locationSubscription;
   Position? _lastSyncedPosition;
   DateTime? _lastLocationSyncAt;
+  bool _showPinnedHint = true;
 
   @override
   void initState() {
@@ -185,6 +189,55 @@ class _RiderActiveDeliveriesScreenState
     }
   }
 
+  bool _isPickupPhase(OrderStatus status) {
+    return status == OrderStatus.readyForDelivery ||
+        status == OrderStatus.riderAssigned;
+  }
+
+  String _nextPrimaryActionLabel(Order order) {
+    if (_isPickupPhase(order.status)) return 'Mark as Picked Up';
+    if (order.status == OrderStatus.inTransit) return 'Mark as Delivered';
+    return 'View Delivery';
+  }
+
+  String _firstName(String? fullName) {
+    final trimmed = fullName?.trim() ?? '';
+    if (trimmed.isEmpty) return 'Customer';
+    return trimmed.split(' ').first;
+  }
+
+  String _formatStageTime(DateTime? value) {
+    if (value == null) return 'Pending';
+    final hour = value.hour > 12 ? value.hour - 12 : (value.hour == 0 ? 12 : value.hour);
+    final minute = value.minute.toString().padLeft(2, '0');
+    final period = value.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $period';
+  }
+
+  String _distanceEtaText(Order order) {
+    final lat = order.deliveryAddress.latitude;
+    final lng = order.deliveryAddress.longitude;
+    final riderLat = order.riderLatitude;
+    final riderLng = order.riderLongitude;
+    if (lat == null || lng == null || riderLat == null || riderLng == null) {
+      return 'Distance unavailable';
+    }
+
+    final meters = Geolocator.distanceBetween(riderLat, riderLng, lat, lng);
+    final km = meters / 1000;
+    final etaMinutes = (km / 0.45).ceil().clamp(2, 90);
+    return '${km.toStringAsFixed(1)} km away · ${etaMinutes} min';
+  }
+
+  Future<void> _speakDeliveryBrief(Order order) async {
+    final codText = order.paymentMethod == PaymentMethod.cashOnDelivery
+        ? 'Collect ${Formatters.formatCurrency(order.total)} cash on delivery.'
+        : 'Order already paid. Just deliver.';
+    final message =
+        'Deliver to ${order.deliveryAddress.fullAddress}. $codText';
+    await SemanticsService.announce(message, TextDirection.ltr);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -261,7 +314,27 @@ class _RiderActiveDeliveriesScreenState
             child: ListView(
               padding: const EdgeInsets.all(AppSizes.md),
               children: [
-                if (focusId != null && focusId.isNotEmpty)
+                Text(
+                  'Active Deliveries (${deliveries.length})',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                if (deliveries.length > 1) ...[
+                  const SizedBox(height: AppSizes.xs),
+                  Text(
+                    'Up next: ${deliveries[1].deliveryAddress.label} · ${_distanceEtaText(deliveries[1])}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: AppSizes.sm),
+                if (focusId != null && focusId.isNotEmpty && _showPinnedHint)
                   Container(
                     margin: const EdgeInsets.only(bottom: AppSizes.sm),
                     padding: const EdgeInsets.symmetric(
@@ -273,11 +346,11 @@ class _RiderActiveDeliveriesScreenState
                       borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                       border: Border.all(color: AppColors.accent.withValues(alpha: 0.25)),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(Iconsax.flash_1, size: 16, color: AppColors.accent),
-                        SizedBox(width: 8),
-                        Expanded(
+                        const Icon(Iconsax.flash_1, size: 16, color: AppColors.accent),
+                        const SizedBox(width: 8),
+                        const Expanded(
                           child: Text(
                             'Newly accepted delivery is pinned at the top. Start pickup to begin route.',
                             style: TextStyle(
@@ -286,6 +359,14 @@ class _RiderActiveDeliveriesScreenState
                               fontSize: 12,
                             ),
                           ),
+                        ),
+                        TextButton(
+                          onPressed: () => setState(() => _showPinnedHint = false),
+                          style: TextButton.styleFrom(
+                            minimumSize: const Size(44, 32),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          child: const Text('Got it'),
                         ),
                       ],
                     ),
@@ -306,6 +387,9 @@ class _RiderActiveDeliveriesScreenState
     final itemCount = order.items.length;
     final statusColor = _getStatusColor(order.status);
     final statusText = _getStatusText(order.status);
+    final isPickupPhase = _isPickupPhase(order.status);
+    final isTransitPhase = order.status == OrderStatus.inTransit;
+    final isCod = order.paymentMethod == PaymentMethod.cashOnDelivery;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSizes.sm),
@@ -326,14 +410,20 @@ class _RiderActiveDeliveriesScreenState
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '#${order.orderNumber}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: AppColors.textPrimary,
+                Expanded(
+                  child: Text(
+                    order.deliveryAddress.fullAddress,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      height: 1.25,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -354,78 +444,180 @@ class _RiderActiveDeliveriesScreenState
                 ),
               ],
             ),
-            const SizedBox(height: AppSizes.sm),
-            // Delivery address
+            const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Iconsax.location, size: 16, color: AppColors.textTertiary),
-                const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    order.deliveryAddress.fullAddress,
+                    '#${order.orderNumber} · ${_distanceEtaText(order)}',
                     style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
+                      color: AppColors.textTertiary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  onPressed:
+                      (order.customer?.phoneNumber.isNotEmpty == true)
+                      ? () => _showCallDialog(
+                          'Customer',
+                          order.customer?.name ?? 'Customer',
+                          order.customer!.phoneNumber,
+                        )
+                      : null,
+                  icon: const Icon(Iconsax.call, size: 18),
+                  tooltip: 'Call customer',
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(44, 44),
+                    foregroundColor: AppColors.accent,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => _speakDeliveryBrief(order),
+                  icon: const Icon(Iconsax.volume_high, size: 18),
+                  tooltip: 'Read summary aloud',
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(44, 44),
+                    foregroundColor: AppColors.info,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: AppSizes.sm),
-            // COD banner — prominent at the top
-            if (order.paymentMethod == PaymentMethod.cashOnDelivery)
+
+            if (isCod)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 margin: const EdgeInsets.only(bottom: AppSizes.sm),
                 decoration: BoxDecoration(
-                  color: AppColors.accent,
+                  color: AppColors.warning.withValues(alpha: 0.08),
+                  border: Border.all(
+                    color: AppColors.warning.withValues(alpha: 0.45),
+                  ),
                   borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Iconsax.money_recive, color: Colors.white, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'COLLECT ${Formatters.formatCurrency(order.total)} CASH',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
+                    const Text(
+                      'COD - Collect on Delivery',
+                      style: TextStyle(
+                        fontSize: 11,
+                        letterSpacing: 0.4,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.warning,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      Formatters.formatCurrency(order.total),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ],
                 ),
               ),
-            // Items summary + your earning
-            Row(
-              children: [
-                Icon(Iconsax.box_1, size: 16, color: AppColors.textTertiary),
-                const SizedBox(width: 4),
-                Text(
-                  '$itemCount items',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+
+            if (!isCod)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                margin: const EdgeInsets.only(bottom: AppSizes.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.08),
+                  border: Border.all(color: AppColors.success.withValues(alpha: 0.45)),
+                  borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+                ),
+                child: const Text(
+                  'PAID - Just Deliver',
+                  style: TextStyle(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),
                 ),
-                const Spacer(),
+              ),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.only(bottom: AppSizes.sm),
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Iconsax.wallet_money, size: 16, color: AppColors.success),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Your Earning: ${Formatters.formatCurrency(order.deliveryFee)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: AppColors.success,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '$itemCount items',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            Row(
+              children: [
                 Text(
-                  'Your Earning: ${Formatters.formatCurrency(order.deliveryFee)}',
+                  '${_firstName(order.customer?.name)} · $itemCount items',
                   style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: AppColors.accent,
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (order.estimatedDelivery != null)
+                  Text(
+                    'Expected: ${_formatStageTime(order.estimatedDelivery)}',
+                    style: const TextStyle(
+                      color: AppColors.textTertiary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSizes.sm),
+
+            Row(
+              children: [
+                const Icon(Iconsax.location, size: 16, color: AppColors.textTertiary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Tap navigate below for turn-by-turn directions',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: AppSizes.sm),
-            _buildStageIndicator(order.status),
+            _buildStageIndicator(order),
             // Expandable item list
             if (order.items.isNotEmpty)
               Theme(
@@ -467,124 +659,93 @@ class _RiderActiveDeliveriesScreenState
                 ),
               ),
             const SizedBox(height: AppSizes.sm),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _openNavigation(order),
-                icon: const Icon(Iconsax.route_square, size: 16),
-                label: const Text('Navigate to delivery'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.info,
-                  side: const BorderSide(color: AppColors.info),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSizes.sm),
-            // Action buttons based on status
-            if (order.status == OrderStatus.readyForDelivery ||
-                order.status == OrderStatus.riderAssigned)
-              // Rider has claimed but not yet picked up
-              Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: RiderButton.primary(
-                      text: 'Picked Up — Start Delivery',
-                      icon: Iconsax.truck_fast,
-                      height: 44,
-                      onPressed: () async {
-                        final auth = context.read<AuthProvider>();
-                        final rider = context.read<RiderProvider>();
-                        final success = await rider.markInTransit(
-                          auth.token!,
-                          order.documentId ?? order.id,
-                          auth.user!.documentId ?? auth.user!.id,
-                        );
-                        if (success && mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Order picked up — delivering now!',
-                              ),
-                              backgroundColor: AppColors.info,
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                  if (order.customer != null &&
-                      order.customer!.phoneNumber.isNotEmpty) ...[
-                    const SizedBox(height: AppSizes.xs),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () => _showCallDialog(
-                          'Customer',
-                          order.customer!.name ?? 'Customer',
-                          order.customer!.phoneNumber,
-                        ),
-                        icon: const Icon(Iconsax.call, size: 16),
-                        label: const Text('Call Customer'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.accent,
-                          side: const BorderSide(color: AppColors.accent),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              )
-            else if (order.status == OrderStatus.inTransit) ...[
-              // Rider is delivering — require delivery proof photo
+            if (isTransitPhase)
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Iconsax.camera, size: 18),
-                  label: Text(
-                    order.paymentMethod == PaymentMethod.cashOnDelivery
-                        ? 'Cash Collected — Take Photo'
-                        : 'Take Photo & Complete',
-                  ),
-                  onPressed: () => _showDeliveryProofDialog(context, order),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.success,
-                    foregroundColor: Colors.white,
+                child: RiderButton.primary(
+                  text: 'Navigate to customer',
+                  icon: Iconsax.route_square,
+                  height: 56,
+                  onPressed: () => _openNavigation(order),
+                ),
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: RiderButton.primary(
+                  text: _nextPrimaryActionLabel(order),
+                  icon: Iconsax.truck_fast,
+                  height: 56,
+                  onPressed: () async {
+                    final auth = context.read<AuthProvider>();
+                    final rider = context.read<RiderProvider>();
+                    final success = await rider.markInTransit(
+                      auth.token!,
+                      order.documentId ?? order.id,
+                      auth.user!.documentId ?? auth.user!.id,
+                    );
+                    if (success && mounted) {
+                      await HapticFeedback.mediumImpact();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Pickup confirmed. Delivery is now in transit.'),
+                          backgroundColor: AppColors.info,
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
+            const SizedBox(height: AppSizes.xs),
+            if (isPickupPhase)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _openNavigation(order),
+                  icon: const Icon(Iconsax.route_square, size: 16),
+                  label: const Text('Navigate to delivery'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.info,
+                    side: const BorderSide(color: AppColors.info),
+                    minimumSize: const Size.fromHeight(56),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: AppSizes.xs),
-              if (order.customer != null && order.customer!.phoneNumber.isNotEmpty)
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showCallDialog(
-                      'Customer',
-                      order.customer!.name ?? 'Customer',
-                      order.customer!.phoneNumber,
-                    ),
-                    icon: const Icon(Iconsax.call, size: 16),
-                    label: const Text('Call Customer'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.accent,
-                      side: const BorderSide(color: AppColors.accent),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                      ),
+            if (isTransitPhase)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Iconsax.lock, size: 18),
+                  label: Text(
+                    isCod ? 'Confirm Cash + Mark as Delivered' : 'Mark as Delivered',
+                  ),
+                  onPressed: () => _showDeliveryProofDialog(context, order),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
                     ),
                   ),
                 ),
-            ],
+              ),
             const SizedBox(height: AppSizes.xs),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => _showMoreActionsSheet(order),
+                icon: const Icon(Iconsax.warning_2, size: 16),
+                label: const Text('Running late / issue with order'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  minimumSize: const Size(44, 40),
+                ),
+              ),
+            ),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
@@ -637,13 +798,28 @@ class _RiderActiveDeliveriesScreenState
                   _confirmCancelDelivery(order);
                 },
               ),
+            ListTile(
+              leading: const Icon(Iconsax.warning_2, color: AppColors.warning),
+              title: const Text('Report issue / running late'),
+              subtitle: const Text('Notify customer and support quickly'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Issue logged. Contact customer and support if needed.'),
+                    backgroundColor: AppColors.warning,
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStageIndicator(OrderStatus status) {
+  Widget _buildStageIndicator(Order order) {
+    final status = order.status;
     int stageIndex;
     switch (status) {
       case OrderStatus.riderAssigned:
@@ -660,15 +836,41 @@ class _RiderActiveDeliveriesScreenState
         stageIndex = 0;
     }
 
-    Widget stageChip(String label, bool active) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: active ? AppColors.accentSoft : AppColors.grey100,
-          borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+    Widget timelineNode(String label, bool active, bool isLast) {
+      return Expanded(
+        child: Row(
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: active ? AppColors.accent : AppColors.grey300,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ),
+            if (!isLast)
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 6),
+                  height: 2,
+                  color: active ? AppColors.accent : AppColors.grey300,
+                ),
+              ),
+          ],
         ),
+      );
+    }
+
+    Widget timelineLabel(String label, bool active) {
+      return Expanded(
         child: Text(
           label,
+          textAlign: TextAlign.left,
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w700,
@@ -678,13 +880,47 @@ class _RiderActiveDeliveriesScreenState
       );
     }
 
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        stageChip('Assigned', stageIndex >= 0),
-        stageChip('In Transit', stageIndex >= 1),
-        stageChip('Delivered', stageIndex >= 2),
+        Row(
+          children: [
+            timelineNode('Assigned', stageIndex >= 0, false),
+            timelineNode('In Transit', stageIndex >= 1, false),
+            timelineNode('Delivered', stageIndex >= 2, true),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            timelineLabel('Assigned', stageIndex >= 0),
+            timelineLabel('In Transit', stageIndex >= 1),
+            timelineLabel('Delivered', stageIndex >= 2),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                _formatStageTime(order.riderAssignedAt),
+                style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                _formatStageTime(order.pickedUpAt),
+                style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                _formatStageTime(order.deliveredAt),
+                style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -716,7 +952,10 @@ class _RiderActiveDeliveriesScreenState
   void _showDeliveryProofDialog(BuildContext context, Order order) {
     XFile? proofPhoto;
     Uint8List? proofBytes;
+    final codeController = TextEditingController();
+    bool cashConfirmed = order.paymentMethod != PaymentMethod.cashOnDelivery;
     bool isUploading = false;
+    String? validationMessage;
 
     showDialog(
       context: context,
@@ -734,6 +973,84 @@ class _RiderActiveDeliveriesScreenState
                 'Take a photo of the delivered order at the customer\'s door for verification.',
               ),
               const SizedBox(height: 16),
+              if (order.paymentMethod == PaymentMethod.cashOnDelivery) ...[
+                CheckboxListTile(
+                  value: cashConfirmed,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: Text(
+                    'Confirm cash received: ${Formatters.formatCurrency(order.total)}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  onChanged: (value) => setDialogState(() => cashConfirmed = value ?? false),
+                ),
+                const SizedBox(height: 6),
+              ],
+              TextField(
+                controller: codeController,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                onChanged: (_) {
+                  if (validationMessage != null) {
+                    setDialogState(() => validationMessage = null);
+                  }
+                },
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(4),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Customer delivery code',
+                  hintText: 'Enter 4-digit code',
+                  prefixIcon: Icon(Iconsax.password_check),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Ask customer for the delivery code before handing over the package.',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: isUploading
+                      ? null
+                      : () async {
+                          final auth = context.read<AuthProvider>();
+                          final success = await PaymentService.resendDeliveryCode(
+                            order.documentId ?? order.id,
+                            'sms',
+                            token: auth.token,
+                          );
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                success
+                                    ? 'Code resent to customer.'
+                                    : (PaymentService.lastError ??
+                                          'Could not resend code. Ask customer to use resend in their app.'),
+                              ),
+                              backgroundColor: success ? AppColors.success : AppColors.warning,
+                            ),
+                          );
+                        },
+                  icon: const Icon(Iconsax.refresh, size: 16),
+                  label: const Text('Resend code to customer'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.info,
+                    minimumSize: const Size(44, 40),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               if (proofPhoto != null && proofBytes != null)
                 Container(
                   height: 200,
@@ -785,6 +1102,7 @@ class _RiderActiveDeliveriesScreenState
                       setDialogState(() {
                         proofPhoto = photo;
                         proofBytes = bytes;
+                        validationMessage = null;
                       });
                     }
                   },
@@ -836,6 +1154,26 @@ class _RiderActiveDeliveriesScreenState
                     ),
                   ],
                 ),
+                if (validationMessage != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      validationMessage!,
+                      style: const TextStyle(
+                        color: AppColors.error,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ],
           ),
@@ -845,10 +1183,62 @@ class _RiderActiveDeliveriesScreenState
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: proofPhoto == null || isUploading
+              onPressed: isUploading
                   ? null
                   : () async {
-                      setDialogState(() => isUploading = true);
+                      if (!cashConfirmed) {
+                        setDialogState(
+                          () => validationMessage =
+                              'Confirm cash received before completing this COD delivery.',
+                        );
+                        return;
+                      }
+
+                      if (proofBytes == null) {
+                        setDialogState(
+                          () => validationMessage =
+                              'Take a delivery proof photo first.',
+                        );
+                        return;
+                      }
+
+                      final code = codeController.text.trim();
+                      if (code.length != 4) {
+                        setDialogState(
+                          () => validationMessage =
+                              'Enter the 4-digit delivery code first.',
+                        );
+                        return;
+                      }
+
+                      setDialogState(() {
+                        validationMessage = null;
+                        isUploading = true;
+                      });
+
+                      final verified = await PaymentService.verifyDeliveryCode(
+                        order.documentId ?? order.id,
+                        code,
+                        gpsLat: order.riderLatitude,
+                        gpsLng: order.riderLongitude,
+                      );
+
+                      if (!verified) {
+                        if (!mounted) return;
+                        setDialogState(() => isUploading = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              PaymentService.lastError ?? 'Invalid delivery code. Ask customer to read the code again.',
+                            ),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                        return;
+                      }
+
+                      await HapticFeedback.mediumImpact();
+
                       final auth = context.read<AuthProvider>();
                       final rider = context.read<RiderProvider>();
                       final success = await rider.completeDelivery(
@@ -859,6 +1249,7 @@ class _RiderActiveDeliveriesScreenState
                       );
                       if (ctx.mounted) Navigator.pop(ctx);
                       if (success && mounted) {
+                        await HapticFeedback.heavyImpact();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text(
