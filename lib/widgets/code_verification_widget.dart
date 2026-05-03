@@ -246,7 +246,7 @@ class _CodeInputField extends StatelessWidget {
       width: 56,
       height: 56,
       child: RawKeyboardListener(
-        focusNode: FocusNode(),
+        focusNode: focusNode,
         onKey: onKey,
         child: TextField(
           controller: controller,

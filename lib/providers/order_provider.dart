@@ -17,6 +17,10 @@ class OrderProvider extends ChangeNotifier {
   final _uuid = const Uuid();
   bool _didBootstrap = false;
 
+  bool _matchesOrderIdentifier(Order order, String identifier) {
+    return order.id == identifier || order.documentId == identifier;
+  }
+
   OrderProvider() {
     _bootstrap();
   }
@@ -318,11 +322,14 @@ class OrderProvider extends ChangeNotifier {
 
       if (success) {
         // Refresh the current order to update status
-        final index = _orders.indexWhere((o) => o.id == orderId);
+        final index = _orders.indexWhere(
+          (o) => _matchesOrderIdentifier(o, orderId),
+        );
         if (index >= 0) {
           // Mark as verified locally while waiting for refresh
           _orders[index] = _orders[index].copyWith();
-          if (_currentOrder?.id == orderId) {
+          if (_currentOrder != null &&
+              _matchesOrderIdentifier(_currentOrder!, orderId)) {
             _currentOrder = _orders[index];
           }
           _persistOrders();
@@ -344,7 +351,11 @@ class OrderProvider extends ChangeNotifier {
 
   /// Resend delivery code to customer
   /// Method can be 'sms', 'push', or 'whatsapp'
-  Future<bool> resendDeliveryCode(String orderId, String method) async {
+  Future<bool> resendDeliveryCode(
+    String orderId,
+    String method, {
+    String? token,
+  }) async {
     try {
       _isLoading = true;
       _errorMessage = null;
@@ -353,6 +364,7 @@ class OrderProvider extends ChangeNotifier {
       final success = await PaymentService.resendDeliveryCode(
         orderId,
         method,
+        token: token,
       );
 
       if (!success) {
@@ -371,7 +383,11 @@ class OrderProvider extends ChangeNotifier {
   }
 
   /// Forward delivery code to third party (gift scenario)
-  Future<bool> forwardDeliveryCode(String orderId, String recipientPhone) async {
+  Future<bool> forwardDeliveryCode(
+    String orderId,
+    String recipientPhone, {
+    String? token,
+  }) async {
     try {
       _isLoading = true;
       _errorMessage = null;
@@ -380,6 +396,7 @@ class OrderProvider extends ChangeNotifier {
       final success = await PaymentService.forwardDeliveryCode(
         orderId,
         recipientPhone,
+        token: token,
       );
 
       if (!success) {

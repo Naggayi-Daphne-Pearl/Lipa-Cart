@@ -82,6 +82,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
 
     if (success) {
       await _refreshOrder();
+      if (!mounted) return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
