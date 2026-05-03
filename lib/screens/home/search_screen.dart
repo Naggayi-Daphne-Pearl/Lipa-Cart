@@ -11,6 +11,7 @@ import '../../core/utils/responsive.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../widgets/adaptive_page_scaffold.dart';
+import '../../widgets/desktop_breadcrumbs.dart';
 import '../../widgets/product_card.dart';
 import '../../widgets/product_filter_sheet.dart';
 import '../../widgets/search_bar_widget.dart';
@@ -102,6 +103,11 @@ class _SearchScreenState extends State<SearchScreen> {
           'Find groceries quickly with a dedicated mobile and desktop search layout.',
       currentIndex: 1,
       desktopActiveSection: 'browse',
+      desktopBreadcrumbs: const [
+        DesktopBreadcrumbItem(label: 'Home', route: '/customer/home'),
+        DesktopBreadcrumbItem(label: 'Browse', route: '/customer/browse'),
+        DesktopBreadcrumbItem(label: 'Search'),
+      ],
       onBack: () {
         productProvider.clearSearch();
         if (context.canPop()) {

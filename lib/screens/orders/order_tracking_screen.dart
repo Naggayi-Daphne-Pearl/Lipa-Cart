@@ -1294,107 +1294,14 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                     ),
                                 ],
                               ),
+                                ],
+                              ),
                             );
                           }).toList(),
                         ],
                       ),
                     ),
                     const SizedBox(height: AppSizes.lg),
-
-                    // Pricing breakdown
-                    Container(
-                      padding: const EdgeInsets.all(AppSizes.md),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Iconsax.calculator,
-                                color: AppColors.primaryOrange,
-                                size: 20,
-                              ),
-                              const SizedBox(width: AppSizes.sm),
-                              Text('Price Breakdown', style: AppTextStyles.h5),
-                            ],
-                          ),
-                          const SizedBox(height: AppSizes.md),
-                          _buildPricingRow('Subtotal', order.subtotal),
-                          const SizedBox(height: AppSizes.sm),
-                          _buildPricingRow(
-                            'Service Fee (5%)',
-                            order.serviceFee,
-                          ),
-                          const SizedBox(height: AppSizes.sm),
-                          if (order.pawaPayCharge > 0) ...[
-                            _buildPricingRow('PawaPay Charge', order.pawaPayCharge),
-                            const SizedBox(height: AppSizes.sm),
-                          ],
-                          if (order.deliveryFee > 0)
-                            _buildPricingRow('Delivery Fee', order.deliveryFee)
-                          else
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Delivery Fee',
-                                    style: AppTextStyles.bodyMedium,
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.success.withValues(
-                                        alpha: 0.15,
-                                      ),
-                                      style: AppTextStyles.labelMedium.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                        decoration: item.found == false
-                                            ? TextDecoration.lineThrough
-                                            : null,
-                                        color: item.found == false
-                                            ? AppColors.textTertiary
-                                            : null,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (!isLast)
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      top: AppSizes.md,
-                                    ),
-                                    child: Divider(
-                                      color: AppColors.lightGrey.withValues(
-                                        alpha: 0.5,
-                                      ),
-                                      height: 1,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppSizes.lg),
 
                   // Pricing breakdown
                   Container(
@@ -1429,6 +1336,10 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                         const SizedBox(height: AppSizes.sm),
                         _buildPricingRow('Service Fee (5%)', order.serviceFee),
                         const SizedBox(height: AppSizes.sm),
+                        if (order.pawaPayCharge > 0) ...[
+                          _buildPricingRow('PawaPay Charge', order.pawaPayCharge),
+                          const SizedBox(height: AppSizes.sm),
+                        ],
                         if (order.deliveryFee > 0)
                           _buildPricingRow('Delivery Fee', order.deliveryFee)
                         else

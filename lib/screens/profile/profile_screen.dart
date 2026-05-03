@@ -16,6 +16,7 @@ import '../../providers/order_provider.dart';
 import '../../services/address_service.dart';
 import '../../services/order_service.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/desktop_breadcrumbs.dart';
 import '../../widgets/desktop_top_nav_bar.dart';
 import '../../widgets/auth_bottom_sheet.dart';
 
@@ -150,6 +151,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildProfileStatsRow({
+    required int ordersCount,
+    required int addressesCount,
+  }) {
+    Widget tile(String label, String value) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            border: Border.all(color: AppColors.grey200),
+          ),
+          child: Column(
+            children: [
+              Text(
+                value,
+                style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        tile('Total orders', '$ordersCount'),
+        const SizedBox(width: AppSizes.sm),
+        tile('Addresses', '$addressesCount'),
+        const SizedBox(width: AppSizes.sm),
+        tile('Loyalty pts', '${ordersCount * 10}'),
+      ],
+    );
+  }
+
   Future<void> _loadProfileData() async {
     if (_isLoadingProfile) return;
 
@@ -194,6 +238,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+    final orderProvider = context.watch<OrderProvider>();
+    final addressService = context.watch<AddressService>();
     final user = authProvider.user;
     final isGuest = !authProvider.isAuthenticated;
 
@@ -209,6 +255,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const DesktopTopNavBar(activeSection: 'profile'),
+                if (context.isDesktop)
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSizes.lg,
+                      0,
+                      AppSizes.lg,
+                      AppSizes.sm,
+                    ),
+                    child: DesktopBreadcrumbs(
+                      items: [
+                        DesktopBreadcrumbItem(
+                          label: 'Home',
+                          route: '/customer/home',
+                        ),
+                        DesktopBreadcrumbItem(label: 'Profile'),
+                      ],
+                    ),
+                  ),
                 // Guest state — show Sign In prompt
                 if (isGuest) ...[
                   _buildGuestHeader(context),
@@ -285,6 +349,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                   ),
+
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.horizontalPadding,
+                    ),
+                    child: _buildProfileStatsRow(
+                      ordersCount: orderProvider.orders.length,
+                      addressesCount: addressService.addresses.length,
+                    ),
+                  ),
+
+                  const SizedBox(height: AppSizes.md),
 
                   _buildWalletInfoCard(),
 
@@ -419,15 +495,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: EdgeInsets.symmetric(
                       horizontal: context.horizontalPadding,
                     ),
-                    child: _buildMenuSection(context, 'Need Assistance?', [
+                    child: _buildMenuSection(context, 'Help', [
                       _MenuItem(
                         icon: Iconsax.info_circle,
-                        title: 'Help & Support',
+                        title: 'Help Center',
                         onTap: () => context.push('/customer/help'),
                       ),
                       _MenuItem(
+                        icon: Iconsax.send_2,
+                        title: 'Contact us on WhatsApp',
+                        onTap: () => launchUrl(
+                          Uri.parse(
+                            'https://wa.me/${AppConstants.supportWhatsAppNumber}?text=Hello%20LipaCart%2C%20I%20need%20help',
+                          ),
+                        ),
+                      ),
+                      _MenuItem(
                         icon: Iconsax.setting_2,
-                        title: 'App Settings',
+                        title: 'Settings',
                         onTap: () => context.push('/customer/settings'),
                       ),
                     ]),
@@ -451,11 +536,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: _buildMenuSection(context, 'My Lipa Cart', [
+                            child: _buildMenuSection(context, 'Activity', [
                               _MenuItem(
                                 icon: Iconsax.receipt,
                                 title: 'Orders',
                                 onTap: () => context.go('/customer/orders'),
+                              ),
+                              _MenuItem(
+                                icon: Iconsax.heart,
+                                title: 'Favorites',
+                                onTap: () => context.go('/customer/home'),
                               ),
                               _MenuItem(
                                 icon: Iconsax.location_add,
@@ -472,11 +562,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(width: AppSizes.lg),
                           Expanded(
-                            child: _buildMenuSection(context, 'My Settings', [
+                            child: _buildMenuSection(context, 'Account', [
                               _MenuItem(
                                 icon: Iconsax.location,
-                                title: 'Addresses',
+                                title: 'Saved Addresses',
                                 onTap: () => context.go('/customer/addresses'),
+                              ),
+                              _MenuItem(
+                                icon: Iconsax.card,
+                                title: 'Payment Methods',
+                                onTap: () => _showPaymentMethodsSheet(context),
                               ),
                             ]),
                           ),
@@ -489,11 +584,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: EdgeInsets.symmetric(
                         horizontal: context.horizontalPadding,
                       ),
-                      child: _buildMenuSection(context, 'My Lipa Cart', [
+                      child: _buildMenuSection(context, 'Activity', [
                         _MenuItem(
                           icon: Iconsax.receipt,
                           title: 'Orders',
                           onTap: () => context.go('/customer/orders'),
+                        ),
+                        _MenuItem(
+                          icon: Iconsax.heart,
+                          title: 'Favorites',
+                          onTap: () => context.go('/customer/home'),
                         ),
                         _MenuItem(
                           icon: Iconsax.location_add,
@@ -520,10 +620,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: EdgeInsets.symmetric(
                         horizontal: context.horizontalPadding,
                       ),
-                      child: _buildMenuSection(context, 'My Settings', [
+                      child: _buildMenuSection(context, 'Account', [
                         _MenuItem(
                           icon: Iconsax.location,
-                          title: 'Addresses',
+                          title: 'Saved Addresses',
                           onTap: () => context.go('/customer/addresses'),
                         ),
                         _MenuItem(

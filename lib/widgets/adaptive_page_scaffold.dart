@@ -7,6 +7,8 @@ import '../core/theme/app_text_styles.dart';
 import '../core/utils/responsive.dart';
 import 'app_bottom_nav.dart';
 import 'desktop_top_nav_bar.dart';
+import 'desktop_sidebar.dart';
+import 'desktop_breadcrumbs.dart';
 
 class AdaptivePageScaffold extends StatelessWidget {
   final String title;
@@ -20,6 +22,7 @@ class AdaptivePageScaffold extends StatelessWidget {
   final Gradient? backgroundGradient;
   final double? maxWidth;
   final String desktopActiveSection;
+  final List<DesktopBreadcrumbItem> desktopBreadcrumbs;
 
   const AdaptivePageScaffold({
     super.key,
@@ -34,6 +37,7 @@ class AdaptivePageScaffold extends StatelessWidget {
     this.backgroundGradient,
     this.maxWidth,
     this.desktopActiveSection = 'home',
+    this.desktopBreadcrumbs = const [],
   });
 
   @override
@@ -41,6 +45,94 @@ class AdaptivePageScaffold extends StatelessWidget {
     final body = context.isDesktop && desktopBody != null
         ? desktopBody!
         : mobileBody;
+
+    final desktopContent = SafeArea(
+      child: ResponsiveContainer(
+        maxWidth: maxWidth ?? (context.isDesktop ? 1440 : null),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!context.isMobile)
+              DesktopTopNavBar(activeSection: desktopActiveSection),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                context.horizontalPadding,
+                context.responsive<double>(
+                  mobile: AppSizes.lg,
+                  tablet: AppSizes.xl,
+                  desktop: 24.0,
+                ),
+                context.horizontalPadding,
+                context.responsive<double>(
+                  mobile: AppSizes.md,
+                  tablet: AppSizes.lg,
+                  desktop: 20.0,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (showBackButton && context.isMobile) ...[
+                    _buildBackButton(context),
+                    const SizedBox(width: AppSizes.md),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: AppTextStyles.h4.copyWith(
+                            fontWeight: FontWeight.w700,
+                            fontSize: context.responsive<double>(
+                              mobile: 24.0,
+                              tablet: 28.0,
+                              desktop: 32.0,
+                            ),
+                          ),
+                        ),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            subtitle!,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: context.responsive<double>(
+                                mobile: 13.0,
+                                tablet: 14.0,
+                                desktop: 15.0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (actions != null && actions!.isNotEmpty)
+                    Wrap(
+                      spacing: AppSizes.sm,
+                      runSpacing: AppSizes.sm,
+                      alignment: WrapAlignment.end,
+                      children: actions!,
+                    ),
+                ],
+              ),
+            ),
+            if (context.isDesktop && desktopBreadcrumbs.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  context.horizontalPadding,
+                  0,
+                  context.horizontalPadding,
+                  AppSizes.sm,
+                ),
+                child: DesktopBreadcrumbs(items: desktopBreadcrumbs),
+              ),
+            Expanded(child: body),
+          ],
+        ),
+      ),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -51,83 +143,14 @@ class AdaptivePageScaffold extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: backgroundGradient ?? AppColors.elegantBgGradient,
         ),
-        child: SafeArea(
-          child: ResponsiveContainer(
-            maxWidth: maxWidth ?? (context.isDesktop ? 1440 : null),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (!context.isMobile)
-                  DesktopTopNavBar(activeSection: desktopActiveSection),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    context.horizontalPadding,
-                    context.responsive<double>(
-                      mobile: AppSizes.lg,
-                      tablet: AppSizes.xl,
-                      desktop: 24.0,
-                    ),
-                    context.horizontalPadding,
-                    context.responsive<double>(
-                      mobile: AppSizes.md,
-                      tablet: AppSizes.lg,
-                      desktop: 20.0,
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (showBackButton && context.isMobile) ...[
-                        _buildBackButton(context),
-                        const SizedBox(width: AppSizes.md),
-                      ],
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              style: AppTextStyles.h4.copyWith(
-                                fontWeight: FontWeight.w700,
-                                fontSize: context.responsive<double>(
-                                  mobile: 24.0,
-                                  tablet: 28.0,
-                                  desktop: 32.0,
-                                ),
-                              ),
-                            ),
-                            if (subtitle != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                subtitle!,
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.textSecondary,
-                                  fontSize: context.responsive<double>(
-                                    mobile: 13.0,
-                                    tablet: 14.0,
-                                    desktop: 15.0,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      if (actions != null && actions!.isNotEmpty)
-                        Wrap(
-                          spacing: AppSizes.sm,
-                          runSpacing: AppSizes.sm,
-                          alignment: WrapAlignment.end,
-                          children: actions!,
-                        ),
-                    ],
-                  ),
-                ),
-                Expanded(child: body),
-              ],
-            ),
-          ),
-        ),
+        child: context.isDesktop
+            ? Row(
+                children: [
+                  DesktopSidebar(activeSection: desktopActiveSection),
+                  Expanded(child: desktopContent),
+                ],
+              )
+            : desktopContent,
       ),
     );
   }
